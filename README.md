@@ -9,7 +9,7 @@ Auto Sleep Droid is a simple Android sleep timer for media playback. It works en
 3. Enter the duration in minutes using the inline notification reply.
 4. Leave the notification active while you listen.
 
-The duration can be between 1 minute and 24 hours. The notification stays visible while the timer is active and cannot be dismissed.
+The duration can be between 1 minute and 24 hours. The default duration is 20 minutes. The notification reply suggests the default or your last configured duration, which you can change before submitting. The notification stays visible while the timer is active and cannot be dismissed.
 
 For the timer to pause all active media apps when it expires, tap `Allow media control` in the notification and enable Auto Sleep Droid in Android's notification-access settings. The app does not show a custom settings screen.
 

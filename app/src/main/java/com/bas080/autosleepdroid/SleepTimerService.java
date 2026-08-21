@@ -34,6 +34,7 @@ public class SleepTimerService extends Service {
     private static final String KEY_DURATION_MINUTES = "duration_minutes";
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long FADE_DURATION_MS = 15_000L;
+    private static final int DEFAULT_DURATION_MINUTES = 20;
     private static final int MINUTES_MIN = 1;
     private static final int MINUTES_MAX = 24 * 60;
 
@@ -61,7 +62,8 @@ public class SleepTimerService extends Service {
         registerVolumeObserver();
         startForeground(NOTIFICATION_ID, buildNotification());
 
-        configuredDurationMinutes = preferences.getInt(KEY_DURATION_MINUTES, 0);
+        configuredDurationMinutes = preferences.getInt(
+            KEY_DURATION_MINUTES, DEFAULT_DURATION_MINUTES);
         active = preferences.getBoolean(KEY_ACTIVE, false);
         if (active && isValidDuration(configuredDurationMinutes)) {
             startTimer(configuredDurationMinutes);
@@ -251,12 +253,14 @@ public class SleepTimerService extends Service {
                     "Turn off",
                     disableIntent()).build());
         } else {
+            String configuredDuration = String.valueOf(configuredDurationMinutes);
             RemoteInput remoteInput = new RemoteInput.Builder(REMOTE_INPUT_KEY)
-                    .setLabel("Minutes (1-1440)")
+                .setLabel("Minutes (default: " + configuredDuration + ")")
+                .setChoices(new CharSequence[]{configuredDuration})
                     .build();
             Notification.Action action = new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_input_add),
-                    "Set duration",
+                "Set duration (" + configuredDuration + "m)",
                     durationIntent()).addRemoteInput(remoteInput).build();
             builder.addAction(action);
         }

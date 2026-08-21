@@ -92,6 +92,8 @@ State is stored in the `sleep_timer` `SharedPreferences` file:
 
 The remaining countdown is not persisted. On reboot or service recreation, an active timer starts from the stored configured duration.
 
+When `duration_minutes` is absent, `SleepTimerService` uses the 20-minute default. A valid user reply replaces and persists this value.
+
 In-memory state in `SleepTimerService`:
 
 - `active`: timer is counting down.
@@ -121,6 +123,8 @@ In-memory state in `SleepTimerService`:
 5. Values from `1` through `1440` are accepted.
 6. The duration is persisted, `active` is set to true, and a full countdown starts.
 7. Invalid or empty input updates the notification with the accepted range.
+
+When the duration action is shown, the saved duration is provided as the notification reply choice and action label. Android exposes this as an editable suggestion; the user can replace it before sending.
 
 ### Volume reset
 
