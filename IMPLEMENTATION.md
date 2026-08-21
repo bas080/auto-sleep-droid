@@ -138,6 +138,8 @@ When the duration action is shown, the saved duration is provided as the notific
 
 1. The one-minute input poll reads `AudioManager.isMusicActive()`.
 2. A transition from inactive to active playback starts or resets the timer from the configured duration.
+3. The service initializes the previous playback sample as inactive, so playback already active when the service starts is detected on the first poll.
+4. After expiry pauses media, the service resets the previous playback sample to inactive, so playing media again is detected as a new start.
 
 ### Expiry
 

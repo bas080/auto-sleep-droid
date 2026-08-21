@@ -61,7 +61,7 @@ public class SleepTimerService extends Service {
         preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
         createNotificationChannel();
         lastObservedVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        lastObservedMediaActive = audioManager.isMusicActive();
+        lastObservedMediaActive = false;
         scheduleInputPoll();
         startForeground(NOTIFICATION_ID, buildNotification());
 
@@ -144,6 +144,7 @@ public class SleepTimerService extends Service {
     private void disableTimer() {
         active = false;
         fading = false;
+        lastObservedMediaActive = audioManager.isMusicActive();
         preferences.edit().putBoolean(KEY_ACTIVE, false).apply();
         cancelTimerCallbacks();
         updateNotification();
@@ -202,6 +203,7 @@ public class SleepTimerService extends Service {
 
     private void finishExpiry() {
         MediaSessionAccessService.pauseAll(this);
+        lastObservedMediaActive = false;
         suppressVolumeReset = true;
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeBeforeFade, 0);
         suppressVolumeReset = false;

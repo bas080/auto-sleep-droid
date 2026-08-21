@@ -22,6 +22,7 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 - Prefill or suggest the default or last configured duration in the inline notification reply.
 - Once a duration has been configured, start the timer automatically when polling detects a volume change while it is inactive.
 - Start the timer automatically when polling detects active music playback.
+- After the timer pauses media at expiry, starting media playback again starts the timer automatically.
 
 ## Timer behavior
 
