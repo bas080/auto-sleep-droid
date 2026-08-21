@@ -204,7 +204,7 @@ public class SleepTimerService extends Service {
     }
 
     private void registerVolumeObserver() {
-        Uri volumeUri = Settings.System.getUriFor(Settings.System.VOLUME_MUSIC);
+        Uri volumeUri = Settings.System.getUriFor("volume_music");
         volumeObserver = new ContentObserver(handler) {
             @Override
             public void onChange(boolean selfChange, Uri uri) {
@@ -250,7 +250,25 @@ public class SleepTimerService extends Service {
                     durationIntent()).addRemoteInput(remoteInput).build();
             builder.addAction(action);
         }
+        if (!hasNotificationAccess()) {
+            builder.addAction(new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_menu_manage),
+                    "Allow media control",
+                    notificationAccessIntent()).build());
+        }
         return builder.build();
+    }
+
+    private boolean hasNotificationAccess() {
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        return manager != null && manager.isNotificationListenerAccessGranted(
+                new ComponentName(this, MediaControlNotificationListener.class));
+    }
+
+    private PendingIntent notificationAccessIntent() {
+        Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+        return PendingIntent.getActivity(this, 5, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private void updateNotification() {
