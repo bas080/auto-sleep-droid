@@ -9,10 +9,8 @@ import android.app.RemoteInput;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.database.ContentObserver;
 import android.graphics.drawable.Icon;
 import android.media.AudioManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -25,7 +23,6 @@ import java.util.Locale;
 public class SleepTimerService extends Service {
     public static final String ACTION_DISABLE = "com.bas080.autosleepdroid.DISABLE";
     public static final String ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION";
-    public static final String ACTION_MEDIA_PLAYING = "com.bas080.autosleepdroid.MEDIA_PLAYING";
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
     private static final String CHANNEL_ID = "sleep_timer";
     private static final int NOTIFICATION_ID = 1001;
@@ -35,16 +32,17 @@ public class SleepTimerService extends Service {
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long FADE_DURATION_MS = 15_000L;
     private static final int DEFAULT_DURATION_MINUTES = 20;
+    private static final long INPUT_POLL_INTERVAL_MS = 60_000L;
     private static final int MINUTES_MIN = 1;
     private static final int MINUTES_MAX = 24 * 60;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private AudioManager audioManager;
     private android.content.SharedPreferences preferences;
-    private ContentObserver volumeObserver;
     private Runnable expiryRunnable;
     private Runnable notificationRunnable;
     private Runnable fadeRunnable;
+    private Runnable inputPollRunnable;
     private long timerEndsAt;
     private int configuredDurationMinutes;
     private int volumeBeforeFade;
@@ -52,6 +50,8 @@ public class SleepTimerService extends Service {
     private boolean fading;
     private boolean suppressVolumeReset;
     private int fadeStep;
+    private int lastObservedVolume;
+    private boolean lastObservedMediaActive;
 
     @Override
     public void onCreate() {
@@ -59,7 +59,9 @@ public class SleepTimerService extends Service {
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
         createNotificationChannel();
-        registerVolumeObserver();
+        lastObservedVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        lastObservedMediaActive = audioManager.isMusicActive();
+        scheduleInputPoll();
         startForeground(NOTIFICATION_ID, buildNotification());
 
         configuredDurationMinutes = preferences.getInt(
@@ -79,8 +81,6 @@ public class SleepTimerService extends Service {
             disableTimer();
         } else if (intent != null && ACTION_SET_DURATION.equals(intent.getAction())) {
             handleDurationReply(intent);
-        } else if (intent != null && ACTION_MEDIA_PLAYING.equals(intent.getAction())) {
-            startTimerFromConfiguredDuration();
         }
         return START_STICKY;
     }
@@ -215,17 +215,28 @@ public class SleepTimerService extends Service {
         }
     }
 
-    private void registerVolumeObserver() {
-        Uri volumeUri = Settings.System.getUriFor("volume_music");
-        volumeObserver = new ContentObserver(handler) {
-            @Override
-            public void onChange(boolean selfChange, Uri uri) {
-                if (!suppressVolumeReset) {
-                    resetTimerForVolumeChange();
-                }
-            }
+    private void scheduleInputPoll() {
+        inputPollRunnable = () -> {
+            pollInputs();
+            scheduleInputPoll();
         };
-        getContentResolver().registerContentObserver(volumeUri, false, volumeObserver);
+        handler.postDelayed(inputPollRunnable, INPUT_POLL_INTERVAL_MS);
+    }
+
+    private void pollInputs() {
+        int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        boolean mediaActive = audioManager.isMusicActive();
+        boolean volumeChanged = currentVolume != lastObservedVolume;
+        boolean playbackStarted = mediaActive && !lastObservedMediaActive;
+        lastObservedVolume = currentVolume;
+        lastObservedMediaActive = mediaActive;
+
+        if (volumeChanged && !suppressVolumeReset) {
+            resetTimerForVolumeChange();
+        }
+        if (playbackStarted) {
+            startTimerFromConfiguredDuration();
+        }
     }
 
     private Notification buildNotification() {
@@ -333,8 +344,8 @@ public class SleepTimerService extends Service {
 
     @Override
     public void onDestroy() {
-        if (volumeObserver != null) {
-            getContentResolver().unregisterContentObserver(volumeObserver);
+        if (inputPollRunnable != null) {
+            handler.removeCallbacks(inputPollRunnable);
         }
         cancelTimerCallbacks();
         super.onDestroy();

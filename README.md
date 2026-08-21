@@ -16,8 +16,8 @@ For the timer to pause all active media apps when it expires, tap `Allow media c
 ## During the timer
 
 - Press volume up or volume down as usual. The volume changes normally, and the timer starts over at the original duration.
-- Once a duration has been configured, changing the volume while the timer is off starts the timer automatically.
-- Starting media playback also starts the timer automatically when notification access is enabled.
+- Once a duration has been configured, changing the volume while the timer is off starts the timer automatically. The polling implementation checks for this once per minute.
+- Starting media playback also starts the timer automatically. Playback state is checked once per minute.
 - If you change the volume while the fade-out is running, the fade-out is cancelled, your new volume is kept, and the timer starts over.
 - Turn the timer off from the notification at any time. Media keeps playing and the current volume is left unchanged.
 
