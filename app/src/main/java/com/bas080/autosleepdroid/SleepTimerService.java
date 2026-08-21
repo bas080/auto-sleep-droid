@@ -203,7 +203,7 @@ public class SleepTimerService extends Service {
 
     private void finishExpiry() {
         MediaSessionAccessService.pauseAll(this);
-        lastObservedMediaActive = false;
+        lastObservedMediaActive = audioManager.isMusicActive();
         suppressVolumeReset = true;
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeBeforeFade, 0);
         suppressVolumeReset = false;
