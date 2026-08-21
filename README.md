@@ -76,7 +76,7 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 After installation, launch the app once to create the ongoing notification and grant notification permission when Android asks. Use the notification's `Allow media control` action to grant notification access; this is required to pause all active media sessions.
 
-The app intentionally has no custom settings or timer screen. Changes to timer behavior belong in `SleepTimerService`, reboot restoration belongs in `BootReceiver`, and media-session control belongs in `MediaControlNotificationListener`.
+The app intentionally has no custom settings or timer screen. Changes to timer behavior belong in `SleepTimerService`, reboot restoration belongs in `BootReceiver`, and media-session control belongs in `MediaSessionAccessService`.
 
 ### Testing notes
 
