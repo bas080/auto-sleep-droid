@@ -17,7 +17,7 @@ The app is a notification-only Android sleep timer. There is no custom settings 
 │       ├── java/com/bas080/autosleepdroid/
 │       │   ├── BootReceiver.java
 │       │   ├── MainActivity.java
-│       │   ├── MediaControlNotificationListener.java
+│       │   ├── MediaSessionAccessService.java
 │       │   └── SleepTimerService.java
 │       └── res/values/styles.xml
 ├── .github/workflows/android-release.yml
@@ -49,7 +49,7 @@ Responsibilities:
 - Start the timer when polling detects music playback.
 - Fade music volume from the captured current level to half that level over 15 seconds.
 - Restore the volume captured before fading.
-- Ask `MediaControlNotificationListener` to pause active media sessions.
+- Ask `MediaSessionAccessService` to pause active media sessions.
 
 Important constants:
 
@@ -71,11 +71,11 @@ File: `app/src/main/java/com/bas080/autosleepdroid/BootReceiver.java`
 
 Receives `BOOT_COMPLETED` and starts the foreground service. `SleepTimerService` then reads persisted state. An active timer is restarted at its full configured duration; an inactive timer remains inactive.
 
-### `MediaControlNotificationListener`
+### `MediaSessionAccessService`
 
-File: `app/src/main/java/com/bas080/autosleepdroid/MediaControlNotificationListener.java`
+File: `app/src/main/java/com/bas080/autosleepdroid/MediaSessionAccessService.java`
 
-Extends `NotificationListenerService` so the app can obtain active media sessions through `MediaSessionManager`. `pauseAll()` sends `pause()` to every active session. Automatic start detection is handled by `SleepTimerService` polling instead of this listener.
+Extends `NotificationListenerService` to provide the notification-access component required by `MediaSessionManager`. `pauseAll()` sends `pause()` to every active session. Automatic start detection is handled by `SleepTimerService` polling instead of this service.
 
 Android notification access must be granted by the user. The service catches `SecurityException` when access has not been granted.
 

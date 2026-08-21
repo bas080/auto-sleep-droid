@@ -201,7 +201,7 @@ public class SleepTimerService extends Service {
     }
 
     private void finishExpiry() {
-        MediaControlNotificationListener.pauseAll(this);
+        MediaSessionAccessService.pauseAll(this);
         suppressVolumeReset = true;
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeBeforeFade, 0);
         suppressVolumeReset = false;
@@ -306,7 +306,7 @@ public class SleepTimerService extends Service {
     private boolean hasNotificationAccess() {
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         return manager != null && manager.isNotificationListenerAccessGranted(
-                new ComponentName(this, MediaControlNotificationListener.class));
+                new ComponentName(this, MediaSessionAccessService.class));
     }
 
     private PendingIntent notificationAccessIntent() {

@@ -8,7 +8,7 @@ import android.service.notification.NotificationListenerService;
 
 import java.util.List;
 
-public class MediaControlNotificationListener extends NotificationListenerService {
+public class MediaSessionAccessService extends NotificationListenerService {
     public static void pauseAll(Context context) {
         MediaSessionManager sessionManager =
                 (MediaSessionManager) context.getSystemService(Context.MEDIA_SESSION_SERVICE);
@@ -17,7 +17,7 @@ public class MediaControlNotificationListener extends NotificationListenerServic
         }
 
         try {
-            ComponentName listener = new ComponentName(context, MediaControlNotificationListener.class);
+            ComponentName listener = new ComponentName(context, MediaSessionAccessService.class);
             List<MediaController> sessions = sessionManager.getActiveSessions(listener);
             for (MediaController controller : sessions) {
                 if (controller.getTransportControls() != null) {
