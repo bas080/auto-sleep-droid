@@ -20,8 +20,8 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 - Default duration: 20 minutes when the user has not configured a duration.
 - Store the original configured duration while the timer is active.
 - Prefill or suggest the default or last configured duration in the inline notification reply.
-- Once a duration has been configured, start the timer automatically when the volume changes while it is inactive.
-- Start the timer automatically when a media session begins playback.
+- Once a duration has been configured, start the timer automatically when polling detects a volume change while it is inactive.
+- Start the timer automatically when polling detects active music playback.
 
 ## Timer behavior
 
