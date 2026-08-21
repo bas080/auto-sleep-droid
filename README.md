@@ -20,7 +20,7 @@ For the timer to pause all active media apps when it expires, tap `Allow media c
 
 ## When time runs out
 
-The volume fades out over 15 seconds. All active media playback is then paused, and the volume is restored to the level it had before the fade-out began.
+The current volume fades down to halfway to zero over 15 seconds. All active media playback is then paused, and the volume is restored to the level it had before the fade-out began.
 
 ## After a reboot
 

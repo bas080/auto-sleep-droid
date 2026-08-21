@@ -45,7 +45,7 @@ Responsibilities:
 - Store timer configuration and active state in `SharedPreferences`.
 - Schedule timer expiry and notification refresh callbacks on the main looper.
 - Observe the music-volume setting and reset an active timer when volume changes.
-- Fade music volume over 15 seconds.
+- Fade music volume from the captured current level to half that level over 15 seconds.
 - Restore the volume captured before fading.
 - Ask `MediaControlNotificationListener` to pause active media sessions.
 
@@ -128,9 +128,9 @@ In-memory state in `SleepTimerService`:
 ### Expiry
 
 1. The expiry callback calls `beginFadeOut()`.
-2. The service captures the current music stream volume.
+2. The service captures the current music stream volume as `volumeBeforeFade`.
 3. Fifteen fade steps run at approximately one-second intervals.
-4. Each step writes a lower music stream volume while `suppressVolumeReset` is true.
+4. Each step interpolates from `volumeBeforeFade` to `volumeBeforeFade / 2` while `suppressVolumeReset` is true. The first step cannot increase the volume.
 5. After the final step, all active media sessions are sent `pause()`.
 6. The captured pre-fade volume is restored.
 7. The timer is marked inactive and the notification reports that media was paused.
@@ -192,7 +192,7 @@ The GitHub Actions workflow in `.github/workflows/android-release.yml`:
 - This environment has no attached emulator or physical Android device, so runtime notification and media-session behavior needs device testing.
 - Android lint may require a JDK version supported by the installed Android lint tooling.
 - The music-volume `ContentObserver` is used to detect volume changes. Device/OEM behavior should be verified because volume settings observation can vary across Android versions.
-- Fade steps target an absolute fraction of the maximum music volume rather than interpolating from the captured starting volume. The final restore still uses the captured pre-fade volume.
+- The fade target is integer music-stream volume, so rounding can make adjacent fade steps equal on devices with a small volume range. The final restore still uses the captured pre-fade volume.
 - Notification access is required to pause all active media apps. Without it, the timer can still fade and restore volume, but media pausing may fail.
 - The service returns `START_STICKY`, but Android battery-management policies can still stop or delay background work. Long-duration timer behavior should be tested on target devices.
 

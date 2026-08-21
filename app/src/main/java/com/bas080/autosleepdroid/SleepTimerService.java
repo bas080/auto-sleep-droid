@@ -166,8 +166,9 @@ public class SleepTimerService extends Service {
 
     private void runFadeStep() {
         fadeStep++;
-        int maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-        int nextVolume = Math.max(0, Math.round(maxVolume * (15 - fadeStep) / 15f));
+        int targetVolume = volumeBeforeFade / 2;
+        int nextVolume = Math.round(volumeBeforeFade
+            - (volumeBeforeFade - targetVolume) * fadeStep / 15f);
         suppressVolumeReset = true;
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, nextVolume, 0);
         suppressVolumeReset = false;
