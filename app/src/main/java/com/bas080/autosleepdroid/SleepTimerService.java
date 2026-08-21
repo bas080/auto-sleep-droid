@@ -25,6 +25,7 @@ import java.util.Locale;
 public class SleepTimerService extends Service {
     public static final String ACTION_DISABLE = "com.bas080.autosleepdroid.DISABLE";
     public static final String ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION";
+    public static final String ACTION_MEDIA_PLAYING = "com.bas080.autosleepdroid.MEDIA_PLAYING";
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
     private static final String CHANNEL_ID = "sleep_timer";
     private static final int NOTIFICATION_ID = 1001;
@@ -76,6 +77,8 @@ public class SleepTimerService extends Service {
             disableTimer();
         } else if (intent != null && ACTION_SET_DURATION.equals(intent.getAction())) {
             handleDurationReply(intent);
+        } else if (intent != null && ACTION_MEDIA_PLAYING.equals(intent.getAction())) {
+            startTimerFromConfiguredDuration();
         }
         return START_STICKY;
     }
@@ -124,7 +127,13 @@ public class SleepTimerService extends Service {
     }
 
     private void resetTimerForVolumeChange() {
-        if (active && isValidDuration(configuredDurationMinutes)) {
+        if (!fading && isValidDuration(configuredDurationMinutes)) {
+            startTimer(configuredDurationMinutes);
+        }
+    }
+
+    private void startTimerFromConfiguredDuration() {
+        if (isValidDuration(configuredDurationMinutes)) {
             startTimer(configuredDurationMinutes);
         }
     }
