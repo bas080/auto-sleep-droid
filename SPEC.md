@@ -28,6 +28,10 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 - When volume-down is pressed:
   - Allow the system volume to change.
   - Reset the timer to the original configured duration.
+- If volume-up or volume-down is pressed during fade-out:
+  - Cancel the fade-out and timer expiry.
+  - Keep the new user-selected volume unchanged.
+  - Reset the timer to the original configured duration.
 - When the timer expires:
   - Fade from the current volume to halfway to zero over 15 seconds.
   - Pause all active media apps.

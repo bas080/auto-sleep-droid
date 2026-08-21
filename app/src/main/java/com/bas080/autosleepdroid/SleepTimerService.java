@@ -124,7 +124,7 @@ public class SleepTimerService extends Service {
     }
 
     private void resetTimerForVolumeChange() {
-        if (active && !fading && isValidDuration(configuredDurationMinutes)) {
+        if (active && isValidDuration(configuredDurationMinutes)) {
             startTimer(configuredDurationMinutes);
         }
     }
