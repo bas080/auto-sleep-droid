@@ -10,6 +10,8 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 - Use notifications for timer state and feedback.
 - Keep the notification ongoing so the user cannot dismiss it.
 - Enter the duration through a minimal inline notification reply.
+- Require notification access before starting the timer service or accepting timer input.
+- Do not provide a notification action for media permission; request it through Android Settings before the notification is created.
 
 ## Timer configuration
 
@@ -22,6 +24,8 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 - Prefill or suggest the default or last configured duration in the inline notification reply.
 - Once a duration has been configured, start the timer automatically when polling detects a volume change while it is inactive.
 - Start the timer automatically when polling detects active music playback.
+- When inactive, communicate that the timer is waiting for playback or a volume change rather than stopped.
+- Show the configured duration in waiting, active, and fade states.
 - After the timer pauses media at expiry, starting media playback again starts the timer automatically.
 
 ## Timer behavior
@@ -44,6 +48,7 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 - When the timer is turned off:
   - Leave the current volume unchanged.
   - Allow media to continue playing.
+- The notification provides only the duration input action; timer state is controlled automatically by playback, volume changes, expiry, and duration replies.
 
 ## Reboot behavior
 
