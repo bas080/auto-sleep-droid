@@ -4,14 +4,14 @@ Auto Sleep Droid is a simple Android sleep timer for media playback. It works en
 
 ## How to use it
 
-1. Open the Auto Sleep Droid notification.
-2. Turn the sleep timer on.
-3. Enter the duration in minutes using the inline notification reply.
+1. Launch Auto Sleep Droid and grant notification access when Android opens Settings.
+2. Open the Auto Sleep Droid notification.
+3. Enter or change the duration in minutes using the inline notification reply.
 4. Leave the notification active while you listen.
 
-The duration can be between 1 minute and 24 hours. The default duration is 20 minutes. The notification reply suggests the default or your last configured duration, which you can change before submitting. The notification stays visible while the timer is active and cannot be dismissed.
+The duration can be between 1 minute and 24 hours. The default duration is 20 minutes. The notification reply suggests the default or your last configured duration, which you can change before submitting. Notification access is required before the timer can operate, because it is used to pause active media at expiry. The notification stays visible and cannot be dismissed.
 
-For the timer to pause all active media apps when it expires, tap `Allow media control` in the notification and enable Auto Sleep Droid in Android's notification-access settings. The app does not show a custom settings screen.
+Notification access is requested through Android Settings before the timer notification is created. It is required to pause all active media apps when the timer expires. The app does not show a custom settings screen.
 
 ## During the timer
 
@@ -19,7 +19,7 @@ For the timer to pause all active media apps when it expires, tap `Allow media c
 - Once a duration has been configured, changing the volume while the timer is off starts the timer automatically. The polling implementation checks for this once per minute.
 - Starting media playback also starts the timer automatically. Playback state is checked once per minute.
 - If you change the volume while the fade-out is running, the fade-out is cancelled, your new volume is kept, and the timer starts over.
-- Turn the timer off from the notification at any time. Media keeps playing and the current volume is left unchanged.
+- After expiry, the notification says the timer is waiting and shows the configured duration. It starts again when media plays or the volume changes.
 
 ## When time runs out
 
@@ -74,7 +74,7 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ### Runtime setup
 
-After installation, launch the app once to create the ongoing notification and grant notification permission when Android asks. Use the notification's `Allow media control` action to grant notification access; this is required to pause all active media sessions.
+After installation, launch the app once. Grant notification permission and notification access when Android asks; both are required before the timer notification and timer controls become available.
 
 The app intentionally has no custom settings or timer screen. Changes to timer behavior belong in `SleepTimerService`, reboot restoration belongs in `BootReceiver`, and media-session control belongs in `MediaSessionAccessService`.
 

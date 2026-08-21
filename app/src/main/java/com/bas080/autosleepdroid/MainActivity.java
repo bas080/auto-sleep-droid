@@ -4,16 +4,28 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.provider.Settings;
+import android.content.ComponentName;
 import android.os.Build;
 import android.os.Bundle;
 
 public class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 100;
+    private boolean accessSettingsOpened;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         startOrRequestNotificationPermission();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (accessSettingsOpened) {
+            accessSettingsOpened = false;
+            startOrRequestNotificationPermission();
+        }
     }
 
     private void startOrRequestNotificationPermission() {
@@ -25,7 +37,12 @@ public class MainActivity extends Activity {
                     NOTIFICATION_PERMISSION_REQUEST);
             return;
         }
-        startTimerService();
+        if (hasNotificationAccess()) {
+            startTimerService();
+        } else if (!accessSettingsOpened) {
+            accessSettingsOpened = true;
+            startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+        }
     }
 
     @Override
@@ -44,5 +61,12 @@ public class MainActivity extends Activity {
             startService(serviceIntent);
         }
         finish();
+    }
+
+    private boolean hasNotificationAccess() {
+        android.app.NotificationManager manager =
+                (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        ComponentName component = new ComponentName(this, MediaSessionAccessService.class);
+        return manager != null && manager.isNotificationListenerAccessGranted(component);
     }
 }

@@ -40,6 +40,7 @@ This is the main application component. It is a foreground service with the `med
 Responsibilities:
 
 - Create the low-importance ongoing notification.
+- Require notification access before creating the foreground notification or accepting timer actions.
 - Expose notification actions for setting duration and disabling the timer.
 - Parse and validate the inline notification reply.
 - Store timer configuration and active state in `SharedPreferences`.
@@ -105,6 +106,8 @@ In-memory state in `SleepTimerService`:
 - `lastObservedVolume`: music volume from the previous input poll.
 - `lastObservedMediaActive`: playback state from the previous input poll.
 
+Notification access is checked by `MainActivity` before starting `SleepTimerService`. The launcher opens Android's notification-listener settings when access is missing. The service repeats the check as a guard for boot or stale start requests.
+
 ## Runtime flows
 
 ### Initial launch
@@ -113,7 +116,8 @@ In-memory state in `SleepTimerService`:
 2. The activity requests notification permission on Android 13+ if needed.
 3. The activity starts `SleepTimerService` as a foreground service.
 4. The service creates the notification channel and ongoing notification.
-5. The service loads persisted state and restarts the timer if `active` is true and the duration is valid.
+5. The service loads persisted state and duration before rendering the notification.
+6. The service restarts the timer if `active` is true and the duration is valid.
 
 ### Set duration
 
@@ -124,6 +128,8 @@ In-memory state in `SleepTimerService`:
 5. Values from `1` through `1440` are accepted.
 6. The duration is persisted, `active` is set to true, and a full countdown starts.
 7. Invalid or empty input updates the notification with the accepted range.
+
+The notification always provides only the duration reply action. Its title and text distinguish `Timer waiting`, `Sleep timer`, and `Fading volume`, and include the configured duration.
 
 When the duration action is shown, the saved duration is provided as the notification reply choice and action label. Android exposes this as an editable suggestion; the user can replace it before sending.
 
@@ -155,13 +161,11 @@ When the duration action is shown, the saved duration is provided as the notific
 
 The per-step check handles volume changes during the fade immediately; the one-minute poll remains responsible for changes outside the fade.
 
-### Disable
+### Inactive waiting state
 
-1. The user taps `Turn off`.
-2. Pending expiry, notification, and fade callbacks are cancelled.
-3. The active preference is set to false.
-4. Current volume and media playback are left unchanged.
-5. The notification remains ongoing and offers duration entry again.
+1. Expiry marks the timer inactive after pausing media.
+2. The notification remains ongoing and reports that it is waiting for playback or a volume change.
+3. The configured duration remains visible and is available through the single duration reply action.
 
 ### Reboot
 
