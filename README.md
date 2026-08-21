@@ -26,7 +26,10 @@ The volume fades out over 15 seconds. All active media playback is then paused, 
 
 Auto Sleep Droid remembers whether the timer was on or off. If it was on, the timer starts again from the full configured duration. If it was off, it remains off.
 
-For the complete product specification, see [SPEC.md](SPEC.md).
+## Project documentation
+
+- [SPEC.md](SPEC.md): product requirements and acceptance criteria.
+- [IMPLEMENTATION.md](IMPLEMENTATION.md): architecture, runtime flows, persistence, permissions, build/release details, and guidance for future developers and AI agents.
 
 ## Building
 
