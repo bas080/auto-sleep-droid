@@ -27,7 +27,7 @@ The current volume fades down to halfway to zero over 15 seconds. All active med
 
 ## After a reboot
 
-Auto Sleep Droid remembers whether the timer was on or off. If it was on, the timer starts again from the full configured duration. If it was off, it remains off.
+Auto Sleep Droid keeps your configured duration across reboots. If a countdown was active, it starts again from the full configured duration. Otherwise, the notification returns to its waiting state and starts a new countdown when media plays or the volume changes.
 
 ## Project documentation
 

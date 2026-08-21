@@ -52,12 +52,13 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 
 ## Reboot behavior
 
-- Persist whether the timer was active or inactive.
-- Restore that active/inactive state after reboot.
-- If the timer was active before reboot, reset it to the original configured duration.
-- If the timer was inactive before reboot, leave it inactive.
+## Reboot behavior
 
-## Acceptance criteria
+- Persist the configured duration across reboots.
+- If a countdown was active before reboot, start again from the full configured duration.
+- If the timer was waiting before reboot, restore the waiting state and start a countdown when polling detects playback or a volume change.
+
+Reboot preserves the configured duration; an active countdown starts again at its full duration, while a waiting timer resumes automatic playback and volume detection.
 
 - The complete user workflow is possible from the notification bar and system volume buttons only.
 - No custom app screen is required for setup or operation.

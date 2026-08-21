@@ -87,13 +87,13 @@ State is stored in the `sleep_timer` `SharedPreferences` file:
 
 | Key | Type | Meaning |
 |---|---|---|
-| `active` | boolean | Whether the timer should be active after service restart or reboot |
+`active` | boolean | Whether a countdown was active when the service last persisted state |
 | `duration_minutes` | integer | The configured duration used for every reset |
-
+The remaining countdown is not persisted. On reboot or service recreation, an active countdown starts from the stored configured duration. An inactive timer is restored as the automatic waiting state; there is no user-controlled off mode.
 The remaining countdown is not persisted. On reboot or service recreation, an active timer starts from the stored configured duration.
-
-When `duration_minutes` is absent, `SleepTimerService` uses the 20-minute default. A valid user reply replaces and persists this value.
-
+3. The service loads `active` and `duration_minutes` from preferences.
+4. An active countdown starts at the full configured duration.
+5. An inactive timer returns to the waiting state and starts automatically when polling detects playback or a volume change.
 In-memory state in `SleepTimerService`:
 
 - `active`: timer is counting down.
