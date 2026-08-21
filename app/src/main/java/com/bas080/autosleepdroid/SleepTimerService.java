@@ -50,6 +50,7 @@ public class SleepTimerService extends Service {
     private boolean fading;
     private boolean suppressVolumeReset;
     private int fadeStep;
+    private int lastFadeVolume;
     private int lastObservedVolume;
     private boolean lastObservedMediaActive;
 
@@ -170,12 +171,19 @@ public class SleepTimerService extends Service {
         }
         fading = true;
         volumeBeforeFade = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        lastFadeVolume = volumeBeforeFade;
         fadeStep = 0;
         fadeRunnable = this::runFadeStep;
         handler.post(fadeRunnable);
     }
 
     private void runFadeStep() {
+        int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        if (currentVolume != lastFadeVolume) {
+            cancelFadeForVolumeChange();
+            return;
+        }
+
         fadeStep++;
         int targetVolume = volumeBeforeFade / 2;
         int nextVolume = Math.round(volumeBeforeFade
@@ -183,6 +191,7 @@ public class SleepTimerService extends Service {
         suppressVolumeReset = true;
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, nextVolume, 0);
         suppressVolumeReset = false;
+        lastFadeVolume = nextVolume;
 
         if (fadeStep >= 15) {
             finishExpiry();
@@ -201,6 +210,16 @@ public class SleepTimerService extends Service {
         preferences.edit().putBoolean(KEY_ACTIVE, false).apply();
         cancelTimerCallbacks();
         updateNotification("Media paused. Timer is off.");
+    }
+
+    private void cancelFadeForVolumeChange() {
+        fading = false;
+        cancelTimerCallbacks();
+        if (isValidDuration(configuredDurationMinutes)) {
+            startTimer(configuredDurationMinutes);
+        } else {
+            updateNotification();
+        }
     }
 
     private void cancelTimerCallbacks() {

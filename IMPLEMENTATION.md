@@ -144,12 +144,14 @@ When the duration action is shown, the saved duration is provided as the notific
 1. The expiry callback calls `beginFadeOut()`.
 2. The service captures the current music stream volume as `volumeBeforeFade`.
 3. Fifteen fade steps run at approximately one-second intervals.
-4. Each step interpolates from `volumeBeforeFade` to `volumeBeforeFade / 2` while `suppressVolumeReset` is true. The first step cannot increase the volume.
-5. After the final step, all active media sessions are sent `pause()`.
-6. The captured pre-fade volume is restored.
-7. The timer is marked inactive and the notification reports that media was paused.
+4. Before each step, the service compares the current music volume with `lastFadeVolume`. A mismatch means the user changed the volume.
+5. On a user volume change, the fade callbacks are cancelled, the old volume is not restored, and the timer restarts at the configured duration.
+6. Otherwise, each step interpolates from `volumeBeforeFade` to `volumeBeforeFade / 2` while `suppressVolumeReset` is true. The first step cannot increase the volume.
+7. After the final step, all active media sessions are sent `pause()`.
+8. The captured pre-fade volume is restored.
+9. The timer is marked inactive and the notification reports that media was paused.
 
-If the user changes the volume during the fade, polling may detect the change too late to cancel the 15-second fade. This is an intentional tradeoff of the polling experiment.
+The per-step check handles volume changes during the fade immediately; the one-minute poll remains responsible for changes outside the fade.
 
 ### Disable
 
@@ -207,7 +209,7 @@ The GitHub Actions workflow in `.github/workflows/android-release.yml`:
 - There are no automated unit or instrumentation tests yet.
 - This environment has no attached emulator or physical Android device, so runtime notification and media-session behavior needs device testing.
 - Android lint may require a JDK version supported by the installed Android lint tooling.
-- Input polling runs once per minute, so volume changes and playback starts may take up to one minute to be detected. A change during the 15-second fade may not cancel the fade in time.
+- Input polling runs once per minute, so volume changes and playback starts outside the fade may take up to one minute to be detected.
 - The fade target is integer music-stream volume, so rounding can make adjacent fade steps equal on devices with a small volume range. The final restore still uses the captured pre-fade volume.
 - Notification access is required to pause all active media apps. Without it, the timer can still fade and restore volume, but media pausing may fail.
 - The service returns `START_STICKY`, but Android battery-management policies can still stop or delay background work. Long-duration timer behavior should be tested on target devices.
