@@ -14,10 +14,10 @@ The duration can be between 1 minute and 24 hours. The default duration is 20 mi
 ## System states
 
 - **Permissions Pending:** Initial state when setup is required. Tap the notification to open System Settings and grant notification access.
-- **Off:** The sleep timer is disabled ("Sleep timer is off."). Media continues playing and volume remains unchanged. Tap "Set Timer" to enable and configure a duration.
-- **Waiting:** Duration is configured ("Waiting for media playback..."). Sits passively listening for playback.
-- **Active:** Triggered when media playback starts ("Timer running."). Counts down from the configured duration.
-- **Fading:** Timer reaches zero ("Fading volume..."). Fades volume halfway over 15 seconds, pauses media, restores pre-fade volume, and reverts to Waiting.
+- **Off:** The sleep timer is disabled ("Sleep timer is off"). Media continues playing and volume remains unchanged. Tap "Set Timer" to enable and configure a duration.
+- **Waiting:** Duration is configured ("Waiting for media playback"). Sits passively listening for playback.
+- **Active:** Triggered when media playback starts ("Timer running"). Counts down from the configured duration.
+- **Fading:** Timer reaches zero ("Fading volume"). Fades volume halfway over 15 seconds, pauses media, restores pre-fade volume, and reverts to Waiting.
 
 ## During the timer
 

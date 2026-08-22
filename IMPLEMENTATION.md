@@ -19,7 +19,12 @@ The app is a notification-only Android sleep timer. There is no custom settings 
 │       │   ├── MainActivity.java
 │       │   ├── MediaSessionAccessService.java
 │       │   └── SleepTimerService.java
-│       └── res/values/styles.xml
+│       └── res/
+│           ├── values/
+│           │   ├── strings.xml
+│           │   └── styles.xml
+│           └── values-es/
+│               └── strings.xml
 ├── .github/workflows/android-release.yml
 ├── README.md
 ├── SPEC.md
@@ -115,7 +120,7 @@ In-memory state in `SleepTimerService`:
 2. The activity requests notification permission (`POST_NOTIFICATIONS`) on Android 13+ if needed.
 3. Once notification permission is granted (or immediately on Android < 33), the activity starts `SleepTimerService` as a foreground service.
 4. The service checks for notification listener access (`hasNotificationAccess()`).
-5. If missing, the service immediately displays a `Permissions Pending` notification ("Setup required: Tap to grant permissions."). Tapping it opens Android notification listener settings.
+5. If missing, the service immediately displays a `Permissions Pending` notification ("Setup required Tap to grant permissions"). Tapping it opens Android notification listener settings.
 6. Upon granting permissions, the service transitions to the `Waiting` state using the default or saved duration.
 
 ### Set Timer action
@@ -133,7 +138,7 @@ In-memory state in `SleepTimerService`:
 2. Any active countdown or fade callbacks are cancelled.
 3. `enabled` is set to false and persisted in `SharedPreferences`.
 4. Current volume and media playback remain unchanged.
-5. The notification updates to the `Off` state ("Sleep timer is off.").
+5. The notification updates to the `Off` state ("Sleep timer is off").
 
 ### Volume reset & Media playback start
 
