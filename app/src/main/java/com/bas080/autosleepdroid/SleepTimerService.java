@@ -59,12 +59,14 @@ public class SleepTimerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        EventLogger.log(this, "SleepTimerService created");
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
         createNotificationChannel();
 
         if (!hasNotificationAccess()) {
             wasPermissionsPending = true;
+            EventLogger.log(this, "Notification access pending");
             startForeground(NOTIFICATION_ID, buildPermissionsPendingNotification());
             scheduleInputPoll();
             return;
@@ -86,6 +88,8 @@ public class SleepTimerService extends Service {
         }
         enabled = preferences.getBoolean(KEY_ENABLED, true);
 
+        EventLogger.log(this, "SleepTimerService state initialized (enabled: " + enabled + ", duration: " + configuredDurationMinutes + "m)");
+
         startForeground(NOTIFICATION_ID, buildNotification());
 
         if (enabled && audioManager != null && audioManager.isMusicActive()) {
@@ -99,6 +103,9 @@ public class SleepTimerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        String action = intent != null ? intent.getAction() : "null";
+        EventLogger.log(this, "SleepTimerService onStartCommand (action: " + action + ")");
+
         if (!hasNotificationAccess()) {
             wasPermissionsPending = true;
             startForeground(NOTIFICATION_ID, buildPermissionsPendingNotification());
@@ -121,6 +128,7 @@ public class SleepTimerService extends Service {
     }
 
     private void handleTurnOff() {
+        EventLogger.log(this, "Timer turned off");
         enabled = false;
         active = false;
         fading = false;
@@ -149,6 +157,8 @@ public class SleepTimerService extends Service {
             configuredDurationMinutes = DEFAULT_DURATION_MINUTES;
         }
 
+        EventLogger.log(this, "Duration reply received: '" + reply + "' -> configured duration = " + configuredDurationMinutes + "m");
+
         enabled = true;
         preferences.edit()
                 .putInt(KEY_DURATION_MINUTES, configuredDurationMinutes)
@@ -175,6 +185,7 @@ public class SleepTimerService extends Service {
         active = true;
         fading = false;
         timerEndsAt = System.currentTimeMillis() + durationMinutes * 60_000L;
+        EventLogger.log(this, "Timer started for " + durationMinutes + "m");
         preferences.edit().putBoolean(KEY_ENABLED, true).apply();
         scheduleExpiry();
         updateNotification();
@@ -182,6 +193,7 @@ public class SleepTimerService extends Service {
 
     private void resetTimerForVolumeChange() {
         if (!fading && isValidDuration(configuredDurationMinutes)) {
+            EventLogger.log(this, "Timer reset due to volume change");
             startTimer(configuredDurationMinutes);
         }
     }
@@ -216,6 +228,7 @@ public class SleepTimerService extends Service {
         volumeBeforeFade = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
         lastFadeVolume = volumeBeforeFade;
         fadeStep = 0;
+        EventLogger.log(this, "Fade-out started (volume before fade: " + volumeBeforeFade + ")");
         updateNotification();
         fadeRunnable = this::runFadeStep;
         handler.post(fadeRunnable);
@@ -241,6 +254,8 @@ public class SleepTimerService extends Service {
         suppressVolumeReset = false;
         lastFadeVolume = nextVolume;
 
+        EventLogger.log(this, "Fade step " + fadeStep + "/15 (volume: " + nextVolume + ")");
+
         if (fadeStep >= 15) {
             finishExpiry();
         } else {
@@ -249,6 +264,7 @@ public class SleepTimerService extends Service {
     }
 
     private void finishExpiry() {
+        EventLogger.log(this, "Timer expired: pausing media and restoring volume to " + volumeBeforeFade);
         MediaSessionAccessService.pauseAll(this);
         if (audioManager != null) {
             lastObservedMediaActive = audioManager.isMusicActive();
@@ -265,6 +281,7 @@ public class SleepTimerService extends Service {
     }
 
     private void cancelFadeForVolumeChange() {
+        EventLogger.log(this, "Fade cancelled due to volume change");
         fading = false;
         cancelTimerCallbacks();
         if (isValidDuration(configuredDurationMinutes)) {
@@ -313,7 +330,16 @@ public class SleepTimerService extends Service {
         int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         boolean mediaActive = audioManager.isMusicActive();
         boolean volumeChanged = currentVolume != lastObservedVolume;
+        boolean playbackStateChanged = mediaActive != lastObservedMediaActive;
         boolean playbackStopped = !mediaActive && lastObservedMediaActive;
+
+        if (volumeChanged) {
+            EventLogger.log(this, "Volume changed: " + lastObservedVolume + " -> " + currentVolume);
+        }
+        if (playbackStateChanged) {
+            EventLogger.log(this, "Media playback state changed: active = " + mediaActive);
+        }
+
         lastObservedVolume = currentVolume;
         lastObservedMediaActive = mediaActive;
 
@@ -325,6 +351,7 @@ public class SleepTimerService extends Service {
             } else if (!active && !fading && mediaActive) {
                 startTimerFromConfiguredDuration();
             } else if (active && playbackStopped) {
+                EventLogger.log(this, "Playback stopped while timer was active");
                 active = false;
                 cancelTimerCallbacks();
                 updateNotification();
@@ -460,6 +487,7 @@ public class SleepTimerService extends Service {
 
     @Override
     public void onDestroy() {
+        EventLogger.log(this, "SleepTimerService destroyed");
         if (inputPollRunnable != null) {
             handler.removeCallbacks(inputPollRunnable);
         }
