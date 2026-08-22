@@ -38,6 +38,7 @@ public class MainActivity extends Activity {
     }
 
     private void startOrRequestNotificationPermission() {
+        startTimerService();
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -47,7 +48,7 @@ public class MainActivity extends Activity {
             return;
         }
         if (hasNotificationAccess()) {
-            startTimerService();
+            finish();
         } else if (!accessSettingsOpened) {
             accessSettingsOpened = true;
             startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
@@ -69,7 +70,6 @@ public class MainActivity extends Activity {
         } else {
             startService(serviceIntent);
         }
-        finish();
     }
 
     private boolean hasNotificationAccess() {
