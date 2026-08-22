@@ -53,6 +53,17 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             accessSettingsOpened = false;
             startTimerService();
         }
+        redrawNotification();
+    }
+
+    private void redrawNotification() {
+        Intent serviceIntent = new Intent(this, SleepTimerService.class);
+        serviceIntent.setAction(SleepTimerService.ACTION_REDRAW_NOTIFICATION);
+        if (Build.VERSION.SDK_INT >= 26) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
     }
 
     @Override

@@ -136,4 +136,20 @@ public class SleepTimerServiceTest {
         assertEquals(20, preferences.getInt("duration_minutes", -1));
         assertTrue(preferences.getBoolean("active", false));
     }
+
+    @Test
+    public void testRedrawNotificationAction() {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        Intent redrawIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_REDRAW_NOTIFICATION);
+
+        service.onStartCommand(redrawIntent, 0, 1);
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+        assertNotNull(shadowNotificationManager.getNotification(1001));
+    }
 }

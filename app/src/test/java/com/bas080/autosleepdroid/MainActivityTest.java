@@ -15,9 +15,11 @@ import org.robolectric.Shadows;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import org.robolectric.shadows.ShadowApplication;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = {34})
@@ -70,5 +72,30 @@ public class MainActivityTest {
         MainActivity activity = controller.create().get();
         controller.newIntent(new Intent(ApplicationProvider.getApplicationContext(), MainActivity.class));
         assertNotNull(activity);
+    }
+
+    @Test
+    public void testOnResumeStartsRedrawServiceIntent() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        controller.create();
+
+        Application app = ApplicationProvider.getApplicationContext();
+        ShadowApplication shadowApp = Shadows.shadowOf(app);
+
+        // Consume service intents queued during onCreate
+        while (shadowApp.getNextStartedService() != null) {}
+
+        controller.resume();
+
+        boolean foundRedrawIntent = false;
+        Intent intent;
+        while ((intent = shadowApp.getNextStartedService()) != null) {
+            if (SleepTimerService.ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())
+                    && SleepTimerService.class.getName().equals(intent.getComponent().getClassName())) {
+                foundRedrawIntent = true;
+                break;
+            }
+        }
+        assertTrue("Expected ACTION_REDRAW_NOTIFICATION intent when MainActivity is resumed", foundRedrawIntent);
     }
 }
