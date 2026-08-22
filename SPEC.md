@@ -13,7 +13,7 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 ## Notification states and content
 - Permissions Pending: 
   - Text: "Setup required: Tap to grant permissions."
-  - Action: Tapping the notification directs the user to the necessary Android Settings pages.
+  - Action: Tapping the notification directs the user to the Android Settings page for media control / notification listener permissions.
   - Buttons: None (relies on notification tap).
 - Off: 
   - Text: "Sleep timer is off."
@@ -34,7 +34,7 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 ## User interface
 - Use notification buttons for sleep-timer controls (including the "Set Timer" inline reply available in all states except Permissions Pending, and the "Turn Off" button available when the timer is not already stopped/Off).
 - Use notifications for timer state and feedback.
-- Tapping/clicking the notification body expands or collapses the notification in all states except Permissions Pending (where tapping directs the user to grant permissions).
+- Tapping/clicking the notification body expands or collapses the notification in all states except Permissions Pending (where notification listener access / media controls permission has not been granted and tapping directs the user to system settings).
 - Keep the notification ongoing so the user cannot dismiss it.
 - Enter the duration through a minimal inline notification reply using Android's native text input mechanism.
 - When permissions are missing, display a preliminary notification that invites the user to click it to start the permission granting process.
