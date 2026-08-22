@@ -11,21 +11,23 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Icon;
 import android.media.AudioManager;
-import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.provider.Settings;
+import android.text.InputType;
 import android.text.TextUtils;
 
 import java.util.Locale;
 
 public class SleepTimerService extends Service {
     public static final String ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION";
+    public static final String ACTION_TURN_OFF = "com.bas080.autosleepdroid.TURN_OFF";
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
     private static final String CHANNEL_ID = "sleep_timer";
     private static final int NOTIFICATION_ID = 1001;
     private static final String PREFERENCES = "sleep_timer";
-    private static final String KEY_ACTIVE = "active";
+    private static final String KEY_ENABLED = "active";
     private static final String KEY_DURATION_MINUTES = "duration_minutes";
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long FADE_DURATION_MS = 15_000L;
@@ -44,6 +46,7 @@ public class SleepTimerService extends Service {
     private long timerEndsAt;
     private int configuredDurationMinutes;
     private int volumeBeforeFade;
+    private boolean enabled;
     private boolean active;
     private boolean fading;
     private boolean suppressVolumeReset;
@@ -51,70 +54,114 @@ public class SleepTimerService extends Service {
     private int lastFadeVolume;
     private int lastObservedVolume;
     private boolean lastObservedMediaActive;
+    private boolean wasPermissionsPending;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        if (!hasNotificationAccess()) {
-            stopSelf();
-            return;
-        }
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
         createNotificationChannel();
-        lastObservedVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+
+        if (!hasNotificationAccess()) {
+            wasPermissionsPending = true;
+            startForeground(NOTIFICATION_ID, buildPermissionsPendingNotification());
+            scheduleInputPoll();
+            return;
+        }
+
+        initializeStateAndNotification();
+    }
+
+    private void initializeStateAndNotification() {
+        if (audioManager != null) {
+            lastObservedVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        }
         lastObservedMediaActive = false;
         scheduleInputPoll();
-        configuredDurationMinutes = preferences.getInt(
-            KEY_DURATION_MINUTES, DEFAULT_DURATION_MINUTES);
-        active = preferences.getBoolean(KEY_ACTIVE, false);
+
+        configuredDurationMinutes = preferences.getInt(KEY_DURATION_MINUTES, DEFAULT_DURATION_MINUTES);
+        if (!isValidDuration(configuredDurationMinutes)) {
+            configuredDurationMinutes = DEFAULT_DURATION_MINUTES;
+        }
+        enabled = preferences.getBoolean(KEY_ENABLED, true);
+
         startForeground(NOTIFICATION_ID, buildNotification());
-        if (active && isValidDuration(configuredDurationMinutes)) {
+
+        if (enabled && audioManager != null && audioManager.isMusicActive()) {
             startTimer(configuredDurationMinutes);
         } else {
             active = false;
+            fading = false;
             updateNotification();
         }
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (audioManager == null || !hasNotificationAccess()) {
-            return START_NOT_STICKY;
+        if (!hasNotificationAccess()) {
+            startForeground(NOTIFICATION_ID, buildPermissionsPendingNotification());
+            return START_STICKY;
         }
-        if (intent != null && ACTION_SET_DURATION.equals(intent.getAction())) {
-            handleDurationReply(intent);
+
+        if (wasPermissionsPending) {
+            wasPermissionsPending = false;
+            initializeStateAndNotification();
+        }
+
+        if (intent != null) {
+            if (ACTION_TURN_OFF.equals(intent.getAction())) {
+                handleTurnOff();
+            } else if (ACTION_SET_DURATION.equals(intent.getAction())) {
+                handleDurationReply(intent);
+            }
         }
         return START_STICKY;
+    }
+
+    private void handleTurnOff() {
+        enabled = false;
+        active = false;
+        fading = false;
+        cancelTimerCallbacks();
+        preferences.edit().putBoolean(KEY_ENABLED, false).apply();
+        updateNotification();
     }
 
     private void handleDurationReply(Intent intent) {
         CharSequence reply = RemoteInput.getResultsFromIntent(intent) == null
                 ? null
                 : RemoteInput.getResultsFromIntent(intent).getCharSequence(REMOTE_INPUT_KEY);
-        if (TextUtils.isEmpty(reply)) {
-            updateNotification();
-            return;
+
+        int duration = -1;
+        if (!TextUtils.isEmpty(reply)) {
+            try {
+                duration = Integer.parseInt(reply.toString().trim());
+            } catch (NumberFormatException ignored) {
+                duration = -1;
+            }
         }
 
-        int duration;
-        try {
-            duration = Integer.parseInt(reply.toString().trim());
-        } catch (NumberFormatException exception) {
-            updateNotification("Enter a duration from 1 to 1440 minutes.");
-            return;
+        if (isValidDuration(duration)) {
+            configuredDurationMinutes = duration;
+        } else if (!isValidDuration(configuredDurationMinutes)) {
+            configuredDurationMinutes = DEFAULT_DURATION_MINUTES;
         }
 
-        if (!isValidDuration(duration)) {
-            updateNotification("Enter a duration from 1 to 1440 minutes.");
-            return;
-        }
-        configuredDurationMinutes = duration;
+        enabled = true;
         preferences.edit()
                 .putInt(KEY_DURATION_MINUTES, configuredDurationMinutes)
-                .putBoolean(KEY_ACTIVE, true)
+                .putBoolean(KEY_ENABLED, true)
                 .apply();
-        startTimer(configuredDurationMinutes);
+
+        if (audioManager != null && audioManager.isMusicActive()) {
+            startTimer(configuredDurationMinutes);
+        } else {
+            active = false;
+            fading = false;
+            cancelTimerCallbacks();
+            updateNotification();
+        }
     }
 
     private boolean isValidDuration(int minutes) {
@@ -123,10 +170,11 @@ public class SleepTimerService extends Service {
 
     private void startTimer(int durationMinutes) {
         cancelTimerCallbacks();
+        enabled = true;
         active = true;
         fading = false;
         timerEndsAt = System.currentTimeMillis() + durationMinutes * 60_000L;
-        preferences.edit().putBoolean(KEY_ACTIVE, true).apply();
+        preferences.edit().putBoolean(KEY_ENABLED, true).apply();
         scheduleExpiry();
         updateNotification();
     }
@@ -160,11 +208,11 @@ public class SleepTimerService extends Service {
     }
 
     private void beginFadeOut() {
-        if (!active || fading) {
+        if (!enabled || !active || fading) {
             return;
         }
         fading = true;
-        volumeBeforeFade = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        volumeBeforeFade = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
         lastFadeVolume = volumeBeforeFade;
         fadeStep = 0;
         fadeRunnable = this::runFadeStep;
@@ -172,6 +220,10 @@ public class SleepTimerService extends Service {
     }
 
     private void runFadeStep() {
+        if (audioManager == null) {
+            finishExpiry();
+            return;
+        }
         int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         if (currentVolume != lastFadeVolume) {
             cancelFadeForVolumeChange();
@@ -181,7 +233,7 @@ public class SleepTimerService extends Service {
         fadeStep++;
         int targetVolume = volumeBeforeFade / 2;
         int nextVolume = Math.round(volumeBeforeFade
-            - (volumeBeforeFade - targetVolume) * fadeStep / 15f);
+                - (volumeBeforeFade - targetVolume) * fadeStep / 15f);
         suppressVolumeReset = true;
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, nextVolume, 0);
         suppressVolumeReset = false;
@@ -196,15 +248,18 @@ public class SleepTimerService extends Service {
 
     private void finishExpiry() {
         MediaSessionAccessService.pauseAll(this);
-        lastObservedMediaActive = audioManager.isMusicActive();
-        suppressVolumeReset = true;
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeBeforeFade, 0);
-        suppressVolumeReset = false;
+        if (audioManager != null) {
+            lastObservedMediaActive = audioManager.isMusicActive();
+            suppressVolumeReset = true;
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeBeforeFade, 0);
+            suppressVolumeReset = false;
+        }
         active = false;
         fading = false;
-        preferences.edit().putBoolean(KEY_ACTIVE, false).apply();
+        enabled = true;
+        preferences.edit().putBoolean(KEY_ENABLED, true).apply();
         cancelTimerCallbacks();
-        updateNotification("Waiting for playback or a volume change.");
+        updateNotification();
     }
 
     private void cancelFadeForVolumeChange() {
@@ -230,6 +285,9 @@ public class SleepTimerService extends Service {
     }
 
     private void scheduleInputPoll() {
+        if (inputPollRunnable != null) {
+            handler.removeCallbacks(inputPollRunnable);
+        }
         inputPollRunnable = () -> {
             pollInputs();
             scheduleInputPoll();
@@ -238,42 +296,77 @@ public class SleepTimerService extends Service {
     }
 
     private void pollInputs() {
+        if (!hasNotificationAccess()) {
+            return;
+        }
+        if (wasPermissionsPending) {
+            wasPermissionsPending = false;
+            initializeStateAndNotification();
+            return;
+        }
+        if (audioManager == null) {
+            return;
+        }
+
         int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         boolean mediaActive = audioManager.isMusicActive();
         boolean volumeChanged = currentVolume != lastObservedVolume;
         boolean playbackStarted = mediaActive && !lastObservedMediaActive;
+        boolean playbackStopped = !mediaActive && lastObservedMediaActive;
         lastObservedVolume = currentVolume;
         lastObservedMediaActive = mediaActive;
 
-        if (volumeChanged && !suppressVolumeReset) {
-            resetTimerForVolumeChange();
+        if (enabled) {
+            if (fading && volumeChanged) {
+                cancelFadeForVolumeChange();
+            } else if (active && volumeChanged && !suppressVolumeReset) {
+                resetTimerForVolumeChange();
+            } else if (playbackStarted) {
+                startTimerFromConfiguredDuration();
+            } else if (active && playbackStopped) {
+                active = false;
+                cancelTimerCallbacks();
+                updateNotification();
+            }
         }
-        if (playbackStarted) {
-            startTimerFromConfiguredDuration();
-        }
+    }
+
+    private Notification buildPermissionsPendingNotification() {
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setContentTitle("Auto Sleep Droid")
+                .setContentText("Setup required: Tap to grant permissions.")
+                .setCategory(Notification.CATEGORY_SERVICE)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setShowWhen(false)
+                .setContentIntent(permissionsSettingsIntent());
+        return builder.build();
     }
 
     private Notification buildNotification() {
-        return buildNotification(null);
-    }
+        if (!hasNotificationAccess()) {
+            return buildPermissionsPendingNotification();
+        }
 
-    private Notification buildNotification(String statusOverride) {
         String configuredDuration = configuredDurationMinutes + "m configured";
         String title;
         String text;
-        if (statusOverride != null) {
-            title = "Sleep timer: " + configuredDuration;
-            text = statusOverride;
+
+        if (!enabled) {
+            title = "Sleep timer is off.";
+            text = "Sleep timer is off.";
         } else if (fading) {
-            title = "Fading volume: " + configuredDuration;
-            text = "Change the volume to cancel and restart the timer.";
+            title = "Fading volume...";
+            text = "Fading volume... (" + configuredDuration + ")";
         } else if (active) {
-            title = "Sleep timer: " + formatRemaining();
-            text = "Watching for playback or volume changes.";
+            title = "Timer running.";
+            text = formatRemaining() + " remaining (" + configuredDuration + ")";
         } else {
-            title = "Timer waiting: " + configuredDuration;
-            text = "Starts when media plays or the volume changes.";
+            title = "Waiting for media playback...";
+            text = "Waiting for media playback... (" + configuredDuration + ")";
         }
+
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(title)
@@ -284,16 +377,31 @@ public class SleepTimerService extends Service {
                 .setShowWhen(false)
                 .setContentIntent(contentIntent());
 
-        String duration = String.valueOf(configuredDurationMinutes);
+        String durationStr = String.valueOf(configuredDurationMinutes);
         RemoteInput remoteInput = new RemoteInput.Builder(REMOTE_INPUT_KEY)
-            .setLabel("Minutes (currently " + duration + ")")
-            .setChoices(new CharSequence[]{duration})
-            .build();
-        Notification.Action action = new Notification.Action.Builder(
-            Icon.createWithResource(this, android.R.drawable.ic_input_add),
-            "Set duration (" + duration + "m)",
-            durationIntent()).addRemoteInput(remoteInput).build();
-        builder.addAction(action);
+                .setLabel("Minutes (" + durationStr + "m)")
+                .setChoices(new CharSequence[]{durationStr})
+                .build();
+        remoteInput.getExtras().putInt("android.intent.extra.inputType", InputType.TYPE_CLASS_NUMBER);
+        remoteInput.getExtras().putInt("inputType", InputType.TYPE_CLASS_NUMBER);
+
+        Notification.Action setTimerAction = new Notification.Action.Builder(
+                Icon.createWithResource(this, android.R.drawable.ic_input_add),
+                "Set Timer",
+                durationIntent())
+                .addRemoteInput(remoteInput)
+                .build();
+        builder.addAction(setTimerAction);
+
+        if (enabled) {
+            Notification.Action turnOffAction = new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                    "Turn Off",
+                    turnOffIntent())
+                    .build();
+            builder.addAction(turnOffAction);
+        }
+
         return builder.build();
     }
 
@@ -304,12 +412,10 @@ public class SleepTimerService extends Service {
     }
 
     private void updateNotification() {
-        updateNotification(null);
-    }
-
-    private void updateNotification(String status) {
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        manager.notify(NOTIFICATION_ID, buildNotification(status));
+        if (manager != null) {
+            manager.notify(NOTIFICATION_ID, buildNotification());
+        }
     }
 
     private PendingIntent durationIntent() {
@@ -318,9 +424,21 @@ public class SleepTimerService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
     }
 
+    private PendingIntent turnOffIntent() {
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_TURN_OFF);
+        return PendingIntent.getService(this, 5, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
     private PendingIntent contentIntent() {
         Intent intent = new Intent(this, MainActivity.class);
         return PendingIntent.getActivity(this, 4, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private PendingIntent permissionsSettingsIntent() {
+        Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+        return PendingIntent.getActivity(this, 6, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
@@ -330,17 +448,19 @@ public class SleepTimerService extends Service {
         long hours = totalMinutes / 60L;
         long minutes = totalMinutes % 60L;
         if (hours > 0L) {
-            return String.format(Locale.US, "%dh %02dm remaining", hours, minutes);
+            return String.format(Locale.US, "%dh %02dm", hours, minutes);
         }
-        return String.format(Locale.US, "%dm remaining", minutes);
+        return String.format(Locale.US, "%dm", minutes);
     }
 
     private void createNotificationChannel() {
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID, "Sleep timer", NotificationManager.IMPORTANCE_LOW);
-        channel.setDescription("Auto Sleep Droid timer status and controls");
-        manager.createNotificationChannel(channel);
+        if (manager != null) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID, "Sleep timer", NotificationManager.IMPORTANCE_LOW);
+            channel.setDescription("Auto Sleep Droid timer status and controls");
+            manager.createNotificationChannel(channel);
+        }
     }
 
     @Override

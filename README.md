@@ -4,30 +4,34 @@ Auto Sleep Droid is a simple Android sleep timer for media playback. It works en
 
 ## How to use it
 
-1. Launch Auto Sleep Droid and grant notification access when Android opens Settings.
+1. Launch Auto Sleep Droid and grant notification access when prompted or by tapping the "Setup required" notification.
 2. Open the Auto Sleep Droid notification.
-3. Enter or change the duration in minutes using the inline notification reply.
-4. Leave the notification active while you listen.
+3. Enter or change the duration in minutes using the **"Set Timer"** inline reply (a numeric keypad is automatically presented).
+4. Tap **"Turn Off"** at any time to disable the timer.
 
-The duration can be between 1 minute and 24 hours. The default duration is 20 minutes. The notification reply suggests the default or your last configured duration, which you can change before submitting. Notification access is required before the timer can operate, because it is used to pause active media at expiry. The notification stays visible and cannot be dismissed.
+The duration can be between 1 minute and 24 hours. The default duration is 20 minutes. The notification reply suggests the default or your last configured duration. If an invalid duration is entered, the app gracefully falls back to the last valid or default duration. Notification access is required before the timer can control playback and pause media at expiry. The notification stays visible and cannot be dismissed.
 
-Notification access is requested through Android Settings before the timer notification is created. It is required to pause all active media apps when the timer expires. The app does not show a custom settings screen.
+## System states
+
+- **Permissions Pending:** Initial state when setup is required. Tap the notification to open System Settings and grant notification access.
+- **Off:** The sleep timer is disabled ("Sleep timer is off."). Media continues playing and volume remains unchanged. Tap "Set Timer" to enable and configure a duration.
+- **Waiting:** Duration is configured ("Waiting for media playback..."). Sits passively listening for playback.
+- **Active:** Triggered when media playback starts ("Timer running."). Counts down from the configured duration.
+- **Fading:** Timer reaches zero ("Fading volume..."). Fades volume halfway over 15 seconds, pauses media, restores pre-fade volume, and reverts to Waiting.
 
 ## During the timer
 
-- Press volume up or volume down as usual. The volume changes normally, and the timer starts over at the original duration.
-- Once a duration has been configured, changing the volume while the timer is off starts the timer automatically. The polling implementation checks for this once per minute.
-- Starting media playback also starts the timer automatically. Playback state is checked once per minute.
-- If you change the volume while the fade-out is running, the fade-out is cancelled, your new volume is kept, and the timer starts over.
-- After expiry, the notification says the timer is waiting and shows the configured duration. It starts again when media plays or the volume changes.
+- Press volume up or volume down as usual. The volume changes normally, and an active or fading timer resets to the full configured duration.
+- Starting media playback automatically transitions the timer from Waiting to Active.
+- Tap **"Turn Off"** to disable the timer without changing volume or pausing playback.
 
 ## When time runs out
 
-The current volume fades down to halfway to zero over 15 seconds. All active media playback is then paused, and the volume is restored to the level it had before the fade-out began.
+The current volume fades down to halfway to zero over 15 seconds. All active media playback is then paused, volume is restored to pre-fade level, and the timer returns to the Waiting state.
 
 ## After a reboot
 
-Auto Sleep Droid remembers whether the timer was on or off. If it was on, the timer starts again from the full configured duration. If it was off, it remains off.
+Auto Sleep Droid remembers whether the timer was running (Waiting, Active, Fading) vs explicitly Off. If it was running, it restores to the Waiting state with the configured duration. If it was Off, it remains Off.
 
 ## Project documentation
 
@@ -36,7 +40,7 @@ Auto Sleep Droid remembers whether the timer was on or off. If it was on, the ti
 
 ## Building
 
-Open this project in Android Studio with an Android SDK installed, then build the `app` module. From a terminal with `ANDROID_HOME` or `ANDROID_SDK_ROOT` configured, run:
+From a terminal with `ANDROID_HOME` or `ANDROID_SDK_ROOT` configured, run:
 
 ```sh
 ./gradlew assembleDebug
@@ -46,16 +50,8 @@ Open this project in Android Studio with an Android SDK installed, then build th
 
 ### Prerequisites
 
-- Android Studio or a JDK 17+ installation.
+- JDK 17+ installation.
 - Android SDK Platform 35 and Build Tools 35.0.0.
-- An Android device or emulator running Android 8.0 (API 26) or newer for manual testing.
-- Enable USB debugging when testing on a physical device.
-
-If the SDK is not discovered automatically, create a local, untracked `local.properties` file with:
-
-```properties
-sdk.dir=/path/to/android-sdk
-```
 
 ### Common commands
 
@@ -71,15 +67,3 @@ sdk.dir=/path/to/android-sdk
 ```
 
 The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
-
-### Runtime setup
-
-After installation, launch the app once. Grant notification permission and notification access when Android asks; both are required before the timer notification and timer controls become available.
-
-The app intentionally has no custom settings or timer screen. Changes to timer behavior belong in `SleepTimerService`, reboot restoration belongs in `BootReceiver`, and media-session control belongs in `MediaSessionAccessService`.
-
-### Testing notes
-
-Manual testing requires a connected Android device or emulator because the development container does not provide one. Verify notification permission, notification access, duration validation, volume-button resets, 15-second fade-out, media pause, volume restoration, timer disable behavior, and reboot persistence.
-
-The debug build is the primary automated validation command. Android lint may require a JDK version supported by the installed Android lint tooling.
