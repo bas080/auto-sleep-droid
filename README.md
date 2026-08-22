@@ -74,3 +74,24 @@ From a terminal with `ANDROID_HOME` or `ANDROID_SDK_ROOT` configured, run:
 ```
 
 The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
+
+### Creating a new release
+
+To publish a new release of the app, run the release script with the target version name:
+
+```sh
+./scripts/release.sh 0.2
+```
+
+The script automatically:
+1. Increments `versionCode` in `app/build.gradle` and updates `versionName`.
+2. Commits the changes and creates a Git tag `v0.2`.
+
+After running the script, push the commit and tag to trigger the automated GitHub Actions release build:
+
+```sh
+git push origin master
+git push origin v0.2
+```
+
+Pushing a tag matching `v*` triggers the automated GitHub Actions release workflow (`.github/workflows/android-release.yml`), which runs unit tests, builds the versioned APK, and creates a new GitHub Release. Release notes and changelogs are published automatically on the [GitHub Releases](https://github.com/bas080/auto-sleep-droid/releases) page.

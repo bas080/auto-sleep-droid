@@ -1,1 +1,0 @@
-Initial release of Auto Sleep Droid sleep timer.
