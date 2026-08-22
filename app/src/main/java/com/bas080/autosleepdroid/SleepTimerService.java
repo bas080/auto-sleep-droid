@@ -380,7 +380,6 @@ public class SleepTimerService extends Service {
         String durationStr = String.valueOf(configuredDurationMinutes);
         RemoteInput remoteInput = new RemoteInput.Builder(REMOTE_INPUT_KEY)
                 .setLabel("Minutes (" + durationStr + "m)")
-                .setChoices(new CharSequence[]{durationStr})
                 .build();
         remoteInput.getExtras().putInt("android.intent.extra.inputType", InputType.TYPE_CLASS_NUMBER);
         remoteInput.getExtras().putInt("inputType", InputType.TYPE_CLASS_NUMBER);
