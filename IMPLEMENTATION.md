@@ -111,10 +111,10 @@ In-memory state in `SleepTimerService`:
 ### Initial launch & Permissions Pending
 
 1. Android launches `MainActivity`.
-2. The activity requests notification permission on Android 13+ if needed.
-3. The activity starts `SleepTimerService` as a foreground service.
+2. The activity requests notification permission (`POST_NOTIFICATIONS`) on Android 13+ if needed.
+3. Once notification permission is granted (or immediately on Android < 33), the activity starts `SleepTimerService` as a foreground service.
 4. The service checks for notification listener access (`hasNotificationAccess()`).
-5. If missing, the service shows a `Permissions Pending` notification ("Setup required: Tap to grant permissions."). Tapping it opens Android notification listener settings.
+5. If missing, the service immediately displays a `Permissions Pending` notification ("Setup required: Tap to grant permissions."). Tapping it opens Android notification listener settings.
 6. Upon granting permissions, the service transitions to the `Waiting` state using the default or saved duration.
 
 ### Set Timer action
@@ -139,7 +139,7 @@ In-memory state in `SleepTimerService`:
 1. Android changes music stream volume normally or playback starts.
 2. The one-minute input poll compares volume and playback status with previous samples.
 3. If enabled and active, a volume change resets the countdown to `configuredDurationMinutes`.
-4. If enabled and waiting, media playback starting transitions the timer to `Active`.
+4. If enabled and waiting, active media playback (`isMusicActive()`) transitions the timer to `Active`.
 5. If in `Fading` state, a volume change cancels the fade, preserves the new volume, and resets the timer to `Active`.
 
 ### Expiry
