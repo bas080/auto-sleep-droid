@@ -32,6 +32,7 @@ public class SleepTimerService extends Service {
     private static final String KEY_DURATION_MINUTES = "duration_minutes";
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long FADE_DURATION_MS = 30_000L;
+    private static final long PAUSE_RESET_DELAY_MS = 500L;
     private static final int DEFAULT_DURATION_MINUTES = 20;
     private static final long INPUT_POLL_INTERVAL_MS = 60_000L;
     private static final int MINUTES_MIN = 1;
@@ -44,6 +45,7 @@ public class SleepTimerService extends Service {
     private Runnable notificationRunnable;
     private Runnable fadeRunnable;
     private Runnable inputPollRunnable;
+    private Runnable restoreVolumeRunnable;
     private long timerEndsAt;
     private int configuredDurationMinutes;
     private int volumeBeforeFade;
@@ -250,8 +252,10 @@ public class SleepTimerService extends Service {
 
         fadeStep++;
         int targetVolume = volumeBeforeFade / 2;
+        float progress = (float) fadeStep / 15f;
+        float fraction = 1.0f - (1.0f - progress) * (1.0f - progress);
         int nextVolume = Math.round(volumeBeforeFade
-                - (volumeBeforeFade - targetVolume) * fadeStep / 15f);
+                - (volumeBeforeFade - targetVolume) * fraction);
         suppressVolumeReset = true;
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, nextVolume, 0);
         suppressVolumeReset = false;
@@ -267,20 +271,26 @@ public class SleepTimerService extends Service {
     }
 
     private void finishExpiry() {
-        EventLogger.log(this, "Timer expired: pausing media and restoring volume to " + volumeBeforeFade);
+        EventLogger.log(this, "Timer expired: pausing media");
         MediaSessionAccessService.pauseAll(this);
-        if (audioManager != null) {
-            lastObservedMediaActive = audioManager.isMusicActive();
-            suppressVolumeReset = true;
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeBeforeFade, 0);
-            suppressVolumeReset = false;
-        }
-        active = false;
-        fading = false;
-        enabled = true;
-        preferences.edit().putBoolean(KEY_ENABLED, true).apply();
-        cancelTimerCallbacks();
-        updateNotification();
+
+        restoreVolumeRunnable = () -> {
+            EventLogger.log(this, "Restoring volume to " + volumeBeforeFade);
+            if (audioManager != null) {
+                lastObservedMediaActive = audioManager.isMusicActive();
+                suppressVolumeReset = true;
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeBeforeFade, 0);
+                suppressVolumeReset = false;
+                lastObservedVolume = volumeBeforeFade;
+            }
+            active = false;
+            fading = false;
+            enabled = true;
+            preferences.edit().putBoolean(KEY_ENABLED, true).apply();
+            cancelTimerCallbacks();
+            updateNotification();
+        };
+        handler.postDelayed(restoreVolumeRunnable, PAUSE_RESET_DELAY_MS);
     }
 
     private void cancelFadeForVolumeChange() {
@@ -303,6 +313,9 @@ public class SleepTimerService extends Service {
         }
         if (fadeRunnable != null) {
             handler.removeCallbacks(fadeRunnable);
+        }
+        if (restoreVolumeRunnable != null) {
+            handler.removeCallbacks(restoreVolumeRunnable);
         }
     }
 
