@@ -1,13 +1,14 @@
 # auto-sleep-droid
 
-Auto Sleep Droid is a simple Android sleep timer for media playback. It works entirely from the notification shade and has no separate app screen.
+Auto Sleep Droid is a simple Android sleep timer for media playback. It is controlled from the notification shade, and the main app screen displays a live list of events (one per line) for debugging purposes.
 
 ## How to use it
 
 1. Launch Auto Sleep Droid and grant notification access when prompted or by tapping the "Setup required" notification.
-2. Open the Auto Sleep Droid notification.
-3. Enter or change the duration in minutes using the **"Set Timer"** inline reply (a numeric keypad is automatically presented).
-4. Tap **"Turn Off"** at any time to disable the timer.
+2. Open the main app screen to view a real-time event log for debugging.
+3. Open the Auto Sleep Droid notification to set or control the timer.
+4. Enter or change the duration in minutes using the **"Set Timer"** inline reply (a numeric keypad is automatically presented).
+5. Tap **"Turn Off"** at any time to disable the timer.
 
 The duration can be between 1 minute and 24 hours. The default duration is 20 minutes. The notification reply suggests the default or your last configured duration. If an invalid duration is entered, the app gracefully falls back to the last valid or default duration. Notification access is required before the timer can control playback and pause media at expiry. The notification stays visible and cannot be dismissed.
 
@@ -32,6 +33,10 @@ The current volume fades down to halfway to zero over 15 seconds. All active med
 ## After a reboot
 
 Auto Sleep Droid remembers whether the timer was running (Waiting, Active, Fading) vs explicitly Off. If it was running, it restores to the Waiting state with the configured duration. If it was Off, it remains Off.
+
+## Event log UI
+
+The main activity UI prints a list of timestamped application events (one per line) for debugging. Recorded events include activity and service lifecycle transitions, timer configuration and state changes, volume and playback status updates, and boot events.
 
 ## Issues
 
