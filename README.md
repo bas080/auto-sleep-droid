@@ -33,6 +33,10 @@ The current volume fades down to halfway to zero over 15 seconds. All active med
 
 Auto Sleep Droid remembers whether the timer was running (Waiting, Active, Fading) vs explicitly Off. If it was running, it restores to the Waiting state with the configured duration. If it was Off, it remains Off.
 
+## Issues
+
+You can report new bugs, request features, or find existing open issues on the project's [GitHub Issues](https://github.com/bas080/auto-sleep-droid/issues) page.
+
 ## Project documentation
 
 - [SPEC.md](SPEC.md): product requirements and acceptance criteria.
