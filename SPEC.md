@@ -8,7 +8,7 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 - Off: The timer is manually disabled. Media continues playing normally, and the current volume remains entirely unchanged.
 - Waiting: A duration is configured. The app sits passively and listens for active media playback.
 - Active: Triggered by media playback, the timer actively counts down from the configured duration.
-- Fading: The timer reaches zero, initiating a 30-second volume fade. Completing this fade pauses media and returns the app back to the Waiting state.
+- Fading: The timer reaches zero, initiating a 30-second volume fade along a curve that starts steep and flattens out. Completing this fade pauses media, restores pre-fade volume, and returns the app back to the Waiting state.
 
 ## Notification states and content
 - Permissions Pending: 
@@ -59,7 +59,7 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 - When enabled, count down from the configured duration.
 - When volume-up or volume-down is pressed: allow the system volume to change and reset the timer to the original configured duration.
 - If volume-up or volume-down is pressed during fade-out: cancel the fade-out, keep the new user-selected volume unchanged, and reset the timer.
-- When the timer expires: fade halfway to zero over 30 seconds, pause all active media apps, restore the pre-fade volume, and return immediately to the Waiting state.
+- When the timer expires: fade halfway to zero over 30 seconds (starting fast and slowing down along a curve), pause all active media apps, restore the pre-fade volume after pausing media, and return to the Waiting state.
 - When the timer is turned off: leave the current volume unchanged and allow media to continue playing.
 - The notification provides duration input and turn-off actions; timer state is controlled automatically by playback, volume button resets, expiry, and duration replies.
 
@@ -72,7 +72,7 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 - The main activity prints a list of events, one per line, for debugging.
 - The complete timer workflow is possible from the notification bar and system volume buttons.
 - Volume-up and volume-down both reset an active timer while preserving their normal volume behavior.
-- Expiration pauses active media after a 30-second fade-out, restores pre-fade volume, and successfully reverts to the Waiting state.
+- Expiration pauses active media after a 30-second fade-out, restores pre-fade volume after pausing media, and successfully reverts to the Waiting state.
 - Disabling the timer does not pause media or change the current volume.
 - Invalid inline reply inputs gracefully default to the last valid or default duration.
 - Post-reboot behavior respects the last saved state (preserving Off status or returning running timers to Waiting).

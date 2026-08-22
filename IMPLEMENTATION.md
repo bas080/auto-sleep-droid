@@ -56,9 +56,8 @@ Responsibilities:
 - Schedule timer expiry and notification refresh callbacks on the main looper.
 - Poll the music volume and playback state once per minute.
 - Transition from `Waiting` to `Active` when polling detects active music playback or volume changes while enabled.
-- Fade music volume from the captured current level to half that level over 30 seconds upon expiry.
-- Restore the volume captured before fading.
-- Ask `MediaSessionAccessService` to pause active media sessions and revert to the `Waiting` state.
+- Fade music volume from the captured current level to half that level over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
+- Ask `MediaSessionAccessService` to pause active media sessions, restore pre-fade volume after media is paused, and revert to the `Waiting` state.
 - Log lifecycle and state events to `EventLogger`.
 
 Important constants:
@@ -124,7 +123,8 @@ In-memory state in `SleepTimerService`:
 - `configuredDurationMinutes`: reset duration.
 - `volumeBeforeFade`: music stream volume captured at fade start.
 - `suppressVolumeReset`: prevents app-generated volume writes from restarting the timer.
-- `fadeStep`: current one-second fade step.
+- `fadeStep`: current fade step (15 steps across 30 seconds).
+- `restoreVolumeRunnable`: delayed runnable executing 500ms after pause to restore pre-fade volume.
 - `lastObservedVolume`: music volume from the previous input poll.
 - `lastObservedMediaActive`: playback state from the previous input poll.
 
@@ -172,9 +172,9 @@ In-memory state in `SleepTimerService`:
 
 1. The expiry callback calls `beginFadeOut()`.
 2. The service captures current music stream volume as `volumeBeforeFade`.
-3. Fifteen fade steps run at 1-second intervals.
+3. Fifteen fade steps run at 2-second intervals using an ease-out quadratic curve.
 4. User volume changes during fade cancel the fade and restart the timer.
-5. After the final step, active media sessions are paused (`MediaSessionAccessService.pauseAll()`), pre-fade volume is restored, and the timer returns to `Waiting`.
+5. After the final step, active media sessions are paused (`MediaSessionAccessService.pauseAll()`), pre-fade volume is restored after a short delay (500ms) to allow media to pause silently, and the timer returns to `Waiting`.
 6. Expiry and fade steps are logged to `EventLogger`.
 
 ### Reboot
