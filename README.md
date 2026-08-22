@@ -77,11 +77,35 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ### Creating a new release
 
-To publish a new release of the app:
+To publish a new release of the app, you can use the automated release script or follow the manual release steps below.
+
+#### Option A: Using the release script (Automated)
+
+Run the included release script with the target version name and an optional release message:
+
+```sh
+./scripts/release.sh 1.0.1 "Bug fixes and performance improvements"
+```
+
+The script automatically:
+1. Increments `versionCode` in `app/build.gradle` and updates `versionName`.
+2. Generates the Fastlane changelog files for `en-US` and `es-ES`.
+3. Commits the changes and creates a Git tag `v1.0.1`.
+
+After running the script, push the commit and tag to trigger the automated GitHub Actions release build:
+
+```sh
+git push origin master
+git push origin v1.0.1
+```
+
+#### Option B: Manual release
+
+If you prefer to release manually:
 
 1. **Update version information:**
    - In `app/build.gradle`, increment `versionCode` (integer) and update `versionName` (e.g., `"1.0.1"`).
-   - Update changelog files under `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt` (e.g., `1.txt`, `2.txt`) if applicable.
+   - Create changelog files under `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` and `fastlane/metadata/android/es-ES/changelogs/<versionCode>.txt`.
 
 2. **Commit and push changes:**
    ```sh
@@ -96,4 +120,4 @@ To publish a new release of the app:
    git push origin v1.0.1
    ```
 
-Pushing a tag matching `v*` triggers the automated GitHub Actions release workflow (`.github/workflows/android-release.yml`), which builds the APK, runs unit tests, and creates a new GitHub Release with the versioned APK attached.
+Pushing a tag matching `v*` triggers the automated GitHub Actions release workflow (`.github/workflows/android-release.yml`), which runs unit tests, builds the versioned APK, and creates a new GitHub Release.
