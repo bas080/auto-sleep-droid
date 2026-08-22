@@ -30,7 +30,7 @@ public class SleepTimerService extends Service {
     private static final String KEY_ENABLED = "active";
     private static final String KEY_DURATION_MINUTES = "duration_minutes";
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
-    private static final long FADE_DURATION_MS = 15_000L;
+    private static final long FADE_DURATION_MS = 30_000L;
     private static final int DEFAULT_DURATION_MINUTES = 20;
     private static final long INPUT_POLL_INTERVAL_MS = 60_000L;
     private static final int MINUTES_MIN = 1;
