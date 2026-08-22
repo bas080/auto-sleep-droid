@@ -53,6 +53,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          git tag -f latest "${GITHUB_SHA}"
+          git push origin refs/tags/latest --force
+
           if gh release view latest >/dev/null 2>&1; then
             gh release edit latest --target "${GITHUB_SHA}"
             gh release upload latest auto-sleep-droid-latest.apk --clobber
