@@ -32,6 +32,7 @@ public class SleepTimerService extends Service {
     private static final String KEY_DURATION_MINUTES = "duration_minutes";
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long FADE_DURATION_MS = 30_000L;
+    private static final int TOTAL_FADE_STEPS = 30;
     private static final long PAUSE_RESET_DELAY_MS = 500L;
     private static final int DEFAULT_DURATION_MINUTES = 20;
     private static final long INPUT_POLL_INTERVAL_MS = 60_000L;
@@ -252,7 +253,7 @@ public class SleepTimerService extends Service {
 
         fadeStep++;
         int targetVolume = volumeBeforeFade / 2;
-        float progress = (float) fadeStep / 15f;
+        float progress = (float) fadeStep / TOTAL_FADE_STEPS;
         float fraction = 1.0f - (1.0f - progress) * (1.0f - progress);
         int nextVolume = Math.round(volumeBeforeFade
                 - (volumeBeforeFade - targetVolume) * fraction);
@@ -261,12 +262,12 @@ public class SleepTimerService extends Service {
         suppressVolumeReset = false;
         lastFadeVolume = nextVolume;
 
-        EventLogger.log(this, "Fade step " + fadeStep + "/15 (volume: " + nextVolume + ")");
+        EventLogger.log(this, "Fade step " + fadeStep + "/" + TOTAL_FADE_STEPS + " (volume: " + nextVolume + ")");
 
-        if (fadeStep >= 15) {
+        if (fadeStep >= TOTAL_FADE_STEPS) {
             finishExpiry();
         } else {
-            handler.postDelayed(fadeRunnable, FADE_DURATION_MS / 15L);
+            handler.postDelayed(fadeRunnable, FADE_DURATION_MS / TOTAL_FADE_STEPS);
         }
     }
 

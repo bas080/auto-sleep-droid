@@ -123,7 +123,7 @@ In-memory state in `SleepTimerService`:
 - `configuredDurationMinutes`: reset duration.
 - `volumeBeforeFade`: music stream volume captured at fade start.
 - `suppressVolumeReset`: prevents app-generated volume writes from restarting the timer.
-- `fadeStep`: current fade step (15 steps across 30 seconds).
+- `fadeStep`: current fade step (30 steps across 30 seconds).
 - `restoreVolumeRunnable`: delayed runnable executing 500ms after pause to restore pre-fade volume.
 - `lastObservedVolume`: music volume from the previous input poll.
 - `lastObservedMediaActive`: playback state from the previous input poll.
@@ -172,7 +172,7 @@ In-memory state in `SleepTimerService`:
 
 1. The expiry callback calls `beginFadeOut()`.
 2. The service captures current music stream volume as `volumeBeforeFade`.
-3. Fifteen fade steps run at 2-second intervals using an ease-out quadratic curve.
+3. Thirty fade steps run at 1-second intervals using an ease-out quadratic curve.
 4. User volume changes during fade cancel the fade and restart the timer.
 5. After the final step, active media sessions are paused (`MediaSessionAccessService.pauseAll()`), pre-fade volume is restored after a short delay (500ms) to allow media to pause silently, and the timer returns to `Waiting`.
 6. Expiry and fade steps are logged to `EventLogger`.
