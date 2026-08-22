@@ -1,0 +1,10 @@
+Auto Sleep Droid is a simple Android sleep timer for media playback.
+
+It works entirely from the notification shade and requires no separate app screen.
+
+Features:
+- Controlled entirely via ongoing notifications.
+- Volume-button press resets active countdown.
+- Fades volume before pausing media playback.
+- Automatically listens for media playback.
+- Open source with no trackers or analytics.
