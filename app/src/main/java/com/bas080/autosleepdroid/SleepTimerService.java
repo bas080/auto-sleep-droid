@@ -312,7 +312,6 @@ public class SleepTimerService extends Service {
         int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         boolean mediaActive = audioManager.isMusicActive();
         boolean volumeChanged = currentVolume != lastObservedVolume;
-        boolean playbackStarted = mediaActive && !lastObservedMediaActive;
         boolean playbackStopped = !mediaActive && lastObservedMediaActive;
         lastObservedVolume = currentVolume;
         lastObservedMediaActive = mediaActive;
@@ -322,7 +321,7 @@ public class SleepTimerService extends Service {
                 cancelFadeForVolumeChange();
             } else if (active && volumeChanged && !suppressVolumeReset) {
                 resetTimerForVolumeChange();
-            } else if (playbackStarted) {
+            } else if (!active && !fading && mediaActive) {
                 startTimerFromConfiguredDuration();
             } else if (active && playbackStopped) {
                 active = false;
