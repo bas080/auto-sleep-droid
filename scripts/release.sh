@@ -8,11 +8,6 @@ if [ -z "$1" ]; then
 fi
 
 VERSION_NAME="$1"
-
-# Ensure we are at repo root
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$REPO_ROOT"
-
 BUILD_GRADLE="app/build.gradle"
 
 if [ ! -f "$BUILD_GRADLE" ]; then

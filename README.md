@@ -95,12 +95,3 @@ git push origin v0.2
 ```
 
 Pushing a tag matching `v*` triggers the automated GitHub Actions release workflow (`.github/workflows/android-release.yml`), which runs unit tests, builds the versioned APK, and creates a new GitHub Release. Release notes and changelogs are published automatically on the [GitHub Releases](https://github.com/bas080/auto-sleep-droid/releases) page.
-
-### F-Droid metadata & Links
-
-F-Droid metadata (including links for Changelog, Source Code, Issues, and License) is configured in `.fdroid.yml` at the repository root and via Fastlane metadata under `fastlane/metadata/android/`:
-
-- **Changelog**: Points directly to GitHub Releases (`https://github.com/bas080/auto-sleep-droid/releases`)
-- **Source Code**: Points to the repository (`https://github.com/bas080/auto-sleep-droid`)
-- **Issue Tracker**: Points to GitHub Issues (`https://github.com/bas080/auto-sleep-droid/issues`)
-- **License**: MIT
