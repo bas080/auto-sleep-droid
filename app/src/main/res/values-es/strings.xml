@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Auto Sleep Droid</string>
+    <string name="media_control_service_label">Control de medios de Auto Sleep Droid</string>
+    <string name="notification_channel_name">Temporizador de apagado</string>
+    <string name="notification_channel_description">Estado y controles del temporizador de Auto Sleep Droid</string>
+    <string name="setup_required">Configuración requerida: toca para conceder permisos.</string>
+    <string name="timer_off">El temporizador de apagado está desactivado.</string>
+    <string name="fading_title">Atenuando volumen...</string>
+    <string name="fading_text">Atenuando volumen... (%1$s)</string>
+    <string name="active_title">Temporizador en ejecución.</string>
+    <string name="active_text">%1$s restantes (%2$s)</string>
+    <string name="waiting_title">Esperando reproducción de medios...</string>
+    <string name="waiting_text">Esperando reproducción de medios... (%1$s)</string>
+    <string name="configured_duration">%1$dm configurado</string>
+    <string name="set_timer_input_label">Minutos (%1$sm)</string>
+    <string name="action_set_timer">Configurar temporizador</string>
+    <string name="action_turn_off">Desactivar</string>
+    <string name="time_format_hours_minutes">%1$dh %2$02dm</string>
+    <string name="time_format_minutes">%1$dm</string>
+</resources>
