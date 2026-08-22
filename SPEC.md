@@ -1,7 +1,7 @@
 # Auto Sleep Droid Specification
 
 ## Product goal
-Provide an Android sleep timer controlled entirely from the notification bar. The app must not require a standalone user interface.
+Provide an Android sleep timer controlled from the notification bar. The main UI displays a live event log (one line per event) for debugging.
 
 ## System states
 - Permissions Pending: The initial state upon first launch or if permissions are revoked. A notification invites the user to tap it to grant the required system permissions.
@@ -32,6 +32,7 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
   - Buttons: "Set Timer" (Inline reply to change duration) and "Turn Off" (Cancels the fade, disables timer, and transitions to Off state).
 
 ## User interface
+- Display a line-by-line list of timestamped events in the main UI for debugging purposes.
 - Use notification buttons for sleep-timer controls (including the "Set Timer" inline reply available in all states except Permissions Pending, and the "Turn Off" button available when the timer is not already stopped/Off).
 - Use notifications for timer state and feedback.
 - Tapping/clicking the notification body expands or collapses the notification in all states except Permissions Pending (where notification listener access / media controls permission has not been granted and tapping directs the user to system settings).
@@ -68,8 +69,8 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 - If the app was explicitly in the **Off** state prior to reboot, keep it in the **Off** state.
 
 ## Acceptance criteria
-- The complete user workflow is possible from the notification bar and system volume buttons only.
-- No custom app screen is required for setup or operation.
+- The main activity prints a list of events, one per line, for debugging.
+- The complete timer workflow is possible from the notification bar and system volume buttons.
 - Volume-up and volume-down both reset an active timer while preserving their normal volume behavior.
 - Expiration pauses active media after a 30-second fade-out, restores pre-fade volume, and successfully reverts to the Waiting state.
 - Disabling the timer does not pause media or change the current volume.

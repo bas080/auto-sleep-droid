@@ -4,7 +4,7 @@
 
 This document describes the implementation that currently exists in the repository. Use it as the code-oriented source of truth when modifying the app.
 
-The app is a notification-only Android sleep timer. There is no custom settings screen or timer screen.
+The app is an Android sleep timer controlled from the notification shade. The main activity UI prints a list of debug events, one per line.
 
 ## Project structure
 
@@ -16,10 +16,13 @@ The app is a notification-only Android sleep timer. There is no custom settings 
 │       ├── AndroidManifest.xml
 │       ├── java/com/bas080/autosleepdroid/
 │       │   ├── BootReceiver.java
+│       │   ├── EventLogger.java
 │       │   ├── MainActivity.java
 │       │   ├── MediaSessionAccessService.java
 │       │   └── SleepTimerService.java
 │       └── res/
+│           ├── layout/
+│           │   └── activity_main.xml
 │           ├── values/
 │           │   ├── strings.xml
 │           │   └── styles.xml
@@ -56,6 +59,7 @@ Responsibilities:
 - Fade music volume from the captured current level to half that level over 30 seconds upon expiry.
 - Restore the volume captured before fading.
 - Ask `MediaSessionAccessService` to pause active media sessions and revert to the `Waiting` state.
+- Log lifecycle and state events to `EventLogger`.
 
 Important constants:
 
@@ -69,31 +73,43 @@ Important constants:
 
 File: `app/src/main/java/com/bas080/autosleepdroid/MainActivity.java`
 
-The launcher activity exists only to start the foreground service and request `POST_NOTIFICATIONS` on Android 13 and newer. It finishes immediately and does not render a layout.
+The launcher activity starts `SleepTimerService`, requests `POST_NOTIFICATIONS` on Android 13+, and displays a real-time event log UI (`activity_main.xml` with `ScrollView` and monospace `TextView`). It listens to `EventLogger` for live log updates and scrolls to the newest line.
+
+### `EventLogger`
+
+File: `app/src/main/java/com/bas080/autosleepdroid/EventLogger.java`
+
+Centralized logging utility that formats event lines with timestamps (`yyyy-MM-dd HH:mm:ss - <message>`). Keeps logs bounded up to 500 lines in memory and `SharedPreferences`, notifying UI listeners of new events.
 
 ### `BootReceiver`
 
 File: `app/src/main/java/com/bas080/autosleepdroid/BootReceiver.java`
 
-Receives `BOOT_COMPLETED` and starts the foreground service. `SleepTimerService` then reads persisted state. If previously in an enabled/running state (`Waiting`, `Active`, `Fading`), it restores to the `Waiting` state using the configured duration; if explicitly in `Off` state, it remains `Off`.
+Receives `BOOT_COMPLETED`, logs the reboot event, and starts the foreground service. `SleepTimerService` then reads persisted state. If previously in an enabled/running state (`Waiting`, `Active`, `Fading`), it restores to the `Waiting` state using the configured duration; if explicitly in `Off` state, it remains `Off`.
 
 ### `MediaSessionAccessService`
 
 File: `app/src/main/java/com/bas080/autosleepdroid/MediaSessionAccessService.java`
 
-Extends `NotificationListenerService` to provide the notification-access component required by `MediaSessionManager`. `pauseAll()` sends `pause()` to every active session. Automatic start detection is handled by `SleepTimerService` polling instead of this service.
+Extends `NotificationListenerService` to provide the notification-access component required by `MediaSessionManager`. `pauseAll()` sends `pause()` to every active session. Logs pause operations and active session counts to `EventLogger`. Automatic start detection is handled by `SleepTimerService` polling instead of this service.
 
 Android notification access must be granted by the user. The service catches `SecurityException` when access has not been granted.
 
 
 ## State and persistence
 
-State is stored in the `sleep_timer` `SharedPreferences` file:
+Timer state is stored in the `sleep_timer` `SharedPreferences` file:
 
 | Key | Type | Meaning |
 |---|---|---|
 | `active` | boolean | Whether the timer is enabled (`Waiting`/`Active`/`Fading`) vs explicitly `Off` |
 | `duration_minutes` | integer | The configured duration used for every reset |
+
+Event log history is stored in the `event_logger` `SharedPreferences` file:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `logs` | string | Newline-separated event log entries (capped at 500 lines) |
 
 The remaining countdown is not persisted. On reboot or service recreation, an enabled timer restores to the `Waiting` state (or starts counting down if media is currently playing) using the stored configured duration.
 
@@ -117,11 +133,12 @@ In-memory state in `SleepTimerService`:
 ### Initial launch & Permissions Pending
 
 1. Android launches `MainActivity`.
-2. The activity requests notification permission (`POST_NOTIFICATIONS`) on Android 13+ if needed.
-3. Once notification permission is granted (or immediately on Android < 33), the activity starts `SleepTimerService` as a foreground service.
-4. The service checks for notification listener access (`hasNotificationAccess()`).
-5. If missing, the service immediately displays a `Permissions Pending` notification ("Setup required Tap to grant permissions"). Tapping it opens Android notification listener settings.
-6. Upon granting permissions, the service transitions to the `Waiting` state using the default or saved duration.
+2. `MainActivity` displays the event log UI and logs its creation.
+3. The activity requests notification permission (`POST_NOTIFICATIONS`) on Android 13+ if needed.
+4. Once notification permission is granted (or immediately on Android < 33), the activity starts `SleepTimerService` as a foreground service.
+5. The service checks for notification listener access (`hasNotificationAccess()`).
+6. If missing, the service immediately displays a `Permissions Pending` notification ("Setup required Tap to grant permissions"). Tapping it opens Android notification listener settings.
+7. Upon granting permissions, the service transitions to the `Waiting` state using the default or saved duration.
 
 ### Set Timer action
 
@@ -131,6 +148,7 @@ In-memory state in `SleepTimerService`:
 4. If valid (integer 1 through 1440), the duration is persisted and `enabled` is set to true.
 5. If invalid or empty, the duration falls back safely to the previously configured duration or the 20-minute default, and `enabled` is set to true.
 6. If media is currently active, the timer transitions to `Active` and starts counting down; otherwise, it enters `Waiting`.
+7. `EventLogger` logs the configuration action.
 
 ### Turn Off action
 
@@ -139,6 +157,7 @@ In-memory state in `SleepTimerService`:
 3. `enabled` is set to false and persisted in `SharedPreferences`.
 4. Current volume and media playback remain unchanged.
 5. The notification updates to the `Off` state ("Sleep timer is off").
+6. `EventLogger` logs the turn off action.
 
 ### Volume reset & Media playback start
 
@@ -147,6 +166,7 @@ In-memory state in `SleepTimerService`:
 3. If enabled and active, a volume change resets the countdown to `configuredDurationMinutes`.
 4. If enabled and waiting, active media playback (`isMusicActive()`) transitions the timer to `Active`.
 5. If in `Fading` state, a volume change cancels the fade, preserves the new volume, and resets the timer to `Active`.
+6. Changes in volume or media playback state are logged to `EventLogger`.
 
 ### Expiry
 
@@ -155,11 +175,12 @@ In-memory state in `SleepTimerService`:
 3. Fifteen fade steps run at 1-second intervals.
 4. User volume changes during fade cancel the fade and restart the timer.
 5. After the final step, active media sessions are paused (`MediaSessionAccessService.pauseAll()`), pre-fade volume is restored, and the timer returns to `Waiting`.
+6. Expiry and fade steps are logged to `EventLogger`.
 
 ### Reboot
 
 1. Android sends `BOOT_COMPLETED`.
-2. `BootReceiver` starts `SleepTimerService`.
+2. `BootReceiver` logs the boot event and starts `SleepTimerService`.
 3. The service loads `active` (`enabled`) and `duration_minutes` from preferences.
 4. If `enabled` was true, the timer restores to `Waiting` state (or `Active` if media is playing).
 5. If explicitly `Off`, the timer remains `Off`.
@@ -201,7 +222,7 @@ The APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Change guidance for AI agents
 
-- Preserve the notification-only UX; do not add a custom app screen unless the product specification changes.
+- Preserve the event log UI in `MainActivity` and `EventLogger`.
 - Keep `configuredDurationMinutes` as the source for timer resets after volume changes and reboot.
 - Do not treat app-generated fade/restore volume writes as user volume changes; keep `suppressVolumeReset` around those writes.
 - Update `SPEC.md` when product behavior changes and update this file when architecture or runtime behavior changes.
