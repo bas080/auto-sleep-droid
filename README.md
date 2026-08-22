@@ -77,11 +77,7 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ### Creating a new release
 
-To publish a new release of the app, you can use the automated release script or follow the manual release steps below.
-
-#### Option A: Using the release script (Automated)
-
-Run the included release script with the target version name:
+To publish a new release of the app, run the release script with the target version name:
 
 ```sh
 ./scripts/release.sh 0.2
@@ -98,29 +94,7 @@ git push origin master
 git push origin v0.2
 ```
 
-All release notes and changelogs are published automatically on the [GitHub Releases](https://github.com/bas080/auto-sleep-droid/releases) page.
-
-#### Option B: Manual release
-
-If you prefer to release manually:
-
-1. **Update version information:**
-   - In `app/build.gradle`, increment `versionCode` (integer) and update `versionName` (e.g., `"0.2"`).
-
-2. **Commit and push changes:**
-   ```sh
-   git add app/build.gradle
-   git commit -m "Bump version to 0.2"
-   git push origin master
-   ```
-
-3. **Tag the release and push the tag:**
-   ```sh
-   git tag v0.2
-   git push origin v0.2
-   ```
-
-Pushing a tag matching `v*` triggers the automated GitHub Actions release workflow (`.github/workflows/android-release.yml`), which runs unit tests, builds the versioned APK, and creates a new GitHub Release.
+Pushing a tag matching `v*` triggers the automated GitHub Actions release workflow (`.github/workflows/android-release.yml`), which runs unit tests, builds the versioned APK, and creates a new GitHub Release. Release notes and changelogs are published automatically on the [GitHub Releases](https://github.com/bas080/auto-sleep-droid/releases) page.
 
 ### F-Droid metadata & Links
 
