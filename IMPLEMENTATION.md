@@ -47,7 +47,7 @@ Responsibilities:
 - Schedule timer expiry and notification refresh callbacks on the main looper.
 - Poll the music volume and playback state once per minute.
 - Transition from `Waiting` to `Active` when polling detects active music playback or volume changes while enabled.
-- Fade music volume from the captured current level to half that level over 30 seconds upon expiry.
+- Fade music volume from the captured current level to half that level over 15 seconds upon expiry.
 - Restore the volume captured before fading.
 - Ask `MediaSessionAccessService` to pause active media sessions and revert to the `Waiting` state.
 
@@ -57,7 +57,7 @@ Important constants:
 - Notification ID: `1001`
 - Minimum duration: `1` minute
 - Maximum duration: `1440` minutes (24 hours)
-- Fade duration: `30_000` milliseconds
+- Fade duration: `15_000` milliseconds
 
 ### `MainActivity`
 

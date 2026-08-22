@@ -30,7 +30,7 @@ public class SleepTimerService extends Service {
     private static final String KEY_ENABLED = "active";
     private static final String KEY_DURATION_MINUTES = "duration_minutes";
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
-    private static final long FADE_DURATION_MS = 30_000L;
+    private static final long FADE_DURATION_MS = 15_000L;
     private static final int DEFAULT_DURATION_MINUTES = 20;
     private static final long INPUT_POLL_INTERVAL_MS = 60_000L;
     private static final int MINUTES_MIN = 1;
@@ -100,6 +100,7 @@ public class SleepTimerService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (!hasNotificationAccess()) {
+            wasPermissionsPending = true;
             startForeground(NOTIFICATION_ID, buildPermissionsPendingNotification());
             return START_STICKY;
         }
@@ -378,6 +379,8 @@ public class SleepTimerService extends Service {
                 .setContentIntent(contentIntent());
 
         String durationStr = String.valueOf(configuredDurationMinutes);
+        builder.getExtras().putString(Notification.EXTRA_REMOTE_INPUT_DRAFT, durationStr);
+
         RemoteInput remoteInput = new RemoteInput.Builder(REMOTE_INPUT_KEY)
                 .setLabel("Minutes (" + durationStr + "m)")
                 .build();
@@ -436,7 +439,7 @@ public class SleepTimerService extends Service {
     }
 
     private PendingIntent permissionsSettingsIntent() {
-        Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+        Intent intent = new Intent(this, MainActivity.class);
         return PendingIntent.getActivity(this, 6, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
