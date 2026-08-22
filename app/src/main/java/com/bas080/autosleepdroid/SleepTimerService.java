@@ -23,6 +23,7 @@ import java.util.Locale;
 public class SleepTimerService extends Service {
     public static final String ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION";
     public static final String ACTION_TURN_OFF = "com.bas080.autosleepdroid.TURN_OFF";
+    public static final String ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION";
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
     private static final String CHANNEL_ID = "sleep_timer";
     private static final int NOTIFICATION_ID = 1001;
@@ -122,6 +123,8 @@ public class SleepTimerService extends Service {
                 handleTurnOff();
             } else if (ACTION_SET_DURATION.equals(intent.getAction())) {
                 handleDurationReply(intent);
+            } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
+                updateNotification();
             }
         }
         return START_STICKY;
