@@ -2,20 +2,33 @@ package com.bas080.autosleepdroid;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.provider.Settings;
-import android.content.ComponentName;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.widget.ScrollView;
+import android.widget.TextView;
 
-public class MainActivity extends Activity {
+import java.util.List;
+
+public class MainActivity extends Activity implements EventLogger.Listener {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 100;
     private boolean accessSettingsOpened;
+    private ScrollView scrollView;
+    private TextView eventLogText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        scrollView = findViewById(R.id.event_scroll_view);
+        eventLogText = findViewById(R.id.event_log_text);
+
+        EventLogger.log(this, "MainActivity created");
+
         accessSettingsOpened = false;
         startOrRequestNotificationPermission();
     }
@@ -24,6 +37,7 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        EventLogger.log(this, "MainActivity new intent");
         accessSettingsOpened = false;
         startOrRequestNotificationPermission();
     }
@@ -31,17 +45,28 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        EventLogger.log(this, "MainActivity resumed");
+        EventLogger.setListener(this);
+        refreshEventLog();
+
         if (accessSettingsOpened) {
             accessSettingsOpened = false;
             startTimerService();
-            finish();
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        EventLogger.log(this, "MainActivity paused");
+        EventLogger.setListener(null);
     }
 
     private void startOrRequestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
+            EventLogger.log(this, "Requesting POST_NOTIFICATIONS permission");
             requestPermissions(
                     new String[]{Manifest.permission.POST_NOTIFICATIONS},
                     NOTIFICATION_PERMISSION_REQUEST);
@@ -49,9 +74,10 @@ public class MainActivity extends Activity {
         }
         startTimerService();
         if (hasNotificationAccess()) {
-            finish();
+            EventLogger.log(this, "Notification access verified");
         } else if (!accessSettingsOpened) {
             accessSettingsOpened = true;
+            EventLogger.log(this, "Opening notification listener settings");
             startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
         }
     }
@@ -60,6 +86,8 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            EventLogger.log(this, "Permission result: POST_NOTIFICATIONS granted = " + granted);
             startOrRequestNotificationPermission();
         }
     }
@@ -78,5 +106,31 @@ public class MainActivity extends Activity {
                 (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         ComponentName component = new ComponentName(this, MediaSessionAccessService.class);
         return manager != null && manager.isNotificationListenerAccessGranted(component);
+    }
+
+    private void refreshEventLog() {
+        List<String> events = EventLogger.getEvents(this);
+        StringBuilder sb = new StringBuilder();
+        for (String event : events) {
+            sb.append(event).append("\n");
+        }
+        if (eventLogText != null) {
+            eventLogText.setText(sb.toString());
+            scrollToBottom();
+        }
+    }
+
+    @Override
+    public void onEventLogged(String event) {
+        if (eventLogText != null) {
+            eventLogText.append(event + "\n");
+            scrollToBottom();
+        }
+    }
+
+    private void scrollToBottom() {
+        if (scrollView != null) {
+            scrollView.post(() -> scrollView.fullScroll(ScrollView.FOCUS_DOWN));
+        }
     }
 }

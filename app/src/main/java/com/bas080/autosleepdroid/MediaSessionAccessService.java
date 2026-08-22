@@ -10,6 +10,7 @@ import java.util.List;
 
 public class MediaSessionAccessService extends NotificationListenerService {
     public static void pauseAll(Context context) {
+        EventLogger.log(context, "Pausing active media sessions");
         MediaSessionManager sessionManager =
                 (MediaSessionManager) context.getSystemService(Context.MEDIA_SESSION_SERVICE);
         if (sessionManager == null) {
@@ -19,13 +20,14 @@ public class MediaSessionAccessService extends NotificationListenerService {
         try {
             ComponentName listener = new ComponentName(context, MediaSessionAccessService.class);
             List<MediaController> sessions = sessionManager.getActiveSessions(listener);
+            EventLogger.log(context, "Found " + (sessions != null ? sessions.size() : 0) + " active media session(s)");
             for (MediaController controller : sessions) {
                 if (controller.getTransportControls() != null) {
                     controller.getTransportControls().pause();
                 }
             }
         } catch (SecurityException ignored) {
-            // Notification access has not been granted yet.
+            EventLogger.log(context, "SecurityException: notification access not granted for media control");
         }
     }
 }
