@@ -8,3 +8,5 @@ Features:
 - Fades volume before pausing media playback.
 - Automatically listens for media playback.
 - Open source with no trackers or analytics.
+
+Release notes: https://github.com/bas080/auto-sleep-droid/releases
