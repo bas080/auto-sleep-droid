@@ -33,7 +33,8 @@ public class MainActivity extends Activity {
         super.onResume();
         if (accessSettingsOpened) {
             accessSettingsOpened = false;
-            startOrRequestNotificationPermission();
+            startTimerService();
+            finish();
         }
     }
 
