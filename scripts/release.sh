@@ -3,12 +3,13 @@ set -e
 
 if [ -z "$1" ]; then
   echo "Usage: $0 <version-name> [changelog-message]"
-  echo "Example: $0 1.0.1 \"Bug fixes and improvements\""
+  echo "Example: $0 0.2"
   exit 1
 fi
 
 VERSION_NAME="$1"
-CHANGELOG_MSG="${2:-Release ${VERSION_NAME}}"
+DEFAULT_CHANGELOG="See release notes on GitHub: https://github.com/bas080/auto-sleep-droid/releases/tag/v${VERSION_NAME}"
+CHANGELOG_MSG="${2:-$DEFAULT_CHANGELOG}"
 
 # Ensure we are at repo root
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -39,7 +40,7 @@ echo "  versionName: -> \"$VERSION_NAME\""
 perl -pi -e "s/(versionCode\s+)[0-9]+/\${1}${NEW_VERSION_CODE}/" "$BUILD_GRADLE"
 perl -pi -e "s/(versionName\s+)\"[^\"]+\"/\${1}\"${VERSION_NAME}\"/" "$BUILD_GRADLE"
 
-# Update fastlane changelogs
+# Update fastlane changelogs automatically pointing to GitHub Release notes
 EN_CHANGELOG="fastlane/metadata/android/en-US/changelogs/${NEW_VERSION_CODE}.txt"
 ES_CHANGELOG="fastlane/metadata/android/es-ES/changelogs/${NEW_VERSION_CODE}.txt"
 
@@ -49,7 +50,7 @@ mkdir -p "$(dirname "$ES_CHANGELOG")"
 echo "$CHANGELOG_MSG" > "$EN_CHANGELOG"
 echo "$CHANGELOG_MSG" > "$ES_CHANGELOG"
 
-echo "Created changelogs:"
+echo "Created changelogs pointing to GitHub release notes:"
 echo "  $EN_CHANGELOG"
 echo "  $ES_CHANGELOG"
 

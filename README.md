@@ -81,22 +81,22 @@ To publish a new release of the app, you can use the automated release script or
 
 #### Option A: Using the release script (Automated)
 
-Run the included release script with the target version name and an optional release message:
+Run the included release script with the target version name:
 
 ```sh
-./scripts/release.sh 1.0.1 "Bug fixes and performance improvements"
+./scripts/release.sh 0.2
 ```
 
 The script automatically:
 1. Increments `versionCode` in `app/build.gradle` and updates `versionName`.
-2. Generates the Fastlane changelog files for `en-US` and `es-ES`.
-3. Commits the changes and creates a Git tag `v1.0.1`.
+2. Generates Fastlane changelog files for `en-US` and `es-ES` pointing to the GitHub release page (`https://github.com/bas080/auto-sleep-droid/releases/tag/v<version>`), so you do not need to maintain multiple language changelogs manually.
+3. Commits the changes and creates a Git tag `v0.2`.
 
 After running the script, push the commit and tag to trigger the automated GitHub Actions release build:
 
 ```sh
 git push origin master
-git push origin v1.0.1
+git push origin v0.2
 ```
 
 #### Option B: Manual release
@@ -104,20 +104,20 @@ git push origin v1.0.1
 If you prefer to release manually:
 
 1. **Update version information:**
-   - In `app/build.gradle`, increment `versionCode` (integer) and update `versionName` (e.g., `"1.0.1"`).
-   - Create changelog files under `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` and `fastlane/metadata/android/es-ES/changelogs/<versionCode>.txt`.
+   - In `app/build.gradle`, increment `versionCode` (integer) and update `versionName` (e.g., `"0.2"`).
+   - Create changelog files under `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` and `fastlane/metadata/android/es-ES/changelogs/<versionCode>.txt` containing `See release notes on GitHub: https://github.com/bas080/auto-sleep-droid/releases/tag/v<version>`.
 
 2. **Commit and push changes:**
    ```sh
    git add app/build.gradle fastlane/metadata/
-   git commit -m "Bump version to 1.0.1"
+   git commit -m "Bump version to 0.2"
    git push origin master
    ```
 
 3. **Tag the release and push the tag:**
    ```sh
-   git tag v1.0.1
-   git push origin v1.0.1
+   git tag v0.2
+   git push origin v0.2
    ```
 
 Pushing a tag matching `v*` triggers the automated GitHub Actions release workflow (`.github/workflows/android-release.yml`), which runs unit tests, builds the versioned APK, and creates a new GitHub Release.
