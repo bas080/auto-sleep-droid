@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-if [ -z "$1" ]; then
+if [ -z "${1:-}" ]; then
   echo "Usage: $0 <version-name>"
   echo "Example: $0 0.2"
   exit 1
