@@ -12,22 +12,22 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 
 ## Notification states and content
 - Permissions Pending: 
-  - Text: "Setup required: Tap to grant permissions."
+  - Text: "Setup required Tap to grant permissions"
   - Action: Tapping the notification directs the user to the Android Settings page for media control / notification listener permissions.
   - Buttons: None (relies on notification tap).
 - Off: 
-  - Text: "Sleep timer is off."
+  - Text: "Sleep timer is off"
   - Buttons: "Set Timer" (Opens inline text reply to input duration, pre-filled with the default or last used duration).
 - Waiting: 
-  - Text: "Waiting for media playback..."
+  - Text: "Waiting for media playback"
   - Duration: Displays the configured duration.
   - Buttons: "Set Timer" (Inline reply to change duration) and "Turn Off" (Disables timer and transitions to Off state).
 - Active: 
-  - Text: "Timer running."
+  - Text: "Timer running"
   - Duration: Displays the live countdown of time remaining.
   - Buttons: "Set Timer" (Inline reply to change duration) and "Turn Off" (Disables timer and transitions to Off state).
 - Fading: 
-  - Text: "Fading volume..."
+  - Text: "Fading volume"
   - Duration: Displays the original configured duration.
   - Buttons: "Set Timer" (Inline reply to change duration) and "Turn Off" (Cancels the fade, disables timer, and transitions to Off state).
 
