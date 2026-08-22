@@ -334,8 +334,8 @@ public class SleepTimerService extends Service {
     private Notification buildPermissionsPendingNotification() {
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle("Auto Sleep Droid")
-                .setContentText("Setup required: Tap to grant permissions.")
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(getString(R.string.setup_required))
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
@@ -349,22 +349,22 @@ public class SleepTimerService extends Service {
             return buildPermissionsPendingNotification();
         }
 
-        String configuredDuration = configuredDurationMinutes + "m configured";
+        String configuredDuration = getString(R.string.configured_duration, configuredDurationMinutes);
         String title;
         String text;
 
         if (!enabled) {
-            title = "Sleep timer is off.";
-            text = "Sleep timer is off.";
+            title = getString(R.string.timer_off);
+            text = getString(R.string.timer_off);
         } else if (fading) {
-            title = "Fading volume...";
-            text = "Fading volume... (" + configuredDuration + ")";
+            title = getString(R.string.fading_title);
+            text = getString(R.string.fading_text, configuredDuration);
         } else if (active) {
-            title = "Timer running.";
-            text = formatRemaining() + " remaining (" + configuredDuration + ")";
+            title = getString(R.string.active_title);
+            text = getString(R.string.active_text, formatRemaining(), configuredDuration);
         } else {
-            title = "Waiting for media playback...";
-            text = "Waiting for media playback... (" + configuredDuration + ")";
+            title = getString(R.string.waiting_title);
+            text = getString(R.string.waiting_text, configuredDuration);
         }
 
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
@@ -380,14 +380,14 @@ public class SleepTimerService extends Service {
         builder.getExtras().putString(Notification.EXTRA_REMOTE_INPUT_DRAFT, durationStr);
 
         RemoteInput remoteInput = new RemoteInput.Builder(REMOTE_INPUT_KEY)
-                .setLabel("Minutes (" + durationStr + "m)")
+                .setLabel(getString(R.string.set_timer_input_label, durationStr))
                 .build();
         remoteInput.getExtras().putInt("android.intent.extra.inputType", InputType.TYPE_CLASS_NUMBER);
         remoteInput.getExtras().putInt("inputType", InputType.TYPE_CLASS_NUMBER);
 
         Notification.Action setTimerAction = new Notification.Action.Builder(
                 Icon.createWithResource(this, android.R.drawable.ic_input_add),
-                "Set Timer",
+                getString(R.string.action_set_timer),
                 durationIntent())
                 .addRemoteInput(remoteInput)
                 .build();
@@ -396,7 +396,7 @@ public class SleepTimerService extends Service {
         if (enabled) {
             Notification.Action turnOffAction = new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    "Turn Off",
+                    getString(R.string.action_turn_off),
                     turnOffIntent())
                     .build();
             builder.addAction(turnOffAction);
@@ -442,17 +442,17 @@ public class SleepTimerService extends Service {
         long hours = totalMinutes / 60L;
         long minutes = totalMinutes % 60L;
         if (hours > 0L) {
-            return String.format(Locale.US, "%dh %02dm", hours, minutes);
+            return getString(R.string.time_format_hours_minutes, hours, minutes);
         }
-        return String.format(Locale.US, "%dm", minutes);
+        return getString(R.string.time_format_minutes, minutes);
     }
 
     private void createNotificationChannel() {
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) {
             NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID, "Sleep timer", NotificationManager.IMPORTANCE_LOW);
-            channel.setDescription("Auto Sleep Droid timer status and controls");
+                    CHANNEL_ID, getString(R.string.notification_channel_name), NotificationManager.IMPORTANCE_LOW);
+            channel.setDescription(getString(R.string.notification_channel_description));
             manager.createNotificationChannel(channel);
         }
     }
