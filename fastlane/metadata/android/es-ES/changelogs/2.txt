@@ -1,1 +1,0 @@
-See release notes on GitHub: https://github.com/bas080/auto-sleep-droid/releases/tag/v0.1
