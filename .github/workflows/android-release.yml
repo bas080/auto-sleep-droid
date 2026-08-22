@@ -54,6 +54,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view latest >/dev/null 2>&1; then
+            gh release edit latest --target "${GITHUB_SHA}"
             gh release upload latest auto-sleep-droid-latest.apk --clobber
           else
             gh release create latest auto-sleep-droid-latest.apk \
