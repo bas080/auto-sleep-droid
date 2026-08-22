@@ -34,6 +34,7 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 ## User interface
 - Use notification buttons for sleep-timer controls (including the "Set Timer" inline reply available in all states except Permissions Pending, and the "Turn Off" button available when the timer is not already stopped/Off).
 - Use notifications for timer state and feedback.
+- Tapping/clicking the notification body expands or collapses the notification in all states except Permissions Pending (where tapping directs the user to grant permissions).
 - Keep the notification ongoing so the user cannot dismiss it.
 - Enter the duration through a minimal inline notification reply using Android's native text input mechanism.
 - When permissions are missing, display a preliminary notification that invites the user to click it to start the permission granting process.
