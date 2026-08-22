@@ -1,0 +1,10 @@
+Auto Sleep Droid es un temporizador de apagado simple para Android.
+
+Funciona completamente desde la barra de notificaciones y no requiere una pantalla de aplicación independiente.
+
+Características:
+- Controlado completamente mediante notificaciones permanentes.
+- La pulsación de los botones de volumen reinicia la cuenta regresiva.
+- Atenúa el volumen antes de pausar los medios.
+- Detecta automáticamente la reproducción de medios.
+- Código abierto sin rastreadores ni analíticas.
