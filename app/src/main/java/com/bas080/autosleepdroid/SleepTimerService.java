@@ -216,6 +216,7 @@ public class SleepTimerService extends Service {
         volumeBeforeFade = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
         lastFadeVolume = volumeBeforeFade;
         fadeStep = 0;
+        updateNotification();
         fadeRunnable = this::runFadeStep;
         handler.post(fadeRunnable);
     }
