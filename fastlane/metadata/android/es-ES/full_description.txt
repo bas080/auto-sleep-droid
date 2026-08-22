@@ -8,5 +8,3 @@ Características:
 - Atenúa el volumen antes de pausar los medios.
 - Detecta automáticamente la reproducción de medios.
 - Código abierto sin rastreadores ni analíticas.
-
-Notas de la versión: https://github.com/bas080/auto-sleep-droid/releases
