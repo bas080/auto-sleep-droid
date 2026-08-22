@@ -6,7 +6,7 @@ Provide an Android sleep timer controlled entirely from the notification bar. Th
 ## System states
 - Permissions Pending: The initial state upon first launch or if permissions are revoked. A notification invites the user to tap it to grant the required system permissions.
 - Off: The timer is manually disabled. Media continues playing normally, and the current volume remains entirely unchanged.
-- Waiting: A duration is configured. The app sits passively and actively listens for media playback to begin.
+- Waiting: A duration is configured. The app sits passively and listens for active media playback.
 - Active: Triggered by media playback, the timer actively counts down from the configured duration.
 - Fading: The timer reaches zero, initiating a 30-second volume fade. Completing this fade pauses media and returns the app back to the Waiting state.
 
