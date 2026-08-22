@@ -60,6 +60,9 @@ From a terminal with `ANDROID_HOME` or `ANDROID_SDK_ROOT` configured, run:
 ### Common commands
 
 ```sh
+# Run unit tests
+./gradlew test
+
 # Build the debug APK
 ./gradlew assembleDebug
 

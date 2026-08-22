@@ -177,11 +177,19 @@ Declared in `app/src/main/AndroidManifest.xml`:
 
 ## Build and release
 
+Run unit tests locally:
+
+```sh
+./gradlew test
+```
+
 Local debug build:
 
 ```sh
 ./gradlew assembleDebug
 ```
+
+CI workflows (`.github/workflows/android-release.yml`) automatically run `./gradlew test` prior to building debug/release APK artifacts.
 
 Install on a connected device or emulator:
 
