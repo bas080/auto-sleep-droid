@@ -16,6 +16,15 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        accessSettingsOpened = false;
+        startOrRequestNotificationPermission();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        accessSettingsOpened = false;
         startOrRequestNotificationPermission();
     }
 
@@ -49,7 +58,7 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
-            startTimerService();
+            startOrRequestNotificationPermission();
         }
     }
 
