@@ -374,8 +374,7 @@ public class SleepTimerService extends Service {
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .setShowWhen(false)
-                .setContentIntent(contentIntent());
+                .setShowWhen(false);
 
         String durationStr = String.valueOf(configuredDurationMinutes);
         builder.getExtras().putString(Notification.EXTRA_REMOTE_INPUT_DRAFT, durationStr);
@@ -428,12 +427,6 @@ public class SleepTimerService extends Service {
     private PendingIntent turnOffIntent() {
         Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_TURN_OFF);
         return PendingIntent.getService(this, 5, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    private PendingIntent contentIntent() {
-        Intent intent = new Intent(this, MainActivity.class);
-        return PendingIntent.getActivity(this, 4, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 

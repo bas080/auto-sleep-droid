@@ -40,6 +40,7 @@ This is the main application component. It is a foreground service with the `med
 Responsibilities:
 
 - Create the low-importance ongoing notification representing one of five system states: `Permissions Pending`, `Off`, `Waiting`, `Active`, or `Fading`.
+- Omit a content intent from the non-pending notification so tapping/clicking expands or collapses the notification rather than launching an activity.
 - Display a `Permissions Pending` notification prompting the user to grant notification access when permissions are missing.
 - Expose notification actions for `Set Timer` (with numeric keypad `RemoteInput`) and `Turn Off` (when enabled).
 - Parse and validate the inline notification reply, gracefully defaulting to the previously configured duration or 20-minute default on invalid input.
