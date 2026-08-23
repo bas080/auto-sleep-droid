@@ -54,8 +54,8 @@ Responsibilities:
 - Parse and validate the inline notification reply, gracefully defaulting to the previously configured duration or 20-minute default on invalid input.
 - Store timer configuration (`duration_minutes`) and enabled state (`active`) in `SharedPreferences`.
 - Schedule timer expiry and notification refresh callbacks on the main looper.
-- Poll the music volume and playback state once per minute.
-- Transition from `Waiting` to `Active` when polling detects active music playback or volume changes while enabled.
+- Poll the music volume, playback state, and accelerometer flip sensor once per minute.
+- Transition from `Waiting` to `Active` when polling detects active music playback, volume changes, or a face-down phone flip while enabled.
 - Fade music volume from the captured current level to half that level over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Ask `MediaSessionAccessService` to pause active media sessions, restore pre-fade volume after media is paused, and revert to the `Waiting` state.
 - Log lifecycle and state events to `EventLogger`.
@@ -159,14 +159,14 @@ In-memory state in `SleepTimerService`:
 5. The notification updates to the `Off` state ("Sleep timer is off").
 6. `EventLogger` logs the turn off action.
 
-### Volume reset & Media playback start
+### Volume reset, Gesture flip & Media playback start
 
-1. Android changes music stream volume normally or playback starts.
-2. The one-minute input poll compares volume and playback status with previous samples.
-3. If enabled and active, a volume change resets the countdown to `configuredDurationMinutes`.
+1. Android changes music stream volume normally, a face-down phone flip is detected, or playback starts.
+2. The one-minute input poll compares volume, playback status, and flip sensor events with previous samples.
+3. If enabled and active, a volume change or face-down flip gesture resets the countdown to `configuredDurationMinutes`.
 4. If enabled and waiting, active media playback (`isMusicActive()`) transitions the timer to `Active`.
-5. If in `Fading` state, a volume change cancels the fade, preserves the new volume, and resets the timer to `Active`.
-6. Changes in volume or media playback state are logged to `EventLogger`.
+5. If in `Fading` state, a volume change or face-down flip gesture cancels the fade, preserves volume, and resets the timer to `Active`.
+6. Changes in volume, flip gesture detection, or media playback state are logged to `EventLogger`.
 
 ### Expiry
 

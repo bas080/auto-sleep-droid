@@ -10,6 +10,10 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Icon;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.os.Handler;
 import android.os.IBinder;
@@ -20,7 +24,7 @@ import android.text.TextUtils;
 
 import java.util.Locale;
 
-public class SleepTimerService extends Service {
+public class SleepTimerService extends Service implements SensorEventListener {
     public static final String ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION";
     public static final String ACTION_TURN_OFF = "com.bas080.autosleepdroid.TURN_OFF";
     public static final String ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION";
@@ -61,6 +65,11 @@ public class SleepTimerService extends Service {
     private boolean lastObservedMediaActive;
     private boolean wasPermissionsPending;
 
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private boolean isFaceDown;
+    private boolean flipDetected;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -68,6 +77,14 @@ public class SleepTimerService extends Service {
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
         createNotificationChannel();
+
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        if (sensorManager != null) {
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            if (accelerometer != null) {
+                sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+            }
+        }
 
         if (!hasNotificationAccess()) {
             wasPermissionsPending = true;
@@ -246,6 +263,13 @@ public class SleepTimerService extends Service {
             finishExpiry();
             return;
         }
+
+        if (checkAndClearFlipDetected()) {
+            EventLogger.log(this, "Fade cancelled due to phone flip gesture");
+            cancelFadeForVolumeChange();
+            return;
+        }
+
         int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         if (currentVolume != lastFadeVolume) {
             cancelFadeForVolumeChange();
@@ -361,10 +385,18 @@ public class SleepTimerService extends Service {
         lastObservedVolume = currentVolume;
         lastObservedMediaActive = mediaActive;
 
+        boolean flipped = checkAndClearFlipDetected();
+
         if (enabled) {
-            if (fading && volumeChanged) {
+            if (fading && (volumeChanged || flipped)) {
+                if (flipped) {
+                    EventLogger.log(this, "Fade cancelled due to phone flip gesture");
+                }
                 cancelFadeForVolumeChange();
-            } else if (active && volumeChanged && !suppressVolumeReset) {
+            } else if (active && (volumeChanged || flipped) && !suppressVolumeReset) {
+                if (flipped) {
+                    EventLogger.log(this, "Timer reset due to phone flip gesture");
+                }
                 resetTimerForVolumeChange();
             } else if (!active && !fading && mediaActive) {
                 startTimerFromConfiguredDuration();
@@ -504,8 +536,36 @@ public class SleepTimerService extends Service {
     }
 
     @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event != null && event.sensor != null && event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            float z = event.values[2];
+            if (z < -8.5f && !isFaceDown) {
+                isFaceDown = true;
+                flipDetected = true;
+            } else if (z > -3.0f) {
+                isFaceDown = false;
+            }
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    }
+
+    private boolean checkAndClearFlipDetected() {
+        if (flipDetected) {
+            flipDetected = false;
+            return true;
+        }
+        return false;
+    }
+
+    @Override
     public void onDestroy() {
         EventLogger.log(this, "SleepTimerService destroyed");
+        if (sensorManager != null) {
+            sensorManager.unregisterListener(this);
+        }
         if (inputPollRunnable != null) {
             handler.removeCallbacks(inputPollRunnable);
         }

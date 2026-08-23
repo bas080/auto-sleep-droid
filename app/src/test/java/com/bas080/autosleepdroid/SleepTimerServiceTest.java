@@ -152,4 +152,34 @@ public class SleepTimerServiceTest {
         ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
         assertNotNull(shadowNotificationManager.getNotification(1001));
     }
+
+    @Test
+    public void testPhoneFlipSensorEventDetection() throws Exception {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        java.lang.reflect.Constructor<android.hardware.SensorEvent> constructor =
+                android.hardware.SensorEvent.class.getDeclaredConstructor(int.class);
+        constructor.setAccessible(true);
+        android.hardware.SensorEvent sensorEvent = constructor.newInstance(3);
+        sensorEvent.values[0] = 0f;
+        sensorEvent.values[1] = 0f;
+        sensorEvent.values[2] = -9.8f;
+
+        java.lang.reflect.Constructor<android.hardware.Sensor> sensorConstructor =
+                android.hardware.Sensor.class.getDeclaredConstructor();
+        sensorConstructor.setAccessible(true);
+        android.hardware.Sensor accelerometer = sensorConstructor.newInstance();
+        java.lang.reflect.Field typeField = android.hardware.Sensor.class.getDeclaredField("mType");
+        typeField.setAccessible(true);
+        typeField.setInt(accelerometer, android.hardware.Sensor.TYPE_ACCELEROMETER);
+        sensorEvent.sensor = accelerometer;
+
+        service.onSensorChanged(sensorEvent);
+
+        java.lang.reflect.Method method = SleepTimerService.class.getDeclaredMethod("checkAndClearFlipDetected");
+        method.setAccessible(true);
+        boolean flipDetected = (boolean) method.invoke(service);
+        assertTrue(flipDetected);
+    }
 }

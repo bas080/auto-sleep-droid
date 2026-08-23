@@ -7,7 +7,7 @@ Auto Sleep Droid is a simple Android sleep timer for media playback.
 - **Never be startled awake:** Fall asleep peacefully to podcasts, YouTube playlists, audiobooks, or music without waking up hours later to blaring audio or autoplay videos.
 - **Universal compatibility:** Controls playback via standard Android system media controls, making it compatible with YouTube, Spotify, podcast players, browsers, and most audio or video apps.
 - **Gentle volume fade:** Volume slowly fades down before pausing playback so you aren't jolted awake by abrupt silence.
-- **Screen-free resets:** Simply press a physical volume button on your phone while in bed to reset the timer to full duration without looking at a bright screen.
+- **Screen-free resets:** Simply press a physical volume button or flip your phone face down while in bed to reset the timer to full duration without looking at a bright screen.
 
 ## How It Works
 
@@ -21,7 +21,7 @@ Auto Sleep Droid is a simple Android sleep timer for media playback.
 2. Open the Auto Sleep Droid notification to set or control the timer.
 3. Tap **"Set Timer"** and enter your desired duration in minutes (between 1 minute and 24 hours, default 20 minutes).
 4. Start playing your podcast, music, or video app. The timer automatically begins counting down.
-5. If you're still awake, press your phone's volume buttons at any time to reset the timer to full duration.
+5. If you're still awake, press your phone's volume buttons or flip your phone face down at any time to reset the timer to full duration.
 6. Tap **"Turn Off"** in the notification whenever you want to disable the sleep timer.
 
 ## Issues
