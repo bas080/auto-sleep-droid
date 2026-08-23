@@ -260,7 +260,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
         }
 
         fadeStep++;
-        int targetVolume = volumeBeforeFade / 2;
+        int targetVolume = 0;
         float progress = (float) fadeStep / TOTAL_FADE_STEPS;
         float fraction = 1.0f - (1.0f - progress) * (1.0f - progress);
         int nextVolume = Math.round(volumeBeforeFade

@@ -53,7 +53,7 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 - When the phone is flipped (face-up to face-down, or face-down to face-up, detected via accelerometer): reset the timer to the original configured duration.
 - If a phone flip gesture occurs during fade-out: cancel the fade-out, restore the volume to pre-fade level, and reset the timer.
 - If volume-up or volume-down is pressed during fade-out: cancel the fade-out, keep the new user-selected volume, and reset the timer.
-- When the timer expires: fade halfway to zero over 30 seconds (starting fast and slowing down along a curve), pause all active media apps, restore the pre-fade volume after pausing media, and return to the Waiting state.
+- When the timer expires: fade to zero over 30 seconds (starting fast and slowing down along a curve), pause all active media apps, restore the pre-fade volume after pausing media, and return to the Waiting state.
 - When the timer is turned off: leave the current volume unchanged and allow media to continue playing.
 - The notification provides duration input and turn-off actions; timer state is controlled automatically by playback, volume button resets, expiry, and duration replies.
 
