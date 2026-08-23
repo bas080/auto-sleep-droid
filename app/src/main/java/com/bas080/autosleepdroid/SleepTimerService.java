@@ -139,10 +139,12 @@ public class SleepTimerService extends Service implements SensorEventListener {
 
     private void triggerFaintVibration() {
         if (vibrator != null && vibrator.hasVibrator()) {
-            if (android.os.Build.VERSION.SDK_INT >= 26) {
-                vibrator.vibrate(android.os.VibrationEffect.createOneShot(30L, 40));
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                vibrator.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK));
+            } else if (android.os.Build.VERSION.SDK_INT >= 26) {
+                vibrator.vibrate(android.os.VibrationEffect.createOneShot(70L, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
             } else {
-                vibrator.vibrate(30L);
+                vibrator.vibrate(70L);
             }
         }
     }
