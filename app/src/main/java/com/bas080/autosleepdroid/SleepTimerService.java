@@ -293,10 +293,21 @@ public class SleepTimerService extends Service implements SensorEventListener {
         PendingIntent pendingIntent = PendingIntent.getService(this, 100, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        if (android.os.Build.VERSION.SDK_INT >= 23) {
-            alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
-        } else {
-            alarmManager.setExact(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
+                } else {
+                    EventLogger.log(this, "Exact alarm permission missing, falling back to setAndAllowWhileIdle");
+                    alarmManager.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
+                }
+            } else if (android.os.Build.VERSION.SDK_INT >= 23) {
+                alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
+            } else {
+                alarmManager.setExact(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
+            }
+        } catch (SecurityException e) {
+            EventLogger.log(this, "SecurityException scheduling alarm; relying on foreground service polling");
         }
     }
 

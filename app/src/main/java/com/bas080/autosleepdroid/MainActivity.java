@@ -15,6 +15,7 @@ import java.util.List;
 
 public class MainActivity extends Activity implements EventLogger.Listener {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 100;
+    private static final String PREF_ALARM_SETTINGS_PROMPTED = "alarm_settings_prompted";
     private boolean accessSettingsOpened;
     private ScrollView scrollView;
     private TextView eventLogText;
@@ -30,6 +31,24 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         EventLogger.log(this, "MainActivity created");
 
         startOrRequestNotificationPermission();
+        requestExactAlarmPermissionIfNeeded();
+    }
+
+    private void requestExactAlarmPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= 31) {
+            android.app.AlarmManager alarmManager = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
+            if (alarmManager != null && !alarmManager.canScheduleExactAlarms()) {
+                android.content.SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+                boolean prompted = prefs.getBoolean(PREF_ALARM_SETTINGS_PROMPTED, false);
+                if (!prompted) {
+                    prefs.edit().putBoolean(PREF_ALARM_SETTINGS_PROMPTED, true).apply();
+                    EventLogger.log(this, "Opening exact alarm permission settings");
+                    Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                    intent.setData(android.net.Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                }
+            }
+        }
     }
 
     @Override
