@@ -1,1 +1,1 @@
-Temporizador de apagado para reproducción de medios basado en notificaciones.
+Duérmete tranquilo escuchando pódcasts o música sin despertarte de golpe.

@@ -1,1 +1,1 @@
-Simple notification-based Android sleep timer for media playback.
+Fall asleep peacefully to podcasts or music without being startled awake.
