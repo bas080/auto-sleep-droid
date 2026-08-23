@@ -1,6 +1,19 @@
-# auto-sleep-droid
+# Auto Sleep Droid
 
-Auto Sleep Droid is a simple Android sleep timer for media playback. It is controlled from the notification shade, and the main app screen displays a live list of events (one per line) for debugging purposes.
+Auto Sleep Droid is a simple, smart Android sleep timer for media playback.
+
+## Why Auto Sleep Droid?
+
+- **Never be startled awake:** Fall asleep peacefully to your favorite podcasts, YouTube playlists, audiobooks, or music without waking up hours later to blaring audio or unexpected autoplay videos.
+- **Works with almost any app:** Uses Android's universal media controls to pause playback, making it compatible with YouTube, Spotify, podcast players, web browsers, and most audio or video apps.
+- **Gentle sleep transition:** When time runs out, the volume slowly fades down before pausing playback, preventing abrupt silence from waking you up.
+- **Screen-free resets:** If you're still awake, simply press a volume button on your phone to reset the timer back to full duration without opening your phone or staring at a bright screen.
+
+## How Simply It Works
+
+1. **Set your timer:** Enter your desired sleep duration directly from the notification shade.
+2. **Automatic playback detection:** The timer waits passively and starts counting down automatically as soon as you start playing media.
+3. **Gentle fade & pause:** At expiry, volume fades halfway down over 15 seconds, media playback is paused via system media controls, and your original volume level is restored.
 
 ## How to use it
 
