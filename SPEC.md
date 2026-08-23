@@ -61,7 +61,7 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 ## Reboot behavior & Alarm persistence
 - Persist whether the timer was running (Waiting, Active, Fading) versus explicitly **Off**, along with the target wall-clock expiration timestamp.
 - Use `AlarmManager.setExactAndAllowWhileIdle()` as a backup trigger to ensure timer expiration fires reliably even if Doze mode or battery saver restricts background service polling.
-- Prompt the user once in `MainActivity` to grant Alarms & Reminders permission (`ACTION_REQUEST_SCHEDULE_EXACT_ALARM`) on Android 12+ (API 31+). If denied, fall back gracefully to `setAndAllowWhileIdle()` and foreground service callbacks without crashing.
+- Prompt the user in `MainActivity` when launched to grant Alarms & Reminders permission (`ACTION_REQUEST_SCHEDULE_EXACT_ALARM`) on Android 12+ (API 31+). If denied, fall back gracefully to `setAndAllowWhileIdle()` and foreground service callbacks without crashing.
 - If the app process was terminated or the device was rebooted during an active timer countdown, restore the exact remaining countdown (or trigger immediate fade if the timestamp passed).
 - If the app was explicitly in the **Off** state prior to reboot, keep it in the **Off** state.
 
