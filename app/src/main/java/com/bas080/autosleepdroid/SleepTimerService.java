@@ -28,6 +28,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
     public static final String ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION";
     public static final String ACTION_TURN_OFF = "com.bas080.autosleepdroid.TURN_OFF";
     public static final String ACTION_TURN_ON = "com.bas080.autosleepdroid.TURN_ON";
+    public static final String ACTION_ALARM_EXPIRY = "com.bas080.autosleepdroid.ALARM_EXPIRY";
     public static final String ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION";
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
     private static final String CHANNEL_ID = "sleep_timer";
@@ -35,6 +36,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
     private static final String PREFERENCES = "sleep_timer";
     private static final String KEY_ENABLED = "active";
     private static final String KEY_DURATION_MINUTES = "duration_minutes";
+    private static final String KEY_TIMER_ENDS_AT = "timer_ends_at";
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long FADE_DURATION_MS = 30_000L;
     private static final long FADE_STEP_INTERVAL_MS = 1_000L;
@@ -47,6 +49,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private AudioManager audioManager;
+    private android.app.AlarmManager alarmManager;
     private android.content.SharedPreferences preferences;
     private Runnable expiryRunnable;
     private Runnable notificationRunnable;
@@ -80,6 +83,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
         super.onCreate();
         EventLogger.log(this, "SleepTimerService created");
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        alarmManager = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
         preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
         vibrator = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
         createNotificationChannel();
@@ -107,12 +111,23 @@ public class SleepTimerService extends Service implements SensorEventListener {
             configuredDurationMinutes = DEFAULT_DURATION_MINUTES;
         }
         enabled = preferences.getBoolean(KEY_ENABLED, true);
+        long savedEndsAt = preferences.getLong(KEY_TIMER_ENDS_AT, 0L);
 
         EventLogger.log(this, "SleepTimerService state initialized (enabled: " + enabled + ", duration: " + configuredDurationMinutes + "m)");
 
         startForeground(NOTIFICATION_ID, buildNotification());
 
-        if (enabled && audioManager != null && audioManager.isMusicActive()) {
+        if (enabled && savedEndsAt > System.currentTimeMillis()) {
+            active = true;
+            fading = false;
+            timerEndsAt = savedEndsAt;
+            scheduleExpiry();
+            updateNotification();
+        } else if (enabled && savedEndsAt > 0L && savedEndsAt <= System.currentTimeMillis()) {
+            active = true;
+            fading = false;
+            beginFadeOut();
+        } else if (enabled && audioManager != null && audioManager.isMusicActive()) {
             startTimer(configuredDurationMinutes);
         } else {
             active = false;
@@ -133,6 +148,8 @@ public class SleepTimerService extends Service implements SensorEventListener {
                 handleTurnOn();
             } else if (ACTION_SET_DURATION.equals(intent.getAction())) {
                 handleDurationReply(intent);
+            } else if (ACTION_ALARM_EXPIRY.equals(intent.getAction())) {
+                handleAlarmExpiry();
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
                 updateNotification();
             }
@@ -159,8 +176,18 @@ public class SleepTimerService extends Service implements SensorEventListener {
         active = false;
         fading = false;
         cancelTimerCallbacks();
-        preferences.edit().putBoolean(KEY_ENABLED, false).apply();
+        preferences.edit()
+                .putBoolean(KEY_ENABLED, false)
+                .remove(KEY_TIMER_ENDS_AT)
+                .apply();
         updateNotification();
+    }
+
+    private void handleAlarmExpiry() {
+        EventLogger.log(this, "AlarmManager trigger received");
+        if (enabled && active && !fading) {
+            beginFadeOut();
+        }
     }
 
     private void handleTurnOn() {
@@ -228,7 +255,10 @@ public class SleepTimerService extends Service implements SensorEventListener {
         fading = false;
         timerEndsAt = System.currentTimeMillis() + durationMinutes * 60_000L;
         EventLogger.log(this, "Timer started for " + durationMinutes + "m");
-        preferences.edit().putBoolean(KEY_ENABLED, true).apply();
+        preferences.edit()
+                .putBoolean(KEY_ENABLED, true)
+                .putLong(KEY_TIMER_ENDS_AT, timerEndsAt)
+                .apply();
         scheduleExpiry();
         updateNotification();
     }
@@ -248,9 +278,39 @@ public class SleepTimerService extends Service implements SensorEventListener {
     }
 
     private void scheduleExpiry() {
+        long delay = Math.max(0L, timerEndsAt - System.currentTimeMillis());
         expiryRunnable = this::beginFadeOut;
-        handler.postDelayed(expiryRunnable, Math.max(0L, timerEndsAt - System.currentTimeMillis()));
+        handler.postDelayed(expiryRunnable, delay);
+        scheduleAlarm(timerEndsAt);
         scheduleNotificationRefresh();
+    }
+
+    private void scheduleAlarm(long triggerAtMillis) {
+        if (alarmManager == null) {
+            return;
+        }
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_ALARM_EXPIRY);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 100, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        if (android.os.Build.VERSION.SDK_INT >= 23) {
+            alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
+        } else {
+            alarmManager.setExact(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
+        }
+    }
+
+    private void cancelAlarm() {
+        if (alarmManager == null) {
+            return;
+        }
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_ALARM_EXPIRY);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 100, intent,
+                PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
+        if (pendingIntent != null) {
+            alarmManager.cancel(pendingIntent);
+            pendingIntent.cancel();
+        }
     }
 
     private void scheduleNotificationRefresh() {
@@ -330,7 +390,10 @@ public class SleepTimerService extends Service implements SensorEventListener {
             active = false;
             fading = false;
             enabled = true;
-            preferences.edit().putBoolean(KEY_ENABLED, true).apply();
+            preferences.edit()
+                    .putBoolean(KEY_ENABLED, true)
+                    .remove(KEY_TIMER_ENDS_AT)
+                    .apply();
             cancelTimerCallbacks();
             updateNotification();
         };
@@ -368,6 +431,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
     }
 
     private void cancelTimerCallbacks() {
+        cancelAlarm();
         if (expiryRunnable != null) {
             handler.removeCallbacks(expiryRunnable);
         }

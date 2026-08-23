@@ -50,8 +50,8 @@ Responsibilities:
 - Omit a content intent from the notification so tapping/clicking expands or collapses the notification rather than launching an activity.
 - Expose notification actions for `Set Timer` (with numeric keypad `RemoteInput`), `Turn Off` (when enabled), and `Turn On` (when Off).
 - Parse and validate the inline notification reply, gracefully defaulting to the previously configured duration or 20-minute default on invalid input.
-- Store timer configuration (`duration_minutes`) and enabled state (`active`) in `SharedPreferences`.
-- Schedule timer expiry and notification refresh callbacks on the main looper.
+- Store timer configuration (`duration_minutes`), enabled state (`active`), and wall-clock target expiration (`timer_ends_at`) in `SharedPreferences`.
+- Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper.
 - Poll the music volume, playback state, and accelerometer flip sensor once per minute.
 - Transition from `Waiting` to `Active` when polling detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
@@ -102,6 +102,7 @@ Timer state is stored in the `sleep_timer` `SharedPreferences` file:
 |---|---|---|
 | `active` | boolean | Whether the timer is enabled (`Waiting`/`Active`/`Fading`) vs explicitly `Off` |
 | `duration_minutes` | integer | The configured duration used for every reset |
+| `timer_ends_at` | long | Wall-clock timestamp (millis) when active timer expires |
 
 Event log history is stored in the `event_logger` `SharedPreferences` file:
 
@@ -189,6 +190,7 @@ Declared in `app/src/main/AndroidManifest.xml`:
 - `FOREGROUND_SERVICE_MEDIA_PLAYBACK`: required for the media playback foreground-service type on newer Android versions.
 - `MODIFY_AUDIO_SETTINGS`: permits changing the music stream volume.
 - `VIBRATE`: permits triggering haptic feedback vibration pulses.
+- `SCHEDULE_EXACT_ALARM`: permits scheduling exact alarms with `AlarmManager`.
 - `POST_NOTIFICATIONS`: required for notification delivery on Android 13+.
 - `RECEIVE_BOOT_COMPLETED`: permits reboot restoration.
 
