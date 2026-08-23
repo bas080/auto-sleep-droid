@@ -51,7 +51,7 @@ Responsibilities:
 - Expose notification actions for `Set Timer` (with numeric keypad `RemoteInput`), `Turn Off` (when enabled), and `Turn On` (when Off).
 - Parse and validate the inline notification reply, gracefully defaulting to the previously configured duration or 20-minute default on invalid input.
 - Store timer configuration (`duration_minutes`), enabled state (`active`), and wall-clock target expiration (`timer_ends_at`) in `SharedPreferences`.
-- Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper.
+- Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
 - Poll the music volume, playback state, and accelerometer flip sensor once per minute.
 - Transition from `Waiting` to `Active` when polling detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
