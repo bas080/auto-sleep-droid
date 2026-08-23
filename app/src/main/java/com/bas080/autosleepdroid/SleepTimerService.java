@@ -72,6 +72,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
     private Sensor accelerometer;
     private int lastOrientation = ORIENTATION_UNKNOWN;
     private boolean flipDetected;
+    private android.os.Vibrator vibrator;
 
     @Override
     public void onCreate() {
@@ -79,6 +80,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
         EventLogger.log(this, "SleepTimerService created");
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
+        vibrator = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
         createNotificationChannel();
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -135,8 +137,19 @@ public class SleepTimerService extends Service implements SensorEventListener {
         return START_STICKY;
     }
 
+    private void triggerFaintVibration() {
+        if (vibrator != null && vibrator.hasVibrator()) {
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                vibrator.vibrate(android.os.VibrationEffect.createOneShot(30L, 40));
+            } else {
+                vibrator.vibrate(30L);
+            }
+        }
+    }
+
     private void handleTurnOff() {
         EventLogger.log(this, "Timer turned off");
+        triggerFaintVibration();
         enabled = false;
         active = false;
         fading = false;
@@ -146,6 +159,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
     }
 
     private void handleDurationReply(Intent intent) {
+        triggerFaintVibration();
         CharSequence reply = RemoteInput.getResultsFromIntent(intent) == null
                 ? null
                 : RemoteInput.getResultsFromIntent(intent).getCharSequence(REMOTE_INPUT_KEY);
@@ -202,6 +216,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
     private void resetTimerForVolumeChange() {
         if (!fading && isValidDuration(configuredDurationMinutes)) {
             EventLogger.log(this, "Timer reset due to volume change");
+            triggerFaintVibration();
             startTimer(configuredDurationMinutes);
         }
     }
@@ -304,6 +319,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
 
     private void cancelFadeForVolumeChange() {
         EventLogger.log(this, "Fade cancelled due to volume change");
+        triggerFaintVibration();
         fading = false;
         cancelTimerCallbacks();
         if (isValidDuration(configuredDurationMinutes)) {
@@ -315,6 +331,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
 
     private void cancelFadeForFlip() {
         EventLogger.log(this, "Fade cancelled due to phone flip gesture (restoring volume to " + volumeBeforeFade + ")");
+        triggerFaintVibration();
         fading = false;
         cancelTimerCallbacks();
         if (audioManager != null) {

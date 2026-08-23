@@ -56,6 +56,7 @@ Responsibilities:
 - Transition from `Waiting` to `Active` when polling detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused, and revert to the `Waiting` state.
+- Trigger a short, faint haptic feedback pulse (`Vibrator`) upon duration replies, turning off, volume button resets, and flip gestures.
 - Log lifecycle and state events to `EventLogger`.
 
 Important constants:
@@ -187,6 +188,7 @@ Declared in `app/src/main/AndroidManifest.xml`:
 - `FOREGROUND_SERVICE`: permits foreground-service operation.
 - `FOREGROUND_SERVICE_MEDIA_PLAYBACK`: required for the media playback foreground-service type on newer Android versions.
 - `MODIFY_AUDIO_SETTINGS`: permits changing the music stream volume.
+- `VIBRATE`: permits triggering haptic feedback vibration pulses.
 - `POST_NOTIFICATIONS`: required for notification delivery on Android 13+.
 - `RECEIVE_BOOT_COMPLETED`: permits reboot restoration.
 
