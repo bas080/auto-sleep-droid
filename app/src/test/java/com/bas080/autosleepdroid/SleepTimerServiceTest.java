@@ -199,6 +199,20 @@ public class SleepTimerServiceTest {
         // Calling onSensorChanged with null event or null sensor should not crash
         service.onSensorChanged(null);
 
+        // Verify notification commands still work as expected
+        Intent setIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_SET_DURATION);
+        Bundle results = new Bundle();
+        results.putCharSequence("duration_minutes", "30");
+        RemoteInput.addResultsToIntent(new RemoteInput[]{
+                new RemoteInput.Builder("duration_minutes").build()
+        }, setIntent, results);
+        service.onStartCommand(setIntent, 0, 1);
+
+        assertEquals(30, preferences.getInt("duration_minutes", -1));
+        assertTrue(preferences.getBoolean("active", false));
+
+        // Verify turn off command still works as expected
         Intent turnOffIntent = new Intent(context, SleepTimerService.class)
                 .setAction(SleepTimerService.ACTION_TURN_OFF);
         service.onStartCommand(turnOffIntent, 0, 1);
