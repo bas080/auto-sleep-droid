@@ -341,6 +341,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
         fading = true;
         volumeBeforeFade = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
         lastFadeVolume = volumeBeforeFade;
+        lastObservedVolume = volumeBeforeFade;
         fadeStep = 0;
         EventLogger.log(this, "Fade-out started (volume before fade: " + volumeBeforeFade + ")");
         updateNotification();
@@ -375,6 +376,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, nextVolume, 0);
         suppressVolumeReset = false;
         lastFadeVolume = nextVolume;
+        lastObservedVolume = nextVolume;
 
         EventLogger.log(this, "Fade step " + fadeStep + "/" + TOTAL_FADE_STEPS + " (volume: " + nextVolume + ")");
 
@@ -415,6 +417,9 @@ public class SleepTimerService extends Service implements SensorEventListener {
         EventLogger.log(this, "Fade cancelled due to volume change");
         triggerFaintVibration();
         fading = false;
+        if (audioManager != null) {
+            lastObservedVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        }
         cancelTimerCallbacks();
         if (isValidDuration(configuredDurationMinutes)) {
             startTimer(configuredDurationMinutes);
@@ -475,12 +480,13 @@ public class SleepTimerService extends Service implements SensorEventListener {
 
         int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         boolean mediaActive = audioManager.isMusicActive();
-        boolean volumeChanged = currentVolume != lastObservedVolume;
+        int expectedVolume = fading ? lastFadeVolume : lastObservedVolume;
+        boolean volumeChanged = currentVolume != expectedVolume;
         boolean playbackStateChanged = mediaActive != lastObservedMediaActive;
         boolean playbackStopped = !mediaActive && lastObservedMediaActive;
 
         if (volumeChanged) {
-            EventLogger.log(this, "Volume changed: " + lastObservedVolume + " -> " + currentVolume);
+            EventLogger.log(this, "Volume changed: " + expectedVolume + " -> " + currentVolume);
         }
         if (playbackStateChanged) {
             EventLogger.log(this, "Media playback state changed: active = " + mediaActive);
