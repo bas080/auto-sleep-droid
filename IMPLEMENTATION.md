@@ -55,7 +55,7 @@ Responsibilities:
 - Store timer configuration (`duration_minutes`) and enabled state (`active`) in `SharedPreferences`.
 - Schedule timer expiry and notification refresh callbacks on the main looper.
 - Poll the music volume, playback state, and accelerometer flip sensor once per minute.
-- Transition from `Waiting` to `Active` when polling detects active music playback, volume changes, or a phone flip gesture while enabled.
+- Transition from `Waiting` to `Active` when polling detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to half that level over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Ask `MediaSessionAccessService` to pause active media sessions, restore pre-fade volume after media is paused, and revert to the `Waiting` state.
 - Log lifecycle and state events to `EventLogger`.
