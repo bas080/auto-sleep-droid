@@ -15,41 +15,14 @@ Auto Sleep Droid is a simple Android sleep timer for media playback.
 2. **Automatic detection:** Sits passively until you start playing media, then automatically begins counting down.
 3. **Fade & pause:** At expiry, volume fades halfway down over 15 seconds, media playback pauses via system media controls, and original volume is restored.
 
-## Usage Guide
+## Usage Instructions
 
-1. Launch Auto Sleep Droid and grant notification access when prompted or by tapping the "Setup required" notification.
-2. Open the main app screen to view a real-time event log for debugging.
-3. Open the Auto Sleep Droid notification to set or control the timer.
-4. Enter or change the duration in minutes using the **"Set Timer"** inline reply (a numeric keypad is automatically presented).
-5. Tap **"Turn Off"** at any time to disable the timer.
-
-The duration can be between 1 minute and 24 hours. The default duration is 20 minutes. The notification reply suggests the default or your last configured duration. If an invalid duration is entered, the app gracefully falls back to the last valid or default duration. Notification access is required before the timer can control playback and pause media at expiry. The notification stays visible and cannot be dismissed.
-
-## System States
-
-- **Permissions Pending:** Initial state when setup is required. Tap the notification to open System Settings and grant notification access.
-- **Off:** The sleep timer is disabled ("Sleep timer is off"). Media continues playing and volume remains unchanged. Tap "Set Timer" to enable and configure a duration.
-- **Waiting:** Duration is configured ("Waiting for media playback"). Sits passively listening for playback.
-- **Active:** Triggered when media playback starts ("Timer running"). Counts down from the configured duration.
-- **Fading:** Timer reaches zero ("Fading volume"). Fades volume halfway over 15 seconds, pauses media, restores pre-fade volume, and reverts to Waiting.
-
-## Behavior During Timer
-
-- Press volume up or volume down as usual. The volume changes normally, and an active or fading timer resets to the full configured duration.
-- Starting media playback automatically transitions the timer from Waiting to Active.
-- Tap **"Turn Off"** to disable the timer without changing volume or pausing playback.
-
-## Behavior Upon Expiry
-
-The current volume fades down to halfway to zero over 15 seconds. All active media playback is then paused, volume is restored to pre-fade level, and the timer returns to the Waiting state.
-
-## Behavior After Reboot
-
-Auto Sleep Droid remembers whether the timer was running (Waiting, Active, Fading) vs explicitly Off. If it was running, it restores to the Waiting state with the configured duration. If it was Off, it remains Off.
-
-## Event Log UI
-
-The main activity UI prints a list of timestamped application events (one per line) for debugging. Recorded events include activity and service lifecycle transitions, timer configuration and state changes, volume and playback status updates, and boot events.
+1. Launch Auto Sleep Droid and grant notification access when prompted.
+2. Open the Auto Sleep Droid notification to set or control the timer.
+3. Tap **"Set Timer"** and enter your desired duration in minutes (between 1 minute and 24 hours, default 20 minutes).
+4. Start playing your podcast, music, or video app. The timer automatically begins counting down.
+5. If you're still awake, press your phone's volume buttons at any time to reset the timer to full duration.
+6. Tap **"Turn Off"** in the notification whenever you want to disable the sleep timer.
 
 ## Issues
 
