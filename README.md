@@ -7,13 +7,13 @@ Auto Sleep Droid is a simple Android sleep timer for media playback.
 - **Never be startled awake:** Fall asleep peacefully to podcasts, YouTube playlists, audiobooks, or music without waking up hours later to blaring audio or autoplay videos.
 - **Universal compatibility:** Controls playback via standard Android system media controls, making it compatible with YouTube, Spotify, podcast players, browsers, and most audio or video apps.
 - **Gentle volume fade:** Volume slowly fades down before pausing playback so you aren't jolted awake by abrupt silence.
-- **Screen-free resets:** Simply press a physical volume button or flip your phone face down while in bed to reset the timer to full duration without looking at a bright screen.
+- **Screen-free resets:** Simply press a physical volume button or flip your phone over while in bed to reset the timer to full duration without looking at a bright screen.
 
 ## How It Works
 
 1. **Set your timer:** Enter a duration directly from the notification shade.
 2. **Automatic detection:** Sits passively until you start playing media, then automatically begins counting down.
-3. **Fade & pause:** At expiry, volume fades halfway down over 15 seconds, media playback pauses via system media controls, and original volume is restored.
+3. **Fade & pause:** At expiry, volume fades halfway down over 30 seconds, media playback pauses via system media controls, and original volume is restored.
 
 ## Usage Instructions
 
@@ -21,7 +21,7 @@ Auto Sleep Droid is a simple Android sleep timer for media playback.
 2. Open the Auto Sleep Droid notification to set or control the timer.
 3. Tap **"Set Timer"** and enter your desired duration in minutes (between 1 minute and 24 hours, default 20 minutes).
 4. Start playing your podcast, music, or video app. The timer automatically begins counting down.
-5. If you're still awake, press your phone's volume buttons or flip your phone face down at any time to reset the timer to full duration.
+5. If you're still awake, press your phone's volume buttons or flip your phone over at any time to reset the timer to full duration.
 6. Tap **"Turn Off"** in the notification whenever you want to disable the sleep timer.
 
 ## Issues
