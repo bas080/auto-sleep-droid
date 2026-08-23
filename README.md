@@ -35,6 +35,10 @@ Auto Sleep Droid uses minimal permissions required to function reliably as a bac
 5. If you're still awake, press your phone's volume buttons or flip your phone over at any time to reset the timer to full duration.
 6. Tap **"Turn Off"** in the notification whenever you want to disable the sleep timer.
 
+## Donate
+
+If you find Auto Sleep Droid helpful, you can support development via [Liberapay](https://liberapay.com/bas080).
+
 ## Issues
 
 You can report new bugs, request features, or find existing open issues on the project's [GitHub Issues](https://github.com/bas080/auto-sleep-droid/issues) page.
