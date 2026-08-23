@@ -54,7 +54,7 @@ Responsibilities:
 - Schedule timer expiry and notification refresh callbacks on the main looper.
 - Poll the music volume, playback state, and accelerometer flip sensor once per minute.
 - Transition from `Waiting` to `Active` when polling detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
-- Fade music volume from the captured current level to half that level over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
+- Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused, and revert to the `Waiting` state.
 - Log lifecycle and state events to `EventLogger`.
 
