@@ -37,12 +37,6 @@ public class SleepTimerServiceTest {
         preferences = context.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE);
         preferences.edit().clear().commit();
 
-        // Grant notification listener access so the service can process actions
-        NotificationManager notificationManager =
-                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
-        shadowNotificationManager.setNotificationListenerAccessGranted(
-                new ComponentName(context, MediaSessionAccessService.class), true);
     }
 
     @Test

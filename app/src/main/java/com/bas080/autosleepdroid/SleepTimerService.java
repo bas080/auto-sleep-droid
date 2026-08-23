@@ -63,7 +63,6 @@ public class SleepTimerService extends Service implements SensorEventListener {
     private int lastFadeVolume;
     private int lastObservedVolume;
     private boolean lastObservedMediaActive;
-    private boolean wasPermissionsPending;
 
     private static final int ORIENTATION_UNKNOWN = 0;
     private static final int ORIENTATION_FACE_UP = 1;
@@ -88,14 +87,6 @@ public class SleepTimerService extends Service implements SensorEventListener {
             if (accelerometer != null) {
                 sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
             }
-        }
-
-        if (!hasNotificationAccess()) {
-            wasPermissionsPending = true;
-            EventLogger.log(this, "Notification access pending");
-            startForeground(NOTIFICATION_ID, buildPermissionsPendingNotification());
-            scheduleInputPoll();
-            return;
         }
 
         initializeStateAndNotification();
@@ -131,17 +122,6 @@ public class SleepTimerService extends Service implements SensorEventListener {
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent != null ? intent.getAction() : "null";
         EventLogger.log(this, "SleepTimerService onStartCommand (action: " + action + ")");
-
-        if (!hasNotificationAccess()) {
-            wasPermissionsPending = true;
-            startForeground(NOTIFICATION_ID, buildPermissionsPendingNotification());
-            return START_STICKY;
-        }
-
-        if (wasPermissionsPending) {
-            wasPermissionsPending = false;
-            initializeStateAndNotification();
-        }
 
         if (intent != null) {
             if (ACTION_TURN_OFF.equals(intent.getAction())) {
@@ -300,8 +280,8 @@ public class SleepTimerService extends Service implements SensorEventListener {
     }
 
     private void finishExpiry() {
-        EventLogger.log(this, "Timer expired: pausing media");
-        MediaSessionAccessService.pauseAll(this);
+        EventLogger.log(this, "Timer expired: pausing media via audio focus loss");
+        pauseMediaViaAudioFocus();
 
         restoreVolumeRunnable = () -> {
             EventLogger.log(this, "Restoring volume to " + volumeBeforeFade);
@@ -377,14 +357,6 @@ public class SleepTimerService extends Service implements SensorEventListener {
     }
 
     private void pollInputs() {
-        if (!hasNotificationAccess()) {
-            return;
-        }
-        if (wasPermissionsPending) {
-            wasPermissionsPending = false;
-            initializeStateAndNotification();
-            return;
-        }
         if (audioManager == null) {
             return;
         }
@@ -428,24 +400,24 @@ public class SleepTimerService extends Service implements SensorEventListener {
         }
     }
 
-    private Notification buildPermissionsPendingNotification() {
-        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle(getString(R.string.app_name))
-                .setContentText(getString(R.string.setup_required))
-                .setCategory(Notification.CATEGORY_SERVICE)
-                .setOngoing(true)
-                .setOnlyAlertOnce(true)
-                .setShowWhen(false)
-                .setContentIntent(permissionsSettingsIntent());
-        return builder.build();
+    private void pauseMediaViaAudioFocus() {
+        if (audioManager == null) {
+            return;
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            android.media.AudioFocusRequest focusRequest = new android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                    .setAudioAttributes(new android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build())
+                    .build();
+            audioManager.requestAudioFocus(focusRequest);
+        } else {
+            audioManager.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+        }
     }
 
     private Notification buildNotification() {
-        if (!hasNotificationAccess()) {
-            return buildPermissionsPendingNotification();
-        }
-
         String configuredDuration = getString(R.string.configured_duration, configuredDurationMinutes);
         String title;
         String text;
@@ -502,12 +474,6 @@ public class SleepTimerService extends Service implements SensorEventListener {
         return builder.build();
     }
 
-    private boolean hasNotificationAccess() {
-        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        return manager != null && manager.isNotificationListenerAccessGranted(
-                new ComponentName(this, MediaSessionAccessService.class));
-    }
-
     private void updateNotification() {
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) {
@@ -524,12 +490,6 @@ public class SleepTimerService extends Service implements SensorEventListener {
     private PendingIntent turnOffIntent() {
         Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_TURN_OFF);
         return PendingIntent.getService(this, 5, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    private PendingIntent permissionsSettingsIntent() {
-        Intent intent = new Intent(this, MainActivity.class);
-        return PendingIntent.getActivity(this, 6, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 

@@ -18,7 +18,6 @@ The app is an Android sleep timer controlled from the notification shade. The ma
 │       │   ├── BootReceiver.java
 │       │   ├── EventLogger.java
 │       │   ├── MainActivity.java
-│       │   ├── MediaSessionAccessService.java
 │       │   └── SleepTimerService.java
 │       └── res/
 │           ├── layout/
@@ -47,9 +46,8 @@ This is the main application component. It is a foreground service with the `med
 
 Responsibilities:
 
-- Create the low-importance ongoing notification representing one of five system states: `Permissions Pending`, `Off`, `Waiting`, `Active`, or `Fading`.
-- Omit a content intent from the non-pending notification so tapping/clicking expands or collapses the notification rather than launching an activity.
-- Display a `Permissions Pending` notification prompting the user to grant notification access when permissions are missing.
+- Create the low-importance ongoing notification representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`.
+- Omit a content intent from the notification so tapping/clicking expands or collapses the notification rather than launching an activity.
 - Expose notification actions for `Set Timer` (with numeric keypad `RemoteInput`) and `Turn Off` (when enabled).
 - Parse and validate the inline notification reply, gracefully defaulting to the previously configured duration or 20-minute default on invalid input.
 - Store timer configuration (`duration_minutes`) and enabled state (`active`) in `SharedPreferences`.
@@ -57,7 +55,7 @@ Responsibilities:
 - Poll the music volume, playback state, and accelerometer flip sensor once per minute.
 - Transition from `Waiting` to `Active` when polling detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to half that level over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
-- Ask `MediaSessionAccessService` to pause active media sessions, restore pre-fade volume after media is paused, and revert to the `Waiting` state.
+- Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused, and revert to the `Waiting` state.
 - Log lifecycle and state events to `EventLogger`.
 
 Important constants:
@@ -130,15 +128,12 @@ In-memory state in `SleepTimerService`:
 
 ## Runtime flows
 
-### Initial launch & Permissions Pending
+### Initial launch
 
 1. Android launches `MainActivity`.
 2. `MainActivity` displays the event log UI and logs its creation.
 3. The activity requests notification permission (`POST_NOTIFICATIONS`) on Android 13+ if needed.
 4. Once notification permission is granted (or immediately on Android < 33), the activity starts `SleepTimerService` as a foreground service.
-5. The service checks for notification listener access (`hasNotificationAccess()`).
-6. If missing, the service immediately displays a `Permissions Pending` notification ("Setup required Tap to grant permissions"). Tapping it opens Android notification listener settings.
-7. Upon granting permissions, the service transitions to the `Waiting` state using the default or saved duration.
 
 ### Set Timer action
 
@@ -174,7 +169,7 @@ In-memory state in `SleepTimerService`:
 2. The service captures current music stream volume as `volumeBeforeFade`.
 3. Thirty fade steps run at 1-second intervals using an ease-out quadratic curve.
 4. User volume changes during fade cancel the fade and restart the timer.
-5. After the final step, active media sessions are paused (`MediaSessionAccessService.pauseAll()`), pre-fade volume is restored after a short delay (500ms) to allow media to pause silently, and the timer returns to `Waiting`.
+5. After the final step, media is paused by requesting transient audio focus (`pauseMediaViaAudioFocus()`), pre-fade volume is restored after a short delay (500ms) to allow media to pause silently, and the timer returns to `Waiting`.
 6. Expiry and fade steps are logged to `EventLogger`.
 
 ### Reboot
@@ -194,7 +189,6 @@ Declared in `app/src/main/AndroidManifest.xml`:
 - `MODIFY_AUDIO_SETTINGS`: permits changing the music stream volume.
 - `POST_NOTIFICATIONS`: required for notification delivery on Android 13+.
 - `RECEIVE_BOOT_COMPLETED`: permits reboot restoration.
-- `BIND_NOTIFICATION_LISTENER_SERVICE`: binds Android to the media-control notification listener. The user must still grant notification access in system settings.
 
 ## Build and release
 
