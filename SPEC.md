@@ -74,7 +74,6 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 - The main activity prints a list of events, one per line, for debugging.
 - The complete timer workflow is possible from the notification bar, system volume buttons, and phone flip gesture.
 - Volume-up and volume-down both reset an active timer while preserving their normal volume behavior.
-- Flipping the phone (in either direction) resets an active or fading timer to the configured duration (restoring pre-fade volume if fading).
 - Expiration pauses active media after a 30-second fade-out, restores pre-fade volume after pausing media, and successfully reverts to the Waiting state.
 - Disabling the timer does not pause media or change the current volume.
 - Invalid inline reply inputs gracefully default to the last valid or default duration.
