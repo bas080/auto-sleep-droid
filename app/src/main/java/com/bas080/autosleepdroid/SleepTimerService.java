@@ -169,9 +169,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
         }
     }
 
-    private void handleTurnOff() {
-        EventLogger.log(this, "Timer turned off");
-        triggerFaintVibration();
+    private void transitionToOff() {
         enabled = false;
         active = false;
         fading = false;
@@ -183,11 +181,24 @@ public class SleepTimerService extends Service implements SensorEventListener {
         updateNotification();
     }
 
+    private void handleTurnOff() {
+        EventLogger.log(this, "Timer turned off");
+        triggerFaintVibration();
+        transitionToOff();
+    }
+
     private void handleAlarmExpiry() {
         EventLogger.log(this, "AlarmManager trigger received");
         if (enabled && active && !fading) {
             beginFadeOut();
         }
+    }
+
+    private void transitionToWaiting() {
+        active = false;
+        fading = false;
+        cancelTimerCallbacks();
+        updateNotification();
     }
 
     private void handleTurnOn() {
@@ -198,10 +209,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
         if (audioManager != null && audioManager.isMusicActive()) {
             startTimer(configuredDurationMinutes);
         } else {
-            active = false;
-            fading = false;
-            cancelTimerCallbacks();
-            updateNotification();
+            transitionToWaiting();
         }
     }
 
@@ -237,10 +245,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
         if (audioManager != null && audioManager.isMusicActive()) {
             startTimer(configuredDurationMinutes);
         } else {
-            active = false;
-            fading = false;
-            cancelTimerCallbacks();
-            updateNotification();
+            transitionToWaiting();
         }
     }
 
@@ -400,15 +405,12 @@ public class SleepTimerService extends Service implements SensorEventListener {
                 suppressVolumeReset = false;
                 lastObservedVolume = volumeBeforeFade;
             }
-            active = false;
-            fading = false;
             enabled = true;
             preferences.edit()
                     .putBoolean(KEY_ENABLED, true)
                     .remove(KEY_TIMER_ENDS_AT)
                     .apply();
-            cancelTimerCallbacks();
-            updateNotification();
+            transitionToWaiting();
         };
         handler.postDelayed(restoreVolumeRunnable, PAUSE_RESET_DELAY_MS);
     }
@@ -498,7 +500,10 @@ public class SleepTimerService extends Service implements SensorEventListener {
         boolean flipped = checkAndClearFlipDetected();
 
         if (enabled) {
-            if (fading && flipped) {
+            if (active && !fading && timerEndsAt > 0L && System.currentTimeMillis() >= timerEndsAt) {
+                EventLogger.log(this, "Timer expiration detected during input poll");
+                beginFadeOut();
+            } else if (fading && flipped) {
                 cancelFadeForFlip();
             } else if (fading && volumeChanged) {
                 cancelFadeForVolumeChange();
