@@ -58,8 +58,9 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 ## Timer behavior
 - When enabled, count down from the configured duration.
 - When volume-up or volume-down is pressed: allow the system volume to change and reset the timer to the original configured duration.
-- When the phone is flipped face down (detected via accelerometer): reset the timer to the original configured duration.
-- If volume-up, volume-down, or a phone flip gesture occurs during fade-out: cancel the fade-out, preserve current volume level, and reset the timer.
+- When the phone is flipped (face-up to face-down, or face-down to face-up, detected via accelerometer): reset the timer to the original configured duration.
+- If a phone flip gesture occurs during fade-out: cancel the fade-out, restore the volume to pre-fade level, and reset the timer.
+- If volume-up or volume-down is pressed during fade-out: cancel the fade-out, keep the new user-selected volume, and reset the timer.
 - When the timer expires: fade halfway to zero over 30 seconds (starting fast and slowing down along a curve), pause all active media apps, restore the pre-fade volume after pausing media, and return to the Waiting state.
 - When the timer is turned off: leave the current volume unchanged and allow media to continue playing.
 - The notification provides duration input and turn-off actions; timer state is controlled automatically by playback, volume button resets, expiry, and duration replies.
@@ -73,7 +74,7 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 - The main activity prints a list of events, one per line, for debugging.
 - The complete timer workflow is possible from the notification bar, system volume buttons, and phone flip gesture.
 - Volume-up and volume-down both reset an active timer while preserving their normal volume behavior.
-- Flipping the phone face down resets an active or fading timer to the configured duration.
+- Flipping the phone (in either direction) resets an active or fading timer to the configured duration (restoring pre-fade volume if fading).
 - Expiration pauses active media after a 30-second fade-out, restores pre-fade volume after pausing media, and successfully reverts to the Waiting state.
 - Disabling the timer does not pause media or change the current volume.
 - Invalid inline reply inputs gracefully default to the last valid or default duration.

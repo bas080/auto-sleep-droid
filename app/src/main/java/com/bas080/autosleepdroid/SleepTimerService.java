@@ -65,9 +65,13 @@ public class SleepTimerService extends Service implements SensorEventListener {
     private boolean lastObservedMediaActive;
     private boolean wasPermissionsPending;
 
+    private static final int ORIENTATION_UNKNOWN = 0;
+    private static final int ORIENTATION_FACE_UP = 1;
+    private static final int ORIENTATION_FACE_DOWN = 2;
+
     private SensorManager sensorManager;
     private Sensor accelerometer;
-    private boolean isFaceDown;
+    private int lastOrientation = ORIENTATION_UNKNOWN;
     private boolean flipDetected;
 
     @Override
@@ -265,8 +269,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
         }
 
         if (checkAndClearFlipDetected()) {
-            EventLogger.log(this, "Fade cancelled due to phone flip gesture");
-            cancelFadeForVolumeChange();
+            cancelFadeForFlip();
             return;
         }
 
@@ -323,6 +326,23 @@ public class SleepTimerService extends Service implements SensorEventListener {
         EventLogger.log(this, "Fade cancelled due to volume change");
         fading = false;
         cancelTimerCallbacks();
+        if (isValidDuration(configuredDurationMinutes)) {
+            startTimer(configuredDurationMinutes);
+        } else {
+            updateNotification();
+        }
+    }
+
+    private void cancelFadeForFlip() {
+        EventLogger.log(this, "Fade cancelled due to phone flip gesture (restoring volume to " + volumeBeforeFade + ")");
+        fading = false;
+        cancelTimerCallbacks();
+        if (audioManager != null) {
+            suppressVolumeReset = true;
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeBeforeFade, 0);
+            suppressVolumeReset = false;
+            lastObservedVolume = volumeBeforeFade;
+        }
         if (isValidDuration(configuredDurationMinutes)) {
             startTimer(configuredDurationMinutes);
         } else {
@@ -388,15 +408,14 @@ public class SleepTimerService extends Service implements SensorEventListener {
         boolean flipped = checkAndClearFlipDetected();
 
         if (enabled) {
-            if (fading && (volumeChanged || flipped)) {
-                if (flipped) {
-                    EventLogger.log(this, "Fade cancelled due to phone flip gesture");
-                }
+            if (fading && flipped) {
+                cancelFadeForFlip();
+            } else if (fading && volumeChanged) {
                 cancelFadeForVolumeChange();
-            } else if (active && (volumeChanged || flipped) && !suppressVolumeReset) {
-                if (flipped) {
-                    EventLogger.log(this, "Timer reset due to phone flip gesture");
-                }
+            } else if (active && flipped && !suppressVolumeReset) {
+                EventLogger.log(this, "Timer reset due to phone flip gesture");
+                resetTimerForVolumeChange();
+            } else if (active && volumeChanged && !suppressVolumeReset) {
                 resetTimerForVolumeChange();
             } else if (!active && !fading && mediaActive) {
                 startTimerFromConfiguredDuration();
@@ -539,11 +558,16 @@ public class SleepTimerService extends Service implements SensorEventListener {
     public void onSensorChanged(SensorEvent event) {
         if (event != null && event.sensor != null && event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             float z = event.values[2];
-            if (z < -8.5f && !isFaceDown) {
-                isFaceDown = true;
-                flipDetected = true;
-            } else if (z > -3.0f) {
-                isFaceDown = false;
+            if (z < -8.5f) {
+                if (lastOrientation == ORIENTATION_FACE_UP) {
+                    flipDetected = true;
+                }
+                lastOrientation = ORIENTATION_FACE_DOWN;
+            } else if (z > 8.5f) {
+                if (lastOrientation == ORIENTATION_FACE_DOWN) {
+                    flipDetected = true;
+                }
+                lastOrientation = ORIENTATION_FACE_UP;
             }
         }
     }

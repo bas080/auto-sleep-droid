@@ -161,10 +161,10 @@ public class SleepTimerServiceTest {
         java.lang.reflect.Constructor<android.hardware.SensorEvent> constructor =
                 android.hardware.SensorEvent.class.getDeclaredConstructor(int.class);
         constructor.setAccessible(true);
-        android.hardware.SensorEvent sensorEvent = constructor.newInstance(3);
-        sensorEvent.values[0] = 0f;
-        sensorEvent.values[1] = 0f;
-        sensorEvent.values[2] = -9.8f;
+        android.hardware.SensorEvent faceUpEvent = constructor.newInstance(3);
+        faceUpEvent.values[0] = 0f;
+        faceUpEvent.values[1] = 0f;
+        faceUpEvent.values[2] = 9.8f;
 
         java.lang.reflect.Constructor<android.hardware.Sensor> sensorConstructor =
                 android.hardware.Sensor.class.getDeclaredConstructor();
@@ -173,9 +173,17 @@ public class SleepTimerServiceTest {
         java.lang.reflect.Field typeField = android.hardware.Sensor.class.getDeclaredField("mType");
         typeField.setAccessible(true);
         typeField.setInt(accelerometer, android.hardware.Sensor.TYPE_ACCELEROMETER);
-        sensorEvent.sensor = accelerometer;
+        faceUpEvent.sensor = accelerometer;
 
-        service.onSensorChanged(sensorEvent);
+        service.onSensorChanged(faceUpEvent);
+
+        android.hardware.SensorEvent faceDownEvent = constructor.newInstance(3);
+        faceDownEvent.values[0] = 0f;
+        faceDownEvent.values[1] = 0f;
+        faceDownEvent.values[2] = -9.8f;
+        faceDownEvent.sensor = accelerometer;
+
+        service.onSensorChanged(faceDownEvent);
 
         java.lang.reflect.Method method = SleepTimerService.class.getDeclaredMethod("checkAndClearFlipDetected");
         method.setAccessible(true);
