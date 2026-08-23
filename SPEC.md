@@ -56,6 +56,7 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 - When the timer expires: fade to zero over 30 seconds (starting fast and slowing down along a curve), pause all active media apps, restore the pre-fade volume after pausing media, and return to the Waiting state.
 - When the timer is turned off: leave the current volume unchanged and allow media to continue playing.
 - The notification provides duration input and turn-off actions; timer state is controlled automatically by playback, volume button resets, expiry, and duration replies.
+- Provide haptic feedback (a short, faint vibration) to confirm user actions (setting duration reply, turning off, volume button resets, and flip gestures).
 
 ## Reboot behavior
 - Persist whether the timer was running (Waiting, Active, Fading) versus explicitly **Off**.
