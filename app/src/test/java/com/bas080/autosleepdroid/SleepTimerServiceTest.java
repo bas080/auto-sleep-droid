@@ -190,4 +190,19 @@ public class SleepTimerServiceTest {
         boolean flipDetected = (boolean) method.invoke(service);
         assertTrue(flipDetected);
     }
+
+    @Test
+    public void testServiceHandlesNullAccelerometerGracefully() {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        // Calling onSensorChanged with null event or null sensor should not crash
+        service.onSensorChanged(null);
+
+        Intent turnOffIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_TURN_OFF);
+        service.onStartCommand(turnOffIntent, 0, 1);
+
+        assertFalse(preferences.getBoolean("active", true));
+    }
 }
