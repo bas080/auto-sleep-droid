@@ -29,7 +29,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         EventLogger.log(this, "MainActivity created");
 
-        accessSettingsOpened = false;
         startOrRequestNotificationPermission();
     }
 
@@ -38,7 +37,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         super.onNewIntent(intent);
         setIntent(intent);
         EventLogger.log(this, "MainActivity new intent");
-        accessSettingsOpened = false;
         startOrRequestNotificationPermission();
     }
 
@@ -48,11 +46,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         EventLogger.log(this, "MainActivity resumed");
         EventLogger.setListener(this);
         refreshEventLog();
-
-        if (accessSettingsOpened) {
-            accessSettingsOpened = false;
-            startTimerService();
-        }
         redrawNotification();
     }
 
@@ -84,13 +77,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             return;
         }
         startTimerService();
-        if (hasNotificationAccess()) {
-            EventLogger.log(this, "Notification access verified");
-        } else if (!accessSettingsOpened) {
-            accessSettingsOpened = true;
-            EventLogger.log(this, "Opening notification listener settings");
-            startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
-        }
     }
 
     @Override
@@ -112,12 +98,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
     }
 
-    private boolean hasNotificationAccess() {
-        android.app.NotificationManager manager =
-                (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        ComponentName component = new ComponentName(this, MediaSessionAccessService.class);
-        return manager != null && manager.isNotificationListenerAccessGranted(component);
-    }
 
     private void refreshEventLog() {
         List<String> events = EventLogger.getEvents(this);
