@@ -28,12 +28,6 @@ Auto Sleep Droid is a simple Android sleep timer for media playback.
 
 You can report new bugs, request features, or find existing open issues on the project's [GitHub Issues](https://github.com/bas080/auto-sleep-droid/issues) page.
 
-## Project Documentation
-
-- [SPEC.md](SPEC.md): product requirements and acceptance criteria.
-- [IMPLEMENTATION.md](IMPLEMENTATION.md): architecture, runtime flows, persistence, permissions, build/release details, and guidance for future developers and AI agents.
-- [AGENTS.md](AGENTS.md): developer and AI agent instructions and repository conventions.
-
 ## Building
 
 From a terminal with `ANDROID_HOME` or `ANDROID_SDK_ROOT` configured, run:

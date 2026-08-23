@@ -6,6 +6,11 @@ Instructions and guidelines for AI coding agents and human developers working in
 
 Auto Sleep Droid is an Android sleep timer app controlled entirely from the notification shade with a live event log UI in `MainActivity`.
 
+## Project Documentation
+
+- [SPEC.md](SPEC.md): product requirements and acceptance criteria.
+- [IMPLEMENTATION.md](IMPLEMENTATION.md): architecture, runtime flows, persistence, permissions, build/release details, and guidance for future developers and AI agents.
+
 ## Build & Test Instructions
 
 ### Common Commands
