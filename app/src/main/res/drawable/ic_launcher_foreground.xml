@@ -3,23 +3,12 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Clock Outer Ring -->
+    <!-- Simple Clock Outer Ring -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,30 C40.75,30 30,40.75 30,54 C30,67.25 40.75,78 54,78 C67.25,78 78,67.25 78,54 C78,40.75 67.25,30 54,30 Z M54,73 C43.51,73 35,64.49 35,54 C35,43.51 43.51,35 54,35 C64.49,35 73,43.51 73,54 C73,64.49 64.49,73 54,73 Z"/>
-    <!-- Clock Hands (10:10 angle) -->
+        android:pathData="M54,28 C39.64,28 28,39.64 28,54 C28,68.36 39.64,80 54,80 C68.36,80 80,68.36 80,54 C80,39.64 68.36,28 54,28 Z M54,74 C42.95,74 34,65.05 34,54 C34,42.95 42.95,34 54,34 C65.05,34 74,42.95 74,54 C74,65.05 65.05,74 54,74 Z"/>
+    <!-- Simple Clock Hands -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M52,39 H56 V52.5 L63.5,45 L66.3,47.8 L56,58 H52 Z"/>
-    <!-- Crescent Moon overlay (sleeping theme) -->
-    <path
-        android:fillColor="#E0E0E0"
-        android:pathData="M70,28 C64,28 59,32.5 58,38.5 C63,38.5 67.5,42 69,47 C74,45 77,40.5 77,35 C77,31.1 74,28 70,28 Z"/>
-    <!-- ZZZ Sleeping symbol -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M32,28 H40 V30.5 L34.5,36 H40 V38 H32 V35.5 L37.5,30 H32 Z"/>
-    <path
-        android:fillColor="#E0E0E0"
-        android:pathData="M25,38 H31 V40 L27,44 H31 V45.5 H25 V43.5 L29,39.5 H25 Z"/>
+        android:pathData="M52,38 H56 V52.5 L64,60.5 L61.2,63.3 L52,54.1 Z"/>
 </vector>
