@@ -58,9 +58,10 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 - The notification provides duration input and turn-off actions; timer state is controlled automatically by playback, volume button resets, expiry, and duration replies.
 - Provide haptic feedback (a short, faint vibration) to confirm user actions (setting duration reply, turning off, volume button resets, and flip gestures).
 
-## Reboot behavior
-- Persist whether the timer was running (Waiting, Active, Fading) versus explicitly **Off**.
-- If the app was in an active/waiting state prior to reboot, restore it to the **Waiting** state using the configured or default duration.
+## Reboot behavior & Alarm persistence
+- Persist whether the timer was running (Waiting, Active, Fading) versus explicitly **Off**, along with the target wall-clock expiration timestamp.
+- Use `AlarmManager.setExactAndAllowWhileIdle()` as a backup trigger to ensure timer expiration fires reliably even if Doze mode or battery saver restricts background service polling.
+- If the app process was terminated or the device was rebooted during an active timer countdown, restore the exact remaining countdown (or trigger immediate fade if the timestamp passed).
 - If the app was explicitly in the **Off** state prior to reboot, keep it in the **Off** state.
 
 ## Acceptance criteria

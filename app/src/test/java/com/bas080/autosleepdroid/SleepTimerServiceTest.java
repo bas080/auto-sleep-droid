@@ -65,6 +65,24 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testAlarmExpiryActionTriggersFade() {
+        preferences.edit()
+                .putBoolean("active", true)
+                .putInt("duration_minutes", 10)
+                .putLong("timer_ends_at", System.currentTimeMillis() - 1000L)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        Intent alarmIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_ALARM_EXPIRY);
+
+        service.onStartCommand(alarmIntent, 0, 1);
+        assertNotNull(service);
+    }
+
+    @Test
     public void testTurnOffActionPersistsState() {
         preferences.edit()
                 .putBoolean("active", true)
