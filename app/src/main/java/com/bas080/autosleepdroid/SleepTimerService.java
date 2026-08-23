@@ -27,6 +27,7 @@ import java.util.Locale;
 public class SleepTimerService extends Service implements SensorEventListener {
     public static final String ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION";
     public static final String ACTION_TURN_OFF = "com.bas080.autosleepdroid.TURN_OFF";
+    public static final String ACTION_TURN_ON = "com.bas080.autosleepdroid.TURN_ON";
     public static final String ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION";
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
     private static final String CHANNEL_ID = "sleep_timer";
@@ -128,6 +129,8 @@ public class SleepTimerService extends Service implements SensorEventListener {
         if (intent != null) {
             if (ACTION_TURN_OFF.equals(intent.getAction())) {
                 handleTurnOff();
+            } else if (ACTION_TURN_ON.equals(intent.getAction())) {
+                handleTurnOn();
             } else if (ACTION_SET_DURATION.equals(intent.getAction())) {
                 handleDurationReply(intent);
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
@@ -158,6 +161,21 @@ public class SleepTimerService extends Service implements SensorEventListener {
         cancelTimerCallbacks();
         preferences.edit().putBoolean(KEY_ENABLED, false).apply();
         updateNotification();
+    }
+
+    private void handleTurnOn() {
+        EventLogger.log(this, "Timer turned on");
+        triggerFaintVibration();
+        enabled = true;
+        preferences.edit().putBoolean(KEY_ENABLED, true).apply();
+        if (audioManager != null && audioManager.isMusicActive()) {
+            startTimer(configuredDurationMinutes);
+        } else {
+            active = false;
+            fading = false;
+            cancelTimerCallbacks();
+            updateNotification();
+        }
     }
 
     private void handleDurationReply(Intent intent) {
@@ -488,6 +506,13 @@ public class SleepTimerService extends Service implements SensorEventListener {
                     turnOffIntent())
                     .build();
             builder.addAction(turnOffAction);
+        } else {
+            Notification.Action turnOnAction = new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_media_play),
+                    getString(R.string.action_turn_on),
+                    turnOnIntent())
+                    .build();
+            builder.addAction(turnOnAction);
         }
 
         return builder.build();
@@ -509,6 +534,12 @@ public class SleepTimerService extends Service implements SensorEventListener {
     private PendingIntent turnOffIntent() {
         Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_TURN_OFF);
         return PendingIntent.getService(this, 5, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private PendingIntent turnOnIntent() {
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_TURN_ON);
+        return PendingIntent.getService(this, 7, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 

@@ -13,6 +13,7 @@
     <string name="set_timer_input_label">Minutes (%1$sm)</string>
     <string name="action_set_timer">Set Timer</string>
     <string name="action_turn_off">Turn Off</string>
+    <string name="action_turn_on">Turn On</string>
     <string name="time_format_hours_minutes">%1$dh %2$02dm</string>
     <string name="time_format_minutes">%1$dm</string>
 </resources>

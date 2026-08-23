@@ -12,7 +12,7 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 ## Notification states and content
 - Off: 
   - Text: "Sleep timer is off"
-  - Buttons: "Set Timer" (Opens inline text reply to input duration, pre-filled with the default or last used duration).
+  - Buttons: "Set Timer" (Opens inline text reply to input duration) and "Turn On" (Enables timer without changing configured duration).
 - Waiting: 
   - Text: "Waiting for media playback"
   - Duration: Displays the configured duration.
@@ -28,7 +28,7 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 
 ## User interface
 - Display a line-by-line list of timestamped events in the main UI for debugging purposes.
-- Use notification buttons for sleep-timer controls (including the "Set Timer" inline reply available in all states, and the "Turn Off" button available when the timer is not already stopped/Off).
+- Use notification buttons for sleep-timer controls (including the "Set Timer" inline reply available in all states, "Turn Off" button available when enabled, and "Turn On" button available when Off).
 - Use notifications for timer state and feedback.
 - Tapping/clicking the notification body expands or collapses the notification in all states.
 - Keep the notification ongoing so the user cannot dismiss it.
@@ -71,4 +71,4 @@ Provide an Android sleep timer controlled from the notification bar. The main UI
 - Disabling the timer does not pause media or change the current volume.
 - Invalid inline reply inputs gracefully default to the last valid or default duration.
 - Post-reboot behavior respects the last saved state (preserving Off status or returning running timers to Waiting).
-- The "Set Timer" action is available across all states, and the "Turn Off" button is present whenever the timer is not already stopped.
+- The "Set Timer" action is available across all states, the "Turn Off" button is present whenever the timer is enabled, and the "Turn On" button is present when the timer is Off.

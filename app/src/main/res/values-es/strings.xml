@@ -13,6 +13,7 @@
     <string name="set_timer_input_label">Minutos (%1$sm)</string>
     <string name="action_set_timer">Configurar temporizador</string>
     <string name="action_turn_off">Desactivar</string>
+    <string name="action_turn_on">Activar</string>
     <string name="time_format_hours_minutes">%1$dh %2$02dm</string>
     <string name="time_format_minutes">%1$dm</string>
 </resources>
