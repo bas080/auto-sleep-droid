@@ -47,6 +47,24 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testTurnOnActionPersistsState() {
+        preferences.edit()
+                .putBoolean("active", false)
+                .putInt("duration_minutes", 30)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        Intent turnOnIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_TURN_ON);
+
+        service.onStartCommand(turnOnIntent, 0, 1);
+
+        assertTrue(preferences.getBoolean("active", false));
+    }
+
+    @Test
     public void testTurnOffActionPersistsState() {
         preferences.edit()
                 .putBoolean("active", true)
