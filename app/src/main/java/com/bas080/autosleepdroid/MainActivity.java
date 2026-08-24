@@ -98,7 +98,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             EventLogger.log(this, "Permission result: POST_NOTIFICATIONS granted = " + granted);
-            startOrRequestNotificationPermission();
+            startTimerService();
         }
     }
 

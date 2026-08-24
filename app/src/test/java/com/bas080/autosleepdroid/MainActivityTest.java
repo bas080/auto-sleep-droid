@@ -75,6 +75,22 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testOnRequestPermissionsResultDeniedStartsServiceWithoutLooping() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+
+        Application app = ApplicationProvider.getApplicationContext();
+        ShadowApplication shadowApp = Shadows.shadowOf(app);
+        while (shadowApp.getNextStartedService() != null) {}
+
+        activity.onRequestPermissionsResult(100, new String[]{Manifest.permission.POST_NOTIFICATIONS}, new int[]{android.content.pm.PackageManager.PERMISSION_DENIED});
+
+        Intent startedService = shadowApp.getNextStartedService();
+        assertNotNull("Expected SleepTimerService to start even when notification permission is denied", startedService);
+        assertEquals(SleepTimerService.class.getName(), startedService.getComponent().getClassName());
+    }
+
+    @Test
     public void testOnResumeStartsRedrawServiceIntent() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         controller.create();
