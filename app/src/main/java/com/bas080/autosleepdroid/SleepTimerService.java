@@ -377,11 +377,11 @@ public class SleepTimerService extends Service implements SensorEventListener {
         float fraction = 1.0f - (1.0f - progress) * (1.0f - progress);
         int nextVolume = Math.round(volumeBeforeFade
                 - (volumeBeforeFade - targetVolume) * fraction);
+        lastFadeVolume = nextVolume;
+        lastObservedVolume = nextVolume;
         suppressVolumeReset = true;
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, nextVolume, 0);
         suppressVolumeReset = false;
-        lastFadeVolume = nextVolume;
-        lastObservedVolume = nextVolume;
 
         EventLogger.log(this, "Fade step " + fadeStep + "/" + TOTAL_FADE_STEPS + " (volume: " + nextVolume + ")");
 
@@ -483,7 +483,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
         int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         boolean mediaActive = audioManager.isMusicActive();
         int expectedVolume = fading ? lastFadeVolume : lastObservedVolume;
-        boolean volumeChanged = currentVolume != expectedVolume;
+        boolean volumeChanged = !suppressVolumeReset && (currentVolume != expectedVolume);
         boolean playbackStateChanged = mediaActive != lastObservedMediaActive;
         boolean playbackStopped = !mediaActive && lastObservedMediaActive;
 

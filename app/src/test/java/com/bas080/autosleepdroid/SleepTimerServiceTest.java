@@ -249,4 +249,35 @@ public class SleepTimerServiceTest {
 
         assertFalse(preferences.getBoolean("active", true));
     }
+
+    @Test
+    public void testFadeOutStepDoesNotCancelFade() throws Exception {
+        preferences.edit()
+                .putBoolean("active", true)
+                .putInt("duration_minutes", 10)
+                .putLong("timer_ends_at", System.currentTimeMillis() - 1000L)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        Intent alarmIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_ALARM_EXPIRY);
+
+        service.onStartCommand(alarmIntent, 0, 1);
+
+        // Run fade step runnable posted to handler
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
+
+        // Invoke pollInputs via reflection
+        java.lang.reflect.Method pollInputsMethod = SleepTimerService.class.getDeclaredMethod("pollInputs");
+        pollInputsMethod.setAccessible(true);
+        pollInputsMethod.invoke(service);
+
+        // Verify fading is still true (not cancelled by false positive volume change)
+        java.lang.reflect.Field fadingField = SleepTimerService.class.getDeclaredField("fading");
+        fadingField.setAccessible(true);
+        boolean fading = (boolean) fadingField.get(service);
+        assertTrue(fading);
+    }
 }
