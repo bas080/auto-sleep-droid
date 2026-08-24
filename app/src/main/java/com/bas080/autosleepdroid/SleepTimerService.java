@@ -40,7 +40,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private android.app.AlarmManager alarmManager;
     private android.content.SharedPreferences preferences;
     private Runnable expiryRunnable;
-    private Runnable notificationRunnable;
     private Runnable fadeRunnable;
     private Runnable restoreVolumeRunnable;
     private AudioManager.AudioPlaybackCallback audioPlaybackCallback;
@@ -242,9 +241,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private void cancelTimerCallbacks() {
         if (expiryRunnable != null) {
             handler.removeCallbacks(expiryRunnable);
-        }
-        if (notificationRunnable != null) {
-            handler.removeCallbacks(notificationRunnable);
         }
         if (fadeRunnable != null) {
             handler.removeCallbacks(fadeRunnable);
