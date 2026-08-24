@@ -2,7 +2,6 @@ package com.bas080.autosleepdroid;
 
 import android.app.NotificationManager;
 import android.app.RemoteInput;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -252,26 +251,20 @@ public class SleepTimerServiceTest {
 
     @Test
     public void testFadeOutStepDoesNotCancelFadeWhenPolledDuringVolumeChange() throws Exception {
-        preferences.edit()
-                .putBoolean("active", true)
-                .putInt("duration_minutes", 10)
-                .putLong("timer_ends_at", System.currentTimeMillis() - 1000L)
-                .commit();
-
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
-        Intent alarmIntent = new Intent(context, SleepTimerService.class)
-                .setAction(SleepTimerService.ACTION_ALARM_EXPIRY);
+        java.lang.reflect.Field audioManagerField = SleepTimerService.class.getDeclaredField("audioManager");
+        audioManagerField.setAccessible(true);
+        android.media.AudioManager audioManager = (android.media.AudioManager) audioManagerField.get(service);
+        audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, 10, 0);
 
-        service.onStartCommand(alarmIntent, 0, 1);
+        java.lang.reflect.Field stateMachineField = SleepTimerService.class.getDeclaredField("stateMachine");
+        stateMachineField.setAccessible(true);
+        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
 
-        // Before runFadeStep finishes, check that lastFadeVolume is updated to nextVolume
-        // and pollInputs during volume change does not trigger volumeChanged = true.
-        java.lang.reflect.Field fadingField = SleepTimerService.class.getDeclaredField("fading");
-        fadingField.setAccessible(true);
-        java.lang.reflect.Field lastFadeVolumeField = SleepTimerService.class.getDeclaredField("lastFadeVolume");
-        lastFadeVolumeField.setAccessible(true);
+        stateMachine.beginFadeOut(10);
+
         java.lang.reflect.Method runFadeStepMethod = SleepTimerService.class.getDeclaredMethod("runFadeStep");
         runFadeStepMethod.setAccessible(true);
         java.lang.reflect.Method pollInputsMethod = SleepTimerService.class.getDeclaredMethod("pollInputs");
@@ -283,18 +276,11 @@ public class SleepTimerServiceTest {
         // Poll inputs
         pollInputsMethod.invoke(service);
 
-        boolean fading = (boolean) fadingField.get(service);
-        assertTrue(fading);
+        assertTrue(stateMachine.isFading());
     }
 
     @Test
     public void testFadeVolumeStateConsistencyDuringStreamVolumeSet() throws Exception {
-        preferences.edit()
-                .putBoolean("active", true)
-                .putInt("duration_minutes", 10)
-                .putLong("timer_ends_at", System.currentTimeMillis() - 1000L)
-                .commit();
-
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
@@ -303,34 +289,21 @@ public class SleepTimerServiceTest {
         android.media.AudioManager audioManager = (android.media.AudioManager) audioManagerField.get(service);
         audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, 10, 0);
 
-        Intent alarmIntent = new Intent(context, SleepTimerService.class)
-                .setAction(SleepTimerService.ACTION_ALARM_EXPIRY);
+        java.lang.reflect.Field stateMachineField = SleepTimerService.class.getDeclaredField("stateMachine");
+        stateMachineField.setAccessible(true);
+        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
 
-        service.onStartCommand(alarmIntent, 0, 1);
+        stateMachine.beginFadeOut(10);
 
         java.lang.reflect.Method runFadeStepMethod = SleepTimerService.class.getDeclaredMethod("runFadeStep");
         runFadeStepMethod.setAccessible(true);
-        java.lang.reflect.Method pollInputsMethod = SleepTimerService.class.getDeclaredMethod("pollInputs");
-        pollInputsMethod.setAccessible(true);
-        java.lang.reflect.Field fadingField = SleepTimerService.class.getDeclaredField("fading");
-        fadingField.setAccessible(true);
-        java.lang.reflect.Field lastFadeVolumeField = SleepTimerService.class.getDeclaredField("lastFadeVolume");
-        lastFadeVolumeField.setAccessible(true);
-
-        // Explicitly set volumeBeforeFade and lastFadeVolume fields to 10
-        java.lang.reflect.Field volumeBeforeFadeField = SleepTimerService.class.getDeclaredField("volumeBeforeFade");
-        volumeBeforeFadeField.setAccessible(true);
-        volumeBeforeFadeField.setInt(service, 10);
-        lastFadeVolumeField.setInt(service, 10);
 
         // Start fade step 1
         runFadeStepMethod.invoke(service);
 
-        boolean fading = (boolean) fadingField.get(service);
-        int lastFadeVolume = (int) lastFadeVolumeField.get(service);
         int currentVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
 
-        assertEquals("lastFadeVolume must match updated stream volume", currentVolume, lastFadeVolume);
-        assertTrue("Fade should not be cancelled during fade step volume update", fading);
+        assertEquals("lastObservedVolume must match updated stream volume", currentVolume, stateMachine.getLastObservedVolume());
+        assertTrue("Fade should not be cancelled during fade step volume update", stateMachine.isFading());
     }
 }
