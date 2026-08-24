@@ -88,9 +88,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         EventLogger.log(this, "SleepTimerService state initialized (enabled: " + savedEnabled + ", duration: " + savedDuration + "m)");
 
-        if (savedEnabled) {
-            startForeground(NOTIFICATION_ID, buildNotification());
-        }
+        startForeground(NOTIFICATION_ID, buildNotification());
 
         stateMachine.initialize(savedEnabled, savedDuration, savedEndsAt, currentVolume, musicActive, System.currentTimeMillis());
     }
@@ -367,6 +365,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onUpdateNotification() {
         updateNotification();
+    }
+
+    @Override
+    public void onTimerRescheduled() {
+        scheduleExpiry();
     }
 
     private void pauseMediaViaAudioFocus() {

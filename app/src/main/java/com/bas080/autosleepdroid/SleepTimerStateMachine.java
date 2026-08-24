@@ -18,6 +18,7 @@ public class SleepTimerStateMachine {
         void onTriggerVibration();
         void onPersistState(boolean enabled, int durationMinutes, long timerEndsAt);
         void onUpdateNotification();
+        void onTimerRescheduled();
     }
 
     public static final long FADE_DURATION_MS = 30_000L;
@@ -152,6 +153,7 @@ public class SleepTimerStateMachine {
         if (callback != null) {
             callback.onCancelAlarm();
         }
+        boolean wasActive = state == State.ACTIVE;
         configuredDurationMinutes = isValidDuration(durationMinutes) ? durationMinutes : DEFAULT_DURATION_MINUTES;
         timerEndsAt = endsAt;
         if (persist && callback != null) {
@@ -160,7 +162,14 @@ public class SleepTimerStateMachine {
         if (callback != null) {
             callback.onScheduleAlarm(timerEndsAt);
         }
-        transitionTo(State.ACTIVE);
+        if (wasActive) {
+            if (callback != null) {
+                callback.onTimerRescheduled();
+                callback.onUpdateNotification();
+            }
+        } else {
+            transitionTo(State.ACTIVE);
+        }
     }
 
     public void handleAlarmExpiry(int currentVolume) {

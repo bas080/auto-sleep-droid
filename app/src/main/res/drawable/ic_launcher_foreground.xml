@@ -3,12 +3,8 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Simple Clock Outer Ring -->
+    <!-- ZZZ Sleep Icon -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,28 C39.64,28 28,39.64 28,54 C28,68.36 39.64,80 54,80 C68.36,80 80,68.36 80,54 C80,39.64 68.36,28 54,28 Z M54,74 C42.95,74 34,65.05 34,54 C34,42.95 42.95,34 54,34 C65.05,34 74,42.95 74,54 C74,65.05 65.05,74 54,74 Z"/>
-    <!-- Simple Clock Hands -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M52,38 H56 V52.5 L64,60.5 L61.2,63.3 L52,54.1 Z"/>
+        android:pathData="M54,24v6.25L45.25,41.5H54v5H39v-6.25L47.75,29H39v-5H54zM84,31.5v6.25L75.25,49H84v5H69v-6.25L77.75,36.5H69v-5H84zM69,51.5v6.25L60.25,69H69v5H54v-6.25L62.75,56.5H54v-5H69z"/>
 </vector>
