@@ -25,6 +25,7 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 - **Documentation Boundaries:** `SPEC.md` must focus purely on product requirements, acceptance criteria, and user-visible behavior without technical implementation details (such as Android API names, classes, or code constructs). Technical implementation details belong exclusively in `IMPLEMENTATION.md`.
 - **UI & Notification Strings:** Do not include trailing punctuation, colons, or ellipses in UI and notification string resource values (`strings.xml`).
 - **Localization:** Maintain default English resources in `app/src/main/res/values/strings.xml` and Spanish translations in `app/src/main/res/values-es/strings.xml`.
+- **Test-Driven Development (TDD):** When attempting a fix, follow a TDD approach where possible: write a test that fails first, and then implement the fix to make that test pass.
 - **Unit Tests:** Do not add unit tests or test dependencies unless explicitly instructed by the user.
 - **Reproducible Builds:** Keep `dependenciesInfo` (`includeInApk = false`, `includeInBundle = false`) disabled in `app/build.gradle` for F-Droid compliance.
 - **Releases:** Follow `scripts/release.sh <version>` for bumping versions and tagging. GitHub Actions (`.github/workflows/android-release.yml`) builds and publishes releases automatically. Point to GitHub Releases in Fastlane description metadata rather than per-version changelogs.
