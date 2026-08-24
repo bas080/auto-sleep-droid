@@ -35,8 +35,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private static final String KEY_TIMER_ENDS_AT = "timer_ends_at";
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long PAUSE_RESET_DELAY_MS = 500L;
-    private static final long INPUT_POLL_INTERVAL_MS = 60_000L;
-
     private final Handler handler = new Handler(Looper.getMainLooper());
     private AudioManager audioManager;
     private android.app.AlarmManager alarmManager;
@@ -44,8 +42,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private Runnable expiryRunnable;
     private Runnable notificationRunnable;
     private Runnable fadeRunnable;
-    private Runnable inputPollRunnable;
     private Runnable restoreVolumeRunnable;
+    private AudioManager.AudioPlaybackCallback audioPlaybackCallback;
+    private android.database.ContentObserver volumeObserver;
 
     private static final int ORIENTATION_UNKNOWN = 0;
     private static final int ORIENTATION_FACE_UP = 1;
@@ -54,7 +53,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private int lastOrientation = ORIENTATION_UNKNOWN;
-    private boolean flipDetected;
+    private boolean sensorListenerRegistered = false;
     private android.os.Vibrator vibrator;
 
     private SleepTimerStateMachine stateMachine;
@@ -80,7 +79,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void initializeStateAndNotification() {
-        scheduleInputPoll();
+        registerAudioPlaybackCallback();
 
         boolean savedEnabled = preferences.getBoolean(KEY_ENABLED, true);
         int savedDuration = preferences.getInt(KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
@@ -90,9 +89,73 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         EventLogger.log(this, "SleepTimerService state initialized (enabled: " + savedEnabled + ", duration: " + savedDuration + "m)");
 
-        startForeground(NOTIFICATION_ID, buildNotification());
+        if (savedEnabled) {
+            startForeground(NOTIFICATION_ID, buildNotification());
+        }
 
         stateMachine.initialize(savedEnabled, savedDuration, savedEndsAt, currentVolume, musicActive, System.currentTimeMillis());
+    }
+
+    private void registerAudioPlaybackCallback() {
+        if (audioManager != null && android.os.Build.VERSION.SDK_INT >= 26) {
+            audioPlaybackCallback = new AudioManager.AudioPlaybackCallback() {
+                @Override
+                public void onPlaybackConfigChanged(java.util.List<android.media.AudioPlaybackConfiguration> configs) {
+                    super.onPlaybackConfigChanged(configs);
+                    boolean musicActive = audioManager.isMusicActive();
+                    stateMachine.onPlaybackStateChanged(musicActive, System.currentTimeMillis());
+                }
+            };
+            audioManager.registerAudioPlaybackCallback(audioPlaybackCallback, handler);
+        }
+    }
+
+    private void unregisterAudioPlaybackCallback() {
+        if (audioManager != null && audioPlaybackCallback != null && android.os.Build.VERSION.SDK_INT >= 26) {
+            audioManager.unregisterAudioPlaybackCallback(audioPlaybackCallback);
+            audioPlaybackCallback = null;
+        }
+    }
+
+    private void registerVolumeObserver() {
+        if (volumeObserver == null && getContentResolver() != null) {
+            volumeObserver = new android.database.ContentObserver(handler) {
+                @Override
+                public void onChange(boolean selfChange) {
+                    super.onChange(selfChange);
+                    if (audioManager != null) {
+                        int currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+                        stateMachine.onVolumeChanged(currentVol, System.currentTimeMillis());
+                    }
+                }
+            };
+            getContentResolver().registerContentObserver(
+                    android.provider.Settings.System.CONTENT_URI,
+                    true,
+                    volumeObserver
+            );
+        }
+    }
+
+    private void unregisterVolumeObserver() {
+        if (volumeObserver != null && getContentResolver() != null) {
+            getContentResolver().unregisterContentObserver(volumeObserver);
+            volumeObserver = null;
+        }
+    }
+
+    private void registerSensorListener() {
+        if (sensorManager != null && accelerometer != null && !sensorListenerRegistered) {
+            sensorListenerRegistered = true;
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        }
+    }
+
+    private void unregisterSensorListener() {
+        if (sensorListenerRegistered && sensorManager != null) {
+            sensorListenerRegistered = false;
+            sensorManager.unregisterListener(this);
+        }
     }
 
     @Override
@@ -152,12 +215,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             return;
         }
 
-        sampleOrientation();
-
         int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        boolean flipped = checkAndClearFlipDetected();
 
-        boolean continues = stateMachine.runFadeStep(currentVolume, flipped);
+        boolean continues = stateMachine.runFadeStep(currentVolume, false);
         if (continues) {
             handler.postDelayed(fadeRunnable, SleepTimerStateMachine.FADE_STEP_INTERVAL_MS);
         }
@@ -201,50 +261,43 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         handler.postDelayed(notificationRunnable, 60_000L);
     }
 
-    private void scheduleInputPoll() {
-        if (inputPollRunnable != null) {
-            handler.removeCallbacks(inputPollRunnable);
-        }
-        inputPollRunnable = () -> {
-            pollInputs();
-            scheduleInputPoll();
-        };
-        handler.postDelayed(inputPollRunnable, INPUT_POLL_INTERVAL_MS);
-    }
-
-    private void pollInputs() {
-        if (audioManager == null) {
-            return;
-        }
-
-        sampleOrientation();
-
-        int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        boolean musicActive = audioManager.isMusicActive();
-        boolean flipped = checkAndClearFlipDetected();
-
-        stateMachine.pollInputs(currentVolume, musicActive, flipped, System.currentTimeMillis());
-    }
-
-    private boolean samplingRequested = false;
-
-    private void sampleOrientation() {
-        if (sensorManager != null && accelerometer != null) {
-            samplingRequested = true;
-            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-        }
-    }
 
     // Callback implementations from SleepTimerStateMachine.Callback
     @Override
     public void onStateChanged(SleepTimerStateMachine.State newState) {
         cancelTimerCallbacks();
-        if (newState == SleepTimerStateMachine.State.OFF || newState == SleepTimerStateMachine.State.WAITING) {
+        if (newState == SleepTimerStateMachine.State.OFF) {
             onCancelAlarm();
+            unregisterSensorListener();
+            unregisterVolumeObserver();
+            stopForeground(STOP_FOREGROUND_REMOVE);
+            NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (manager != null) {
+                manager.cancel(NOTIFICATION_ID);
+            }
+        } else if (newState == SleepTimerStateMachine.State.WAITING) {
+            onCancelAlarm();
+            unregisterSensorListener();
+            unregisterVolumeObserver();
+            startForeground(NOTIFICATION_ID, buildNotification());
         } else if (newState == SleepTimerStateMachine.State.FADING) {
+            registerSensorListener();
+            registerVolumeObserver();
+            startForeground(NOTIFICATION_ID, buildNotification());
             startFadeRunnable();
         } else if (newState == SleepTimerStateMachine.State.ACTIVE) {
+            registerSensorListener();
+            registerVolumeObserver();
+            startForeground(NOTIFICATION_ID, buildNotification());
             scheduleExpiry();
+        }
+        updateTileState();
+    }
+
+    private void updateTileState() {
+        if (android.os.Build.VERSION.SDK_INT >= 24) {
+            android.service.quicksettings.TileService.requestListeningState(
+                    this, new android.content.ComponentName(this, SleepTimerTileService.class));
         }
     }
 
@@ -401,21 +454,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 .build();
         builder.addAction(setTimerAction);
 
-        if (stateMachine.isEnabled()) {
-            Notification.Action turnOffAction = new Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    getString(R.string.action_turn_off),
-                    turnOffIntent())
-                    .build();
-            builder.addAction(turnOffAction);
-        } else {
-            Notification.Action turnOnAction = new Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_media_play),
-                    getString(R.string.action_turn_on),
-                    turnOnIntent())
-                    .build();
-            builder.addAction(turnOnAction);
-        }
+        Notification.Action turnOffAction = new Notification.Action.Builder(
+                Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                getString(R.string.action_turn_off),
+                turnOffIntent())
+                .build();
+        builder.addAction(turnOffAction);
 
         return builder.build();
     }
@@ -479,16 +523,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
             if (currentOrientation != ORIENTATION_UNKNOWN) {
                 if (lastOrientation != ORIENTATION_UNKNOWN && lastOrientation != currentOrientation) {
-                    flipDetected = true;
+                    stateMachine.onPhoneFlipped(System.currentTimeMillis());
                 }
                 lastOrientation = currentOrientation;
-            }
-
-            if (samplingRequested) {
-                samplingRequested = false;
-                if (sensorManager != null) {
-                    sensorManager.unregisterListener(this);
-                }
             }
         }
     }
@@ -497,23 +534,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
     }
 
-    private boolean checkAndClearFlipDetected() {
-        if (flipDetected) {
-            flipDetected = false;
-            return true;
-        }
-        return false;
-    }
-
     @Override
     public void onDestroy() {
         EventLogger.log(this, "SleepTimerService destroyed");
-        if (sensorManager != null) {
-            sensorManager.unregisterListener(this);
-        }
-        if (inputPollRunnable != null) {
-            handler.removeCallbacks(inputPollRunnable);
-        }
+        unregisterSensorListener();
+        unregisterVolumeObserver();
+        unregisterAudioPlaybackCallback();
         cancelTimerCallbacks();
         super.onDestroy();
     }
