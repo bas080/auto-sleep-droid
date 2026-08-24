@@ -6,7 +6,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.app.RemoteInput;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Icon;
@@ -18,13 +17,10 @@ import android.media.AudioManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.provider.Settings;
 import android.text.InputType;
 import android.text.TextUtils;
 
-import java.util.Locale;
-
-public class SleepTimerService extends Service implements SensorEventListener {
+public class SleepTimerService extends Service implements SensorEventListener, SleepTimerStateMachine.Callback {
     public static final String ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION";
     public static final String ACTION_TURN_OFF = "com.bas080.autosleepdroid.TURN_OFF";
     public static final String ACTION_TURN_ON = "com.bas080.autosleepdroid.TURN_ON";
@@ -38,14 +34,8 @@ public class SleepTimerService extends Service implements SensorEventListener {
     private static final String KEY_DURATION_MINUTES = "duration_minutes";
     private static final String KEY_TIMER_ENDS_AT = "timer_ends_at";
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
-    private static final long FADE_DURATION_MS = 30_000L;
-    private static final long FADE_STEP_INTERVAL_MS = 1_000L;
-    private static final int TOTAL_FADE_STEPS = (int) (FADE_DURATION_MS / FADE_STEP_INTERVAL_MS);
     private static final long PAUSE_RESET_DELAY_MS = 500L;
-    private static final int DEFAULT_DURATION_MINUTES = 20;
     private static final long INPUT_POLL_INTERVAL_MS = 60_000L;
-    private static final int MINUTES_MIN = 1;
-    private static final int MINUTES_MAX = 24 * 60;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private AudioManager audioManager;
@@ -56,17 +46,6 @@ public class SleepTimerService extends Service implements SensorEventListener {
     private Runnable fadeRunnable;
     private Runnable inputPollRunnable;
     private Runnable restoreVolumeRunnable;
-    private long timerEndsAt;
-    private int configuredDurationMinutes;
-    private int volumeBeforeFade;
-    private boolean enabled;
-    private boolean active;
-    private boolean fading;
-    private boolean suppressVolumeReset;
-    private int fadeStep;
-    private int lastFadeVolume;
-    private int lastObservedVolume;
-    private boolean lastObservedMediaActive;
 
     private static final int ORIENTATION_UNKNOWN = 0;
     private static final int ORIENTATION_FACE_UP = 1;
@@ -78,6 +57,8 @@ public class SleepTimerService extends Service implements SensorEventListener {
     private boolean flipDetected;
     private android.os.Vibrator vibrator;
 
+    private SleepTimerStateMachine stateMachine;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -87,6 +68,8 @@ public class SleepTimerService extends Service implements SensorEventListener {
         preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
         vibrator = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
         createNotificationChannel();
+
+        stateMachine = new SleepTimerStateMachine(this);
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         if (sensorManager != null) {
@@ -100,40 +83,19 @@ public class SleepTimerService extends Service implements SensorEventListener {
     }
 
     private void initializeStateAndNotification() {
-        if (audioManager != null) {
-            lastObservedVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        }
-        lastObservedMediaActive = false;
         scheduleInputPoll();
 
-        configuredDurationMinutes = preferences.getInt(KEY_DURATION_MINUTES, DEFAULT_DURATION_MINUTES);
-        if (!isValidDuration(configuredDurationMinutes)) {
-            configuredDurationMinutes = DEFAULT_DURATION_MINUTES;
-        }
-        enabled = preferences.getBoolean(KEY_ENABLED, true);
+        boolean savedEnabled = preferences.getBoolean(KEY_ENABLED, true);
+        int savedDuration = preferences.getInt(KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
         long savedEndsAt = preferences.getLong(KEY_TIMER_ENDS_AT, 0L);
+        int currentVolume = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
+        boolean musicActive = audioManager != null && audioManager.isMusicActive();
 
-        EventLogger.log(this, "SleepTimerService state initialized (enabled: " + enabled + ", duration: " + configuredDurationMinutes + "m)");
+        EventLogger.log(this, "SleepTimerService state initialized (enabled: " + savedEnabled + ", duration: " + savedDuration + "m)");
 
         startForeground(NOTIFICATION_ID, buildNotification());
 
-        if (enabled && savedEndsAt > System.currentTimeMillis()) {
-            active = true;
-            fading = false;
-            timerEndsAt = savedEndsAt;
-            scheduleExpiry();
-            updateNotification();
-        } else if (enabled && savedEndsAt > 0L && savedEndsAt <= System.currentTimeMillis()) {
-            active = true;
-            fading = false;
-            beginFadeOut();
-        } else if (enabled && audioManager != null && audioManager.isMusicActive()) {
-            startTimer(configuredDurationMinutes);
-        } else {
-            active = false;
-            fading = false;
-            updateNotification();
-        }
+        stateMachine.initialize(savedEnabled, savedDuration, savedEndsAt, currentVolume, musicActive, System.currentTimeMillis());
     }
 
     @Override
@@ -143,13 +105,18 @@ public class SleepTimerService extends Service implements SensorEventListener {
 
         if (intent != null) {
             if (ACTION_TURN_OFF.equals(intent.getAction())) {
-                handleTurnOff();
+                EventLogger.log(this, "Timer turned off");
+                stateMachine.handleTurnOff(true);
             } else if (ACTION_TURN_ON.equals(intent.getAction())) {
-                handleTurnOn();
+                EventLogger.log(this, "Timer turned on");
+                boolean musicActive = audioManager != null && audioManager.isMusicActive();
+                stateMachine.handleTurnOn(musicActive, System.currentTimeMillis(), true);
             } else if (ACTION_SET_DURATION.equals(intent.getAction())) {
                 handleDurationReply(intent);
             } else if (ACTION_ALARM_EXPIRY.equals(intent.getAction())) {
-                handleAlarmExpiry();
+                EventLogger.log(this, "AlarmManager trigger received");
+                int currentVol = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
+                stateMachine.handleAlarmExpiry(currentVol);
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
                 updateNotification();
             }
@@ -157,64 +124,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
         return START_STICKY;
     }
 
-    private void triggerFaintVibration() {
-        if (vibrator != null && vibrator.hasVibrator()) {
-            if (android.os.Build.VERSION.SDK_INT >= 29) {
-                vibrator.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK));
-            } else if (android.os.Build.VERSION.SDK_INT >= 26) {
-                vibrator.vibrate(android.os.VibrationEffect.createOneShot(70L, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
-            } else {
-                vibrator.vibrate(70L);
-            }
-        }
-    }
-
-    private void transitionToOff() {
-        enabled = false;
-        active = false;
-        fading = false;
-        cancelTimerCallbacks();
-        preferences.edit()
-                .putBoolean(KEY_ENABLED, false)
-                .remove(KEY_TIMER_ENDS_AT)
-                .apply();
-        updateNotification();
-    }
-
-    private void handleTurnOff() {
-        EventLogger.log(this, "Timer turned off");
-        triggerFaintVibration();
-        transitionToOff();
-    }
-
-    private void handleAlarmExpiry() {
-        EventLogger.log(this, "AlarmManager trigger received");
-        if (enabled && active && !fading) {
-            beginFadeOut();
-        }
-    }
-
-    private void transitionToWaiting() {
-        active = false;
-        fading = false;
-        cancelTimerCallbacks();
-        updateNotification();
-    }
-
-    private void handleTurnOn() {
-        EventLogger.log(this, "Timer turned on");
-        triggerFaintVibration();
-        enabled = true;
-        preferences.edit().putBoolean(KEY_ENABLED, true).apply();
-        if (audioManager != null && audioManager.isMusicActive()) {
-            startTimer(configuredDurationMinutes);
-        } else {
-            transitionToWaiting();
-        }
-    }
-
     private void handleDurationReply(Intent intent) {
-        triggerFaintVibration();
         CharSequence reply = RemoteInput.getResultsFromIntent(intent) == null
                 ? null
                 : RemoteInput.getResultsFromIntent(intent).getCharSequence(REMOTE_INPUT_KEY);
@@ -228,69 +138,112 @@ public class SleepTimerService extends Service implements SensorEventListener {
             }
         }
 
-        if (isValidDuration(duration)) {
-            configuredDurationMinutes = duration;
-        } else if (!isValidDuration(configuredDurationMinutes)) {
-            configuredDurationMinutes = DEFAULT_DURATION_MINUTES;
+        boolean musicActive = audioManager != null && audioManager.isMusicActive();
+        stateMachine.handleDurationReply(duration, musicActive, System.currentTimeMillis(), true);
+        EventLogger.log(this, "Duration reply received: '" + reply + "' -> configured duration = " + stateMachine.getConfiguredDurationMinutes() + "m");
+    }
+
+    private void startFadeRunnable() {
+        EventLogger.log(this, "Fade-out started");
+        fadeRunnable = this::runFadeStep;
+        handler.post(fadeRunnable);
+    }
+
+    private void runFadeStep() {
+        if (audioManager == null) {
+            stateMachine.finishExpiry();
+            return;
         }
 
-        EventLogger.log(this, "Duration reply received: '" + reply + "' -> configured duration = " + configuredDurationMinutes + "m");
+        int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        boolean flipped = checkAndClearFlipDetected();
 
-        enabled = true;
-        preferences.edit()
-                .putInt(KEY_DURATION_MINUTES, configuredDurationMinutes)
-                .putBoolean(KEY_ENABLED, true)
-                .apply();
-
-        if (audioManager != null && audioManager.isMusicActive()) {
-            startTimer(configuredDurationMinutes);
-        } else {
-            transitionToWaiting();
-        }
-    }
-
-    private boolean isValidDuration(int minutes) {
-        return minutes >= MINUTES_MIN && minutes <= MINUTES_MAX;
-    }
-
-    private void startTimer(int durationMinutes) {
-        cancelTimerCallbacks();
-        enabled = true;
-        active = true;
-        fading = false;
-        timerEndsAt = System.currentTimeMillis() + durationMinutes * 60_000L;
-        EventLogger.log(this, "Timer started for " + durationMinutes + "m");
-        preferences.edit()
-                .putBoolean(KEY_ENABLED, true)
-                .putLong(KEY_TIMER_ENDS_AT, timerEndsAt)
-                .apply();
-        scheduleExpiry();
-        updateNotification();
-    }
-
-    private void resetTimerForVolumeChange() {
-        if (!fading && isValidDuration(configuredDurationMinutes)) {
-            EventLogger.log(this, "Timer reset due to volume change");
-            triggerFaintVibration();
-            startTimer(configuredDurationMinutes);
-        }
-    }
-
-    private void startTimerFromConfiguredDuration() {
-        if (isValidDuration(configuredDurationMinutes)) {
-            startTimer(configuredDurationMinutes);
+        boolean continues = stateMachine.runFadeStep(currentVolume, flipped);
+        if (continues) {
+            handler.postDelayed(fadeRunnable, SleepTimerStateMachine.FADE_STEP_INTERVAL_MS);
         }
     }
 
     private void scheduleExpiry() {
-        long delay = Math.max(0L, timerEndsAt - System.currentTimeMillis());
-        expiryRunnable = this::beginFadeOut;
+        long delay = Math.max(0L, stateMachine.getTimerEndsAt() - System.currentTimeMillis());
+        expiryRunnable = () -> {
+            int vol = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
+            stateMachine.beginFadeOut(vol);
+        };
         handler.postDelayed(expiryRunnable, delay);
-        scheduleAlarm(timerEndsAt);
         scheduleNotificationRefresh();
     }
 
-    private void scheduleAlarm(long triggerAtMillis) {
+    private void cancelTimerCallbacks() {
+        onCancelAlarm();
+        if (expiryRunnable != null) {
+            handler.removeCallbacks(expiryRunnable);
+        }
+        if (notificationRunnable != null) {
+            handler.removeCallbacks(notificationRunnable);
+        }
+        if (fadeRunnable != null) {
+            handler.removeCallbacks(fadeRunnable);
+        }
+        if (restoreVolumeRunnable != null) {
+            handler.removeCallbacks(restoreVolumeRunnable);
+        }
+    }
+
+    private void scheduleNotificationRefresh() {
+        notificationRunnable = () -> {
+            if (stateMachine.isActive() && !stateMachine.isFading()) {
+                updateNotification();
+                scheduleNotificationRefresh();
+            }
+        };
+        handler.postDelayed(notificationRunnable, 60_000L);
+    }
+
+    private void scheduleInputPoll() {
+        if (inputPollRunnable != null) {
+            handler.removeCallbacks(inputPollRunnable);
+        }
+        inputPollRunnable = () -> {
+            pollInputs();
+            scheduleInputPoll();
+        };
+        handler.postDelayed(inputPollRunnable, INPUT_POLL_INTERVAL_MS);
+    }
+
+    private void pollInputs() {
+        if (audioManager == null) {
+            return;
+        }
+
+        int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        boolean musicActive = audioManager.isMusicActive();
+        boolean flipped = checkAndClearFlipDetected();
+
+        stateMachine.pollInputs(currentVolume, musicActive, flipped, System.currentTimeMillis());
+    }
+
+    // Callback implementations from SleepTimerStateMachine.Callback
+    @Override
+    public void onStateChanged(SleepTimerStateMachine.State newState) {
+        if (newState == SleepTimerStateMachine.State.OFF || newState == SleepTimerStateMachine.State.WAITING) {
+            cancelTimerCallbacks();
+        } else if (newState == SleepTimerStateMachine.State.FADING) {
+            startFadeRunnable();
+        } else if (newState == SleepTimerStateMachine.State.ACTIVE) {
+            scheduleExpiry();
+        }
+    }
+
+    @Override
+    public void onSetStreamVolume(int volume) {
+        if (audioManager != null) {
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0);
+        }
+    }
+
+    @Override
+    public void onScheduleAlarm(long triggerAtMillis) {
         if (alarmManager == null) {
             return;
         }
@@ -316,7 +269,8 @@ public class SleepTimerService extends Service implements SensorEventListener {
         }
     }
 
-    private void cancelAlarm() {
+    @Override
+    public void onCancelAlarm() {
         if (alarmManager == null) {
             return;
         }
@@ -329,198 +283,47 @@ public class SleepTimerService extends Service implements SensorEventListener {
         }
     }
 
-    private void scheduleNotificationRefresh() {
-        notificationRunnable = () -> {
-            if (active && !fading) {
-                updateNotification();
-                scheduleNotificationRefresh();
-            }
-        };
-        handler.postDelayed(notificationRunnable, 60_000L);
-    }
-
-    private void beginFadeOut() {
-        if (!enabled || !active || fading) {
-            return;
-        }
-        fading = true;
-        volumeBeforeFade = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
-        lastFadeVolume = volumeBeforeFade;
-        lastObservedVolume = volumeBeforeFade;
-        fadeStep = 0;
-        EventLogger.log(this, "Fade-out started (volume before fade: " + volumeBeforeFade + ")");
-        updateNotification();
-        fadeRunnable = this::runFadeStep;
-        handler.post(fadeRunnable);
-    }
-
-    private void runFadeStep() {
-        if (audioManager == null) {
-            finishExpiry();
-            return;
-        }
-
-        if (checkAndClearFlipDetected()) {
-            cancelFadeForFlip();
-            return;
-        }
-
-        int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        if (currentVolume != lastFadeVolume) {
-            cancelFadeForVolumeChange();
-            return;
-        }
-
-        fadeStep++;
-        int targetVolume = 0;
-        float progress = (float) fadeStep / TOTAL_FADE_STEPS;
-        float fraction = 1.0f - (1.0f - progress) * (1.0f - progress);
-        int nextVolume = Math.round(volumeBeforeFade
-                - (volumeBeforeFade - targetVolume) * fraction);
-        lastFadeVolume = nextVolume;
-        lastObservedVolume = nextVolume;
-        suppressVolumeReset = true;
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, nextVolume, 0);
-        suppressVolumeReset = false;
-
-        EventLogger.log(this, "Fade step " + fadeStep + "/" + TOTAL_FADE_STEPS + " (volume: " + nextVolume + ")");
-
-        if (fadeStep >= TOTAL_FADE_STEPS) {
-            finishExpiry();
-        } else {
-            handler.postDelayed(fadeRunnable, FADE_STEP_INTERVAL_MS);
-        }
-    }
-
-    private void finishExpiry() {
+    @Override
+    public void onPauseMedia() {
         EventLogger.log(this, "Timer expired: pausing media via audio focus loss");
         pauseMediaViaAudioFocus();
 
-        restoreVolumeRunnable = () -> {
-            EventLogger.log(this, "Restoring volume to " + volumeBeforeFade);
-            if (audioManager != null) {
-                lastObservedMediaActive = audioManager.isMusicActive();
-                suppressVolumeReset = true;
-                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeBeforeFade, 0);
-                suppressVolumeReset = false;
-                lastObservedVolume = volumeBeforeFade;
-            }
-            enabled = true;
-            preferences.edit()
-                    .putBoolean(KEY_ENABLED, true)
-                    .remove(KEY_TIMER_ENDS_AT)
-                    .apply();
-            transitionToWaiting();
-        };
+        restoreVolumeRunnable = () -> stateMachine.restoreVolumeAfterPause();
         handler.postDelayed(restoreVolumeRunnable, PAUSE_RESET_DELAY_MS);
     }
 
-    private void cancelFadeForVolumeChange() {
-        EventLogger.log(this, "Fade cancelled due to volume change");
-        triggerFaintVibration();
-        fading = false;
-        if (audioManager != null) {
-            lastObservedVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        }
-        cancelTimerCallbacks();
-        if (isValidDuration(configuredDurationMinutes)) {
-            startTimer(configuredDurationMinutes);
-        } else {
-            updateNotification();
-        }
-    }
-
-    private void cancelFadeForFlip() {
-        EventLogger.log(this, "Fade cancelled due to phone flip gesture (restoring volume to " + volumeBeforeFade + ")");
-        triggerFaintVibration();
-        fading = false;
-        cancelTimerCallbacks();
-        if (audioManager != null) {
-            suppressVolumeReset = true;
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volumeBeforeFade, 0);
-            suppressVolumeReset = false;
-            lastObservedVolume = volumeBeforeFade;
-        }
-        if (isValidDuration(configuredDurationMinutes)) {
-            startTimer(configuredDurationMinutes);
-        } else {
-            updateNotification();
-        }
-    }
-
-    private void cancelTimerCallbacks() {
-        cancelAlarm();
-        if (expiryRunnable != null) {
-            handler.removeCallbacks(expiryRunnable);
-        }
-        if (notificationRunnable != null) {
-            handler.removeCallbacks(notificationRunnable);
-        }
-        if (fadeRunnable != null) {
-            handler.removeCallbacks(fadeRunnable);
-        }
-        if (restoreVolumeRunnable != null) {
-            handler.removeCallbacks(restoreVolumeRunnable);
-        }
-    }
-
-    private void scheduleInputPoll() {
-        if (inputPollRunnable != null) {
-            handler.removeCallbacks(inputPollRunnable);
-        }
-        inputPollRunnable = () -> {
-            pollInputs();
-            scheduleInputPoll();
-        };
-        handler.postDelayed(inputPollRunnable, INPUT_POLL_INTERVAL_MS);
-    }
-
-    private void pollInputs() {
-        if (audioManager == null) {
-            return;
-        }
-
-        int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        boolean mediaActive = audioManager.isMusicActive();
-        int expectedVolume = fading ? lastFadeVolume : lastObservedVolume;
-        boolean volumeChanged = !suppressVolumeReset && (currentVolume != expectedVolume);
-        boolean playbackStateChanged = mediaActive != lastObservedMediaActive;
-        boolean playbackStopped = !mediaActive && lastObservedMediaActive;
-
-        if (volumeChanged) {
-            EventLogger.log(this, "Volume changed: " + expectedVolume + " -> " + currentVolume);
-        }
-        if (playbackStateChanged) {
-            EventLogger.log(this, "Media playback state changed: active = " + mediaActive);
-        }
-
-        lastObservedVolume = currentVolume;
-        lastObservedMediaActive = mediaActive;
-
-        boolean flipped = checkAndClearFlipDetected();
-
-        if (enabled) {
-            if (active && !fading && timerEndsAt > 0L && System.currentTimeMillis() >= timerEndsAt) {
-                EventLogger.log(this, "Timer expiration detected during input poll");
-                beginFadeOut();
-            } else if (fading && flipped) {
-                cancelFadeForFlip();
-            } else if (fading && volumeChanged) {
-                cancelFadeForVolumeChange();
-            } else if (active && flipped && !suppressVolumeReset) {
-                EventLogger.log(this, "Timer reset due to phone flip gesture");
-                resetTimerForVolumeChange();
-            } else if (active && volumeChanged && !suppressVolumeReset) {
-                resetTimerForVolumeChange();
-            } else if (!active && !fading && mediaActive) {
-                startTimerFromConfiguredDuration();
-            } else if (active && playbackStopped) {
-                EventLogger.log(this, "Playback stopped while timer was active");
-                active = false;
-                cancelTimerCallbacks();
-                updateNotification();
+    @Override
+    public void onTriggerVibration() {
+        if (vibrator != null && vibrator.hasVibrator()) {
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                vibrator.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK));
+            } else if (android.os.Build.VERSION.SDK_INT >= 26) {
+                vibrator.vibrate(android.os.VibrationEffect.createOneShot(70L, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+            } else {
+                vibrator.vibrate(70L);
             }
         }
+    }
+
+    @Override
+    public void onPersistState(boolean enabled, int durationMinutes, long timerEndsAt) {
+        if (preferences == null) {
+            return;
+        }
+        android.content.SharedPreferences.Editor editor = preferences.edit()
+                .putBoolean(KEY_ENABLED, enabled)
+                .putInt(KEY_DURATION_MINUTES, durationMinutes);
+        if (timerEndsAt > 0L) {
+            editor.putLong(KEY_TIMER_ENDS_AT, timerEndsAt);
+        } else {
+            editor.remove(KEY_TIMER_ENDS_AT);
+        }
+        editor.apply();
+    }
+
+    @Override
+    public void onUpdateNotification() {
+        updateNotification();
     }
 
     private void pauseMediaViaAudioFocus() {
@@ -541,17 +344,17 @@ public class SleepTimerService extends Service implements SensorEventListener {
     }
 
     private Notification buildNotification() {
-        String configuredDuration = getString(R.string.configured_duration, configuredDurationMinutes);
+        String configuredDuration = getString(R.string.configured_duration, stateMachine.getConfiguredDurationMinutes());
         String title;
         String text;
 
-        if (!enabled) {
+        if (!stateMachine.isEnabled()) {
             title = getString(R.string.timer_off);
             text = getString(R.string.timer_off);
-        } else if (fading) {
+        } else if (stateMachine.isFading()) {
             title = getString(R.string.fading_title);
             text = getString(R.string.fading_text, configuredDuration);
-        } else if (active) {
+        } else if (stateMachine.isActive()) {
             title = getString(R.string.active_title);
             text = getString(R.string.active_text, formatRemaining(), configuredDuration);
         } else {
@@ -568,7 +371,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
                 .setOnlyAlertOnce(true)
                 .setShowWhen(false);
 
-        String durationStr = String.valueOf(configuredDurationMinutes);
+        String durationStr = String.valueOf(stateMachine.getConfiguredDurationMinutes());
         builder.getExtras().putString(Notification.EXTRA_REMOTE_INPUT_DRAFT, durationStr);
 
         RemoteInput remoteInput = new RemoteInput.Builder(REMOTE_INPUT_KEY)
@@ -585,7 +388,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
                 .build();
         builder.addAction(setTimerAction);
 
-        if (enabled) {
+        if (stateMachine.isEnabled()) {
             Notification.Action turnOffAction = new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
                     getString(R.string.action_turn_off),
@@ -630,7 +433,7 @@ public class SleepTimerService extends Service implements SensorEventListener {
     }
 
     private String formatRemaining() {
-        long remaining = Math.max(0L, timerEndsAt - System.currentTimeMillis());
+        long remaining = Math.max(0L, stateMachine.getTimerEndsAt() - System.currentTimeMillis());
         long totalMinutes = (remaining + 59_999L) / 60_000L;
         long hours = totalMinutes / 60L;
         long minutes = totalMinutes % 60L;
