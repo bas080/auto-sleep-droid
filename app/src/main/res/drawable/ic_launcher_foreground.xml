@@ -4,7 +4,11 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <!-- ZZZ Sleep Icon -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,24v6.25L45.25,41.5H54v5H39v-6.25L47.75,29H39v-5H54zM84,31.5v6.25L75.25,49H84v5H69v-6.25L77.75,36.5H69v-5H84zM69,51.5v6.25L60.25,69H69v5H54v-6.25L62.75,56.5H54v-5H69z"/>
+    <group
+        android:translateX="-7.5"
+        android:translateY="5">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M54,24v6.25L45.25,41.5H54v5H39v-6.25L47.75,29H39v-5H54zM84,31.5v6.25L75.25,49H84v5H69v-6.25L77.75,36.5H69v-5H84zM69,51.5v6.25L60.25,69H69v5H54v-6.25L62.75,56.5H54v-5H69z"/>
+    </group>
 </vector>
