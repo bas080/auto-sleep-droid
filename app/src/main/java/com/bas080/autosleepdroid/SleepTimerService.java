@@ -259,11 +259,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             onCancelAlarm();
             unregisterSensorListener();
             unregisterVolumeObserver();
-            stopForeground(STOP_FOREGROUND_REMOVE);
-            NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            if (manager != null) {
-                manager.cancel(NOTIFICATION_ID);
-            }
+            startForeground(NOTIFICATION_ID, buildNotification());
         } else if (newState == SleepTimerStateMachine.State.WAITING) {
             onCancelAlarm();
             unregisterSensorListener();
@@ -279,14 +275,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             registerVolumeObserver();
             startForeground(NOTIFICATION_ID, buildNotification());
             scheduleExpiry();
-        }
-        updateTileState();
-    }
-
-    private void updateTileState() {
-        if (android.os.Build.VERSION.SDK_INT >= 24) {
-            android.service.quicksettings.TileService.requestListeningState(
-                    this, new android.content.ComponentName(this, SleepTimerTileService.class));
         }
     }
 
@@ -443,12 +431,21 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 .build();
         builder.addAction(setTimerAction);
 
-        Notification.Action turnOffAction = new Notification.Action.Builder(
-                Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                getString(R.string.action_turn_off),
-                turnOffIntent())
-                .build();
-        builder.addAction(turnOffAction);
+        if (stateMachine.isEnabled()) {
+            Notification.Action turnOffAction = new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                    getString(R.string.action_turn_off),
+                    turnOffIntent())
+                    .build();
+            builder.addAction(turnOffAction);
+        } else {
+            Notification.Action turnOnAction = new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_media_play),
+                    getString(R.string.action_turn_on),
+                    turnOnIntent())
+                    .build();
+            builder.addAction(turnOnAction);
+        }
 
         return builder.build();
     }
