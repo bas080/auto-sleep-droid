@@ -17,36 +17,48 @@ public class SleepTimerTileService extends TileService {
     @Override
     public void onClick() {
         super.onClick();
-        boolean isEnabled = getSharedPreferences("sleep_timer", MODE_PRIVATE)
+        boolean currentlyEnabled = getSharedPreferences("sleep_timer", MODE_PRIVATE)
                 .getBoolean("active", true);
+        boolean newEnabledState = !currentlyEnabled;
+
+        getSharedPreferences("sleep_timer", MODE_PRIVATE)
+                .edit()
+                .putBoolean("active", newEnabledState)
+                .apply();
+
+        updateTile(newEnabledState);
 
         Intent intent = new Intent(this, SleepTimerService.class);
-        if (isEnabled) {
-            intent.setAction(SleepTimerService.ACTION_TURN_OFF);
-            startService(intent);
-        } else {
+        if (newEnabledState) {
             intent.setAction(SleepTimerService.ACTION_TURN_ON);
             if (Build.VERSION.SDK_INT >= 26) {
                 startForegroundService(intent);
             } else {
                 startService(intent);
             }
+        } else {
+            intent.setAction(SleepTimerService.ACTION_TURN_OFF);
+            startService(intent);
         }
-
-        updateTile();
     }
 
     public void updateTile() {
+        boolean isEnabled = getSharedPreferences("sleep_timer", MODE_PRIVATE)
+                .getBoolean("active", true);
+        updateTile(isEnabled);
+    }
+
+    private void updateTile(boolean isEnabled) {
         Tile tile = getQsTile();
         if (tile == null) {
             return;
         }
 
-        boolean isEnabled = getSharedPreferences("sleep_timer", MODE_PRIVATE)
-                .getBoolean("active", true);
-
         tile.setState(isEnabled ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
         tile.setLabel(getString(R.string.app_name));
+        if (Build.VERSION.SDK_INT >= 23) {
+            tile.setIcon(Icon.createWithResource(this, R.drawable.ic_zzz));
+        }
         tile.updateTile();
     }
 }

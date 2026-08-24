@@ -44,7 +44,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private Runnable fadeRunnable;
     private Runnable restoreVolumeRunnable;
     private AudioManager.AudioPlaybackCallback audioPlaybackCallback;
-    private android.database.ContentObserver volumeObserver;
+    private android.content.BroadcastReceiver volumeReceiver;
 
     private static final int ORIENTATION_UNKNOWN = 0;
     private static final int ORIENTATION_FACE_UP = 1;
@@ -118,29 +118,33 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void registerVolumeObserver() {
-        if (volumeObserver == null && getContentResolver() != null) {
-            volumeObserver = new android.database.ContentObserver(handler) {
+        if (volumeReceiver == null) {
+            volumeReceiver = new android.content.BroadcastReceiver() {
                 @Override
-                public void onChange(boolean selfChange) {
-                    super.onChange(selfChange);
-                    if (audioManager != null) {
-                        int currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-                        stateMachine.onVolumeChanged(currentVol, System.currentTimeMillis());
+                public void onReceive(Context context, Intent intent) {
+                    if ("android.media.VOLUME_CHANGED_ACTION".equals(intent.getAction())) {
+                        int streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1);
+                        if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
+                            if (audioManager != null) {
+                                int currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+                                stateMachine.onVolumeChanged(currentVol, System.currentTimeMillis());
+                            }
+                        }
                     }
                 }
             };
-            getContentResolver().registerContentObserver(
-                    android.provider.Settings.System.CONTENT_URI,
-                    true,
-                    volumeObserver
-            );
+            android.content.IntentFilter filter = new android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION");
+            registerReceiver(volumeReceiver, filter);
         }
     }
 
     private void unregisterVolumeObserver() {
-        if (volumeObserver != null && getContentResolver() != null) {
-            getContentResolver().unregisterContentObserver(volumeObserver);
-            volumeObserver = null;
+        if (volumeReceiver != null) {
+            try {
+                unregisterReceiver(volumeReceiver);
+            } catch (IllegalArgumentException ignored) {
+            }
+            volumeReceiver = null;
         }
     }
 
@@ -418,7 +422,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
 
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setSmallIcon(R.drawable.ic_zzz)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setCategory(Notification.CATEGORY_SERVICE)
