@@ -74,9 +74,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         if (sensorManager != null) {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            if (accelerometer != null) {
-                sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL, 2_000_000);
-            }
         }
 
         initializeStateAndNotification();
@@ -155,6 +152,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             return;
         }
 
+        sampleOrientation();
+
         int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         boolean flipped = checkAndClearFlipDetected();
 
@@ -218,11 +217,22 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             return;
         }
 
+        sampleOrientation();
+
         int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         boolean musicActive = audioManager.isMusicActive();
         boolean flipped = checkAndClearFlipDetected();
 
         stateMachine.pollInputs(currentVolume, musicActive, flipped, System.currentTimeMillis());
+    }
+
+    private boolean samplingRequested = false;
+
+    private void sampleOrientation() {
+        if (sensorManager != null && accelerometer != null) {
+            samplingRequested = true;
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        }
     }
 
     // Callback implementations from SleepTimerStateMachine.Callback
@@ -460,16 +470,25 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public void onSensorChanged(SensorEvent event) {
         if (event != null && event.sensor != null && event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             float z = event.values[2];
+            int currentOrientation = ORIENTATION_UNKNOWN;
             if (z < -8.5f) {
-                if (lastOrientation == ORIENTATION_FACE_UP) {
-                    flipDetected = true;
-                }
-                lastOrientation = ORIENTATION_FACE_DOWN;
+                currentOrientation = ORIENTATION_FACE_DOWN;
             } else if (z > 8.5f) {
-                if (lastOrientation == ORIENTATION_FACE_DOWN) {
+                currentOrientation = ORIENTATION_FACE_UP;
+            }
+
+            if (currentOrientation != ORIENTATION_UNKNOWN) {
+                if (lastOrientation != ORIENTATION_UNKNOWN && lastOrientation != currentOrientation) {
                     flipDetected = true;
                 }
-                lastOrientation = ORIENTATION_FACE_UP;
+                lastOrientation = currentOrientation;
+            }
+
+            if (samplingRequested) {
+                samplingRequested = false;
+                if (sensorManager != null) {
+                    sensorManager.unregisterListener(this);
+                }
             }
         }
     }
