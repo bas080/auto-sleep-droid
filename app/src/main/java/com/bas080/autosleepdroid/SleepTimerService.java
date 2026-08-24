@@ -75,7 +75,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (sensorManager != null) {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
             if (accelerometer != null) {
-                sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+                sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL, 2_000_000);
             }
         }
 
