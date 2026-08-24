@@ -164,7 +164,14 @@ public class SleepTimerStateMachine {
     }
 
     public void handleAlarmExpiry(int currentVolume) {
+        handleAlarmExpiry(currentVolume, System.currentTimeMillis());
+    }
+
+    public void handleAlarmExpiry(int currentVolume, long now) {
         if (isEnabled() && state == State.ACTIVE) {
+            if (timerEndsAt > 0L && now < timerEndsAt - 1000L) {
+                return;
+            }
             beginFadeOut(currentVolume);
         }
     }

@@ -165,6 +165,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void scheduleExpiry() {
+        if (expiryRunnable != null) {
+            handler.removeCallbacks(expiryRunnable);
+        }
         long delay = Math.max(0L, stateMachine.getTimerEndsAt() - System.currentTimeMillis());
         expiryRunnable = () -> {
             int vol = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
@@ -175,7 +178,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void cancelTimerCallbacks() {
-        onCancelAlarm();
         if (expiryRunnable != null) {
             handler.removeCallbacks(expiryRunnable);
         }
@@ -226,8 +228,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     // Callback implementations from SleepTimerStateMachine.Callback
     @Override
     public void onStateChanged(SleepTimerStateMachine.State newState) {
+        cancelTimerCallbacks();
         if (newState == SleepTimerStateMachine.State.OFF || newState == SleepTimerStateMachine.State.WAITING) {
-            cancelTimerCallbacks();
+            onCancelAlarm();
         } else if (newState == SleepTimerStateMachine.State.FADING) {
             startFadeRunnable();
         } else if (newState == SleepTimerStateMachine.State.ACTIVE) {
