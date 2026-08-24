@@ -6,7 +6,7 @@
     <string name="fading_title">Atenuando volumen</string>
     <string name="fading_text">Atenuando volumen (%1$s)</string>
     <string name="active_title">Temporizador en ejecución</string>
-    <string name="active_text">%1$s restantes (%2$s)</string>
+    <string name="active_text">Atenúa a las %1$s (%2$s)</string>
     <string name="waiting_title">Esperando reproducción de medios</string>
     <string name="waiting_text">Esperando reproducción de medios (%1$s)</string>
     <string name="configured_duration">%1$dm configurado</string>

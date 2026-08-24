@@ -18,7 +18,7 @@ Provide an Android sleep timer controlled via a Quick Settings tile toggle butto
   - Buttons: "Set Timer" (Inline reply to change duration) and "Turn Off" (Disables timer and transitions to Off state).
 - Active: 
   - Text: "Timer running"
-  - Duration: Displays the live countdown of time remaining.
+  - Duration: Displays the target fade-out clock time and configured duration (e.g. "Fades out at 11:15 PM (20m configured)").
   - Buttons: "Set Timer" (Inline reply to change duration) and "Turn Off" (Disables timer and transitions to Off state).
 - Fading: 
   - Text: "Fading volume"

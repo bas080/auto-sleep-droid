@@ -233,7 +233,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             stateMachine.beginFadeOut(vol);
         };
         handler.postDelayed(expiryRunnable, delay);
-        scheduleNotificationRefresh();
     }
 
     private void cancelTimerCallbacks() {
@@ -249,16 +248,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (restoreVolumeRunnable != null) {
             handler.removeCallbacks(restoreVolumeRunnable);
         }
-    }
-
-    private void scheduleNotificationRefresh() {
-        notificationRunnable = () -> {
-            if (stateMachine.isActive() && !stateMachine.isFading()) {
-                updateNotification();
-                scheduleNotificationRefresh();
-            }
-        };
-        handler.postDelayed(notificationRunnable, 60_000L);
     }
 
 
@@ -422,7 +411,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             text = getString(R.string.fading_text, configuredDuration);
         } else if (stateMachine.isActive()) {
             title = getString(R.string.active_title);
-            text = getString(R.string.active_text, formatRemaining(), configuredDuration);
+            text = getString(R.string.active_text, formatTargetTime(), configuredDuration);
         } else {
             title = getString(R.string.waiting_title);
             text = getString(R.string.waiting_text, configuredDuration);
@@ -489,15 +478,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private String formatRemaining() {
-        long remaining = Math.max(0L, stateMachine.getTimerEndsAt() - System.currentTimeMillis());
-        long totalMinutes = (remaining + 59_999L) / 60_000L;
-        long hours = totalMinutes / 60L;
-        long minutes = totalMinutes % 60L;
-        if (hours > 0L) {
-            return getString(R.string.time_format_hours_minutes, hours, minutes);
+    private String formatTargetTime() {
+        long endsAt = stateMachine.getTimerEndsAt();
+        if (endsAt <= 0L) {
+            return "";
         }
-        return getString(R.string.time_format_minutes, minutes);
+        java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
+        return timeFormat.format(new java.util.Date(endsAt));
     }
 
     private void createNotificationChannel() {

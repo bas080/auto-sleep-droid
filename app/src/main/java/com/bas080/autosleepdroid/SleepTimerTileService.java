@@ -23,14 +23,14 @@ public class SleepTimerTileService extends TileService {
         Intent intent = new Intent(this, SleepTimerService.class);
         if (isEnabled) {
             intent.setAction(SleepTimerService.ACTION_TURN_OFF);
+            startService(intent);
         } else {
             intent.setAction(SleepTimerService.ACTION_TURN_ON);
-        }
-
-        if (Build.VERSION.SDK_INT >= 26) {
-            startForegroundService(intent);
-        } else {
-            startService(intent);
+            if (Build.VERSION.SDK_INT >= 26) {
+                startForegroundService(intent);
+            } else {
+                startService(intent);
+            }
         }
 
         updateTile();
