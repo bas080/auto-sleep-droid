@@ -65,6 +65,10 @@ public class SleepTimerStateMachineTest {
         public void onUpdateNotification() {
             this.notificationUpdateCount++;
         }
+
+        @Override
+        public void onTimerRescheduled() {
+        }
     }
 
     @Before

@@ -52,9 +52,9 @@ Responsibilities:
 - Parse and validate the inline notification reply, gracefully defaulting to the previously configured duration or 20-minute default on invalid input.
 - Store timer configuration (`duration_minutes`), enabled state (`active`), and wall-clock target expiration (`timer_ends_at`) in `SharedPreferences`.
 - Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
-- Sample static accelerometer orientation on demand during periodic polling and fade-out steps, unregistering the sensor listener immediately after capturing readings for maximum battery efficiency.
-- Poll the music volume and playback state once per minute.
-- Transition from `Waiting` to `Active` when polling detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
+- Listen for media playback state changes using `AudioManager.AudioPlaybackCallback` (API 26+) instead of periodic polling.
+- Register accelerometer sensor listener and `VOLUME_CHANGED_ACTION` broadcast receiver dynamically only during `Active` and `Fading` states.
+- Transition from `Waiting` to `Active` when playback callback detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused, and revert to the `Waiting` state.
 - Trigger a short, faint haptic feedback pulse (`Vibrator`) upon duration replies, turning off, volume button resets, and flip gestures.
@@ -160,7 +160,7 @@ In-memory state in `SleepTimerService`:
 ### Volume reset, Gesture flip & Media playback start
 
 1. Android changes music stream volume normally, a phone flip gesture is detected, or playback starts.
-2. The one-minute input poll compares volume, playback status, and flip sensor events with previous samples.
+2. Event listeners (`AudioPlaybackCallback`, `VOLUME_CHANGED_ACTION` receiver, accelerometer sensor) notify `SleepTimerStateMachine` immediately of events.
 3. If enabled and active, a volume change or phone flip gesture resets the countdown to `configuredDurationMinutes`.
 4. If enabled and waiting, active media playback (`isMusicActive()`) transitions the timer to `Active`.
 5. If in `Fading` state, a volume change cancels fade and preserves current volume, while a phone flip gesture cancels fade, restores pre-fade volume, and resets the timer to `Active`.
