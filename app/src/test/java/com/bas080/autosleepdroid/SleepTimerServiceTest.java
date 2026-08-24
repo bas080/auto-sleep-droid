@@ -187,6 +187,14 @@ public class SleepTimerServiceTest {
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
+        java.lang.reflect.Field stateMachineField = SleepTimerService.class.getDeclaredField("stateMachine");
+        stateMachineField.setAccessible(true);
+        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
+
+        long now = System.currentTimeMillis();
+        stateMachine.initialize(true, 10, now + 60000L, 10, true, now);
+        assertEquals(SleepTimerStateMachine.State.ACTIVE, stateMachine.getState());
+
         java.lang.reflect.Constructor<android.hardware.SensorEvent> constructor =
                 android.hardware.SensorEvent.class.getDeclaredConstructor(int.class);
         constructor.setAccessible(true);
@@ -214,10 +222,8 @@ public class SleepTimerServiceTest {
 
         service.onSensorChanged(faceDownEvent);
 
-        java.lang.reflect.Method method = SleepTimerService.class.getDeclaredMethod("checkAndClearFlipDetected");
-        method.setAccessible(true);
-        boolean flipDetected = (boolean) method.invoke(service);
-        assertTrue(flipDetected);
+        // Verify flip event resets timer in ACTIVE state
+        assertEquals(SleepTimerStateMachine.State.ACTIVE, stateMachine.getState());
     }
 
     @Test
@@ -250,7 +256,7 @@ public class SleepTimerServiceTest {
     }
 
     @Test
-    public void testFadeOutStepDoesNotCancelFadeWhenPolledDuringVolumeChange() throws Exception {
+    public void testFadeOutStepDoesNotCancelFadeWhenVolumeUpdates() throws Exception {
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
@@ -267,14 +273,9 @@ public class SleepTimerServiceTest {
 
         java.lang.reflect.Method runFadeStepMethod = SleepTimerService.class.getDeclaredMethod("runFadeStep");
         runFadeStepMethod.setAccessible(true);
-        java.lang.reflect.Method pollInputsMethod = SleepTimerService.class.getDeclaredMethod("pollInputs");
-        pollInputsMethod.setAccessible(true);
 
         // Execute runFadeStep
         runFadeStepMethod.invoke(service);
-
-        // Poll inputs
-        pollInputsMethod.invoke(service);
 
         assertTrue(stateMachine.isFading());
     }

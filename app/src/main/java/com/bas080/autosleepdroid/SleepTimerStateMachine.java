@@ -272,27 +272,12 @@ public class SleepTimerStateMachine {
         }
     }
 
-    public void pollInputs(int currentVolume, boolean musicActive, boolean flipDetected, long now) {
-        int expectedVolume = state == State.FADING ? lastFadeVolume : lastObservedVolume;
-        boolean volumeChanged = !suppressVolumeReset && (currentVolume != expectedVolume);
-        boolean playbackStateChanged = musicActive != lastObservedMediaActive;
+    public void onPlaybackStateChanged(boolean musicActive, long now) {
         boolean playbackStopped = !musicActive && lastObservedMediaActive;
-
-        lastObservedVolume = currentVolume;
         lastObservedMediaActive = musicActive;
 
         if (isEnabled()) {
-            if (state == State.ACTIVE && timerEndsAt > 0L && now >= timerEndsAt) {
-                beginFadeOut(currentVolume);
-            } else if (state == State.FADING && flipDetected) {
-                cancelFadeForFlip();
-            } else if (state == State.FADING && volumeChanged) {
-                cancelFadeForVolumeChange(currentVolume);
-            } else if (state == State.ACTIVE && flipDetected && !suppressVolumeReset) {
-                resetTimerForVolumeChange(now);
-            } else if (state == State.ACTIVE && volumeChanged && !suppressVolumeReset) {
-                resetTimerForVolumeChange(now);
-            } else if (state == State.WAITING && musicActive) {
+            if (state == State.WAITING && musicActive) {
                 startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true);
             } else if (state == State.ACTIVE && playbackStopped) {
                 if (callback != null) {
@@ -300,6 +285,54 @@ public class SleepTimerStateMachine {
                 }
                 transitionTo(State.WAITING);
             }
+        }
+    }
+
+    public void onVolumeChanged(int currentVolume, long now) {
+        if (suppressVolumeReset || !isActive()) {
+            lastObservedVolume = currentVolume;
+            return;
+        }
+
+        int expectedVolume = state == State.FADING ? lastFadeVolume : lastObservedVolume;
+        boolean volumeChanged = currentVolume != expectedVolume;
+        lastObservedVolume = currentVolume;
+
+        if (volumeChanged) {
+            if (state == State.FADING) {
+                cancelFadeForVolumeChange(currentVolume);
+            } else if (state == State.ACTIVE) {
+                resetTimerForVolumeChange(now);
+            }
+        }
+    }
+
+    public void onPhoneFlipped(long now) {
+        if (!isActive()) {
+            return;
+        }
+
+        if (state == State.FADING) {
+            cancelFadeForFlip();
+        } else if (state == State.ACTIVE) {
+            resetTimerForVolumeChange(now);
+        }
+    }
+
+    public void pollInputs(int currentVolume, boolean musicActive, boolean flipDetected, long now) {
+        if (musicActive != lastObservedMediaActive) {
+            onPlaybackStateChanged(musicActive, now);
+        }
+        if (flipDetected) {
+            onPhoneFlipped(now);
+        }
+        int expectedVolume = state == State.FADING ? lastFadeVolume : lastObservedVolume;
+        if (currentVolume != expectedVolume) {
+            onVolumeChanged(currentVolume, now);
+        }
+
+        if (isEnabled() && state == State.ACTIVE && timerEndsAt > 0L && now >= timerEndsAt) {
+            beginFadeOut(currentVolume);
         }
     }
 
