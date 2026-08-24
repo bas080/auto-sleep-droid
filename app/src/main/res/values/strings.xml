@@ -6,7 +6,7 @@
     <string name="fading_title">Fading volume</string>
     <string name="fading_text">Fading volume (%1$s)</string>
     <string name="active_title">Timer running</string>
-    <string name="active_text">%1$s remaining (%2$s)</string>
+    <string name="active_text">Fades out at %1$s (%2$s)</string>
     <string name="waiting_title">Waiting for media playback</string>
     <string name="waiting_text">Waiting for media playback (%1$s)</string>
     <string name="configured_duration">%1$dm configured</string>
