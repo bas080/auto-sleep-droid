@@ -52,7 +52,7 @@ Responsibilities:
 - Parse and validate the inline notification reply, gracefully defaulting to the previously configured duration or 20-minute default on invalid input.
 - Store timer configuration (`duration_minutes`), enabled state (`active`), and wall-clock target expiration (`timer_ends_at`) in `SharedPreferences`.
 - Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
-- Monitor accelerometer flip gestures using `SensorManager.SENSOR_DELAY_NORMAL` with a maximum report latency of 2,000,000 µs (2 seconds) to leverage hardware sensor batching for battery optimization while ensuring event delivery within 2 seconds at most.
+- Sample static accelerometer orientation on demand during periodic polling and fade-out steps, unregistering the sensor listener immediately after capturing readings for maximum battery efficiency.
 - Poll the music volume and playback state once per minute.
 - Transition from `Waiting` to `Active` when polling detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
