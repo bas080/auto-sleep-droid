@@ -146,4 +146,20 @@ public class SleepTimerStateMachineTest {
         assertEquals(SleepTimerStateMachine.State.ACTIVE, stateMachine.getState());
         assertFalse(stateMachine.isFading());
     }
+
+    @Test
+    public void testPrematureAlarmExpiryIgnoredWhenTimerActive() {
+        long now = System.currentTimeMillis();
+        long futureEndsAt = now + 10 * 60_000L; // Timer ends in 10 minutes
+
+        stateMachine.initialize(true, 10, futureEndsAt, 10, true, now);
+        assertEquals(SleepTimerStateMachine.State.ACTIVE, stateMachine.getState());
+
+        // Simulate stale or early alarm intent received 9 minutes before expiry
+        stateMachine.handleAlarmExpiry(10, now + 60_000L);
+
+        // Verify state remains ACTIVE and does not transition to FADING prematurely
+        assertEquals(SleepTimerStateMachine.State.ACTIVE, stateMachine.getState());
+        assertFalse(stateMachine.isFading());
+    }
 }
