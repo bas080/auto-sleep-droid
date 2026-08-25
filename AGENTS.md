@@ -8,9 +8,10 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 
 ## Project Documentation
 
-- [SPEC.md](SPEC.md): product requirements and acceptance criteria.
-- [IMPLEMENTATION.md](IMPLEMENTATION.md): architecture, runtime flows, persistence, permissions, build/release details, and guidance for future developers and AI agents.
-- [CRON_SCHEDULING_RESEARCH.md](CRON_SCHEDULING_RESEARCH.md): research on Android background scheduling APIs (`WorkManager`, `AlarmManager`, `JobScheduler`), battery saver/Doze mode behavior, and process recoverability.
+- [SPEC.md](docs/SPEC.md): product requirements and acceptance criteria.
+- [IMPLEMENTATION.md](docs/IMPLEMENTATION.md): architecture, runtime flows, persistence, permissions, build/release details, and guidance for future developers and AI agents.
+- [CRON_SCHEDULING_RESEARCH.md](docs/CRON_SCHEDULING_RESEARCH.md): research on Android background scheduling APIs (`WorkManager`, `AlarmManager`, `JobScheduler`), battery saver/Doze mode behavior, and process recoverability.
+- [PERFORMANCE.md](docs/PERFORMANCE.md): performance optimizations implemented and recommendations for future increases.
 
 ## Build & Test Instructions
 
@@ -22,7 +23,7 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 
 ## Key Codebase Conventions
 
-- **Documentation Boundaries:** `SPEC.md` must focus purely on product requirements, acceptance criteria, and user-visible behavior without technical implementation details (such as Android API names, classes, or code constructs). Technical implementation details belong exclusively in `IMPLEMENTATION.md`.
+- **Documentation Boundaries:** `docs/SPEC.md` must focus purely on product requirements, acceptance criteria, and user-visible behavior without technical implementation details (such as Android API names, classes, or code constructs). Technical implementation details belong exclusively in `docs/IMPLEMENTATION.md`.
 - **UI & Notification Strings:** Do not include trailing punctuation, colons, or ellipses in UI and notification string resource values (`strings.xml`).
 - **Localization:** Maintain default English resources in `app/src/main/res/values/strings.xml` and Spanish translations in `app/src/main/res/values-es/strings.xml`.
 - **Test-Driven Development (TDD):** When attempting a fix, follow a TDD approach where possible: write a test that fails first, and then implement the fix to make that test pass.
