@@ -98,7 +98,6 @@ public class SleepTimerStateMachine {
         this.state = newState;
         if (callback != null) {
             callback.onStateChanged(newState);
-            callback.onUpdateNotification();
         }
     }
 

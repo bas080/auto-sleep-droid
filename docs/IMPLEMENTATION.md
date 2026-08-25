@@ -49,7 +49,7 @@ This is the main application component. It is a foreground service with the `med
 
 Responsibilities:
 
-- Create the low-importance ongoing notification (`setOngoing(true)`) representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`.
+- Create the ongoing notification (`setOngoing(true)`) representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`, using notification channel importance `IMPORTANCE_HIGH` and `PRIORITY_HIGH` with `setOnlyAlertOnce(false)` on `Active` state to pop up a heads-up banner when media playback starts.
 - Omit a content intent from the notification so tapping/clicking expands or collapses the notification rather than launching an activity.
 - Expose notification actions for `Set Timer` (with numeric keypad `RemoteInput`), `Turn Off` (when enabled), and `Turn On` (when Off).
 - Parse and validate the inline notification reply, gracefully defaulting to the previously configured duration or 20-minute default on invalid input.
