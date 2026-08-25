@@ -35,6 +35,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private static final String KEY_TIMER_ENDS_AT = "timer_ends_at";
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long PAUSE_RESET_DELAY_MS = 500L;
+    private static final long SENSOR_THROTTLE_MS = 300L;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private AudioManager audioManager;
     private android.app.AlarmManager alarmManager;
@@ -52,7 +53,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private int lastOrientation = ORIENTATION_UNKNOWN;
+    private long lastSensorEventTimeMs = 0L;
     private boolean sensorListenerRegistered = false;
+    private android.os.HandlerThread sensorThread;
+    private Handler sensorHandler;
     private android.os.Vibrator vibrator;
 
     private SleepTimerStateMachine stateMachine;
@@ -147,8 +151,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private void registerSensorListener() {
         if (sensorManager != null && accelerometer != null && !sensorListenerRegistered) {
+            if (sensorThread == null) {
+                sensorThread = new android.os.HandlerThread("SensorThread");
+                sensorThread.start();
+                sensorHandler = new Handler(sensorThread.getLooper());
+            }
             sensorListenerRegistered = true;
-            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL, sensorHandler);
         }
     }
 
@@ -156,6 +165,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (sensorListenerRegistered && sensorManager != null) {
             sensorListenerRegistered = false;
             sensorManager.unregisterListener(this);
+        }
+        if (sensorThread != null) {
+            sensorThread.quitSafely();
+            sensorThread = null;
+            sensorHandler = null;
         }
     }
 
@@ -500,6 +514,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event != null && event.sensor != null && event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            long now = System.currentTimeMillis();
+            if (now - lastSensorEventTimeMs < SENSOR_THROTTLE_MS) {
+                return;
+            }
+            lastSensorEventTimeMs = now;
+
             float z = event.values[2];
             int currentOrientation = ORIENTATION_UNKNOWN;
             if (z < -8.5f) {
@@ -510,7 +530,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
             if (currentOrientation != ORIENTATION_UNKNOWN) {
                 if (lastOrientation != ORIENTATION_UNKNOWN && lastOrientation != currentOrientation) {
-                    stateMachine.onPhoneFlipped(System.currentTimeMillis());
+                    handler.post(() -> stateMachine.onPhoneFlipped(now));
                 }
                 lastOrientation = currentOrientation;
             }
