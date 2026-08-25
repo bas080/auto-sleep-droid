@@ -422,13 +422,15 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             text = getString(R.string.waiting_text, configuredDuration);
         }
 
+        boolean alertOnActive = stateMachine.isActive();
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_zzz)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .setOngoing(true)
-                .setOnlyAlertOnce(true)
+                .setPriority(alertOnActive ? Notification.PRIORITY_HIGH : Notification.PRIORITY_LOW)
+                .setOnlyAlertOnce(!alertOnActive)
                 .setShowWhen(false);
 
         String durationStr = String.valueOf(stateMachine.getConfiguredDurationMinutes());
@@ -504,8 +506,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private void createNotificationChannel() {
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) {
+            NotificationChannel existingChannel = manager.getNotificationChannel(CHANNEL_ID);
+            if (existingChannel != null && existingChannel.getImportance() < NotificationManager.IMPORTANCE_HIGH) {
+                manager.deleteNotificationChannel(CHANNEL_ID);
+            }
             NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID, getString(R.string.notification_channel_name), NotificationManager.IMPORTANCE_LOW);
+                    CHANNEL_ID, getString(R.string.notification_channel_name), NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription(getString(R.string.notification_channel_description));
             manager.createNotificationChannel(channel);
         }
