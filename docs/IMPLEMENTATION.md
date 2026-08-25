@@ -31,6 +31,7 @@ The app is an Android sleep timer controlled from the notification shade. The ma
 ├── README.md
 ├── docs/
 │   ├── IMPLEMENTATION.md
+│   ├── NOTIFICATION_INPUT_OPTIONS.md
 │   ├── PERFORMANCE.md
 │   └── SPEC.md
 ├── build.gradle
@@ -49,7 +50,7 @@ This is the main application component. It is a foreground service with the `med
 
 Responsibilities:
 
-- Create the ongoing notification (`setOngoing(true)`) representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`, using notification channel importance `IMPORTANCE_HIGH` and `PRIORITY_HIGH` with `setOnlyAlertOnce(false)` on `Active` state to pop up a heads-up banner when media playback starts.
+- Create the low-importance ongoing notification (`setOngoing(true)`) representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`.
 - Omit a content intent from the notification so tapping/clicking expands or collapses the notification rather than launching an activity.
 - Expose notification actions for `Set Timer` (with numeric keypad `RemoteInput`), `Turn Off` (when enabled), and `Turn On` (when Off).
 - Parse and validate the inline notification reply, gracefully defaulting to the previously configured duration or 20-minute default on invalid input.
