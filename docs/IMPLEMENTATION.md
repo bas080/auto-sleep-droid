@@ -30,7 +30,6 @@ The app is an Android sleep timer controlled from the notification shade. The ma
 ├── .github/workflows/android-release.yml
 ├── README.md
 ├── docs/
-│   ├── CRON_SCHEDULING_RESEARCH.md
 │   ├── IMPLEMENTATION.md
 │   ├── PERFORMANCE.md
 │   └── SPEC.md
