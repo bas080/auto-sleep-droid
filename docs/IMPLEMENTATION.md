@@ -29,7 +29,11 @@ The app is an Android sleep timer controlled from the notification shade. The ma
 │               └── strings.xml
 ├── .github/workflows/android-release.yml
 ├── README.md
-├── SPEC.md
+├── docs/
+│   ├── CRON_SCHEDULING_RESEARCH.md
+│   ├── IMPLEMENTATION.md
+│   ├── PERFORMANCE.md
+│   └── SPEC.md
 ├── build.gradle
 ├── gradle.properties
 ├── gradlew
@@ -224,5 +228,5 @@ The APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 - Preserve the event log UI in `MainActivity` and `EventLogger`.
 - Keep `configuredDurationMinutes` as the source for timer resets after volume changes and reboot.
 - Do not treat app-generated fade/restore volume writes as user volume changes; keep `suppressVolumeReset` around those writes.
-- Update `SPEC.md` when product behavior changes and update this file when architecture or runtime behavior changes.
+- Update `docs/SPEC.md` when product behavior changes and update this file when architecture or runtime behavior changes.
 - Run `./gradlew assembleDebug` after Java, manifest, or Gradle changes.
