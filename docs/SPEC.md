@@ -21,7 +21,6 @@ Provide an Android sleep timer controlled via notification shade controls. The m
   - Text: "Timer running"
   - Duration: Displays the target fade-out clock time and configured duration (e.g. "Fades out at 11:15 PM (20m configured)").
   - Buttons: "Set Timer" (Inline reply to change duration) and "Turn Off" (Disables timer and transitions to Off state).
-  - Pop-up behavior: Pops up as a heads-up notification banner when audio playback starts if it is not visible yet.
 - Fading: 
   - Text: "Fading volume"
   - Duration: Displays the original configured duration.
@@ -48,7 +47,7 @@ Provide an Android sleep timer controlled via notification shade controls. The m
 - Show the configured duration in waiting, active, and fade states.
 
 ## Timer behavior
-- When enabled, count down from the configured duration while media is playing. When audio playback starts and transitions the timer to Active, pop up the notification banner if it is not visible yet to inform the user that countdown has begun.
+- When enabled, count down from the configured duration while media is playing.
 - Detect phone flip gestures and volume changes ONLY during Active (media playback) and Fading states to reset the timer. Ignore phone flip gestures and volume changes in Waiting and Off states.
 - When volume-up or volume-down is pressed during Active state: allow the system volume to change and reset the timer to the original configured duration.
 - When the phone is flipped (face-up to face-down, or face-down to face-down, detected via motion sensor) during Active state: reset the timer to the original configured duration.
