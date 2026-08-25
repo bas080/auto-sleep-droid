@@ -14,17 +14,25 @@ This document provides a technical evaluation of the performance characteristics
 - **Mechanism**: Hardware accelerometer listener (`SensorManager`) and system volume broadcast receiver (`VOLUME_CHANGED_ACTION`) are dynamically registered **only** when the timer enters `Active` or `Fading` states. They are immediately unregistered in `Off` and `Waiting` states.
 - **Performance Impact**: Prevents continuous background accelerometer interrupts and system-wide volume broadcast handling when the timer is idle, avoiding unnecessary battery and CPU drain.
 
-### 1.3 Wall-Clock Timestamp Persistence & Alarm Offloading
+### 1.3 Offloaded Sensor Thread & Temporal Throttling
+- **Mechanism**: Accelerometer callbacks are registered to a dedicated background `HandlerThread` (`SensorThread`) rather than the main looper, with a 300ms temporal throttle (`SENSOR_THROTTLE_MS`) filtering out rapid accelerometer noise.
+- **Performance Impact**: Dispatches raw sensor interrupts away from the UI/main thread and minimizes main-thread looper competition during movement.
+
+### 1.4 Wall-Clock Timestamp Persistence & Alarm Offloading
 - **Mechanism**: Target expiration is stored as a wall-clock Unix timestamp (`timer_ends_at`). Expiry is backed by `AlarmManager.setExactAndAllowWhileIdle()`.
 - **Performance Impact**: The system kernel can put the application and CPU into low-power deep sleep (Doze mode) during active timer countdowns. The app does not maintain an active sub-second countdown thread or CPU wake lock.
 
-### 1.4 Decoupled State Machine Architecture
+### 1.5 Decoupled State Machine Architecture
 - **Mechanism**: Core state transitions, duration validation, and fade-out calculations are isolated in `SleepTimerStateMachine.java` using pure Java primitives.
 - **Performance Impact**: State evaluations run synchronously in microseconds with zero Android framework IPC overhead and minimal garbage collection (GC) allocation.
 
-### 1.5 Notification Channel Importance Optimization
+### 1.6 Notification Channel Importance Optimization
 - **Mechanism**: Ongoing service notifications use `NotificationManager.IMPORTANCE_LOW` with `setOnlyAlertOnce(true)`.
 - **Performance Impact**: Prevents SystemUI from triggering sound, haptic feedback, or intrusive visual pop-ups during notification updates, minimizing layout redraw overhead in the status bar.
+
+### 1.7 Build System & CI Gradle Caching
+- **Mechanism**: Enabled Gradle build caching (`org.gradle.caching=true`) and parallel execution (`org.gradle.parallel=true`) in `gradle.properties`, along with `cache: 'gradle'` in GitHub Actions workflows (`.github/workflows/android-release.yml`).
+- **Performance Impact**: Significantly reduces clean and incremental build execution times and speeds up CI unit test runs across workflow executions.
 
 ---
 
@@ -39,12 +47,7 @@ A thorough audit of the runtime codebase reveals several critical performance bo
   - String concatenation (`sb.append(events.get(i))`) inside `persistLogs()` creates $O(N)$ string allocations on every log invocation, causing garbage collector pressure.
   - Date formatting via `SimpleDateFormat` instantiates a new formatter object or parses dates repeatedly on the calling thread.
 
-### 2.2 Main-Thread Accelerometer Event Handling
-- **Issue**: `SensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL)` registers the service as a listener on the main thread looper without specifying a dedicated background `Handler`.
-- **Impact**: When the device is moved or carried during an active timer, high-frequency accelerometer events are dispatched directly to the main thread looper, competing with UI rendering and notification updates.
-- **Lack of Hysteresis**: Every `onSensorChanged` invocation evaluates float comparisons ($z < -8.5\text{f}$ / $z > 8.5\text{f}$) without temporal throttling or noise filtering.
-
-### 2.3 Object Allocations in `buildNotification()`
+### 2.2 Object Allocations in `buildNotification()`
 - **Issue**: `buildNotification()` instantiates new `Notification.Builder`, `RemoteInput`, `Notification.Action`, and `Intent` instances, and queries system string resources every time the notification is updated.
 - **Impact**: While acceptable for occasional updates, frequent redrawing (e.g., during inline reply setup or state changes) causes transient memory allocations on the main thread.
 
@@ -59,20 +62,9 @@ To achieve maximum efficiency and responsiveness, future development should prio
 - **Action**: Replace full-array string serialization with ring-buffer storage or SQLite/Room to eliminate $O(N)$ string concatenation on log writes.
 - **Action**: Use an immutable thread-safe `ConcurrentLinkedQueue` or array ring buffer for in-memory event access to avoid allocating defensive copies on `getEvents()`.
 
-### 3.2 Sensor Thread Offloading & Temporal Throttling
-- **Action**: Create a dedicated background `HandlerThread` for sensor callbacks:
-  ```java
-  sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL, backgroundHandler);
-  ```
-- **Action**: Implement temporal hysteresis for gesture detection (e.g., requiring at least 300ms between orientation evaluations) to skip processing redundant high-frequency sensor noise.
-
-### 3.3 Notification Builder Caching & Re-use
+### 3.2 Notification Builder Caching & Re-use
 - **Action**: Cache static `Notification.Action` instances and `RemoteInput` builders in memory rather than reconstructing them on every state change.
 - **Action**: Only update notifications when user-visible state or time display values actually change.
 
-### 3.4 Build System & Developer Environment Optimization
-- **Action**: Enable Gradle Configuration Cache in `gradle.properties`:
-  ```properties
-  org.gradle.configuration-cache=true
-  ```
-- **Action**: Enable R8 code and resource shrinking for release builds in `app/build.gradle` to minimize final DEX size and runtime method table overhead.
+### 3.3 R8 / ProGuard Code & Resource Shrinking
+- **Action**: Enable R8 / ProGuard obfuscation, code shrinking (`minifyEnabled true`), and resource shrinking (`shrinkResources true`) in `app/build.gradle` for production release builds to reduce final APK size, shrink runtime method tables, and improve class loading performance on device.

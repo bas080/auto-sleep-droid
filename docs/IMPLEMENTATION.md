@@ -56,7 +56,7 @@ Responsibilities:
 - Store timer configuration (`duration_minutes`), enabled state (`active`), and wall-clock target expiration (`timer_ends_at`) in `SharedPreferences`.
 - Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
 - Listen for media playback state changes using `AudioManager.AudioPlaybackCallback` (API 26+) instead of periodic polling.
-- Register accelerometer sensor listener and `VOLUME_CHANGED_ACTION` broadcast receiver dynamically only during `Active` and `Fading` states.
+- Register accelerometer sensor listener on a dedicated background `HandlerThread` (with 300ms temporal throttling) and `VOLUME_CHANGED_ACTION` broadcast receiver dynamically only during `Active` and `Fading` states.
 - Transition from `Waiting` to `Active` when playback callback detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused, and revert to the `Waiting` state.
@@ -212,7 +212,7 @@ Local debug build:
 ./gradlew assembleDebug
 ```
 
-CI workflows (`.github/workflows/android-release.yml`) automatically run `./gradlew test` prior to building debug/release APK artifacts.
+CI workflows (`.github/workflows/android-release.yml`) automatically run `./gradlew test` prior to building debug/release APK artifacts, utilizing Gradle dependency caching for fast workflow execution.
 
 Install on a connected device or emulator:
 
