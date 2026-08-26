@@ -70,7 +70,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onCreate() {
         super.onCreate();
-        EventLogger.log(this, "SleepTimerService created");
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         alarmManager = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
         preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
@@ -96,7 +95,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         int currentVolume = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
         boolean musicActive = audioManager != null && audioManager.isMusicActive();
 
-        EventLogger.log(this, "SleepTimerService state initialized (enabled: " + savedEnabled + ", duration: " + savedDuration + "m)");
+        EventLogger.log(this, "Service initialized (" + savedDuration + "m configured)");
 
         startForeground(NOTIFICATION_ID, buildNotification());
 
@@ -181,9 +180,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        String action = intent != null ? intent.getAction() : "null";
-        EventLogger.log(this, "SleepTimerService onStartCommand (action: " + action + ")");
-
         if (intent != null) {
             if (ACTION_TURN_OFF.equals(intent.getAction())) {
                 EventLogger.log(this, "Timer turned off");
@@ -198,7 +194,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             } else if (ACTION_SET_DURATION.equals(intent.getAction())) {
                 handleDurationReply(intent);
             } else if (ACTION_ALARM_EXPIRY.equals(intent.getAction())) {
-                EventLogger.log(this, "AlarmManager trigger received");
                 int currentVol = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
                 stateMachine.handleAlarmExpiry(currentVol);
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
@@ -210,14 +205,15 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                             .putBoolean(KEY_POST_FADEOUT_ENABLED, true)
                             .putFloat(KEY_POST_FADEOUT_HOURS, hours)
                             .apply();
-                    EventLogger.log(this, "Post-fadeout audio resumption set: " + hours + "h");
+                    String hoursStr = (hours == (long) hours) ? String.format("%d", (long) hours) : String.format("%.1f", hours);
+                    EventLogger.log(this, "Wake-up alarm set for " + hoursStr + "h");
                 }
             } else if (ACTION_CLEAR_POST_FADEOUT_RESUMPTION.equals(intent.getAction())) {
                 preferences.edit()
                         .putBoolean(KEY_POST_FADEOUT_ENABLED, false)
                         .apply();
                 cancelPostFadeoutWakeUp();
-                EventLogger.log(this, "Post-fadeout audio resumption cleared");
+                EventLogger.log(this, "Wake-up alarm cleared");
             } else if (ACTION_POST_FADEOUT_WAKE_UP.equals(intent.getAction())) {
                 handlePostFadeoutWakeUp();
             }
@@ -226,7 +222,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void handlePostFadeoutWakeUp() {
-        EventLogger.log(this, "Post-fadeout wake-up alarm triggered: resuming audio playback");
+        EventLogger.log(this, "Wake-up alarm triggered: resuming playback");
         android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
         android.os.PowerManager.WakeLock wakeLock = null;
         if (pm != null) {
@@ -277,7 +273,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         boolean musicActive = audioManager != null && audioManager.isMusicActive();
         stateMachine.handleDurationReply(duration, musicActive, System.currentTimeMillis(), true);
-        EventLogger.log(this, "Duration reply received: '" + reply + "' -> configured duration = " + stateMachine.getConfiguredDurationMinutes() + "m");
+        EventLogger.log(this, "Timer duration set to " + stateMachine.getConfiguredDurationMinutes() + "m");
     }
 
     private void startFadeRunnable() {
@@ -411,13 +407,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (pendingIntent != null) {
             alarmManager.cancel(pendingIntent);
             pendingIntent.cancel();
-            EventLogger.log(this, "Cancelled post-fadeout wake-up alarm");
+            EventLogger.log(this, "Cancelled wake-up alarm");
         }
     }
 
     @Override
     public void onPauseMedia() {
-        EventLogger.log(this, "Timer expired: pausing media via audio focus loss");
+        EventLogger.log(this, "Timer expired: pausing playback");
         pauseMediaViaAudioFocus();
 
         schedulePostFadeoutWakeUpIfNeeded();
@@ -449,9 +445,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 } else {
                     alarmManager.setExact(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
                 }
-                EventLogger.log(this, "Scheduled post-fadeout wake-up in " + postFadeoutHours + "h");
+                String hoursStr = (postFadeoutHours == (long) postFadeoutHours) ? String.format("%d", (long) postFadeoutHours) : String.format("%.1f", postFadeoutHours);
+                EventLogger.log(this, "Scheduled wake-up alarm in " + hoursStr + "h");
             } catch (SecurityException e) {
-                EventLogger.log(this, "SecurityException scheduling post-fadeout wake-up alarm");
+                EventLogger.log(this, "Error scheduling wake-up alarm");
             }
         }
     }

@@ -45,7 +45,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             btnClearPostFadeout.setOnClickListener(v -> clearPostFadeoutResumption());
         }
 
-        EventLogger.log(this, "MainActivity created");
+        EventLogger.log(this, "App opened");
 
         startOrRequestNotificationPermission();
         requestExactAlarmPermissionIfNeeded();
@@ -83,7 +83,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 .putBoolean(SleepTimerService.KEY_POST_FADEOUT_ENABLED, true)
                 .putFloat(SleepTimerService.KEY_POST_FADEOUT_HOURS, hours)
                 .apply();
-        EventLogger.log(this, "Post-fadeout audio resumption set: " + hours + "h");
+        String hoursStr = (hours == (long) hours) ? String.format("%d", (long) hours) : String.format("%.1f", hours);
+        EventLogger.log(this, "Wake-up alarm set for " + hoursStr + "h");
         updatePostFadeoutStatusText();
     }
 
@@ -92,7 +93,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         prefs.edit()
                 .putBoolean(SleepTimerService.KEY_POST_FADEOUT_ENABLED, false)
                 .apply();
-        EventLogger.log(this, "Post-fadeout audio resumption cleared");
+        EventLogger.log(this, "Wake-up alarm cleared");
         updatePostFadeoutStatusText();
     }
 
@@ -128,7 +129,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        EventLogger.log(this, "MainActivity new intent");
         startOrRequestNotificationPermission();
     }
 
@@ -155,7 +155,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     @Override
     protected void onPause() {
         super.onPause();
-        EventLogger.log(this, "MainActivity paused");
         EventLogger.setListener(null);
     }
 

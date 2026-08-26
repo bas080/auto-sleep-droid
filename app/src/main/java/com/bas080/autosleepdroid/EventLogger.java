@@ -31,7 +31,7 @@ public class EventLogger {
     public static synchronized void log(Context context, String message) {
         ensureLoaded(context);
 
-        String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date());
+        String timestamp = new SimpleDateFormat("MM-dd HH:mm:ss", Locale.US).format(new Date());
         String line = timestamp + " - " + message;
 
         events.add(line);
