@@ -13,9 +13,30 @@ The Post-Fadeout Alarm solves this by dynamically scheduling a wake-up alarm **$
 
 ---
 
+## User Interface & Configuration
+
+The main UI (`MainActivity`) provides controls placed at the top of the screen, directly above the timestamped event log (`ScrollView`).
+
+### UI Elements & Interactions
+
+1. **Set Alarm Duration Button:**
+   - Positioned at the top of the main UI layout above the logs.
+   - Tapping the button opens a native Android `TimePickerDialog` (in 24-hour or 12-hour duration mode) allowing the user to select hours and minutes for target sleep duration $N$ (e.g., 8 hours 0 minutes).
+
+2. **Time Picker Cancel / Clear Action:**
+   - In the initial version, the **Cancel** button on the `TimePickerDialog` serves as the clear/cancel mechanism. Tapping **Cancel** dismisses the dialog and clears or disables the configured post-fadeout alarm duration.
+
+3. **Status Description Text:**
+   - Rendered directly underneath the configuration button, and above the debug event log.
+   - Displays relevant status text reflecting the current post-fadeout alarm configuration:
+     - When configured: Displays the configured sleep duration (e.g., `"Post-fadeout alarm: 8h 0m after fade-out"`).
+     - When not configured / cleared: Displays fallback text (e.g., `"Post-fadeout alarm: Off"` or `"No post-fadeout alarm configured"`).
+
+---
+
 ## User Workflow & Experience
 
-1. **Configuration:** The user specifies a target sleep duration of $N$ hours (e.g., 8 hours) for the post-fadeout alarm.
+1. **Configuration:** The user opens the main app screen, taps the alarm button above the logs, selects $N$ hours using the Time Picker, and confirms. The status text underneath updates immediately.
 2. **Playback & Fade:** The user plays audio, and Auto Sleep Droid counts down to volume fade-out.
 3. **Fade Completion:** When the 30-second volume fade-out finishes and media playback is paused, Auto Sleep Droid calculates the target wake-up time:
    $$\text{Alarm Time} = \text{Fade-Out Completion Time} + N \text{ hours}$$
@@ -79,4 +100,4 @@ When adding $N$ hours to the fade-out completion time, the target wake-up time o
 - If no compatible alarm clock app is installed on the device, the attempt is logged safely to `EventLogger` without crashing the service.
 
 ### 4. User Disabling Feature
-- The user can disable the post-fadeout alarm feature in settings/configuration. When disabled, fade-out completes without launching an alarm intent.
+- The user can clear/disable the post-fadeout alarm feature via the Time Picker cancel action or UI controls. When disabled, fade-out completes without launching an alarm intent.
