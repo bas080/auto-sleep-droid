@@ -248,6 +248,7 @@ public class SleepTimerStateMachine {
         if (callback != null) {
             callback.onPersistState(true, configuredDurationMinutes, 0L);
         }
+        EventLogger.log("Pre-fade volume restored");
         transitionTo(State.WAITING);
     }
 
@@ -257,6 +258,7 @@ public class SleepTimerStateMachine {
             callback.onCancelAlarm();
         }
         lastObservedVolume = currentVolume;
+        EventLogger.log("Volume changed during fade: timer reset (" + configuredDurationMinutes + "m)");
         if (isValidDuration(configuredDurationMinutes)) {
             startTimer(configuredDurationMinutes, System.currentTimeMillis() + configuredDurationMinutes * 60_000L, System.currentTimeMillis(), true);
         } else {
@@ -273,6 +275,7 @@ public class SleepTimerStateMachine {
             suppressVolumeReset = false;
         }
         lastObservedVolume = volumeBeforeFade;
+        EventLogger.log("Phone flipped during fade: timer reset (" + configuredDurationMinutes + "m)");
         if (isValidDuration(configuredDurationMinutes)) {
             startTimer(configuredDurationMinutes, System.currentTimeMillis() + configuredDurationMinutes * 60_000L, System.currentTimeMillis(), true);
         } else {
@@ -286,11 +289,13 @@ public class SleepTimerStateMachine {
 
         if (isEnabled()) {
             if (state == State.WAITING && musicActive) {
+                EventLogger.log("Music started: timer started (" + configuredDurationMinutes + "m)");
                 startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true);
             } else if (state == State.ACTIVE && playbackStopped) {
                 if (callback != null) {
                     callback.onCancelAlarm();
                 }
+                EventLogger.log("Music stopped: timer paused");
                 transitionTo(State.WAITING);
             }
         }
@@ -310,7 +315,8 @@ public class SleepTimerStateMachine {
             if (state == State.FADING) {
                 cancelFadeForVolumeChange(currentVolume);
             } else if (state == State.ACTIVE) {
-                resetTimerForVolumeChange(now);
+                EventLogger.log("Volume changed: timer reset (" + configuredDurationMinutes + "m)");
+                resetTimer(now);
             }
         }
     }
@@ -323,7 +329,8 @@ public class SleepTimerStateMachine {
         if (state == State.FADING) {
             cancelFadeForFlip();
         } else if (state == State.ACTIVE) {
-            resetTimerForVolumeChange(now);
+            EventLogger.log("Phone flipped: timer reset (" + configuredDurationMinutes + "m)");
+            resetTimer(now);
         }
     }
 
@@ -344,7 +351,7 @@ public class SleepTimerStateMachine {
         }
     }
 
-    private void resetTimerForVolumeChange(long now) {
+    private void resetTimer(long now) {
         if (state != State.FADING && isValidDuration(configuredDurationMinutes)) {
             if (callback != null) {
                 callback.onTriggerVibration();

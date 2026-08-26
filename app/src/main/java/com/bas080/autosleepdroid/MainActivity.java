@@ -117,7 +117,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (Build.VERSION.SDK_INT >= 31) {
             android.app.AlarmManager alarmManager = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
             if (alarmManager != null && !alarmManager.canScheduleExactAlarms()) {
-                EventLogger.log(this, "Opening exact alarm permission settings");
+                EventLogger.log(this, "Opening exact alarm settings");
                 Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
                 intent.setData(android.net.Uri.parse("package:" + getPackageName()));
                 startActivity(intent);
@@ -162,7 +162,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
-            EventLogger.log(this, "Requesting POST_NOTIFICATIONS permission");
+            EventLogger.log(this, "Requesting notification permission");
             requestPermissions(
                     new String[]{Manifest.permission.POST_NOTIFICATIONS},
                     NOTIFICATION_PERMISSION_REQUEST);
@@ -176,7 +176,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-            EventLogger.log(this, "Permission result: POST_NOTIFICATIONS granted = " + granted);
+            EventLogger.log(this, "Notification permission: " + (granted ? "granted" : "denied"));
             startOrRequestNotificationPermission();
         }
     }

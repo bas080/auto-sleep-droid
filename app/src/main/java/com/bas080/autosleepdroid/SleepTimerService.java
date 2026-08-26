@@ -379,7 +379,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 alarmManager.setExact(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
             }
         } catch (SecurityException e) {
-            EventLogger.log(this, "SecurityException scheduling alarm; relying on foreground service polling");
+            EventLogger.log(this, "SecurityException scheduling alarm");
         }
     }
 
@@ -654,7 +654,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     @Override
     public void onDestroy() {
-        EventLogger.log(this, "SleepTimerService destroyed");
+        EventLogger.log(this, "Service destroyed");
         unregisterSensorListener();
         unregisterVolumeObserver();
         unregisterAudioPlaybackCallback();
