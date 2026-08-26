@@ -175,9 +175,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        String action = intent != null ? intent.getAction() : "null";
-        EventLogger.log(this, "SleepTimerService onStartCommand (action: " + action + ")");
-
         if (intent != null) {
             if (ACTION_TURN_OFF.equals(intent.getAction())) {
                 EventLogger.log(this, "Timer turned off");
@@ -215,7 +212,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         boolean musicActive = audioManager != null && audioManager.isMusicActive();
         stateMachine.handleDurationReply(duration, musicActive, System.currentTimeMillis(), true);
-        EventLogger.log(this, "Duration reply received: '" + reply + "' -> configured duration = " + stateMachine.getConfiguredDurationMinutes() + "m");
+        EventLogger.log(this, "Duration set to " + stateMachine.getConfiguredDurationMinutes() + "m (input: '" + reply + "')");
     }
 
     private void startFadeRunnable() {
@@ -311,7 +308,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 if (alarmManager.canScheduleExactAlarms()) {
                     alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
                 } else {
-                    EventLogger.log(this, "Exact alarm permission missing, falling back to setAndAllowWhileIdle");
+                    EventLogger.log(this, "Exact alarm permission missing, using fallback alarm");
                     alarmManager.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
                 }
             } else if (android.os.Build.VERSION.SDK_INT >= 23) {
@@ -320,7 +317,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 alarmManager.setExact(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
             }
         } catch (SecurityException e) {
-            EventLogger.log(this, "SecurityException scheduling alarm; relying on foreground service polling");
+            EventLogger.log(this, "SecurityException scheduling alarm, using fallback alarm");
         }
     }
 
@@ -340,7 +337,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     @Override
     public void onPauseMedia() {
-        EventLogger.log(this, "Timer expired: pausing media via audio focus loss");
+        EventLogger.log(this, "Timer expired: pausing media");
         pauseMediaViaAudioFocus();
 
         restoreVolumeRunnable = () -> stateMachine.restoreVolumeAfterPause();

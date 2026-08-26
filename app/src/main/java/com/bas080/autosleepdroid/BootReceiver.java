@@ -9,11 +9,11 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (!Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
-            EventLogger.log(context, "BootReceiver received action: " + (intent != null ? intent.getAction() : "null"));
+            EventLogger.log(context, "BootReceiver received action " + (intent != null ? intent.getAction() : "null"));
             return;
         }
 
-        EventLogger.log(context, "Boot completed event received");
+        EventLogger.log(context, "Boot completed");
 
         Intent serviceIntent = new Intent(context, SleepTimerService.class);
         if (Build.VERSION.SDK_INT >= 26) {
