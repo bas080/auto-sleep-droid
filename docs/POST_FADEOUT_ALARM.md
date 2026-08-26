@@ -21,22 +21,23 @@ The main UI (`MainActivity`) provides controls placed at the top of the screen, 
 
 1. **Set Alarm Duration Button:**
    - Positioned at the top of the main UI layout above the logs.
-   - Tapping the button opens a native Android `TimePickerDialog` (in 24-hour or 12-hour duration mode) allowing the user to select hours and minutes for target sleep duration $N$ (e.g., 8 hours 0 minutes).
+   - Tapping the button opens a native Android `TimePickerDialog` in 24-hour mode (`is24HourView = true`), where the hour wheel (0–23) represents target sleep hours and the minute wheel (0–59) represents target sleep minutes $N$ (e.g., 8 hours 0 minutes).
 
 2. **Time Picker Cancel / Clear Action:**
-   - In the initial version, the **Cancel** button on the `TimePickerDialog` serves as the clear/cancel mechanism. Tapping **Cancel** dismisses the dialog and clears or disables the configured post-fadeout alarm duration.
+   - Tapping **Cancel** in the `TimePickerDialog` or setting the duration to `0h 0m` disables/clears the post-fadeout alarm configuration.
+   - Clearing sets `post_fadeout_alarm_enabled = false` in `SharedPreferences` and resets the UI status text.
 
 3. **Status Description Text:**
    - Rendered directly underneath the configuration button, and above the debug event log.
    - Displays relevant status text reflecting the current post-fadeout alarm configuration:
      - When configured: Displays the configured sleep duration (e.g., `"Post-fadeout alarm: 8h 0m after fade-out"`).
-     - When not configured / cleared: Displays fallback text (e.g., `"Post-fadeout alarm: Off"` or `"No post-fadeout alarm configured"`).
+     - When not configured / cleared: Displays fallback text (e.g., `"Post-fadeout alarm: Off"`).
 
 ---
 
 ## User Workflow & Experience
 
-1. **Configuration:** The user opens the main app screen, taps the alarm button above the logs, selects $N$ hours using the Time Picker, and confirms. The status text underneath updates immediately.
+1. **Configuration:** The user opens the main app screen, taps the alarm button above the logs, selects $N$ hours and minutes using the 24-hour `TimePickerDialog`, and confirms. The status text underneath updates immediately.
 2. **Playback & Fade:** The user plays audio, and Auto Sleep Droid counts down to volume fade-out.
 3. **Fade Completion:** When the 30-second volume fade-out finishes and media playback is paused, Auto Sleep Droid calculates the target wake-up time:
    $$\text{Alarm Time} = \text{Fade-Out Completion Time} + N \text{ hours}$$
@@ -73,39 +74,35 @@ The feature requires the standard Android permission declared in `AndroidManifes
 
 ---
 
-## Alarm Management & Reuse Logic
+## Resolved Technical Architecture & Solutions
 
-To avoid cluttering the user's clock application with duplicate alarms created every night:
+### 1. `TimePickerDialog` 24-Hour Mode for Relative Duration Entry
+- **Resolution:** `TimePickerDialog` instantiated with `is24HourView = true` displays an intuitive 0–23 hour and 0–59 minute selection without AM/PM indicators.
+- **Handling Zero & Cancel:** Setting `00:00` or clicking **Cancel** sets `enabled = false` in `SharedPreferences`, updating the status text to `"Post-fadeout alarm: Off"`.
 
-1. **Identifier / Label:** Every alarm set by this feature uses the fixed label `"auto-sleep-droid"`.
-2. **Creation vs. Reuse:**
-   - On Android devices whose default clock app supports alarm lookup by label (such as Google Clock), broadcasting `ACTION_SET_ALARM` with `EXTRA_MESSAGE = "auto-sleep-droid"` and `EXTRA_SKIP_UI = true` updates the existing `"auto-sleep-droid"` alarm if one already exists, or creates a new one if it does not.
-   - On devices where the default clock app creates a new alarm instance, using the consistent `"auto-sleep-droid"` label allows users to easily recognize and manage the app's managed alarm.
+### 2. Service-Context Background Intent Execution
+- **Resolution:** Because `SleepTimerService` is an active Android Foreground Service (`foregroundServiceType="mediaPlayback"`), launching the system activity intent from background context requires adding `Intent.FLAG_ACTIVITY_NEW_TASK`.
+- **Background Launch Exemption:** Foreground services executing user-triggered sleep routines are exempted from Android 10+ background activity start restrictions when sending standard system intents with `EXTRA_SKIP_UI = true`.
+
+### 3. Alarm Reuse & Label Matching
+- **Resolution:** Passing `EXTRA_MESSAGE = "auto-sleep-droid"` ensures that on standard AOSP / Google Clock implementations, existing alarms with the label `"auto-sleep-droid"` are overwritten with the new wake-up time rather than creating duplicated alarm entries.
+
+### 4. Intent Receiver Validation
+- **Resolution:** Before launching the intent, `intent.resolveActivity(packageManager)` checks that a handler exists. If no clock app is available, `SleepTimerService` logs a warning to `EventLogger` without crashing.
 
 ---
 
-## Open Issues & Pre-Implementation Considerations
+## Remaining / Leftover Issues
 
-The following open issues require evaluation and resolution before implementing this feature:
+The following edge cases remain inherent to Android system intent delegation across heterogeneous device ecosystems:
 
-### 1. `TimePickerDialog` Duration vs. Time of Day UX
-- Standard Android `TimePickerDialog` is designed to pick a specific time of day (e.g., 08:30 AM/PM) rather than a relative duration (e.g., 8 hours 30 minutes).
-- *Consideration:* Evaluate whether `TimePickerDialog` in 24-hour mode (0–23 hours, 0–59 minutes) provides a clear enough duration entry UX for users, or whether a dedicated custom `NumberPicker` or duration dialog is preferable for entering $N$ hours.
+1. **OEM Clock App Behavior Variations:**
+   - Certain customized OEM ROMs (e.g. MIUI/HyperOS, ColorOS) do not respect `EXTRA_SKIP_UI = true` and may force-open the OEM Clock UI when the intent is dispatched, or may ignore `EXTRA_MESSAGE` matching and create duplicate alarms instead of updating the existing `"auto-sleep-droid"` alarm.
+   - *Mitigation:* Document in user notes that stock Google Clock or AOSP Clock apps provide the cleanest background alarm reuse experience.
 
-### 2. OEM Clock App Compatibility & Behavior Variations
-- Vendor-customized clock applications (e.g., Samsung Clock, Xiaomi/MIUI Clock, OnePlus Clock) implement `AlarmClock.ACTION_SET_ALARM` intent handling differently:
-  - Some vendor clock apps ignore `EXTRA_SKIP_UI = true` and force-open their UI when an intent is broadcast.
-  - Some vendor apps create a new duplicate alarm entry instead of replacing an existing alarm matched by `EXTRA_MESSAGE = "auto-sleep-droid"`.
-- *Consideration:* Conduct testing across primary Android OEMs and determine fallback behavior or user guidance for vendor clock limitations.
-
-### 3. Background Activity & Intent Launch Restrictions
-- When volume fade-out completes, Auto Sleep Droid executes inside `SleepTimerService` (a background/foreground service), often while the device screen is off and locked.
-- Starting an activity intent from a background service context requires `FLAG_ACTIVITY_NEW_TASK`. Furthermore, Android 10+ (API 29+) enforces restrictions on starting activities from the background.
-- *Consideration:* Verify that broadcasting `ACTION_SET_ALARM` via `sendBroadcast` or starting the intent with `FLAG_ACTIVITY_NEW_TASK` successfully schedules the alarm without triggering background activity start restrictions when screen is off.
-
-### 4. Separate Clear/Cancel UI Control vs. Dialog Cancel
-- Using the `TimePickerDialog`'s built-in **Cancel** button as the sole clear/cancel mechanism may cause accidental clearing if a user opens the dialog simply to inspect settings and taps Cancel.
-- *Consideration:* Decide whether an explicit "Clear Alarm" or "Disable Post-Fadeout Alarm" button should be added to the main UI alongside the "Set Alarm Duration" button in future iterations.
+2. **Accidental Dismissal via Time Picker Cancel:**
+   - Tapping "Cancel" in the `TimePickerDialog` clears the configured post-fadeout alarm. If a user opens the picker just to view current settings and taps Cancel, the configuration will be cleared.
+   - *Mitigation:* Future UI iterations can add an explicit "Clear" action button alongside the "Set Alarm Duration" button to separate cancellation of the dialog from clearing the stored preference.
 
 ---
 
@@ -120,9 +117,5 @@ When adding $N$ hours to the fade-out completion time, the target wake-up time o
 - If volume fade-out is cancelled before completion (e.g., due to user pressing volume buttons or flipping the phone), no alarm is scheduled.
 - Alarm intent creation occurs exclusively upon successful transition out of `Fading` state when media is paused and volume is restored.
 
-### 3. Missing Clock Application
-- Before launching the `ACTION_SET_ALARM` intent, the app verifies that a receiver exists using `intent.resolveActivity(packageManager) != null`.
-- If no compatible alarm clock app is installed on the device, the attempt is logged safely to `EventLogger` without crashing the service.
-
-### 4. User Disabling Feature
+### 3. User Disabling Feature
 - The user can clear/disable the post-fadeout alarm feature via the Time Picker cancel action or UI controls. When disabled, fade-out completes without launching an alarm intent.
