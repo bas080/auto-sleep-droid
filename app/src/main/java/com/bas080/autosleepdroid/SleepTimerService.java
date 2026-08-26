@@ -187,6 +187,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (intent != null) {
             if (ACTION_TURN_OFF.equals(intent.getAction())) {
                 EventLogger.log(this, "Timer turned off");
+                if (stateMachine.isActive()) {
+                    cancelPostFadeoutWakeUp();
+                }
                 stateMachine.handleTurnOff(true);
             } else if (ACTION_TURN_ON.equals(intent.getAction())) {
                 EventLogger.log(this, "Timer turned on");
@@ -213,6 +216,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 preferences.edit()
                         .putBoolean(KEY_POST_FADEOUT_ENABLED, false)
                         .apply();
+                cancelPostFadeoutWakeUp();
                 EventLogger.log(this, "Post-fadeout audio resumption cleared");
             } else if (ACTION_POST_FADEOUT_WAKE_UP.equals(intent.getAction())) {
                 handlePostFadeoutWakeUp();
@@ -249,9 +253,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             audioManager.dispatchMediaKeyEvent(upEvent);
         }
 
-        try {
-            wakeLock.release();
-        } catch (Throwable ignored) {
+        if (wakeLock != null) {
+            try {
+                wakeLock.release();
+            } catch (Throwable ignored) {
+            }
         }
     }
 
@@ -393,7 +399,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             alarmManager.cancel(pendingIntent);
             pendingIntent.cancel();
         }
-        cancelPostFadeoutWakeUp();
     }
 
     private void cancelPostFadeoutWakeUp() {
