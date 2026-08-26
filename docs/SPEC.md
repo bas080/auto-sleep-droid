@@ -60,11 +60,12 @@ Provide an Android sleep timer controlled via notification shade controls. The m
 ## Post-Fadeout Audio Resumption
 - The user can configure Post-Fadeout Audio Resumption through the main app screen (`MainActivity`).
 - Controls at the top of the main UI include a "Set Audio Resumption" button, a "Clear" button, and status description text rendered above the event log.
-- Clicking "Set Audio Resumption" prompts the user with an integer input dialog to enter target sleep duration in hours (range 1–12 hours).
+- Clicking "Set Audio Resumption" prompts the user with a numeric input dialog to enter target sleep duration in hours as a decimal/float number (e.g. 7.5 hours, valid range 0.1–24.0 hours).
 - Clicking "Clear" or entering `0` disables Post-Fadeout Audio Resumption.
 - Tapping "Cancel" in the input dialog dismisses the dialog without clearing or altering the active configuration.
 - When Post-Fadeout Audio Resumption is enabled and a sleep timer volume fade-out finishes, the app schedules an exact wake-up timer set for $N$ hours in the future.
 - Upon expiration of the wake-up timer, the app requests audio focus and resumes media audio playback to gently wake the user up.
+- Stopping or turning off the sleep timer, or starting/resetting a new timer countdown, cancels any scheduled post-fadeout wake-up alarm.
 
 ## Reboot behavior & Alarm persistence
 - Persist whether the timer was running (Waiting, Active, Fading) versus explicitly **Off**, along with the target expiration timestamp.

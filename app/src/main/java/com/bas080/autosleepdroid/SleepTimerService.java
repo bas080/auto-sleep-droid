@@ -201,11 +201,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
                 updateNotification();
             } else if (ACTION_SET_POST_FADEOUT_RESUMPTION.equals(intent.getAction())) {
-                int hours = intent.getIntExtra(EXTRA_POST_FADEOUT_HOURS, 8);
-                if (hours >= 1 && hours <= 12) {
+                float hours = intent.getFloatExtra(EXTRA_POST_FADEOUT_HOURS, 8.0f);
+                if (hours >= 0.1f && hours <= 24.0f) {
                     preferences.edit()
                             .putBoolean(KEY_POST_FADEOUT_ENABLED, true)
-                            .putInt(KEY_POST_FADEOUT_HOURS, hours)
+                            .putFloat(KEY_POST_FADEOUT_HOURS, hours)
                             .apply();
                     EventLogger.log(this, "Post-fadeout audio resumption set: " + hours + "h");
                 }
@@ -341,6 +341,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             startForeground(NOTIFICATION_ID, buildNotification());
             startFadeRunnable();
         } else if (newState == SleepTimerStateMachine.State.ACTIVE) {
+            cancelPostFadeoutWakeUp();
             registerSensorListener();
             registerVolumeObserver();
             startForeground(NOTIFICATION_ID, buildNotification());
@@ -394,6 +395,21 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             alarmManager.cancel(pendingIntent);
             pendingIntent.cancel();
         }
+        cancelPostFadeoutWakeUp();
+    }
+
+    private void cancelPostFadeoutWakeUp() {
+        if (alarmManager == null) {
+            return;
+        }
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_POST_FADEOUT_WAKE_UP);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 200, intent,
+                PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
+        if (pendingIntent != null) {
+            alarmManager.cancel(pendingIntent);
+            pendingIntent.cancel();
+            EventLogger.log(this, "Cancelled post-fadeout wake-up alarm");
+        }
     }
 
     @Override
@@ -412,9 +428,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             return;
         }
         boolean postFadeoutEnabled = preferences.getBoolean(KEY_POST_FADEOUT_ENABLED, false);
-        int postFadeoutHours = preferences.getInt(KEY_POST_FADEOUT_HOURS, 8);
-        if (postFadeoutEnabled && postFadeoutHours >= 1 && postFadeoutHours <= 12) {
-            long triggerAtMillis = System.currentTimeMillis() + (postFadeoutHours * 3600_000L);
+        float postFadeoutHours = preferences.getFloat(KEY_POST_FADEOUT_HOURS, 8.0f);
+        if (postFadeoutEnabled && postFadeoutHours >= 0.1f && postFadeoutHours <= 24.0f) {
+            long triggerAtMillis = System.currentTimeMillis() + (long) (postFadeoutHours * 3600_000L);
             Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_POST_FADEOUT_WAKE_UP);
             PendingIntent pendingIntent = PendingIntent.getService(this, 200, intent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);

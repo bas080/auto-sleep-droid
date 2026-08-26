@@ -14,7 +14,7 @@ The main UI (`MainActivity`) displays controls positioned at the top of the layo
 
 - **Set Wake-Up Duration Button:**
   - Located at the top of the main UI layout above the logs.
-  - Tapping the button opens a clean numeric integer input dialog prompting the user to select the target sleep duration $N$ in hours (valid range: 1 to 12 hours).
+  - Tapping the button opens a clean numeric input dialog prompting the user to select the target sleep duration $N$ in hours as a float value (e.g. 7.5 hours, valid range: 0.1 to 24.0 hours).
 
 - **Clear Button:**
   - Positioned next to the duration selection button at the top of the main UI.
@@ -30,13 +30,14 @@ The main UI (`MainActivity`) displays controls positioned at the top of the layo
     - Disabled / Cleared: `"Post-fadeout audio resumption: Off"`
 
 ## User Workflow & Visible Behavior
-1. **Configuration:** The user opens `MainActivity`, taps the duration button above the logs, inputs integer hours $N$ (e.g., `8`), and confirms. The status text updates immediately.
+1. **Configuration:** The user opens `MainActivity`, taps the duration button above the logs, inputs float hours $N$ (e.g., `7.5`), and confirms. The status text updates immediately.
 2. **Dismissing Dialog:** If the user opens the duration dialog and taps **Cancel**, the dialog closes without changing the current configuration.
 3. **Clearing Configuration:** Tapping the **Clear** button next to the duration button explicitly disables the post-fadeout wake-up feature and resets status text.
 4. **Timer & Fade-Out:** The user plays media audio and the sleep timer counts down to expiration.
 5. **Fade-Out Completion:** When the 30-second volume fade-out finishes and media is paused, Auto Sleep Droid calculates target wake-up time:
    $$\text{Wake-Up Time} = \text{Fade-Out Completion Time} + N \text{ hours}$$
 6. **Wake-Up Execution:** Exactly $N$ hours post-fadeout, the app requests Audio Focus and resumes audio playback.
+7. **Wake-Up Cancellation:** Stopping/turning off the sleep timer or restarting a timer countdown cancels any scheduled post-fadeout wake-up alarm.
 
 ---
 

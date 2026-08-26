@@ -18,7 +18,7 @@
     <string name="time_format_minutes">%1$dm</string>
     <string name="action_set_post_fadeout">Set Audio Resumption</string>
     <string name="action_clear_post_fadeout">Clear</string>
-    <string name="post_fadeout_status_on">Post-fadeout audio resumption %1$dh after fade-out</string>
+    <string name="post_fadeout_status_on">Post-fadeout audio resumption %1$sh after fade-out</string>
     <string name="post_fadeout_status_off">Post-fadeout audio resumption Off</string>
-    <string name="post_fadeout_input_prompt">Enter hours (1-12)</string>
+    <string name="post_fadeout_input_prompt">Enter hours e.g. 7.5</string>
 </resources>

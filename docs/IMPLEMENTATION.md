@@ -109,7 +109,9 @@ Timer state is stored in the `sleep_timer` `SharedPreferences` file:
 | `duration_minutes` | integer | The configured duration used for every reset |
 | `timer_ends_at` | long | Wall-clock timestamp (millis) when active timer expires |
 | `post_fadeout_enabled` | boolean | Whether Post-Fadeout Audio Resumption is enabled |
-| `post_fadeout_hours` | integer | Configured sleep hours (1–12) for audio resumption |
+| `post_fadeout_hours` | float | Configured sleep hours (0.1–24.0) for audio resumption |
+
+Any pending post-fadeout wake-up alarm is cancelled whenever the sleep timer transitions to `OFF` or `ACTIVE`.
 
 Event log history is stored in the `event_logger` `SharedPreferences` file:
 

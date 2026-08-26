@@ -56,17 +56,17 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         builder.setTitle(R.string.action_set_post_fadeout);
 
         final EditText input = new EditText(this);
-        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         input.setHint(R.string.post_fadeout_input_prompt);
         builder.setView(input);
 
         builder.setPositiveButton(android.R.string.ok, (dialog, which) -> {
             String text = input.getText().toString().trim();
             try {
-                int hours = Integer.parseInt(text);
-                if (hours >= 1 && hours <= 12) {
+                float hours = Float.parseFloat(text);
+                if (hours >= 0.1f && hours <= 24.0f) {
                     setPostFadeoutResumption(hours);
-                } else if (hours == 0) {
+                } else if (hours == 0.0f) {
                     clearPostFadeoutResumption();
                 }
             } catch (NumberFormatException ignored) {
@@ -77,26 +77,22 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         builder.show();
     }
 
-    private void setPostFadeoutResumption(int hours) {
-        Intent serviceIntent = new Intent(this, SleepTimerService.class);
-        serviceIntent.setAction(SleepTimerService.ACTION_SET_POST_FADEOUT_RESUMPTION);
-        serviceIntent.putExtra(SleepTimerService.EXTRA_POST_FADEOUT_HOURS, hours);
-        if (Build.VERSION.SDK_INT >= 26) {
-            startForegroundService(serviceIntent);
-        } else {
-            startService(serviceIntent);
-        }
+    private void setPostFadeoutResumption(float hours) {
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        prefs.edit()
+                .putBoolean(SleepTimerService.KEY_POST_FADEOUT_ENABLED, true)
+                .putFloat(SleepTimerService.KEY_POST_FADEOUT_HOURS, hours)
+                .apply();
+        EventLogger.log(this, "Post-fadeout audio resumption set: " + hours + "h");
         updatePostFadeoutStatusText();
     }
 
     private void clearPostFadeoutResumption() {
-        Intent serviceIntent = new Intent(this, SleepTimerService.class);
-        serviceIntent.setAction(SleepTimerService.ACTION_CLEAR_POST_FADEOUT_RESUMPTION);
-        if (Build.VERSION.SDK_INT >= 26) {
-            startForegroundService(serviceIntent);
-        } else {
-            startService(serviceIntent);
-        }
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        prefs.edit()
+                .putBoolean(SleepTimerService.KEY_POST_FADEOUT_ENABLED, false)
+                .apply();
+        EventLogger.log(this, "Post-fadeout audio resumption cleared");
         updatePostFadeoutStatusText();
     }
 
@@ -106,10 +102,11 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
         boolean enabled = prefs.getBoolean(SleepTimerService.KEY_POST_FADEOUT_ENABLED, false);
-        int hours = prefs.getInt(SleepTimerService.KEY_POST_FADEOUT_HOURS, 8);
+        float hours = prefs.getFloat(SleepTimerService.KEY_POST_FADEOUT_HOURS, 8.0f);
 
-        if (enabled && hours >= 1 && hours <= 12) {
-            postFadeoutStatusText.setText(getString(R.string.post_fadeout_status_on, hours));
+        if (enabled && hours >= 0.1f && hours <= 24.0f) {
+            String hoursStr = (hours == (long) hours) ? String.format("%d", (long) hours) : String.format("%.1f", hours);
+            postFadeoutStatusText.setText(getString(R.string.post_fadeout_status_on, hoursStr));
         } else {
             postFadeoutStatusText.setText(getString(R.string.post_fadeout_status_off));
         }
