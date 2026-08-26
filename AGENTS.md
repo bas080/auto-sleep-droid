@@ -11,6 +11,7 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 - [SPEC.md](docs/SPEC.md): product requirements and acceptance criteria.
 - [IMPLEMENTATION.md](docs/IMPLEMENTATION.md): architecture, runtime flows, persistence, permissions, build/release details, and guidance for future developers and AI agents.
 - [PERFORMANCE.md](docs/PERFORMANCE.md): performance analysis, optimizations implemented, and recommendations for future increases.
+- [POST_FADEOUT_ALARM.md](docs/POST_FADEOUT_ALARM.md): design and specification for scheduling an alarm N hours after fade-out completion.
 
 ## Build & Test Instructions
 
