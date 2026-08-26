@@ -19,6 +19,7 @@ public class EventLogger {
     private static final List<String> events = new ArrayList<>();
     private static boolean loaded = false;
     private static Listener listener;
+    private static Context appContext;
 
     public interface Listener {
         void onEventLogged(String event);
@@ -29,18 +30,22 @@ public class EventLogger {
     }
 
     public static synchronized void log(Context context, String message) {
-        ensureLoaded(context);
+        if (context != null && appContext == null) {
+            appContext = context.getApplicationContext();
+        }
+        Context targetContext = context != null ? context : appContext;
+        ensureLoaded(targetContext);
 
-        String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date());
-        String line = timestamp + " - " + message;
+        String timestamp = new SimpleDateFormat("M/d HH:mm:ss", Locale.US).format(new Date());
+        String line = timestamp + " " + message;
 
         events.add(line);
         if (events.size() > MAX_LOGS) {
             events.remove(0);
         }
 
-        if (context != null) {
-            persistLogs(context.getApplicationContext());
+        if (targetContext != null) {
+            persistLogs(targetContext.getApplicationContext());
         }
 
         final Listener currentListener = listener;

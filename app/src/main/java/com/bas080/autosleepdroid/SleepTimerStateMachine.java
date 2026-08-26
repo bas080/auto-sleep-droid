@@ -244,6 +244,7 @@ public class SleepTimerStateMachine {
             callback.onSetStreamVolume(volumeBeforeFade);
             suppressVolumeReset = false;
         }
+        EventLogger.log("Restored pre-fade volume to " + volumeBeforeFade);
         lastObservedVolume = volumeBeforeFade;
         if (callback != null) {
             callback.onPersistState(true, configuredDurationMinutes, 0L);
@@ -272,6 +273,7 @@ public class SleepTimerStateMachine {
             callback.onSetStreamVolume(volumeBeforeFade);
             suppressVolumeReset = false;
         }
+        EventLogger.log("Restored pre-fade volume to " + volumeBeforeFade);
         lastObservedVolume = volumeBeforeFade;
         if (isValidDuration(configuredDurationMinutes)) {
             startTimer(configuredDurationMinutes, System.currentTimeMillis() + configuredDurationMinutes * 60_000L, System.currentTimeMillis(), true);
@@ -281,8 +283,15 @@ public class SleepTimerStateMachine {
     }
 
     public void onPlaybackStateChanged(boolean musicActive, long now) {
+        boolean playbackStarted = musicActive && !lastObservedMediaActive;
         boolean playbackStopped = !musicActive && lastObservedMediaActive;
         lastObservedMediaActive = musicActive;
+
+        if (playbackStarted) {
+            EventLogger.log("Music playback started");
+        } else if (playbackStopped) {
+            EventLogger.log("Music playback stopped");
+        }
 
         if (isEnabled()) {
             if (state == State.WAITING && musicActive) {
@@ -307,6 +316,7 @@ public class SleepTimerStateMachine {
         lastObservedVolume = currentVolume;
 
         if (volumeChanged) {
+            EventLogger.log("Volume changed to " + currentVolume);
             if (state == State.FADING) {
                 cancelFadeForVolumeChange(currentVolume);
             } else if (state == State.ACTIVE) {
@@ -319,6 +329,8 @@ public class SleepTimerStateMachine {
         if (!isActive()) {
             return;
         }
+
+        EventLogger.log("Phone flip gesture detected");
 
         if (state == State.FADING) {
             cancelFadeForFlip();
