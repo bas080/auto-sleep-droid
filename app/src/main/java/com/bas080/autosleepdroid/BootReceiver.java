@@ -13,7 +13,7 @@ public class BootReceiver extends BroadcastReceiver {
             return;
         }
 
-        EventLogger.log(context, "Boot completed event received");
+        EventLogger.log(context, "Boot completed");
 
         Intent serviceIntent = new Intent(context, SleepTimerService.class);
         if (Build.VERSION.SDK_INT >= 26) {

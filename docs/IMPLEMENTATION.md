@@ -82,7 +82,7 @@ The launcher activity starts `SleepTimerService`, requests `POST_NOTIFICATIONS` 
 
 File: `app/src/main/java/com/bas080/autosleepdroid/EventLogger.java`
 
-Centralized logging utility that formats event lines with timestamps (`yyyy-MM-dd HH:mm:ss - <message>`). Keeps logs bounded up to 500 lines in memory and `SharedPreferences`, notifying UI listeners of new events.
+Centralized logging utility that formats event lines with concise timestamps (`M/d HH:mm:ss <message>`). Keeps logs bounded up to 500 lines in memory and `SharedPreferences`, notifying UI listeners of new events.
 
 ### `BootReceiver`
 
