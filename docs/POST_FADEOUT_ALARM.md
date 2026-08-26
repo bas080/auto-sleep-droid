@@ -84,6 +84,31 @@ To avoid cluttering the user's clock application with duplicate alarms created e
 
 ---
 
+## Open Issues & Pre-Implementation Considerations
+
+The following open issues require evaluation and resolution before implementing this feature:
+
+### 1. `TimePickerDialog` Duration vs. Time of Day UX
+- Standard Android `TimePickerDialog` is designed to pick a specific time of day (e.g., 08:30 AM/PM) rather than a relative duration (e.g., 8 hours 30 minutes).
+- *Consideration:* Evaluate whether `TimePickerDialog` in 24-hour mode (0–23 hours, 0–59 minutes) provides a clear enough duration entry UX for users, or whether a dedicated custom `NumberPicker` or duration dialog is preferable for entering $N$ hours.
+
+### 2. OEM Clock App Compatibility & Behavior Variations
+- Vendor-customized clock applications (e.g., Samsung Clock, Xiaomi/MIUI Clock, OnePlus Clock) implement `AlarmClock.ACTION_SET_ALARM` intent handling differently:
+  - Some vendor clock apps ignore `EXTRA_SKIP_UI = true` and force-open their UI when an intent is broadcast.
+  - Some vendor apps create a new duplicate alarm entry instead of replacing an existing alarm matched by `EXTRA_MESSAGE = "auto-sleep-droid"`.
+- *Consideration:* Conduct testing across primary Android OEMs and determine fallback behavior or user guidance for vendor clock limitations.
+
+### 3. Background Activity & Intent Launch Restrictions
+- When volume fade-out completes, Auto Sleep Droid executes inside `SleepTimerService` (a background/foreground service), often while the device screen is off and locked.
+- Starting an activity intent from a background service context requires `FLAG_ACTIVITY_NEW_TASK`. Furthermore, Android 10+ (API 29+) enforces restrictions on starting activities from the background.
+- *Consideration:* Verify that broadcasting `ACTION_SET_ALARM` via `sendBroadcast` or starting the intent with `FLAG_ACTIVITY_NEW_TASK` successfully schedules the alarm without triggering background activity start restrictions when screen is off.
+
+### 4. Separate Clear/Cancel UI Control vs. Dialog Cancel
+- Using the `TimePickerDialog`'s built-in **Cancel** button as the sole clear/cancel mechanism may cause accidental clearing if a user opens the dialog simply to inspect settings and taps Cancel.
+- *Consideration:* Decide whether an explicit "Clear Alarm" or "Disable Post-Fadeout Alarm" button should be added to the main UI alongside the "Set Alarm Duration" button in future iterations.
+
+---
+
 ## Edge Cases & Technical Considerations
 
 ### 1. Midnight & Next-Day Rollover
