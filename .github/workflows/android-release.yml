@@ -6,6 +6,7 @@ on:
       - master
     tags:
       - "v*"
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -14,7 +15,7 @@ permissions:
 jobs:
   latest:
     name: Build latest APK
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
@@ -54,18 +55,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
           git tag -f latest "${GITHUB_SHA}"
-          git push origin refs/tags/latest --force
+          git push origin refs/tags/latest --force || true
 
           if gh release view latest >/dev/null 2>&1; then
-            gh release edit latest --prerelease=false --draft=false
+            gh release edit latest --title "${BRANCH_NAME}" --prerelease=false --draft=false
             gh release edit latest --target "${GITHUB_SHA}" --latest=true
             gh release upload latest auto-sleep-droid-latest.apk --clobber
           else
             gh release create latest auto-sleep-droid-latest.apk \
               --target "${GITHUB_SHA}" \
-              --title "Latest build" \
-              --notes "Latest debug APK built from master." \
+              --title "${BRANCH_NAME}" \
+              --notes "Latest debug APK built from ${BRANCH_NAME}." \
+              --draft=false \
               --latest=true
           fi
 
