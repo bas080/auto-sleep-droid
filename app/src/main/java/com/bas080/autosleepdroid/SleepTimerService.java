@@ -249,11 +249,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             audioManager.dispatchMediaKeyEvent(upEvent);
         }
 
-        if (wakeLock != null && wakeLock.isHeld()) {
-            try {
-                wakeLock.release();
-            } catch (Throwable ignored) {
-            }
+        try {
+            wakeLock.release();
+        } catch (Throwable ignored) {
         }
     }
 
