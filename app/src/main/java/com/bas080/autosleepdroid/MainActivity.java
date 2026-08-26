@@ -8,8 +8,13 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.app.AlertDialog;
+import android.content.SharedPreferences;
+import android.text.InputType;
 
 import java.util.List;
 
@@ -18,6 +23,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private boolean accessSettingsOpened;
     private ScrollView scrollView;
     private TextView eventLogText;
+    private Button btnSetPostFadeout;
+    private Button btnClearPostFadeout;
+    private TextView postFadeoutStatusText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,11 +34,85 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         scrollView = findViewById(R.id.event_scroll_view);
         eventLogText = findViewById(R.id.event_log_text);
+        btnSetPostFadeout = findViewById(R.id.btn_set_post_fadeout);
+        btnClearPostFadeout = findViewById(R.id.btn_clear_post_fadeout);
+        postFadeoutStatusText = findViewById(R.id.post_fadeout_status_text);
+
+        if (btnSetPostFadeout != null) {
+            btnSetPostFadeout.setOnClickListener(v -> showPostFadeoutInputDialog());
+        }
+        if (btnClearPostFadeout != null) {
+            btnClearPostFadeout.setOnClickListener(v -> clearPostFadeoutResumption());
+        }
 
         EventLogger.log(this, "MainActivity created");
 
         startOrRequestNotificationPermission();
         requestExactAlarmPermissionIfNeeded();
+    }
+
+    private void showPostFadeoutInputDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.action_set_post_fadeout);
+
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        input.setHint(R.string.post_fadeout_input_prompt);
+        builder.setView(input);
+
+        builder.setPositiveButton(android.R.string.ok, (dialog, which) -> {
+            String text = input.getText().toString().trim();
+            try {
+                int hours = Integer.parseInt(text);
+                if (hours >= 1 && hours <= 12) {
+                    setPostFadeoutResumption(hours);
+                } else if (hours == 0) {
+                    clearPostFadeoutResumption();
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        });
+
+        builder.setNegativeButton(android.R.string.cancel, (dialog, which) -> dialog.cancel());
+        builder.show();
+    }
+
+    private void setPostFadeoutResumption(int hours) {
+        Intent serviceIntent = new Intent(this, SleepTimerService.class);
+        serviceIntent.setAction(SleepTimerService.ACTION_SET_POST_FADEOUT_RESUMPTION);
+        serviceIntent.putExtra(SleepTimerService.EXTRA_POST_FADEOUT_HOURS, hours);
+        if (Build.VERSION.SDK_INT >= 26) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+        updatePostFadeoutStatusText();
+    }
+
+    private void clearPostFadeoutResumption() {
+        Intent serviceIntent = new Intent(this, SleepTimerService.class);
+        serviceIntent.setAction(SleepTimerService.ACTION_CLEAR_POST_FADEOUT_RESUMPTION);
+        if (Build.VERSION.SDK_INT >= 26) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+        updatePostFadeoutStatusText();
+    }
+
+    private void updatePostFadeoutStatusText() {
+        if (postFadeoutStatusText == null) {
+            return;
+        }
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        boolean enabled = prefs.getBoolean(SleepTimerService.KEY_POST_FADEOUT_ENABLED, false);
+        int hours = prefs.getInt(SleepTimerService.KEY_POST_FADEOUT_HOURS, 8);
+
+        if (enabled && hours >= 1 && hours <= 12) {
+            postFadeoutStatusText.setText(getString(R.string.post_fadeout_status_on, hours));
+        } else {
+            postFadeoutStatusText.setText(getString(R.string.post_fadeout_status_off));
+        }
     }
 
     private void requestExactAlarmPermissionIfNeeded() {
@@ -58,6 +140,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         super.onResume();
         EventLogger.log(this, "MainActivity resumed");
         EventLogger.setListener(this);
+        updatePostFadeoutStatusText();
         refreshEventLog();
         redrawNotification();
     }

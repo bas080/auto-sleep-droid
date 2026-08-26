@@ -1,17 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/event_scroll_view"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
+    android:orientation="vertical"
     android:padding="16dp">
 
-    <TextView
-        android:id="@+id/event_log_text"
+    <LinearLayout
+        android:id="@+id/post_fadeout_control_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:fontFamily="monospace"
-        android:textIsSelectable="true" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
-</ScrollView>
+        <Button
+            android:id="@+id/btn_set_post_fadeout"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/action_set_post_fadeout" />
+
+        <Button
+            android:id="@+id/btn_clear_post_fadeout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/action_clear_post_fadeout" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/post_fadeout_status_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="4dp"
+        android:paddingBottom="12dp"
+        android:textSize="14sp"
+        android:text="@string/post_fadeout_status_off" />
+
+    <ScrollView
+        android:id="@+id/event_scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <TextView
+            android:id="@+id/event_log_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:fontFamily="monospace"
+            android:textIsSelectable="true" />
+
+    </ScrollView>
+
+</LinearLayout>

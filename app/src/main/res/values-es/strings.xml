@@ -16,4 +16,9 @@
     <string name="action_turn_on">Activar</string>
     <string name="time_format_hours_minutes">%1$dh %2$02dm</string>
     <string name="time_format_minutes">%1$dm</string>
+    <string name="action_set_post_fadeout">Configurar reanudación de audio</string>
+    <string name="action_clear_post_fadeout">Borrar</string>
+    <string name="post_fadeout_status_on">Reanudación de audio tras atenuación %1$dh después</string>
+    <string name="post_fadeout_status_off">Reanudación de audio tras atenuación desactivada</string>
+    <string name="post_fadeout_input_prompt">Ingrese horas (1-12)</string>
 </resources>

@@ -26,13 +26,19 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public static final String ACTION_TURN_ON = "com.bas080.autosleepdroid.TURN_ON";
     public static final String ACTION_ALARM_EXPIRY = "com.bas080.autosleepdroid.ALARM_EXPIRY";
     public static final String ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION";
+    public static final String ACTION_SET_POST_FADEOUT_RESUMPTION = "com.bas080.autosleepdroid.SET_POST_FADEOUT_RESUMPTION";
+    public static final String ACTION_CLEAR_POST_FADEOUT_RESUMPTION = "com.bas080.autosleepdroid.CLEAR_POST_FADEOUT_RESUMPTION";
+    public static final String ACTION_POST_FADEOUT_WAKE_UP = "com.bas080.autosleepdroid.POST_FADEOUT_WAKE_UP";
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
+    public static final String EXTRA_POST_FADEOUT_HOURS = "com.bas080.autosleepdroid.POST_FADEOUT_HOURS";
     private static final String CHANNEL_ID = "sleep_timer";
     private static final int NOTIFICATION_ID = 1001;
     private static final String PREFERENCES = "sleep_timer";
     private static final String KEY_ENABLED = "active";
     private static final String KEY_DURATION_MINUTES = "duration_minutes";
     private static final String KEY_TIMER_ENDS_AT = "timer_ends_at";
+    public static final String KEY_POST_FADEOUT_ENABLED = "post_fadeout_enabled";
+    public static final String KEY_POST_FADEOUT_HOURS = "post_fadeout_hours";
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long PAUSE_RESET_DELAY_MS = 500L;
     private static final long SENSOR_THROTTLE_MS = 300L;
@@ -194,9 +200,61 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 stateMachine.handleAlarmExpiry(currentVol);
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
                 updateNotification();
+            } else if (ACTION_SET_POST_FADEOUT_RESUMPTION.equals(intent.getAction())) {
+                int hours = intent.getIntExtra(EXTRA_POST_FADEOUT_HOURS, 8);
+                if (hours >= 1 && hours <= 12) {
+                    preferences.edit()
+                            .putBoolean(KEY_POST_FADEOUT_ENABLED, true)
+                            .putInt(KEY_POST_FADEOUT_HOURS, hours)
+                            .apply();
+                    EventLogger.log(this, "Post-fadeout audio resumption set: " + hours + "h");
+                }
+            } else if (ACTION_CLEAR_POST_FADEOUT_RESUMPTION.equals(intent.getAction())) {
+                preferences.edit()
+                        .putBoolean(KEY_POST_FADEOUT_ENABLED, false)
+                        .apply();
+                EventLogger.log(this, "Post-fadeout audio resumption cleared");
+            } else if (ACTION_POST_FADEOUT_WAKE_UP.equals(intent.getAction())) {
+                handlePostFadeoutWakeUp();
             }
         }
         return START_STICKY;
+    }
+
+    private void handlePostFadeoutWakeUp() {
+        EventLogger.log(this, "Post-fadeout wake-up alarm triggered: resuming audio playback");
+        android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+        android.os.PowerManager.WakeLock wakeLock = null;
+        if (pm != null) {
+            wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "AutoSleepDroid:PostFadeoutWakeUp");
+            wakeLock.acquire(10000L);
+        }
+
+        if (audioManager != null) {
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                android.media.AudioFocusRequest focusRequest = new android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                        .setAudioAttributes(new android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                                .build())
+                        .build();
+                audioManager.requestAudioFocus(focusRequest);
+            } else {
+                audioManager.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+            }
+
+            android.view.KeyEvent downEvent = new android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_MEDIA_PLAY);
+            android.view.KeyEvent upEvent = new android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_MEDIA_PLAY);
+            audioManager.dispatchMediaKeyEvent(downEvent);
+            audioManager.dispatchMediaKeyEvent(upEvent);
+        }
+
+        if (wakeLock != null && wakeLock.isHeld()) {
+            try {
+                wakeLock.release();
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     private void handleDurationReply(Intent intent) {
@@ -343,8 +401,40 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         EventLogger.log(this, "Timer expired: pausing media via audio focus loss");
         pauseMediaViaAudioFocus();
 
+        schedulePostFadeoutWakeUpIfNeeded();
+
         restoreVolumeRunnable = () -> stateMachine.restoreVolumeAfterPause();
         handler.postDelayed(restoreVolumeRunnable, PAUSE_RESET_DELAY_MS);
+    }
+
+    private void schedulePostFadeoutWakeUpIfNeeded() {
+        if (preferences == null || alarmManager == null) {
+            return;
+        }
+        boolean postFadeoutEnabled = preferences.getBoolean(KEY_POST_FADEOUT_ENABLED, false);
+        int postFadeoutHours = preferences.getInt(KEY_POST_FADEOUT_HOURS, 8);
+        if (postFadeoutEnabled && postFadeoutHours >= 1 && postFadeoutHours <= 12) {
+            long triggerAtMillis = System.currentTimeMillis() + (postFadeoutHours * 3600_000L);
+            Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_POST_FADEOUT_WAKE_UP);
+            PendingIntent pendingIntent = PendingIntent.getService(this, 200, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= 31) {
+                    if (alarmManager.canScheduleExactAlarms()) {
+                        alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
+                    } else {
+                        alarmManager.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
+                    }
+                } else if (android.os.Build.VERSION.SDK_INT >= 23) {
+                    alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
+                } else {
+                    alarmManager.setExact(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
+                }
+                EventLogger.log(this, "Scheduled post-fadeout wake-up in " + postFadeoutHours + "h");
+            } catch (SecurityException e) {
+                EventLogger.log(this, "SecurityException scheduling post-fadeout wake-up alarm");
+            }
+        }
     }
 
     @Override
