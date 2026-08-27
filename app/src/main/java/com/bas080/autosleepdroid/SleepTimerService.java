@@ -17,8 +17,13 @@ import android.media.AudioManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.provider.AlarmClock;
 import android.text.InputType;
 import android.text.TextUtils;
+
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 
 public class SleepTimerService extends Service implements SensorEventListener, SleepTimerStateMachine.Callback {
     public static final String ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION";
@@ -259,13 +264,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
     }
 
-
-    // Callback implementations from SleepTimerStateMachine.Callback
     @Override
     public void onStateChanged(SleepTimerStateMachine.State newState) {
         cancelTimerCallbacks();
         if (newState == SleepTimerStateMachine.State.OFF) {
             onCancelAlarm();
+            dismissAutoSleepAlarm();
             unregisterSensorListener();
             unregisterVolumeObserver();
             startForeground(NOTIFICATION_ID, buildNotification());
@@ -340,8 +344,82 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         EventLogger.log(this, "Timer expired: pausing media");
         pauseMediaViaAudioFocus();
 
+        checkAndScheduleSmartWakeUpAlarm();
+
         restoreVolumeRunnable = () -> stateMachine.restoreVolumeAfterPause();
         handler.postDelayed(restoreVolumeRunnable, PAUSE_RESET_DELAY_MS);
+    }
+
+    private void checkAndScheduleSmartWakeUpAlarm() {
+        if (preferences == null) {
+            return;
+        }
+        boolean goalEnabled = preferences.getBoolean("wake_up_goal_enabled", false);
+        if (!goalEnabled) {
+            return;
+        }
+
+        long bedtime = System.currentTimeMillis();
+        int goalHour = preferences.getInt("wake_up_goal_hour", 6);
+        int goalMin = preferences.getInt("wake_up_goal_minute", 30);
+        int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
+
+        Calendar calGoal = Calendar.getInstance();
+        calGoal.setTimeInMillis(bedtime);
+        calGoal.set(Calendar.HOUR_OF_DAY, goalHour);
+        calGoal.set(Calendar.MINUTE, goalMin);
+        calGoal.set(Calendar.SECOND, 0);
+        calGoal.set(Calendar.MILLISECOND, 0);
+
+        if (calGoal.getTimeInMillis() <= bedtime) {
+            calGoal.add(Calendar.DAY_OF_YEAR, 1);
+        }
+
+        long targetGoalMillis = calGoal.getTimeInMillis();
+        long minWakeTimeMillis = bedtime + minSleepMin * 60_000L;
+
+        long scheduledAlarmMillis = Math.max(targetGoalMillis, minWakeTimeMillis);
+
+        Calendar calAlarm = Calendar.getInstance();
+        calAlarm.setTimeInMillis(scheduledAlarmMillis);
+        int alarmHour = calAlarm.get(Calendar.HOUR_OF_DAY);
+        int alarmMin = calAlarm.get(Calendar.MINUTE);
+
+        dismissAutoSleepAlarm();
+
+        try {
+            Intent setAlarmIntent = new Intent(AlarmClock.ACTION_SET_ALARM);
+            setAlarmIntent.putExtra(AlarmClock.EXTRA_HOUR, alarmHour);
+            setAlarmIntent.putExtra(AlarmClock.EXTRA_MINUTES, alarmMin);
+            setAlarmIntent.putExtra(AlarmClock.EXTRA_MESSAGE, "Auto Sleep");
+            setAlarmIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
+            setAlarmIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(setAlarmIntent);
+        } catch (Exception e) {
+            EventLogger.log(this, "Unable to schedule Auto Sleep alarm: " + e.getMessage());
+        }
+
+        preferences.edit()
+                .putInt("last_scheduled_alarm_hour", alarmHour)
+                .putInt("last_scheduled_alarm_minute", alarmMin)
+                .apply();
+
+        String formattedAlarmTime = formatTime(alarmHour, alarmMin);
+        String formattedGoalTime = formatTime(goalHour, goalMin);
+        EventLogger.log(this, "Auto Sleep alarm set for " + formattedAlarmTime + " (Goal: " + formattedGoalTime + ")");
+    }
+
+    private void dismissAutoSleepAlarm() {
+        try {
+            Intent dismissIntent = new Intent(AlarmClock.ACTION_DISMISS_ALARM);
+            dismissIntent.putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_LABEL);
+            dismissIntent.putExtra(AlarmClock.EXTRA_MESSAGE, "Auto Sleep");
+            dismissIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
+            dismissIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(dismissIntent);
+        } catch (Exception e) {
+            EventLogger.log(this, "Unable to dismiss Auto Sleep alarm: " + e.getMessage());
+        }
     }
 
     @Override
@@ -402,27 +480,39 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private Notification buildNotification() {
         String configuredDuration = getString(R.string.configured_duration, stateMachine.getConfiguredDurationMinutes());
-        String title;
-        String text;
+        String collapsedText;
+        String expandedText;
 
         if (!stateMachine.isEnabled()) {
-            title = getString(R.string.timer_off);
-            text = getString(R.string.timer_off);
+            collapsedText = getString(R.string.timer_off_collapsed);
+            expandedText = getString(R.string.timer_off_expanded);
         } else if (stateMachine.isFading()) {
-            title = getString(R.string.fading_title);
-            text = getString(R.string.fading_text, configuredDuration);
+            collapsedText = getString(R.string.fading_collapsed);
+            expandedText = getString(R.string.fading_expanded);
         } else if (stateMachine.isActive()) {
-            title = getString(R.string.active_title);
-            text = getString(R.string.active_text, formatTargetTime(), configuredDuration);
+            String targetTimeStr = formatTargetTime();
+            collapsedText = getString(R.string.active_collapsed, targetTimeStr);
+
+            boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
+            int alarmHour = preferences != null ? preferences.getInt("last_scheduled_alarm_hour", -1) : -1;
+            int alarmMin = preferences != null ? preferences.getInt("last_scheduled_alarm_minute", -1) : -1;
+
+            if (goalEnabled && alarmHour != -1 && alarmMin != -1) {
+                String formattedAlarmTime = formatTime(alarmHour, alarmMin);
+                expandedText = getString(R.string.active_expanded_alarm, targetTimeStr, configuredDuration, formattedAlarmTime);
+            } else {
+                expandedText = getString(R.string.active_expanded, targetTimeStr, configuredDuration);
+            }
         } else {
-            title = getString(R.string.waiting_title);
-            text = getString(R.string.waiting_text, configuredDuration);
+            collapsedText = getString(R.string.waiting_collapsed);
+            expandedText = getString(R.string.waiting_expanded, configuredDuration);
         }
 
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_zzz)
-                .setContentTitle(title)
-                .setContentText(text)
+                .setContentTitle(collapsedText)
+                .setContentText(collapsedText)
+                .setStyle(new Notification.BigTextStyle().bigText(expandedText))
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .setOngoing(true)
                 .setPriority(Notification.PRIORITY_LOW)
@@ -496,7 +586,15 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             return "";
         }
         java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
-        return timeFormat.format(new java.util.Date(endsAt));
+        return timeFormat.format(new Date(endsAt));
+    }
+
+    private String formatTime(int hour, int minute) {
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, hour);
+        cal.set(Calendar.MINUTE, minute);
+        java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
+        return timeFormat.format(cal.getTime());
     }
 
     private void createNotificationChannel() {
