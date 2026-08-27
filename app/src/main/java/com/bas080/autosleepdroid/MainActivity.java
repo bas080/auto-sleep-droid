@@ -241,20 +241,16 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
                 .apply();
 
-        try {
-            Intent dismissIntent = new Intent(AlarmClock.ACTION_DISMISS_ALARM);
-            dismissIntent.putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_LABEL);
-            dismissIntent.putExtra(AlarmClock.EXTRA_MESSAGE, SleepTimerService.ALARM_SEARCH_NAME);
-            dismissIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
-            dismissIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(dismissIntent);
-        } catch (Exception e) {
-            EventLogger.log(this, "Unable to dismiss Auto Sleep alarm: " + e.getMessage());
+        Intent clearIntent = new Intent(this, SleepTimerService.class);
+        clearIntent.setAction(SleepTimerService.ACTION_CLEAR_GOAL);
+        if (Build.VERSION.SDK_INT >= 26) {
+            startForegroundService(clearIntent);
+        } else {
+            startService(clearIntent);
         }
 
         EventLogger.log(this, "Smart Wake-Up Goal cleared");
         updateGoalStatusView();
-        redrawNotification();
     }
 
     private void updateGoalStatusView() {
