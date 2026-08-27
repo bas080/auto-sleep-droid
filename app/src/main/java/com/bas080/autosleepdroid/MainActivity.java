@@ -258,6 +258,14 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private void updateGoalStatusView() {
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
         boolean enabled = prefs.getBoolean("wake_up_goal_enabled", false);
+
+        if (btnClearGoal != null) {
+            btnClearGoal.setEnabled(enabled);
+        }
+        if (btnSetWakeUpGoal != null) {
+            btnSetWakeUpGoal.setEnabled(true);
+        }
+
         if (!enabled) {
             if (tvWakeUpGoalStatus != null) {
                 tvWakeUpGoalStatus.setText(getString(R.string.wake_up_goal_disabled));
