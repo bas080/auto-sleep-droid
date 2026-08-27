@@ -39,7 +39,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private static final String KEY_WAKEUP_MINUTES = "wakeup_alarm_minutes";
     private static final String KEY_WAKEUP_MIN_SLEEP_HOURS = "wakeup_min_sleep_hours";
     private static final String KEY_WAKEUP_LAST_SCHEDULED_MS = "wakeup_last_scheduled_ms";
-    private static final String ALARM_SEARCH_NAME = "auto-sleep-droid";
+    private static final String ALARM_SEARCH_NAME = "Auto Sleep";
     private long lastScheduledWakeupAlarmTimeMs = 0L;
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long PAUSE_RESET_DELAY_MS = 500L;
@@ -465,10 +465,25 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         scheduleOrUpdateWakeupAlarm(targetAlarmTimeMs);
     }
 
+    private void dismissWakeupAlarmInClockApp() {
+        Intent dismissIntent = new Intent(android.provider.AlarmClock.ACTION_DISMISS_ALARM)
+                .putExtra(android.provider.AlarmClock.EXTRA_ALARM_SEARCH_MODE, android.provider.AlarmClock.ALARM_SEARCH_MODE_LABEL)
+                .putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
+                .putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(dismissIntent);
+        } catch (Exception ignored) {
+        }
+    }
+
     private void scheduleOrUpdateWakeupAlarm(long targetAlarmTimeMs) {
         if (Math.abs(lastScheduledWakeupAlarmTimeMs - targetAlarmTimeMs) < 1000L) {
             return;
         }
+
+        dismissWakeupAlarmInClockApp();
+
         lastScheduledWakeupAlarmTimeMs = targetAlarmTimeMs;
         if (preferences != null) {
             preferences.edit().putLong(KEY_WAKEUP_LAST_SCHEDULED_MS, targetAlarmTimeMs).apply();
@@ -519,6 +534,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void cancelWakeupAlarm() {
+        dismissWakeupAlarmInClockApp();
         if (alarmManager == null) {
             return;
         }

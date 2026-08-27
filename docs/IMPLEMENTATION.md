@@ -71,12 +71,13 @@ Important constants:
 - Minimum duration: `1` minute
 - Maximum duration: `1440` minutes (24 hours)
 - Fade duration: `30_000` milliseconds
-- Alarm search label: `"auto-sleep-droid"`
+- Alarm search label: `"Auto Sleep"`
 
 Wake-Up Alarm Scheduling:
 - `SleepTimerService` computes the target wake-up time upon entering the `Active` state or when the sleep timer is rescheduled.
 - The circadian phase-shifting algorithm proposes a 15-minute daily step toward the user's target wake-up goal time (`wakeup_alarm_hours`, `wakeup_alarm_minutes`), while enforcing a minimum sleep duration safeguard (`wakeup_min_sleep_hours`, default 7.5h) based on `timer_ends_at`.
 - Alarms are scheduled silently in the background using `AlarmManager.setAlarmClock()`, displaying the status bar alarm icon without opening external apps.
+- Existing alarms matching label `"Auto Sleep"` are dismissed via `AlarmClock.ACTION_DISMISS_ALARM` before setting a new alarm, ensuring only a single alarm is maintained in the system Clock app rather than duplicate alarms.
 - `lastScheduledWakeupAlarmTimeMs` deduplicates scheduling to avoid unnecessary AlarmManager or notification updates.
 
 ### `MainActivity`
