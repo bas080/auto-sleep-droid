@@ -25,8 +25,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     public static final String PREF_WAKEUP_ENABLED = "wakeup_alarm_enabled";
     public static final String PREF_WAKEUP_HOURS = "wakeup_alarm_hours";
     public static final String PREF_WAKEUP_MINUTES = "wakeup_alarm_minutes";
-    public static final int DEFAULT_WAKEUP_HOURS = 7;
-    public static final int DEFAULT_WAKEUP_MINUTES = 0;
+    public static final String PREF_WAKEUP_MIN_SLEEP_HOURS = "wakeup_min_sleep_hours";
+    public static final int DEFAULT_WAKEUP_HOURS = 6;
+    public static final int DEFAULT_WAKEUP_MINUTES = 30;
+    public static final float DEFAULT_MIN_SLEEP_HOURS = 7.5f;
 
     private ScrollView scrollView;
     private TextView eventLogText;
@@ -61,7 +63,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (enabled) {
             int hours = prefs.getInt(PREF_WAKEUP_HOURS, DEFAULT_WAKEUP_HOURS);
             int minutes = prefs.getInt(PREF_WAKEUP_MINUTES, DEFAULT_WAKEUP_MINUTES);
-            wakeupAlarmStatusText.setText(getString(R.string.wakeup_alarm_status_enabled, hours, minutes));
+            float minSleepHours = prefs.getFloat(PREF_WAKEUP_MIN_SLEEP_HOURS, DEFAULT_MIN_SLEEP_HOURS);
+            wakeupAlarmStatusText.setText(getString(R.string.wakeup_alarm_status_enabled, hours, minutes, minSleepHours));
             btnClearWakeupAlarm.setEnabled(true);
         } else {
             wakeupAlarmStatusText.setText(getString(R.string.wakeup_alarm_status_disabled));
@@ -73,53 +76,77 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         SharedPreferences prefs = getSharedPreferences(PREF_SLEEP_TIMER, Context.MODE_PRIVATE);
         int currHours = prefs.getInt(PREF_WAKEUP_HOURS, DEFAULT_WAKEUP_HOURS);
         int currMinutes = prefs.getInt(PREF_WAKEUP_MINUTES, DEFAULT_WAKEUP_MINUTES);
+        float currMinSleep = prefs.getFloat(PREF_WAKEUP_MIN_SLEEP_HOURS, DEFAULT_MIN_SLEEP_HOURS);
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(48, 24, 48, 24);
 
-        final EditText hoursInput = new EditText(this);
-        hoursInput.setHint(R.string.dialog_hours_hint);
-        hoursInput.setInputType(InputType.TYPE_CLASS_NUMBER);
-        hoursInput.setText(String.valueOf(currHours));
-        layout.addView(hoursInput);
+        final EditText timeInput = new EditText(this);
+        timeInput.setHint(R.string.dialog_goal_time_hint);
+        timeInput.setInputType(InputType.TYPE_CLASS_DATETIME);
+        timeInput.setText(String.format(java.util.Locale.US, "%02d:%02d", currHours, currMinutes));
+        layout.addView(timeInput);
 
-        final EditText minutesInput = new EditText(this);
-        minutesInput.setHint(R.string.dialog_minutes_hint);
-        minutesInput.setInputType(InputType.TYPE_CLASS_NUMBER);
-        minutesInput.setText(String.valueOf(currMinutes));
-        layout.addView(minutesInput);
+        final EditText minSleepInput = new EditText(this);
+        minSleepInput.setHint(R.string.dialog_min_sleep_hint);
+        minSleepInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        minSleepInput.setText(String.format(java.util.Locale.US, "%.1f", currMinSleep));
+        layout.addView(minSleepInput);
 
         new AlertDialog.Builder(this)
                 .setTitle(R.string.dialog_wakeup_alarm_title)
                 .setView(layout)
                 .setPositiveButton(R.string.dialog_btn_save, (dialog, which) -> {
-                    int hours = parseInputOrDefault(hoursInput.getText().toString(), currHours, 0, 24);
-                    int minutes = parseInputOrDefault(minutesInput.getText().toString(), currMinutes, 0, 59);
-
-                    int totalMinutes = hours * 60 + minutes;
-                    if (totalMinutes < 1) {
-                        totalMinutes = 1;
-                        hours = 0;
-                        minutes = 1;
-                    } else if (totalMinutes > 1440) {
-                        totalMinutes = 1440;
-                        hours = 24;
-                        minutes = 0;
-                    }
+                    int[] parsedTime = parseTimeHHMM(timeInput.getText().toString(), currHours, currMinutes);
+                    float minSleep = parseFloatOrDefault(minSleepInput.getText().toString(), currMinSleep, 6.0f, 9.0f);
 
                     prefs.edit()
                             .putBoolean(PREF_WAKEUP_ENABLED, true)
-                            .putInt(PREF_WAKEUP_HOURS, hours)
-                            .putInt(PREF_WAKEUP_MINUTES, minutes)
+                            .putInt(PREF_WAKEUP_HOURS, parsedTime[0])
+                            .putInt(PREF_WAKEUP_MINUTES, parsedTime[1])
+                            .putFloat(PREF_WAKEUP_MIN_SLEEP_HOURS, minSleep)
                             .apply();
 
-                    EventLogger.log(this, "Wake-Up Alarm set to " + hours + "h " + minutes + "m");
+                    EventLogger.log(this, String.format(java.util.Locale.US, "Wake-Up Goal set to %02d:%02d (Min sleep: %.1fh)", parsedTime[0], parsedTime[1], minSleep));
                     updateWakeupAlarmStatusUI();
                     redrawNotification();
                 })
                 .setNegativeButton(R.string.dialog_btn_cancel, null)
                 .show();
+    }
+
+    private int[] parseTimeHHMM(String raw, int defaultHour, int defaultMinute) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return new int[]{defaultHour, defaultMinute};
+        }
+        String[] parts = raw.trim().split(":");
+        if (parts.length == 2) {
+            try {
+                int h = Integer.parseInt(parts[0].trim());
+                int m = Integer.parseInt(parts[1].trim());
+                if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+                    return new int[]{h, m};
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return new int[]{defaultHour, defaultMinute};
+    }
+
+    private float parseFloatOrDefault(String raw, float defaultValue, float min, float max) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            float val = Float.parseFloat(raw.trim());
+            if (val < min || val > max) {
+                return defaultValue;
+            }
+            return val;
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     private void clearWakeupAlarm() {

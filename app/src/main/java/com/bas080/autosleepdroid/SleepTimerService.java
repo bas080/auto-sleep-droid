@@ -37,7 +37,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private static final String KEY_WAKEUP_ENABLED = "wakeup_alarm_enabled";
     private static final String KEY_WAKEUP_HOURS = "wakeup_alarm_hours";
     private static final String KEY_WAKEUP_MINUTES = "wakeup_alarm_minutes";
+    private static final String KEY_WAKEUP_MIN_SLEEP_HOURS = "wakeup_min_sleep_hours";
+    private static final String KEY_WAKEUP_LAST_SCHEDULED_MS = "wakeup_last_scheduled_ms";
     private static final String ALARM_SEARCH_NAME = "auto-sleep-droid";
+    private long lastScheduledWakeupAlarmTimeMs = 0L;
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long PAUSE_RESET_DELAY_MS = 500L;
     private static final long SENSOR_THROTTLE_MS = 300L;
@@ -199,9 +202,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 onTriggerVibration();
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
                 updateNotification();
-                if (stateMachine != null && stateMachine.isActive()) {
-                    syncWakeupAlarm();
-                }
             }
         }
         return START_STICKY;
@@ -407,16 +407,38 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             return;
         }
 
-        int wakeupHours = preferences.getInt(KEY_WAKEUP_HOURS, 7);
-        int wakeupMinutes = preferences.getInt(KEY_WAKEUP_MINUTES, 0);
+        int goalHour = preferences.getInt(KEY_WAKEUP_HOURS, 6);
+        int goalMinute = preferences.getInt(KEY_WAKEUP_MINUTES, 30);
+        float minSleepHours = preferences.getFloat(KEY_WAKEUP_MIN_SLEEP_HOURS, 7.5f);
+        long lastScheduledMs = preferences.getLong(KEY_WAKEUP_LAST_SCHEDULED_MS, 0L);
 
         long targetExpiryMs = stateMachine.getTimerEndsAt();
         if (targetExpiryMs <= 0L) {
             targetExpiryMs = System.currentTimeMillis();
         }
 
-        long wakeupOffsetMs = ((wakeupHours * 60L) + wakeupMinutes) * 60_000L;
-        long targetAlarmTimeMs = targetExpiryMs + wakeupOffsetMs;
+        long minAllowedWakeTimeMs = targetExpiryMs + (long) (minSleepHours * 3_600_000L);
+
+        java.util.Calendar goalCal = java.util.Calendar.getInstance();
+        goalCal.setTimeInMillis(targetExpiryMs);
+        goalCal.set(java.util.Calendar.HOUR_OF_DAY, goalHour);
+        goalCal.set(java.util.Calendar.MINUTE, goalMinute);
+        goalCal.set(java.util.Calendar.SECOND, 0);
+        goalCal.set(java.util.Calendar.MILLISECOND, 0);
+
+        if (goalCal.getTimeInMillis() <= targetExpiryMs) {
+            goalCal.add(java.util.Calendar.DAY_OF_YEAR, 1);
+        }
+        long goalTimeMs = goalCal.getTimeInMillis();
+
+        long proposedWakeTimeMs;
+        if (lastScheduledMs > 0L) {
+            proposedWakeTimeMs = Math.max(goalTimeMs, lastScheduledMs - 15 * 60_000L);
+        } else {
+            proposedWakeTimeMs = minAllowedWakeTimeMs;
+        }
+
+        long targetAlarmTimeMs = Math.max(proposedWakeTimeMs, minAllowedWakeTimeMs);
 
         scheduleOrUpdateWakeupAlarm(targetAlarmTimeMs);
     }
@@ -424,6 +446,14 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private void scheduleOrUpdateWakeupAlarm(long targetAlarmTimeMs) {
         if (alarmManager == null) {
             return;
+        }
+
+        if (Math.abs(lastScheduledWakeupAlarmTimeMs - targetAlarmTimeMs) < 1000L) {
+            return;
+        }
+        lastScheduledWakeupAlarmTimeMs = targetAlarmTimeMs;
+        if (preferences != null) {
+            preferences.edit().putLong(KEY_WAKEUP_LAST_SCHEDULED_MS, targetAlarmTimeMs).apply();
         }
 
         Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
@@ -441,7 +471,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             alarmManager.setAlarmClock(clockInfo, pendingIntent);
             java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
             String formattedTime = timeFormat.format(new java.util.Date(targetAlarmTimeMs));
-            EventLogger.log(this, "Wake-Up Alarm '" + ALARM_SEARCH_NAME + "' scheduled for " + formattedTime);
+            EventLogger.log(this, "Wake-Up Goal Alarm '" + ALARM_SEARCH_NAME + "' scheduled for " + formattedTime);
         } catch (Exception e) {
             EventLogger.log(this, "Failed to schedule wake-up alarm: " + e.getMessage());
         }
@@ -451,13 +481,14 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (alarmManager == null) {
             return;
         }
+        lastScheduledWakeupAlarmTimeMs = 0L;
         Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
         PendingIntent pendingIntent = PendingIntent.getService(this, 101, intent,
                 PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
         if (pendingIntent != null) {
             alarmManager.cancel(pendingIntent);
             pendingIntent.cancel();
-            EventLogger.log(this, "Wake-Up Alarm '" + ALARM_SEARCH_NAME + "' cancelled");
+            EventLogger.log(this, "Wake-Up Goal Alarm '" + ALARM_SEARCH_NAME + "' cancelled");
         }
     }
 
@@ -493,13 +524,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             expandedText = getString(R.string.fading_text);
         } else if (stateMachine.isActive()) {
             collapsedTitle = getString(R.string.active_collapsed, formatTargetTime());
-            if (wakeupEnabled) {
-                int wakeupHours = preferences.getInt(KEY_WAKEUP_HOURS, 7);
-                int wakeupMinutes = preferences.getInt(KEY_WAKEUP_MINUTES, 0);
-                long wakeupOffsetMs = ((wakeupHours * 60L) + wakeupMinutes) * 60_000L;
-                long targetAlarmTimeMs = stateMachine.getTimerEndsAt() + wakeupOffsetMs;
+            if (wakeupEnabled && lastScheduledWakeupAlarmTimeMs > 0L) {
                 java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
-                String formattedAlarmTime = timeFormat.format(new java.util.Date(targetAlarmTimeMs));
+                String formattedAlarmTime = timeFormat.format(new java.util.Date(lastScheduledWakeupAlarmTimeMs));
                 expandedText = getString(R.string.active_text_with_alarm, formatTargetTime(), configuredDuration, formattedAlarmTime);
             } else {
                 expandedText = getString(R.string.active_text, formatTargetTime(), configuredDuration);

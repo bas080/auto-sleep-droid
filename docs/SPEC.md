@@ -31,10 +31,10 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 
 ## User interface
 - Main Application Screen (`MainActivity`):
-  - A top header section contains controls and status for the System Wake-Up Alarm feature above the main content:
-    - **"Set Wake-Up Alarm" button**: Opens an input dialog to configure $N$ hours and $M$ minutes wake-up duration.
-    - **"Clear Alarm" button**: Disables the system wake-up alarm and clears configured offset values.
-    - **Wake-Up Alarm Status View**: A text element positioned directly above the log view summarizing the current alarm status (e.g., `"Wake-Up Alarm: 7h 0m after sleep timer completion"` or `"Wake-Up Alarm: Disabled"`).
+  - A top header section contains controls and status for the Smart Wake-Up Goal feature above the main content:
+    - **"Set Wake-Up Goal" button**: Opens an input dialog to configure Target Wake-Up Goal Time (e.g., `06:30 AM`) and Minimum Sleep Duration (default 7.5 hours).
+    - **"Clear Goal" button**: Disables the smart wake-up goal feature and cancels scheduled wake-up alarms.
+    - **Wake-Up Goal Status View**: A text element positioned directly above the log view summarizing goal progress (e.g., `"Goal: 06:30 AM • Tonight's Alarm: 07:15 AM (15m closer)"` or `"Wake-Up Goal: Disabled"`).
   - A scrollable, line-by-line list of timestamped events fills the rest of the main UI for debugging purposes.
 - Notification Shade Controls:
   - Use notification buttons for sleep-timer controls ("Set Timer" inline reply to change duration, "Turn Off" action button when enabled, and "Turn On" action button when Off).
@@ -73,30 +73,33 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - If the app process was terminated or the device was rebooted during an active timer countdown, restore the exact remaining countdown (or trigger immediate fade if the timestamp passed).
 - If the app was explicitly in the **Off** state prior to reboot, keep it in the **Off** state.
 
-## System Wake-Up Alarm Configuration ("auto-sleep-droid")
-- **Purpose**: Allow the user to configure a wake-up system clock alarm relative to their sleep timer, ensuring they wake up at the desired time after falling asleep.
-- **Disabled by Default**: The Wake-Up Alarm feature is **disabled by default** upon initial installation. When disabled, no system clock alarm `"auto-sleep-droid"` is scheduled, no status bar alarm icon is created, and the UI status view displays `"Wake-Up Alarm: Disabled"`.
-- **Alarm Label & Type**: The system alarm is non-recurring and strictly named `"auto-sleep-droid"`.
+## Smart Incremental Target Wake-Up Goal ("auto-sleep-droid")
+- **Purpose**: Dynamically shift the user's wake-up alarm incrementally toward a target wake-up goal time while safeguarding against sleep deprivation based on circadian rhythm sleep science.
+- **Sleep Science Principles**:
+  - **Circadian Phase Shifting**: Chronobiology research shows that shifting wake-up times by **15 minutes per day** is the optimal rate for circadian clock adaptation without inducing daytime fatigue or sleep debt.
+  - **Sleep Duration Safeguard**: To prevent acute sleep debt, the algorithm enforces a minimum sleep duration safeguard (default **7.5 hours**, representing 5 complete 90-minute sleep cycles). Wake-up alarms are never scheduled earlier than `Sleep Timer Completion Time + Target Minimum Sleep Duration`.
+- **Disabled by Default**: The Smart Wake-Up Goal feature is **disabled by default**. When disabled, no system alarm is scheduled and the status view displays `"Wake-Up Goal: Disabled"`.
+- **Minimal User Inputs**:
+  - **Target Wake-Up Goal Time** (e.g., `06:30 AM`).
+  - **Minimum Sleep Duration** (default `7.5 hours` / 450 minutes, configurable between 6.0 and 9.0 hours).
 - **UI Location & Dialog Interaction**:
-  - Configured directly within the main app UI (`MainActivity`), positioned at the top above the event log.
-  - Tapping **"Set Wake-Up Alarm"** launches a dialog with two input fields: Hours ($N$, 0 to 24) and Minutes ($M$, 0 to 59).
-  - The dialog pre-fills with the currently configured alarm offset or the default value (7 hours 0 minutes).
-  - Tapping **"Clear Alarm"** clears the alarm offset, disables automatic scheduling, and updates the status text view to `"Wake-Up Alarm: Disabled"`.
-- **Upsert Behavior**:
-  - If an alarm named `"auto-sleep-droid"` does not exist in the system Clock app, create it for the calculated alarm time.
-  - If an alarm named `"auto-sleep-droid"` already exists, update its scheduled time rather than creating duplicate alarms.
-- **Configuration & Inputs**:
-  - Users can configure the duration offset in $N$ hours (0 to 24) and $M$ minutes (0 to 59).
-  - Total combined wake-up offset range: 1 minute to 24 hours.
-  - Default offset: 7 hours 0 minutes when enabled without user modification.
-  - **Invalid Inputs**: Non-numeric or out-of-range hour/minute entries fall back safely to the previously configured duration offset or default (7 hours 0 minutes).
-- **Immediate Status Bar Alarm Scheduling & Dynamic Recalculation**:
-  - **Immediate Status Bar Icon**: When the sleep timer transitions to Active countdown, the system clock alarm `"auto-sleep-droid"` is scheduled immediately (`Target Alarm Time = Current Time + Sleep Duration + Wake-Up Offset`). This ensures the Android system alarm icon appears in the status bar and lockscreen right away.
-  - **Timer Resets (Volume / Flip gesture)**: When the sleep timer is reset during Active countdown via volume buttons or flip gestures, the system alarm `"auto-sleep-droid"` target time is instantly recalculated and updated to maintain the $N$ hours and $M$ minutes offset.
-  - **Timer Expiration / Fade Completion**: When the sleep timer completes its fade-out, the system alarm time is re-confirmed or updated to fire $N$ hours and $M$ minutes from fade completion.
-  - **Timer Turn Off / Cancellation**: Turning off the sleep timer or tapping "Clear Alarm" cancels any pending `"auto-sleep-droid"` system wake-up alarm and removes the status bar alarm icon.
+  - Configured at the top of `MainActivity` above the event log.
+  - Tapping **"Set Wake-Up Goal"** opens a dialog prompting for:
+    1. Target Wake-Up Goal Time (Time picker / hour:minute input).
+    2. Minimum Sleep Duration (default 7.5 hours).
+  - Displays progress text in the header (e.g., `"Goal: 06:30 AM • Tonight's Alarm: 07:15 AM (15m closer)"`).
+  - Tapping **"Clear Goal"** disables the feature and cancels any pending wake-up alarm.
+- **Smart Adaptation Algorithm**:
+  - When the sleep timer transitions to Active countdown or completes fade-out:
+    1. Calculate $\text{Min Allowed Wake Time} = \text{Bedtime/Fade-Out Time} + \text{Minimum Sleep Duration}$.
+    2. Calculate $\text{Proposed Wake Time} = \text{Previous Wake Time} - 15\text{ minutes}$ (bounded by $\text{Target Goal Time}$).
+    3. Calculate $\text{Scheduled Alarm Time} = \max(\text{Proposed Wake Time}, \text{Min Allowed Wake Time})$.
+  - If the user goes to bed late, the minimum sleep safeguard prevents shifting the alarm too early, protecting sleep length.
+- **Background Scheduling**:
+  - Schedules/updates the non-recurring system clock alarm `"auto-sleep-droid"` silently in the background using `AlarmManager.setAlarmClock()`, displaying the status bar alarm icon immediately without launching external apps.
+  - Dynamic resets (physical volume press, flip gestures) recalculate $\text{Min Allowed Wake Time}$ and update the scheduled alarm time instantly.
 - **Event Logging**:
-  - Every system alarm creation, update, recalculation, and cancellation event is logged line-by-line in the main activity event log.
+  - Every calculation, step increment, safeguard adjustment, and alarm cancellation is logged line-by-line in the main activity event log.
 
 ## Acceptance criteria
 - The main activity prints a list of events, one per line, for debugging.
@@ -107,10 +110,8 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - Invalid inline reply inputs gracefully default to the last valid or default duration.
 - Post-reboot behavior respects the last saved state (preserving Off status or returning running timers to Waiting).
 - The "Set Timer" action is available across all states, the "Turn Off" button is present whenever the timer is enabled, and the "Turn On" button is present when the timer is Off.
-- The Wake-Up Alarm feature is disabled by default until explicitly configured by the user.
-- The main activity UI presents top header controls ("Set Wake-Up Alarm", "Clear Alarm", and status text) to configure, display, and clear the system wake-up alarm offset.
+- The Smart Wake-Up Goal feature is disabled by default until explicitly configured by the user.
+- The main activity UI presents top header controls ("Set Wake-Up Goal", "Clear Goal", and status text) to configure, display, and clear the target wake-up goal and minimum sleep duration.
 - Notifications remain minimal and compact when collapsed, expanding to show full details (configured duration, fade target, and scheduled wake-up alarm time).
-- Starting an active sleep timer countdown immediately schedules/updates the `"auto-sleep-droid"` system clock alarm (when enabled), causing the Android status bar alarm icon to appear right away.
-- Users can configure an $N$ hours and $M$ minutes wake-up alarm offset via a main UI dialog that creates or updates a non-recurring system clock alarm labeled `"auto-sleep-droid"`.
-- If an `"auto-sleep-droid"` alarm already exists, its scheduled time is updated; if it does not exist, a new alarm is created.
-- Timer resets recalculate the target wake-up time, and disabling the timer or tapping "Clear Alarm" cancels the scheduled `"auto-sleep-droid"` alarm.
+- Starting an active sleep timer countdown immediately schedules/updates the `"auto-sleep-droid"` system clock alarm (when enabled) using a 15-minute daily incremental step towards the goal while enforcing a minimum sleep duration safeguard (default 7.5h).
+- Timer resets recalculate the minimum allowed wake time and target wake-up alarm, and disabling the timer or tapping "Clear Goal" cancels the scheduled `"auto-sleep-droid"` alarm in the background.
