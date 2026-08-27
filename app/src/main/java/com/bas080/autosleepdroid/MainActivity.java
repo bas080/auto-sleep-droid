@@ -237,8 +237,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
         prefs.edit()
                 .putBoolean("wake_up_goal_enabled", false)
-                .remove("last_scheduled_alarm_hour")
-                .remove("last_scheduled_alarm_minute")
                 .apply();
 
         try {
@@ -269,13 +267,14 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         int goalHour = prefs.getInt("wake_up_goal_hour", 6);
         int goalMin = prefs.getInt("wake_up_goal_minute", 30);
-        int alarmHour = prefs.getInt("last_scheduled_alarm_hour", -1);
-        int alarmMin = prefs.getInt("last_scheduled_alarm_minute", -1);
-
         String formattedGoalTime = formatTime(goalHour, goalMin);
 
-        if (alarmHour != -1 && alarmMin != -1) {
-            String formattedAlarmTime = formatTime(alarmHour, alarmMin);
+        long now = System.currentTimeMillis();
+        long timerEndsAt = prefs.getLong("timer_ends_at", 0L);
+        Calendar scheduledAlarm = SleepTimerService.calculateScheduledAlarm(this, now, timerEndsAt);
+
+        if (scheduledAlarm != null) {
+            String formattedAlarmTime = formatTime(scheduledAlarm.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE));
             tvWakeUpGoalStatus.setText("Goal: " + formattedGoalTime + " • Tonight's Alarm: " + formattedAlarmTime);
         } else {
             int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
