@@ -76,7 +76,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 ## Smart Target Wake-Up Goal ("Auto Sleep")
 - **Purpose**: Automatically set your daily wake-up alarm to your target wake-up goal time while ensuring you always get enough sleep.
 - **How It Works**:
-  1. **Alarm Scheduling at Timer Start**: The wake-up alarm is set when the sleep timer starts, taking into account the timer duration (expected timer completion time) and minimum sleep duration.
+  1. **Timer Start & Expected Expiration**: When the sleep timer starts or is reset, expected timer completion time is determined (`timerStartTime + configuredTimerDuration`).
   2. **12-Hour Window Safeguard**: The alarm is scheduled only when the timer starts within 12 hours prior to the target goal time.
   3. **Alarm Calculation**: The wake-up alarm is set to `Math.max(targetGoalTime, expectedTimerCompletionTime + minimumSleepDuration)`.
   4. **Single Alarm Creation**: The app maintains only one alarm in your Clock app named `"Auto Sleep"`.
