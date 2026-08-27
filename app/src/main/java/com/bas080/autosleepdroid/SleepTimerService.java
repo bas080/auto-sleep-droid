@@ -23,7 +23,6 @@ import android.text.TextUtils;
 
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Locale;
 
 public class SleepTimerService extends Service implements SensorEventListener, SleepTimerStateMachine.Callback {
     public static final String ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION";
@@ -286,6 +285,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         } else if (newState == SleepTimerStateMachine.State.ACTIVE) {
             registerSensorListener();
             registerVolumeObserver();
+            checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
             startForeground(NOTIFICATION_ID, buildNotification());
             scheduleExpiry();
         }
@@ -344,14 +344,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         EventLogger.log(this, "Timer expired: pausing media");
         pauseMediaViaAudioFocus();
 
-        checkAndScheduleSmartWakeUpAlarm();
-
         restoreVolumeRunnable = () -> stateMachine.restoreVolumeAfterPause();
         handler.postDelayed(restoreVolumeRunnable, PAUSE_RESET_DELAY_MS);
     }
 
-    private void checkAndScheduleSmartWakeUpAlarm() {
-        if (preferences == null) {
+    private void checkAndScheduleSmartWakeUpAlarm(long timerEndsAt) {
+        if (preferences == null || timerEndsAt <= 0L) {
             return;
         }
         boolean goalEnabled = preferences.getBoolean("wake_up_goal_enabled", false);
@@ -359,25 +357,31 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             return;
         }
 
-        long bedtime = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
         int goalHour = preferences.getInt("wake_up_goal_hour", 6);
         int goalMin = preferences.getInt("wake_up_goal_minute", 30);
         int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
 
         Calendar calGoal = Calendar.getInstance();
-        calGoal.setTimeInMillis(bedtime);
+        calGoal.setTimeInMillis(now);
         calGoal.set(Calendar.HOUR_OF_DAY, goalHour);
         calGoal.set(Calendar.MINUTE, goalMin);
         calGoal.set(Calendar.SECOND, 0);
         calGoal.set(Calendar.MILLISECOND, 0);
 
-        if (calGoal.getTimeInMillis() <= bedtime) {
+        if (calGoal.getTimeInMillis() <= now) {
             calGoal.add(Calendar.DAY_OF_YEAR, 1);
         }
 
         long targetGoalMillis = calGoal.getTimeInMillis();
-        long minWakeTimeMillis = bedtime + minSleepMin * 60_000L;
+        long diffMillis = targetGoalMillis - now;
+        long TWELVE_HOURS_MS = 12 * 60 * 60_000L;
 
+        if (diffMillis > TWELVE_HOURS_MS) {
+            return;
+        }
+
+        long minWakeTimeMillis = timerEndsAt + minSleepMin * 60_000L;
         long scheduledAlarmMillis = Math.max(targetGoalMillis, minWakeTimeMillis);
 
         Calendar calAlarm = Calendar.getInstance();
@@ -459,6 +463,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onTimerRescheduled() {
         scheduleExpiry();
+        checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
     }
 
     private void pauseMediaViaAudioFocus() {

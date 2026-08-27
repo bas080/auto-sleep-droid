@@ -3,7 +3,6 @@ package com.bas080.autosleepdroid;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -15,8 +14,10 @@ import android.provider.Settings;
 import android.text.InputType;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.TimePicker;
 
 import java.util.Calendar;
 import java.util.List;
@@ -162,31 +163,42 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private void showSetGoalDialog() {
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-        int defaultHour = prefs.getInt("wake_up_goal_hour", 6);
-        int defaultMinute = prefs.getInt("wake_up_goal_minute", 30);
-
-        TimePickerDialog timePickerDialog = new TimePickerDialog(this,
-                (view, hourOfDay, minute) -> showMinSleepDurationDialog(hourOfDay, minute),
-                defaultHour, defaultMinute, false);
-        timePickerDialog.setTitle(getString(R.string.dialog_set_goal_title));
-        timePickerDialog.show();
-    }
-
-    private void showMinSleepDurationDialog(int goalHour, int goalMinute) {
-        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        int defaultGoalHour = prefs.getInt("wake_up_goal_hour", 6);
+        int defaultGoalMin = prefs.getInt("wake_up_goal_minute", 30);
         int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
         double defaultHours = minSleepMin / 60.0;
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(getString(R.string.dialog_min_sleep_title));
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(32, 16, 32, 16);
 
-        final EditText input = new EditText(this);
-        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        input.setText(String.format(Locale.US, "%.1f", defaultHours));
-        builder.setView(input);
+        TextView labelMinSleep = new TextView(this);
+        labelMinSleep.setText(R.string.dialog_min_sleep_title);
+        labelMinSleep.setTextSize(14.0f);
+        container.addView(labelMinSleep);
+
+        final EditText inputMinSleep = new EditText(this);
+        inputMinSleep.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        inputMinSleep.setText(String.format(Locale.US, "%.1f", defaultHours));
+        container.addView(inputMinSleep);
+
+        final TimePicker timePicker = new TimePicker(this);
+        timePicker.setIs24HourView(false);
+        if (Build.VERSION.SDK_INT >= 23) {
+            timePicker.setHour(defaultGoalHour);
+            timePicker.setMinute(defaultGoalMin);
+        } else {
+            timePicker.setCurrentHour(defaultGoalHour);
+            timePicker.setCurrentMinute(defaultGoalMin);
+        }
+        container.addView(timePicker);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(getString(R.string.dialog_set_goal_title));
+        builder.setView(container);
 
         builder.setPositiveButton(getString(R.string.dialog_ok), (dialog, which) -> {
-            String text = input.getText().toString().trim();
+            String text = inputMinSleep.getText().toString().trim();
             double hours = 7.5;
             if (!text.isEmpty()) {
                 try {
@@ -195,7 +207,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 }
             }
             int minMinutes = (int) Math.round(hours * 60.0);
-            saveWakeUpGoal(goalHour, goalMinute, minMinutes);
+            int goalHour = Build.VERSION.SDK_INT >= 23 ? timePicker.getHour() : timePicker.getCurrentHour();
+            int goalMin = Build.VERSION.SDK_INT >= 23 ? timePicker.getMinute() : timePicker.getCurrentMinute();
+
+            saveWakeUpGoal(goalHour, goalMin, minMinutes);
         });
         builder.setNegativeButton(getString(R.string.dialog_cancel), (dialog, which) -> dialog.cancel());
         builder.show();
