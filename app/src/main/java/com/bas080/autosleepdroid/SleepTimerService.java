@@ -421,6 +421,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             preferences.edit().putLong(KEY_WAKEUP_LAST_SCHEDULED_MS, targetAlarmTimeMs).apply();
         }
 
+        if (alarmManager == null) {
+            return;
+        }
+
         if (alarmManager != null) {
             Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
             PendingIntent pendingIntent = PendingIntent.getService(this, 101, intent,
