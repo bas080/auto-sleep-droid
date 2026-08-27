@@ -2,12 +2,18 @@ package com.bas080.autosleepdroid;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.ComponentName;
+import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.InputType;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -15,9 +21,18 @@ import java.util.List;
 
 public class MainActivity extends Activity implements EventLogger.Listener {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 100;
-    private boolean accessSettingsOpened;
+    private static final String PREF_SLEEP_TIMER = "sleep_timer";
+    public static final String PREF_WAKEUP_ENABLED = "wakeup_alarm_enabled";
+    public static final String PREF_WAKEUP_HOURS = "wakeup_alarm_hours";
+    public static final String PREF_WAKEUP_MINUTES = "wakeup_alarm_minutes";
+    public static final int DEFAULT_WAKEUP_HOURS = 7;
+    public static final int DEFAULT_WAKEUP_MINUTES = 0;
+
     private ScrollView scrollView;
     private TextView eventLogText;
+    private TextView wakeupAlarmStatusText;
+    private Button btnSetWakeupAlarm;
+    private Button btnClearWakeupAlarm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,11 +41,108 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         scrollView = findViewById(R.id.event_scroll_view);
         eventLogText = findViewById(R.id.event_log_text);
+        wakeupAlarmStatusText = findViewById(R.id.wakeup_alarm_status_text);
+        btnSetWakeupAlarm = findViewById(R.id.btn_set_wakeup_alarm);
+        btnClearWakeupAlarm = findViewById(R.id.btn_clear_wakeup_alarm);
+
+        btnSetWakeupAlarm.setOnClickListener(v -> showWakeupAlarmDialog());
+        btnClearWakeupAlarm.setOnClickListener(v -> clearWakeupAlarm());
 
         EventLogger.log(this, "MainActivity created");
 
+        updateWakeupAlarmStatusUI();
         startOrRequestNotificationPermission();
         requestExactAlarmPermissionIfNeeded();
+    }
+
+    private void updateWakeupAlarmStatusUI() {
+        SharedPreferences prefs = getSharedPreferences(PREF_SLEEP_TIMER, Context.MODE_PRIVATE);
+        boolean enabled = prefs.getBoolean(PREF_WAKEUP_ENABLED, false);
+        if (enabled) {
+            int hours = prefs.getInt(PREF_WAKEUP_HOURS, DEFAULT_WAKEUP_HOURS);
+            int minutes = prefs.getInt(PREF_WAKEUP_MINUTES, DEFAULT_WAKEUP_MINUTES);
+            wakeupAlarmStatusText.setText(getString(R.string.wakeup_alarm_status_enabled, hours, minutes));
+            btnClearWakeupAlarm.setEnabled(true);
+        } else {
+            wakeupAlarmStatusText.setText(getString(R.string.wakeup_alarm_status_disabled));
+            btnClearWakeupAlarm.setEnabled(false);
+        }
+    }
+
+    private void showWakeupAlarmDialog() {
+        SharedPreferences prefs = getSharedPreferences(PREF_SLEEP_TIMER, Context.MODE_PRIVATE);
+        int currHours = prefs.getInt(PREF_WAKEUP_HOURS, DEFAULT_WAKEUP_HOURS);
+        int currMinutes = prefs.getInt(PREF_WAKEUP_MINUTES, DEFAULT_WAKEUP_MINUTES);
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(48, 24, 48, 24);
+
+        final EditText hoursInput = new EditText(this);
+        hoursInput.setHint(R.string.dialog_hours_hint);
+        hoursInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        hoursInput.setText(String.valueOf(currHours));
+        layout.addView(hoursInput);
+
+        final EditText minutesInput = new EditText(this);
+        minutesInput.setHint(R.string.dialog_minutes_hint);
+        minutesInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        minutesInput.setText(String.valueOf(currMinutes));
+        layout.addView(minutesInput);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_wakeup_alarm_title)
+                .setView(layout)
+                .setPositiveButton(R.string.dialog_btn_save, (dialog, which) -> {
+                    int hours = parseInputOrDefault(hoursInput.getText().toString(), currHours, 0, 24);
+                    int minutes = parseInputOrDefault(minutesInput.getText().toString(), currMinutes, 0, 59);
+
+                    int totalMinutes = hours * 60 + minutes;
+                    if (totalMinutes < 1) {
+                        totalMinutes = 1;
+                        hours = 0;
+                        minutes = 1;
+                    } else if (totalMinutes > 1440) {
+                        totalMinutes = 1440;
+                        hours = 24;
+                        minutes = 0;
+                    }
+
+                    prefs.edit()
+                            .putBoolean(PREF_WAKEUP_ENABLED, true)
+                            .putInt(PREF_WAKEUP_HOURS, hours)
+                            .putInt(PREF_WAKEUP_MINUTES, minutes)
+                            .apply();
+
+                    EventLogger.log(this, "Wake-Up Alarm set to " + hours + "h " + minutes + "m");
+                    updateWakeupAlarmStatusUI();
+                    redrawNotification();
+                })
+                .setNegativeButton(R.string.dialog_btn_cancel, null)
+                .show();
+    }
+
+    private void clearWakeupAlarm() {
+        SharedPreferences prefs = getSharedPreferences(PREF_SLEEP_TIMER, Context.MODE_PRIVATE);
+        prefs.edit().putBoolean(PREF_WAKEUP_ENABLED, false).apply();
+        EventLogger.log(this, "Wake-Up Alarm disabled");
+        updateWakeupAlarmStatusUI();
+        redrawNotification();
+    }
+
+    private int parseInputOrDefault(String raw, int defaultValue, int min, int max) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            int val = Integer.parseInt(raw.trim());
+            if (val < min || val > max) {
+                return defaultValue;
+            }
+            return val;
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     private void requestExactAlarmPermissionIfNeeded() {
@@ -59,6 +171,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         EventLogger.log(this, "MainActivity resumed");
         EventLogger.setListener(this);
         refreshEventLog();
+        updateWakeupAlarmStatusUI();
         redrawNotification();
     }
 

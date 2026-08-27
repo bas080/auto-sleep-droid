@@ -33,6 +33,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private static final String KEY_ENABLED = "active";
     private static final String KEY_DURATION_MINUTES = "duration_minutes";
     private static final String KEY_TIMER_ENDS_AT = "timer_ends_at";
+    private static final String KEY_WAKEUP_ENABLED = "wakeup_alarm_enabled";
+    private static final String KEY_WAKEUP_HOURS = "wakeup_alarm_hours";
+    private static final String KEY_WAKEUP_MINUTES = "wakeup_alarm_minutes";
+    private static final String ALARM_SEARCH_NAME = "auto-sleep-droid";
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long PAUSE_RESET_DELAY_MS = 500L;
     private static final long SENSOR_THROTTLE_MS = 300L;
@@ -191,6 +195,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 stateMachine.handleAlarmExpiry(currentVol);
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
                 updateNotification();
+                if (stateMachine != null && stateMachine.isActive()) {
+                    syncWakeupAlarm();
+                }
             }
         }
         return START_STICKY;
@@ -266,6 +273,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         cancelTimerCallbacks();
         if (newState == SleepTimerStateMachine.State.OFF) {
             onCancelAlarm();
+            cancelWakeupAlarm();
             unregisterSensorListener();
             unregisterVolumeObserver();
             startForeground(NOTIFICATION_ID, buildNotification());
@@ -284,6 +292,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             registerVolumeObserver();
             startForeground(NOTIFICATION_ID, buildNotification());
             scheduleExpiry();
+            syncWakeupAlarm();
         }
     }
 
@@ -381,6 +390,66 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onTimerRescheduled() {
         scheduleExpiry();
+        syncWakeupAlarm();
+    }
+
+    private void syncWakeupAlarm() {
+        if (preferences == null) {
+            return;
+        }
+        boolean wakeupEnabled = preferences.getBoolean(KEY_WAKEUP_ENABLED, false);
+        if (!wakeupEnabled) {
+            cancelWakeupAlarm();
+            return;
+        }
+
+        int wakeupHours = preferences.getInt(KEY_WAKEUP_HOURS, 7);
+        int wakeupMinutes = preferences.getInt(KEY_WAKEUP_MINUTES, 0);
+
+        long targetExpiryMs = stateMachine.getTimerEndsAt();
+        if (targetExpiryMs <= 0L) {
+            targetExpiryMs = System.currentTimeMillis();
+        }
+
+        long wakeupOffsetMs = ((wakeupHours * 60L) + wakeupMinutes) * 60_000L;
+        long targetAlarmTimeMs = targetExpiryMs + wakeupOffsetMs;
+
+        scheduleOrUpdateWakeupAlarm(targetAlarmTimeMs);
+    }
+
+    private void scheduleOrUpdateWakeupAlarm(long targetAlarmTimeMs) {
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.setTimeInMillis(targetAlarmTimeMs);
+        int hourOfDay = cal.get(java.util.Calendar.HOUR_OF_DAY);
+        int minute = cal.get(java.util.Calendar.MINUTE);
+
+        Intent intent = new Intent(android.provider.AlarmClock.ACTION_SET_ALARM)
+                .putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
+                .putExtra(android.provider.AlarmClock.EXTRA_HOUR, hourOfDay)
+                .putExtra(android.provider.AlarmClock.EXTRA_MINUTES, minute)
+                .putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        try {
+            startActivity(intent);
+            java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
+            String formattedTime = timeFormat.format(new java.util.Date(targetAlarmTimeMs));
+            EventLogger.log(this, "Wake-Up Alarm '" + ALARM_SEARCH_NAME + "' scheduled for " + formattedTime);
+        } catch (Exception e) {
+            EventLogger.log(this, "Failed to schedule wake-up alarm: " + e.getMessage());
+        }
+    }
+
+    private void cancelWakeupAlarm() {
+        Intent intent = new Intent(android.provider.AlarmClock.ACTION_DISMISS_ALARM)
+                .putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(intent);
+            EventLogger.log(this, "Wake-Up Alarm '" + ALARM_SEARCH_NAME + "' cancelled");
+        } catch (Exception e) {
+            // Dismiss alarm may not be supported on all devices, fall back safely
+        }
     }
 
     private void pauseMediaViaAudioFocus() {
@@ -402,27 +471,40 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private Notification buildNotification() {
         String configuredDuration = getString(R.string.configured_duration, stateMachine.getConfiguredDurationMinutes());
-        String title;
-        String text;
+        String collapsedTitle;
+        String expandedText;
+
+        boolean wakeupEnabled = preferences != null && preferences.getBoolean(KEY_WAKEUP_ENABLED, false);
 
         if (!stateMachine.isEnabled()) {
-            title = getString(R.string.timer_off);
-            text = getString(R.string.timer_off);
+            collapsedTitle = getString(R.string.timer_off_collapsed);
+            expandedText = getString(R.string.timer_off);
         } else if (stateMachine.isFading()) {
-            title = getString(R.string.fading_title);
-            text = getString(R.string.fading_text, configuredDuration);
+            collapsedTitle = getString(R.string.fading_collapsed);
+            expandedText = getString(R.string.fading_text);
         } else if (stateMachine.isActive()) {
-            title = getString(R.string.active_title);
-            text = getString(R.string.active_text, formatTargetTime(), configuredDuration);
+            collapsedTitle = getString(R.string.active_collapsed, formatTargetTime());
+            if (wakeupEnabled) {
+                int wakeupHours = preferences.getInt(KEY_WAKEUP_HOURS, 7);
+                int wakeupMinutes = preferences.getInt(KEY_WAKEUP_MINUTES, 0);
+                long wakeupOffsetMs = ((wakeupHours * 60L) + wakeupMinutes) * 60_000L;
+                long targetAlarmTimeMs = stateMachine.getTimerEndsAt() + wakeupOffsetMs;
+                java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
+                String formattedAlarmTime = timeFormat.format(new java.util.Date(targetAlarmTimeMs));
+                expandedText = getString(R.string.active_text_with_alarm, formatTargetTime(), configuredDuration, formattedAlarmTime);
+            } else {
+                expandedText = getString(R.string.active_text, formatTargetTime(), configuredDuration);
+            }
         } else {
-            title = getString(R.string.waiting_title);
-            text = getString(R.string.waiting_text, configuredDuration);
+            collapsedTitle = getString(R.string.waiting_collapsed);
+            expandedText = getString(R.string.waiting_text, configuredDuration);
         }
 
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_zzz)
-                .setContentTitle(title)
-                .setContentText(text)
+                .setContentTitle(collapsedTitle)
+                .setContentText(expandedText)
+                .setStyle(new Notification.BigTextStyle().bigText(expandedText))
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .setOngoing(true)
                 .setPriority(Notification.PRIORITY_LOW)
