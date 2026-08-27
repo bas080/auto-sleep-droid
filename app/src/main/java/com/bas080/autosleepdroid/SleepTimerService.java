@@ -202,6 +202,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 onTriggerVibration();
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
                 updateNotification();
+                if (stateMachine != null && stateMachine.isActive()) {
+                    syncWakeupAlarm();
+                } else if (stateMachine != null && !stateMachine.isActive()) {
+                    cancelWakeupAlarm();
+                }
             }
         }
         return START_STICKY;
@@ -461,10 +466,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void scheduleOrUpdateWakeupAlarm(long targetAlarmTimeMs) {
-        if (alarmManager == null) {
-            return;
-        }
-
         if (Math.abs(lastScheduledWakeupAlarmTimeMs - targetAlarmTimeMs) < 1000L) {
             return;
         }
@@ -473,24 +474,47 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             preferences.edit().putLong(KEY_WAKEUP_LAST_SCHEDULED_MS, targetAlarmTimeMs).apply();
         }
 
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
-        PendingIntent pendingIntent = PendingIntent.getService(this, 101, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.setTimeInMillis(targetAlarmTimeMs);
+        int hourOfDay = cal.get(java.util.Calendar.HOUR_OF_DAY);
+        int minute = cal.get(java.util.Calendar.MINUTE);
 
-        Intent showIntent = new Intent(this, MainActivity.class);
-        PendingIntent showPendingIntent = PendingIntent.getActivity(this, 102, showIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        if (alarmManager == null) {
+            return;
+        }
 
-        android.app.AlarmManager.AlarmClockInfo clockInfo =
-                new android.app.AlarmManager.AlarmClockInfo(targetAlarmTimeMs, showPendingIntent);
+        Intent alarmClockIntent = new Intent(android.provider.AlarmClock.ACTION_SET_ALARM)
+                .putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
+                .putExtra(android.provider.AlarmClock.EXTRA_HOUR, hourOfDay)
+                .putExtra(android.provider.AlarmClock.EXTRA_MINUTES, minute)
+                .putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         try {
-            alarmManager.setAlarmClock(clockInfo, pendingIntent);
+            startActivity(alarmClockIntent);
             java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
             String formattedTime = timeFormat.format(new java.util.Date(targetAlarmTimeMs));
-            EventLogger.log(this, "Wake-Up Goal Alarm '" + ALARM_SEARCH_NAME + "' scheduled for " + formattedTime);
+            EventLogger.log(this, "Wake-Up Goal Alarm '" + ALARM_SEARCH_NAME + "' set in Clock app for " + formattedTime);
         } catch (Exception e) {
-            EventLogger.log(this, "Failed to schedule wake-up alarm: " + e.getMessage());
+            EventLogger.log(this, "Failed to set alarm in Clock app: " + e.getMessage());
+        }
+
+        if (alarmManager != null) {
+            Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
+            PendingIntent pendingIntent = PendingIntent.getService(this, 101, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent showIntent = new Intent(this, MainActivity.class);
+            PendingIntent showPendingIntent = PendingIntent.getActivity(this, 102, showIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            android.app.AlarmManager.AlarmClockInfo clockInfo =
+                    new android.app.AlarmManager.AlarmClockInfo(targetAlarmTimeMs, showPendingIntent);
+
+            try {
+                alarmManager.setAlarmClock(clockInfo, pendingIntent);
+            } catch (Exception ignored) {
+            }
         }
     }
 

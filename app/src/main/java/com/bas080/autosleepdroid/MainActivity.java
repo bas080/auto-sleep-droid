@@ -82,6 +82,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(48, 24, 48, 24);
 
+        TextView goalTimeLabel = new TextView(this);
+        goalTimeLabel.setText(R.string.label_target_goal_time);
+        goalTimeLabel.setTextSize(14f);
+        goalTimeLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+        goalTimeLabel.setPadding(0, 0, 0, 8);
+        layout.addView(goalTimeLabel);
+
         final android.widget.TimePicker timePicker = new android.widget.TimePicker(this);
         timePicker.setIs24HourView(android.text.format.DateFormat.is24HourFormat(this));
         if (Build.VERSION.SDK_INT >= 23) {
@@ -92,6 +99,19 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             timePicker.setCurrentMinute(currMinutes);
         }
         layout.addView(timePicker);
+
+        TextView minSleepLabel = new TextView(this);
+        minSleepLabel.setText(R.string.label_min_sleep_duration);
+        minSleepLabel.setTextSize(14f);
+        minSleepLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+        minSleepLabel.setPadding(0, 16, 0, 4);
+        layout.addView(minSleepLabel);
+
+        TextView minSleepDesc = new TextView(this);
+        minSleepDesc.setText(R.string.desc_min_sleep_duration);
+        minSleepDesc.setTextSize(12f);
+        minSleepDesc.setPadding(0, 0, 0, 8);
+        layout.addView(minSleepDesc);
 
         final EditText minSleepInput = new EditText(this);
         minSleepInput.setHint(R.string.dialog_min_sleep_hint);
@@ -120,7 +140,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                             .putInt(PREF_WAKEUP_HOURS, selectedHour)
                             .putInt(PREF_WAKEUP_MINUTES, selectedMinute)
                             .putFloat(PREF_WAKEUP_MIN_SLEEP_HOURS, minSleep)
+                            .remove("wakeup_last_scheduled_ms")
                             .apply();
+
 
                     EventLogger.log(this, String.format(java.util.Locale.US, "Wake-Up Goal set to %02d:%02d (Min sleep: %.1fh)", selectedHour, selectedMinute, minSleep));
                     updateWakeupAlarmStatusUI();
@@ -128,24 +150,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 })
                 .setNegativeButton(R.string.dialog_btn_cancel, null)
                 .show();
-    }
-
-    private int[] parseTimeHHMM(String raw, int defaultHour, int defaultMinute) {
-        if (raw == null || raw.trim().isEmpty()) {
-            return new int[]{defaultHour, defaultMinute};
-        }
-        String[] parts = raw.trim().split(":");
-        if (parts.length == 2) {
-            try {
-                int h = Integer.parseInt(parts[0].trim());
-                int m = Integer.parseInt(parts[1].trim());
-                if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-                    return new int[]{h, m};
-                }
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        return new int[]{defaultHour, defaultMinute};
     }
 
     private float parseFloatOrDefault(String raw, float defaultValue, float min, float max) {
@@ -165,25 +169,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private void clearWakeupAlarm() {
         SharedPreferences prefs = getSharedPreferences(PREF_SLEEP_TIMER, Context.MODE_PRIVATE);
-        prefs.edit().putBoolean(PREF_WAKEUP_ENABLED, false).apply();
+        prefs.edit()
+                .putBoolean(PREF_WAKEUP_ENABLED, false)
+                .remove("wakeup_last_scheduled_ms")
+                .apply();
         EventLogger.log(this, "Wake-Up Alarm disabled");
         updateWakeupAlarmStatusUI();
         redrawNotification();
-    }
-
-    private int parseInputOrDefault(String raw, int defaultValue, int min, int max) {
-        if (raw == null || raw.trim().isEmpty()) {
-            return defaultValue;
-        }
-        try {
-            int val = Integer.parseInt(raw.trim());
-            if (val < min || val > max) {
-                return defaultValue;
-            }
-            return val;
-        } catch (NumberFormatException e) {
-            return defaultValue;
-        }
     }
 
     private void requestExactAlarmPermissionIfNeeded() {

@@ -21,6 +21,9 @@
     <string name="dialog_wakeup_alarm_title">Configurar objetivo de despertador</string>
     <string name="dialog_goal_time_hint">Hora objetivo (HH:MM ej. 06:30)</string>
     <string name="dialog_min_sleep_hint">Duración mínima de sueño en horas (ej. 7.5)</string>
+    <string name="label_target_goal_time">Hora objetivo de despertador</string>
+    <string name="label_min_sleep_duration">Salvaguarda de sueño mínimo (Horas)</string>
+    <string name="desc_min_sleep_duration">Garantiza suficiente descanso si te acuestas tarde (ej. 7.5h para 5 ciclos)</string>
     <string name="dialog_btn_save">Guardar</string>
     <string name="dialog_btn_cancel">Cancelar</string>
     <string name="configured_duration">%1$dm configurado</string>
