@@ -62,8 +62,8 @@ Responsibilities:
 - Transition from `Waiting` to `Active` when playback callback detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused (after a short 500ms delay), and revert to the `Waiting` state.
-- Upon sleep timer start/reschedule within 12 hours prior to goal time, schedule/update the `"Auto Sleep"` system clock alarm via `AlarmClock.ACTION_SET_ALARM` if Smart Wake-Up Goal is enabled, using `Math.max(targetGoalMillis, minWakeTimeMillis)`.
-- Cancel/dismiss the `"Auto Sleep"` system clock alarm via `AlarmClock.ACTION_DISMISS_ALARM` when the timer is explicitly turned off or when "Clear Goal" is selected.
+- Upon sleep timer start/reschedule within 12 hours prior to goal time, schedule/update the `"Auto Sleep"` system clock alarm via `AlarmManager.setAlarmClock(...)` and `AlarmClock.ACTION_SET_ALARM` if Smart Wake-Up Goal is enabled, using `Math.max(targetGoalMillis, minWakeTimeMillis)`.
+- Cancel/dismiss the `"Auto Sleep"` system clock alarm via `AlarmClock.ACTION_DISMISS_ALARM` and `AlarmManager.cancel()` when the timer is explicitly turned off or when "Clear Goal" is selected.
 - Trigger a short, faint haptic feedback pulse (`Vibrator`) upon duration replies, turning off, volume button resets, and flip gestures.
 - Log lifecycle and state events to `EventLogger`.
 
@@ -85,7 +85,7 @@ Header Controls & Status View:
 
 - **"Set Wake-Up Goal" button**: Displays dialogs (`TimePickerDialog` for target goal time and input dialog for minimum sleep duration safeguard, default 7.5 hours) to enable and configure Smart Wake-Up Goal.
 - **"Clear Goal" button**: Disables Smart Wake-Up Goal, dismisses existing `"Auto Sleep"` system alarms, and updates status.
-- **Wake-Up Goal Status View**: Summarizes current goal settings and scheduled alarm progress (e.g. `"Goal: 06:30 AM • Tonight's Alarm: 07:15 AM"` or `"Wake-Up Goal: Disabled"`).
+- **Wake-Up Goal Status View**: Summarizes current goal settings and calculated alarm progress (e.g. `"Goal: 06:30 AM • Tonight's Alarm: 07:15 AM"` or `"Wake-Up Goal: Disabled"`).
 
 Main Event Log:
 
@@ -125,8 +125,6 @@ Timer and Wake-Up Goal state is stored in the `sleep_timer` `SharedPreferences` 
 | `wake_up_goal_hour` | integer | Target goal hour of day (0-23) |
 | `wake_up_goal_minute` | integer | Target goal minute (0-59) |
 | `min_sleep_duration_minutes` | integer | Safeguard minimum sleep duration in minutes (default 450 = 7.5h) |
-| `last_scheduled_alarm_hour` | integer | Hour of the last scheduled `"Auto Sleep"` alarm |
-| `last_scheduled_alarm_minute` | integer | Minute of the last scheduled `"Auto Sleep"` alarm |
 
 Event log history is stored in the `event_logger` `SharedPreferences` file:
 
@@ -176,7 +174,7 @@ In-memory state in `SleepTimerService`:
 1. The user taps `Turn Off` in the notification (available in `Waiting`, `Active`, and `Fading` states).
 2. Any active countdown or fade callbacks are cancelled.
 3. `enabled` is set to false and persisted in `SharedPreferences`.
-4. Dismisses any scheduled `"Auto Sleep"` alarm in the background via `AlarmClock.ACTION_DISMISS_ALARM`.
+4. Dismisses any scheduled `"Auto Sleep"` alarm in the background via `AlarmManager.cancel()` and `AlarmClock.ACTION_DISMISS_ALARM`.
 5. Current volume and media playback remain unchanged.
 6. The notification updates to the `Off` state ("Timer off").
 7. `EventLogger` logs the turn off action.

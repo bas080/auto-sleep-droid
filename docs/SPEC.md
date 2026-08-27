@@ -3,6 +3,7 @@
 ## Terminology
 - **Sleep Timer**: The application feature that counts down while media is playing and fades volume down to zero to pause playback upon expiration.
 - **Sleep Timer Duration**: The user-configured duration in minutes (default 20 minutes, min 1 minute, max 24 hours) that the sleep timer counts down before fading and pausing media.
+- **Fade-Out / Fading**: The 30-second volume fade at sleep timer expiration where music volume gradually decreases along an ease-out curve down to zero before media playback is paused.
 - **Wake-Up Alarm ("Auto Sleep")**: The system Clock app alarm scheduled by Auto Sleep Droid to wake the user up at or after their target goal time.
 - **Target Goal Time**: The user's desired daily wake-up clock time (e.g., `06:30 AM`).
 - **Minimum Sleep Duration**: The user-configured minimum sleep safeguard duration in hours (default 7.5 hours) ensuring that the wake-up alarm is set no earlier than `timerStartTime + sleepTimerDuration + minimumSleepDuration`.
