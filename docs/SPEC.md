@@ -77,8 +77,9 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - **Purpose**: Gently adjust your daily wake-up alarm 15 minutes earlier each day until you reach your goal wake-up time, while ensuring you always get enough sleep.
 - **How It Works**:
   1. **Daily 15-Minute Adjustment**: Each night when you start the sleep timer, the app takes your previous wake-up time and shifts it 15 minutes earlier toward your target goal time (e.g., from 7:30 AM to 7:15 AM toward a goal of 6:30 AM).
-  2. **Minimum Sleep Safeguard**: To make sure you never lose sleep when staying up late, the app ensures your alarm is set no earlier than your bedtime plus your minimum sleep duration (default 7.5 hours).
-  3. **Re-using a Single Alarm**: The app maintains only one alarm in your Clock app named `"Auto Sleep"`. Whenever the wake-up time is recalculated or updated, the app clears any existing `"Auto Sleep"` alarm first so you never end up with duplicate alarms.
+  2. **Bedtime & Sleep Duration Determination**: The exact bedtime (and calculated sleep duration) is determined by recording the wall-clock timestamp when the user stops resetting the sleep timer and the timer completes during nighttime hours (between 8:00 PM and 6:00 AM).
+  3. **Minimum Sleep Safeguard**: To make sure you never lose sleep when staying up late, the app ensures your alarm is set no earlier than your recorded bedtime plus your minimum sleep duration (default 7.5 hours).
+  4. **Re-using a Single Alarm**: The app maintains only one alarm in your Clock app named `"Auto Sleep"`. Whenever the wake-up time is recalculated or updated, the app clears any existing `"Auto Sleep"` alarm first so you never end up with duplicate alarms.
 - **Disabled by Default**: The feature is off by default until you tap "Set Wake-Up Goal". Tapping "Clear Goal" turns it off and removes the alarm.
 - **User Inputs**:
   - **Target Goal Time** (e.g., `06:30 AM`).
