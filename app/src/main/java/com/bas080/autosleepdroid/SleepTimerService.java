@@ -301,7 +301,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             registerVolumeObserver();
             startForeground(NOTIFICATION_ID, buildNotification());
             scheduleExpiry();
-            syncWakeupAlarm();
         }
     }
 
@@ -358,6 +357,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         EventLogger.log(this, "Timer expired: pausing media");
         pauseMediaViaAudioFocus();
 
+        syncWakeupAlarm();
+
         restoreVolumeRunnable = () -> stateMachine.restoreVolumeAfterPause();
         handler.postDelayed(restoreVolumeRunnable, PAUSE_RESET_DELAY_MS);
     }
@@ -399,7 +400,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onTimerRescheduled() {
         scheduleExpiry();
-        syncWakeupAlarm();
     }
 
     private void syncWakeupAlarm() {
@@ -478,10 +478,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void scheduleOrUpdateWakeupAlarm(long targetAlarmTimeMs) {
-        if (Math.abs(lastScheduledWakeupAlarmTimeMs - targetAlarmTimeMs) < 1000L) {
-            return;
-        }
-
         dismissWakeupAlarmInClockApp();
 
         lastScheduledWakeupAlarmTimeMs = targetAlarmTimeMs;
