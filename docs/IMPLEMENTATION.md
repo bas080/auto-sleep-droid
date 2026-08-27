@@ -61,8 +61,8 @@ Responsibilities:
 - Register accelerometer sensor listener on a dedicated background `HandlerThread` (with 300ms temporal throttling) and `VOLUME_CHANGED_ACTION` broadcast receiver dynamically only during `Active` and `Fading` states.
 - Transition from `Waiting` to `Active` when playback callback detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
-- Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused, and revert to the `Waiting` state.
-- Upon sleep timer completion, determine bedtime and schedule/update the `"Auto Sleep"` system clock alarm via `AlarmClock.ACTION_SET_ALARM` if Smart Wake-Up Goal is enabled, using `Math.max(targetGoalMillis, minWakeTimeMillis)`.
+- Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused (after a short 500ms delay), and revert to the `Waiting` state.
+- Upon sleep timer start/reschedule within 12 hours prior to goal time, schedule/update the `"Auto Sleep"` system clock alarm via `AlarmClock.ACTION_SET_ALARM` if Smart Wake-Up Goal is enabled, using `Math.max(targetGoalMillis, minWakeTimeMillis)`.
 - Cancel/dismiss the `"Auto Sleep"` system clock alarm via `AlarmClock.ACTION_DISMISS_ALARM` when the timer is explicitly turned off or when "Clear Goal" is selected.
 - Trigger a short, faint haptic feedback pulse (`Vibrator`) upon duration replies, turning off, volume button resets, and flip gestures.
 - Log lifecycle and state events to `EventLogger`.
@@ -196,15 +196,8 @@ In-memory state in `SleepTimerService`:
 2. The service captures current music stream volume as `volumeBeforeFade`.
 3. Thirty fade steps run at 1-second intervals using an ease-out quadratic curve.
 4. User volume changes during fade cancel the fade and restart the timer.
-5. After the final step, media is paused by requesting transient audio focus (`pauseMediaViaAudioFocus()`).
-6. If Smart Wake-Up Goal is enabled:
-   - Bedtime is recorded as current timestamp (`System.currentTimeMillis()`).
-   - Calculates target goal time for upcoming morning and minimum allowed wake time (`bedtime + minSleepDuration`).
-   - Scheduled alarm time is set to `Math.max(targetGoalMillis, minWakeTimeMillis)`.
-   - Sends `AlarmClock.ACTION_DISMISS_ALARM` to clear old `"Auto Sleep"` alarm and `AlarmClock.ACTION_SET_ALARM` with label `"Auto Sleep"` to schedule new alarm.
-   - Logs alarm creation to `EventLogger`.
-7. Pre-fade volume is restored after a short delay (500ms) to allow media to pause silently, and the timer returns to `Waiting`.
-8. Expiry and fade steps are logged to `EventLogger`.
+5. After the final step, media is paused by requesting transient audio focus (`pauseMediaViaAudioFocus()`), pre-fade volume is restored after a short delay (500ms) to allow media to pause silently, and the timer returns to `Waiting`.
+6. Expiry and fade steps are logged to `EventLogger`.
 
 ### Reboot
 
@@ -232,7 +225,7 @@ Declared in `app/src/main/AndroidManifest.xml`:
 Run unit tests locally:
 
 ```sh
-./gradlew test --offline
+./gradlew test
 ```
 
 Local debug build:
