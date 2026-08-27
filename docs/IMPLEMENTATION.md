@@ -71,6 +71,13 @@ Important constants:
 - Minimum duration: `1` minute
 - Maximum duration: `1440` minutes (24 hours)
 - Fade duration: `30_000` milliseconds
+- Alarm search label: `"auto-sleep-droid"`
+
+Wake-Up Alarm Scheduling:
+- `SleepTimerService` computes the target wake-up time upon entering the `Active` state or when the sleep timer is rescheduled.
+- The circadian phase-shifting algorithm proposes a 15-minute daily step toward the user's target wake-up goal time (`wakeup_alarm_hours`, `wakeup_alarm_minutes`), while enforcing a minimum sleep duration safeguard (`wakeup_min_sleep_hours`, default 7.5h) based on `timer_ends_at`.
+- Alarms are scheduled silently in the background using `AlarmManager.setAlarmClock()`, displaying the status bar alarm icon without opening external apps.
+- `lastScheduledWakeupAlarmTimeMs` deduplicates scheduling to avoid unnecessary AlarmManager or notification updates.
 
 ### `MainActivity`
 
@@ -108,6 +115,11 @@ Timer state is stored in the `sleep_timer` `SharedPreferences` file:
 | `active` | boolean | Whether the timer is enabled (`Waiting`/`Active`/`Fading`) vs explicitly `Off` |
 | `duration_minutes` | integer | The configured duration used for every reset |
 | `timer_ends_at` | long | Wall-clock timestamp (millis) when active timer expires |
+| `wakeup_alarm_enabled` | boolean | Whether the smart wake-up alarm feature is enabled (disabled by default) |
+| `wakeup_alarm_hours` | integer | Target wake-up goal hour of day (0–23, default 6) |
+| `wakeup_alarm_minutes` | integer | Target wake-up goal minute (0–59, default 30) |
+| `wakeup_min_sleep_hours` | float | Minimum sleep duration safeguard in hours (default 7.5) |
+| `wakeup_last_scheduled_ms` | long | Wall-clock timestamp (millis) of the last scheduled wake-up alarm |
 
 Event log history is stored in the `event_logger` `SharedPreferences` file:
 
@@ -198,6 +210,7 @@ Declared in `app/src/main/AndroidManifest.xml`:
 - `SCHEDULE_EXACT_ALARM`: permits scheduling exact alarms with `AlarmManager`.
 - `POST_NOTIFICATIONS`: required for notification delivery on Android 13+.
 - `RECEIVE_BOOT_COMPLETED`: permits reboot restoration.
+- `com.android.alarm.permission.SET_ALARM`: permits scheduling system wake-up alarms.
 
 ## Build and release
 

@@ -82,11 +82,16 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(48, 24, 48, 24);
 
-        final EditText timeInput = new EditText(this);
-        timeInput.setHint(R.string.dialog_goal_time_hint);
-        timeInput.setInputType(InputType.TYPE_CLASS_DATETIME);
-        timeInput.setText(String.format(java.util.Locale.US, "%02d:%02d", currHours, currMinutes));
-        layout.addView(timeInput);
+        final android.widget.TimePicker timePicker = new android.widget.TimePicker(this);
+        timePicker.setIs24HourView(android.text.format.DateFormat.is24HourFormat(this));
+        if (Build.VERSION.SDK_INT >= 23) {
+            timePicker.setHour(currHours);
+            timePicker.setMinute(currMinutes);
+        } else {
+            timePicker.setCurrentHour(currHours);
+            timePicker.setCurrentMinute(currMinutes);
+        }
+        layout.addView(timePicker);
 
         final EditText minSleepInput = new EditText(this);
         minSleepInput.setHint(R.string.dialog_min_sleep_hint);
@@ -98,17 +103,26 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 .setTitle(R.string.dialog_wakeup_alarm_title)
                 .setView(layout)
                 .setPositiveButton(R.string.dialog_btn_save, (dialog, which) -> {
-                    int[] parsedTime = parseTimeHHMM(timeInput.getText().toString(), currHours, currMinutes);
+                    int selectedHour;
+                    int selectedMinute;
+                    if (Build.VERSION.SDK_INT >= 23) {
+                        selectedHour = timePicker.getHour();
+                        selectedMinute = timePicker.getMinute();
+                    } else {
+                        selectedHour = timePicker.getCurrentHour();
+                        selectedMinute = timePicker.getCurrentMinute();
+                    }
+
                     float minSleep = parseFloatOrDefault(minSleepInput.getText().toString(), currMinSleep, 6.0f, 9.0f);
 
                     prefs.edit()
                             .putBoolean(PREF_WAKEUP_ENABLED, true)
-                            .putInt(PREF_WAKEUP_HOURS, parsedTime[0])
-                            .putInt(PREF_WAKEUP_MINUTES, parsedTime[1])
+                            .putInt(PREF_WAKEUP_HOURS, selectedHour)
+                            .putInt(PREF_WAKEUP_MINUTES, selectedMinute)
                             .putFloat(PREF_WAKEUP_MIN_SLEEP_HOURS, minSleep)
                             .apply();
 
-                    EventLogger.log(this, String.format(java.util.Locale.US, "Wake-Up Goal set to %02d:%02d (Min sleep: %.1fh)", parsedTime[0], parsedTime[1], minSleep));
+                    EventLogger.log(this, String.format(java.util.Locale.US, "Wake-Up Goal set to %02d:%02d (Min sleep: %.1fh)", selectedHour, selectedMinute, minSleep));
                     updateWakeupAlarmStatusUI();
                     redrawNotification();
                 })
