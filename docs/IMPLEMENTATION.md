@@ -179,6 +179,8 @@ In-memory state in `SleepTimerService`:
 6. The notification updates to the `Off` state ("Timer off").
 7. `EventLogger` logs the turn off action.
 
+> https://developer.android.com/reference/android/provider/AlarmClock
+
 ### Volume reset, Gesture flip & Media playback start
 
 1. Android changes music stream volume normally, a phone flip gesture is detected, or playback starts.
