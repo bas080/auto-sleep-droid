@@ -26,6 +26,9 @@ android {
 
     testOptions {
         unitTests.includeAndroidResources = true
+        unitTests.all {
+            maxParallelForks = Runtime.runtime.availableProcessors()
+        }
     }
 }
 
