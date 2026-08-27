@@ -31,9 +31,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public static final String ACTION_TURN_OFF = "com.bas080.autosleepdroid.TURN_OFF";
     public static final String ACTION_TURN_ON = "com.bas080.autosleepdroid.TURN_ON";
     public static final String ACTION_ALARM_EXPIRY = "com.bas080.autosleepdroid.ALARM_EXPIRY";
-    public static final String ACTION_AUTO_SLEEP_ALARM_EXPIRY = "com.bas080.autosleepdroid.AUTO_SLEEP_ALARM_EXPIRY";
+    public static final String ACTION_WAKEUP_ALARM_EXPIRY = "com.bas080.autosleepdroid.AUTO_SLEEP_ALARM_EXPIRY";
     public static final String ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION";
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
+    public static final String ALARM_SEARCH_NAME = "Auto Sleep";
+    public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = "wakeup_last_scheduled_ms";
+
     private static final String CHANNEL_ID = "sleep_timer";
     private static final int NOTIFICATION_ID = 1001;
     private static final String PREFERENCES = "sleep_timer";
@@ -65,6 +68,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private android.os.HandlerThread sensorThread;
     private Handler sensorHandler;
     private android.os.Vibrator vibrator;
+    private long lastScheduledWakeupAlarmTimeMs = 0L;
 
     private SleepTimerStateMachine stateMachine;
 
@@ -196,7 +200,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 EventLogger.log(this, "AlarmManager trigger received");
                 int currentVol = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
                 stateMachine.handleAlarmExpiry(currentVol);
-            } else if (ACTION_AUTO_SLEEP_ALARM_EXPIRY.equals(intent.getAction())) {
+            } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, "Auto Sleep wake-up alarm triggered");
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
                 updateNotification();
@@ -400,59 +404,60 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             return;
         }
 
-        int alarmHour = calAlarm.get(Calendar.HOUR_OF_DAY);
-        int alarmMin = calAlarm.get(Calendar.MINUTE);
+        long targetAlarmTimeMs = calAlarm.getTimeInMillis();
+        lastScheduledWakeupAlarmTimeMs = targetAlarmTimeMs;
+        if (preferences != null) {
+            preferences.edit().putLong(KEY_WAKEUP_LAST_SCHEDULED_MS, targetAlarmTimeMs).apply();
+        }
 
-        dismissAutoSleepAlarm();
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(targetAlarmTimeMs);
+        int hourOfDay = cal.get(Calendar.HOUR_OF_DAY);
+        int minute = cal.get(Calendar.MINUTE);
 
-        boolean alarmScheduled = false;
+        if (alarmManager == null) {
+            return;
+        }
+
+        Intent alarmClockIntent = new Intent(AlarmClock.ACTION_SET_ALARM)
+                .putExtra(AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
+                .putExtra(AlarmClock.EXTRA_HOUR, hourOfDay)
+                .putExtra(AlarmClock.EXTRA_MINUTES, minute)
+                .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        try {
+            startActivity(alarmClockIntent);
+            java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
+            String formattedTime = timeFormat.format(new Date(targetAlarmTimeMs));
+            EventLogger.log(this, "Wake-Up Goal Alarm '" + ALARM_SEARCH_NAME + "' set in Clock app for " + formattedTime);
+        } catch (Exception e) {
+            EventLogger.log(this, "Failed to set alarm in Clock app: " + e.getMessage());
+        }
 
         if (alarmManager != null) {
-            Intent alarmTriggerIntent = new Intent(this, SleepTimerService.class).setAction(ACTION_AUTO_SLEEP_ALARM_EXPIRY);
-            PendingIntent operationIntent = PendingIntent.getService(this, 200, alarmTriggerIntent,
+            Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
+            PendingIntent pendingIntent = PendingIntent.getService(this, 101, intent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
             Intent showIntent = new Intent(this, MainActivity.class);
-            PendingIntent showPendingIntent = PendingIntent.getActivity(this, 201, showIntent,
+            PendingIntent showPendingIntent = PendingIntent.getActivity(this, 102, showIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-            AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(calAlarm.getTimeInMillis(), showPendingIntent);
+            AlarmManager.AlarmClockInfo clockInfo =
+                    new AlarmManager.AlarmClockInfo(targetAlarmTimeMs, showPendingIntent);
+
             try {
-                alarmManager.setAlarmClock(clockInfo, operationIntent);
-                alarmScheduled = true;
-            } catch (Exception e) {
-                EventLogger.log(this, "Error scheduling system AlarmClockInfo: " + e.getMessage());
+                alarmManager.setAlarmClock(clockInfo, pendingIntent);
+            } catch (Exception ignored) {
             }
-        }
-
-        try {
-            Intent setAlarmIntent = new Intent(AlarmClock.ACTION_SET_ALARM);
-            setAlarmIntent.putExtra(AlarmClock.EXTRA_HOUR, alarmHour);
-            setAlarmIntent.putExtra(AlarmClock.EXTRA_MINUTES, alarmMin);
-            setAlarmIntent.putExtra(AlarmClock.EXTRA_MESSAGE, "Auto Sleep");
-            setAlarmIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
-            setAlarmIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-            PendingIntent pi = PendingIntent.getActivity(this, 202, setAlarmIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            pi.send();
-            alarmScheduled = true;
-        } catch (Exception ignored) {
-        }
-
-        if (alarmScheduled) {
-            int goalHour = preferences.getInt("wake_up_goal_hour", 6);
-            int goalMin = preferences.getInt("wake_up_goal_minute", 30);
-            String formattedAlarmTime = formatTime(alarmHour, alarmMin);
-            String formattedGoalTime = formatTime(goalHour, goalMin);
-            EventLogger.log(this, "Auto Sleep alarm set for " + formattedAlarmTime + " (Goal: " + formattedGoalTime + ")");
         }
     }
 
     private void dismissAutoSleepAlarm() {
         if (alarmManager != null) {
-            Intent alarmTriggerIntent = new Intent(this, SleepTimerService.class).setAction(ACTION_AUTO_SLEEP_ALARM_EXPIRY);
-            PendingIntent operationIntent = PendingIntent.getService(this, 200, alarmTriggerIntent,
+            Intent alarmTriggerIntent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
+            PendingIntent operationIntent = PendingIntent.getService(this, 101, alarmTriggerIntent,
                     PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
             if (operationIntent != null) {
                 alarmManager.cancel(operationIntent);
@@ -462,13 +467,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         try {
             Intent dismissIntent = new Intent(AlarmClock.ACTION_DISMISS_ALARM);
             dismissIntent.putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_LABEL);
-            dismissIntent.putExtra(AlarmClock.EXTRA_MESSAGE, "Auto Sleep");
+            dismissIntent.putExtra(AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME);
             dismissIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
             dismissIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-            PendingIntent pi = PendingIntent.getActivity(this, 203, dismissIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            pi.send();
+            startActivity(dismissIntent);
         } catch (Exception ignored) {
         }
     }
