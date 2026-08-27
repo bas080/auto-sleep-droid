@@ -1,5 +1,12 @@
 # Auto Sleep Droid Specification
 
+## Terminology
+- **Sleep Timer**: The application feature that counts down from a configured duration while media is playing and fades volume down to zero to pause playback upon expiration.
+- **Configured Duration**: The user-selected timer duration in minutes (default 20 minutes) used for countdowns and resets.
+- **Wake-Up Alarm ("Auto Sleep")**: The non-recurring system Clock app alarm scheduled by Auto Sleep Droid to wake the user up at or after their target goal time.
+- **Target Goal Time**: The user's desired daily wake-up clock time (e.g., `06:30 AM`).
+- **Minimum Sleep Duration**: The minimum sleep safeguard duration in hours (default 7.5 hours) used to ensure adequate sleep when going to bed late.
+
 ## Product goal
 Provide an Android sleep timer controlled via notification shade controls. The main UI displays a live event log (one line per event) for debugging.
 
