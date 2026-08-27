@@ -68,6 +68,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private android.os.HandlerThread sensorThread;
     private Handler sensorHandler;
     private android.os.Vibrator vibrator;
+    private long lastScheduledWakeupAlarmTimeMs = 0L;
 
     private SleepTimerStateMachine stateMachine;
 
@@ -412,6 +413,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         dismissAutoSleepAlarm();
 
+        lastScheduledWakeupAlarmTimeMs = targetAlarmTimeMs;
         if (preferences != null) {
             preferences.edit().putLong(KEY_WAKEUP_LAST_SCHEDULED_MS, targetAlarmTimeMs).apply();
         }
@@ -420,6 +422,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         cal.setTimeInMillis(targetAlarmTimeMs);
         int hourOfDay = cal.get(Calendar.HOUR_OF_DAY);
         int minute = cal.get(Calendar.MINUTE);
+
+        if (alarmManager == null) {
+            return;
+        }
 
         Intent alarmClockIntent = new Intent(AlarmClock.ACTION_SET_ALARM)
                 .putExtra(AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
@@ -466,16 +472,37 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 operationIntent.cancel();
             }
         }
-        try {
-            Intent dismissIntent = new Intent(AlarmClock.ACTION_DISMISS_ALARM);
-            dismissIntent.putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_LABEL);
-            dismissIntent.putExtra(AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME);
-            dismissIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
-            dismissIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-            startActivity(dismissIntent);
+        long lastScheduled = preferences != null ? preferences.getLong(KEY_WAKEUP_LAST_SCHEDULED_MS, 0L) : 0L;
+        if (lastScheduled > 0L) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTimeInMillis(lastScheduled);
+            int hour = cal.get(Calendar.HOUR_OF_DAY);
+            int minute = cal.get(Calendar.MINUTE);
+
+            try {
+                Intent dismissByTimeIntent = new Intent(AlarmClock.ACTION_DISMISS_ALARM)
+                        .putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_TIME)
+                        .putExtra(AlarmClock.EXTRA_HOUR, hour)
+                        .putExtra(AlarmClock.EXTRA_MINUTES, minute)
+                        .putExtra(AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
+                        .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(dismissByTimeIntent);
+            } catch (Exception ignored) {
+            }
+        }
+
+        try {
+            Intent dismissByLabelIntent = new Intent(AlarmClock.ACTION_DISMISS_ALARM)
+                    .putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_LABEL)
+                    .putExtra(AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
+                    .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(dismissByLabelIntent);
         } catch (Exception ignored) {
         }
+
         if (preferences != null) {
             preferences.edit().remove(KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
         }

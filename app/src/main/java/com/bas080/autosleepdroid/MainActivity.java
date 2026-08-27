@@ -223,6 +223,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 .putInt("wake_up_goal_hour", goalHour)
                 .putInt("wake_up_goal_minute", goalMinute)
                 .putInt("min_sleep_duration_minutes", minSleepMinutes)
+                .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
                 .apply();
 
         String formattedGoalTime = formatTime(goalHour, goalMinute);
@@ -237,12 +238,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
         prefs.edit()
                 .putBoolean("wake_up_goal_enabled", false)
+                .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
                 .apply();
 
         try {
             Intent dismissIntent = new Intent(AlarmClock.ACTION_DISMISS_ALARM);
             dismissIntent.putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_LABEL);
-            dismissIntent.putExtra(AlarmClock.EXTRA_MESSAGE, "Auto Sleep");
+            dismissIntent.putExtra(AlarmClock.EXTRA_MESSAGE, SleepTimerService.ALARM_SEARCH_NAME);
             dismissIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
             dismissIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(dismissIntent);
