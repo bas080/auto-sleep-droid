@@ -75,6 +75,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 
 ## System Wake-Up Alarm Configuration ("auto-sleep-droid")
 - **Purpose**: Allow the user to configure a wake-up system clock alarm relative to their sleep timer, ensuring they wake up at the desired time after falling asleep.
+- **Disabled by Default**: The Wake-Up Alarm feature is **disabled by default** upon initial installation. When disabled, no system clock alarm `"auto-sleep-droid"` is scheduled, no status bar alarm icon is created, and the UI status view displays `"Wake-Up Alarm: Disabled"`.
 - **Alarm Label & Type**: The system alarm is non-recurring and strictly named `"auto-sleep-droid"`.
 - **UI Location & Dialog Interaction**:
   - Configured directly within the main app UI (`MainActivity`), positioned at the top above the event log.
@@ -106,9 +107,10 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - Invalid inline reply inputs gracefully default to the last valid or default duration.
 - Post-reboot behavior respects the last saved state (preserving Off status or returning running timers to Waiting).
 - The "Set Timer" action is available across all states, the "Turn Off" button is present whenever the timer is enabled, and the "Turn On" button is present when the timer is Off.
+- The Wake-Up Alarm feature is disabled by default until explicitly configured by the user.
 - The main activity UI presents top header controls ("Set Wake-Up Alarm", "Clear Alarm", and status text) to configure, display, and clear the system wake-up alarm offset.
 - Notifications remain minimal and compact when collapsed, expanding to show full details (configured duration, fade target, and scheduled wake-up alarm time).
-- Starting an active sleep timer countdown immediately schedules/updates the `"auto-sleep-droid"` system clock alarm, causing the Android status bar alarm icon to appear right away.
+- Starting an active sleep timer countdown immediately schedules/updates the `"auto-sleep-droid"` system clock alarm (when enabled), causing the Android status bar alarm icon to appear right away.
 - Users can configure an $N$ hours and $M$ minutes wake-up alarm offset via a main UI dialog that creates or updates a non-recurring system clock alarm labeled `"auto-sleep-droid"`.
 - If an `"auto-sleep-droid"` alarm already exists, its scheduled time is updated; if it does not exist, a new alarm is created.
 - Timer resets recalculate the target wake-up time, and disabling the timer or tapping "Clear Alarm" cancels the scheduled `"auto-sleep-droid"` alarm.
