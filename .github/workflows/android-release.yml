@@ -13,6 +13,30 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: 'gradle'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Run unit tests
+        run: ./gradlew test --parallel
+
   latest:
     name: Build latest APK
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master' || github.event_name == 'pull_request'
@@ -34,9 +58,6 @@ jobs:
 
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Run unit tests
-        run: ./gradlew test
 
       - name: Build debug APK
         run: ./gradlew assembleDebug
@@ -93,9 +114,6 @@ jobs:
 
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Run unit tests
-        run: ./gradlew test
 
       - name: Build debug APK
         run: ./gradlew assembleDebug
