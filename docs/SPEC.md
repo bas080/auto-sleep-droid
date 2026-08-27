@@ -1,11 +1,11 @@
 # Auto Sleep Droid Specification
 
 ## Terminology
-- **Sleep Timer**: The application feature that counts down from a configured duration while media is playing and fades volume down to zero to pause playback upon expiration.
-- **Configured Duration**: The user-selected timer duration in minutes (default 20 minutes) used for countdowns and resets.
-- **Wake-Up Alarm ("Auto Sleep")**: The non-recurring system Clock app alarm scheduled by Auto Sleep Droid to wake the user up at or after their target goal time.
+- **Sleep Timer**: The application feature that counts down while media is playing and fades volume down to zero to pause playback upon expiration.
+- **Sleep Timer Duration**: The user-configured duration in minutes (default 20 minutes, min 1 minute, max 24 hours) that the sleep timer counts down before fading and pausing media.
+- **Wake-Up Alarm ("Auto Sleep")**: The system Clock app alarm scheduled by Auto Sleep Droid to wake the user up at or after their target goal time.
 - **Target Goal Time**: The user's desired daily wake-up clock time (e.g., `06:30 AM`).
-- **Minimum Sleep Duration**: The minimum sleep safeguard duration in hours (default 7.5 hours) used to ensure adequate sleep when going to bed late.
+- **Minimum Sleep Duration**: The user-configured minimum sleep safeguard duration in hours (default 7.5 hours) ensuring that the wake-up alarm is set no earlier than `timerStartTime + sleepTimerDuration + minimumSleepDuration`.
 
 ## Product goal
 Provide an Android sleep timer controlled via notification shade controls. The main UI displays a live event log (one line per event) for debugging.
@@ -83,7 +83,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 ## Smart Target Wake-Up Goal ("Auto Sleep")
 - **Purpose**: Automatically set your daily wake-up alarm to your target wake-up goal time while ensuring you always get enough sleep.
 - **How It Works**:
-  1. **Alarm Calculation at Timer Start**: When the sleep timer starts or is reset, the wake-up alarm is set to `Math.max(targetGoalTime, timerStartTime + sleepDuration + minimumSleepDuration)`.
+  1. **Alarm Calculation at Timer Start**: When the sleep timer starts or is reset, the wake-up alarm is set to `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)`.
   2. **12-Hour Window Safeguard**: The alarm is scheduled only when the timer starts within 12 hours prior to the target goal time.
   3. **Single Alarm Creation**: The app maintains only one alarm in your Clock app named `"Auto Sleep"`.
 - **Disabled by Default**: The feature is off by default until you tap "Set Wake-Up Goal". Tapping "Clear Goal" turns it off and removes the alarm.
@@ -107,5 +107,5 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - The Smart Wake-Up Goal feature is disabled by default until explicitly configured by the user.
 - The main activity UI presents top header controls ("Set Wake-Up Goal", "Clear Goal", and status text) to configure, display, and clear the target wake-up goal and minimum sleep duration.
 - Notifications remain minimal and compact when collapsed, expanding to show full details (configured duration, fade target, and scheduled wake-up alarm time).
-- Starting the sleep timer within 12 hours of the target goal time schedules/updates the `"Auto Sleep"` system clock alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h).
+- Starting the sleep timer within 12 hours of the target goal time schedules/updates the `"Auto Sleep"` system clock alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h).
 - Disabling the timer or tapping "Clear Goal" cancels the scheduled `"Auto Sleep"` alarm in the background.
