@@ -33,6 +33,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public static final String ACTION_ALARM_EXPIRY = "com.bas080.autosleepdroid.ALARM_EXPIRY";
     public static final String ACTION_WAKEUP_ALARM_EXPIRY = "com.bas080.autosleepdroid.AUTO_SLEEP_ALARM_EXPIRY";
     public static final String ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION";
+    public static final String ACTION_CLEAR_GOAL = "com.bas080.autosleepdroid.CLEAR_GOAL";
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
     public static final String ALARM_SEARCH_NAME = "Auto Sleep";
     public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = "wakeup_last_scheduled_ms";
@@ -202,6 +203,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 stateMachine.handleAlarmExpiry(currentVol);
             } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, "Auto Sleep wake-up alarm triggered");
+            } else if (ACTION_CLEAR_GOAL.equals(intent.getAction())) {
+                dismissAutoSleepAlarm();
+                updateNotification();
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
                 updateNotification();
             }
