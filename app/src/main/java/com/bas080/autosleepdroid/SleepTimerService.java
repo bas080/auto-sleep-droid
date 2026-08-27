@@ -25,6 +25,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public static final String ACTION_TURN_OFF = "com.bas080.autosleepdroid.TURN_OFF";
     public static final String ACTION_TURN_ON = "com.bas080.autosleepdroid.TURN_ON";
     public static final String ACTION_ALARM_EXPIRY = "com.bas080.autosleepdroid.ALARM_EXPIRY";
+    public static final String ACTION_WAKEUP_ALARM_EXPIRY = "com.bas080.autosleepdroid.WAKEUP_ALARM_EXPIRY";
     public static final String ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION";
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
     private static final String CHANNEL_ID = "sleep_timer";
@@ -193,6 +194,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 EventLogger.log(this, "AlarmManager trigger received");
                 int currentVol = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
                 stateMachine.handleAlarmExpiry(currentVol);
+            } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
+                EventLogger.log(this, "Wake-Up Alarm '" + ALARM_SEARCH_NAME + "' fired");
+                onTriggerVibration();
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
                 updateNotification();
                 if (stateMachine != null && stateMachine.isActive()) {
@@ -418,20 +422,23 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void scheduleOrUpdateWakeupAlarm(long targetAlarmTimeMs) {
-        java.util.Calendar cal = java.util.Calendar.getInstance();
-        cal.setTimeInMillis(targetAlarmTimeMs);
-        int hourOfDay = cal.get(java.util.Calendar.HOUR_OF_DAY);
-        int minute = cal.get(java.util.Calendar.MINUTE);
+        if (alarmManager == null) {
+            return;
+        }
 
-        Intent intent = new Intent(android.provider.AlarmClock.ACTION_SET_ALARM)
-                .putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
-                .putExtra(android.provider.AlarmClock.EXTRA_HOUR, hourOfDay)
-                .putExtra(android.provider.AlarmClock.EXTRA_MINUTES, minute)
-                .putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 101, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent showIntent = new Intent(this, MainActivity.class);
+        PendingIntent showPendingIntent = PendingIntent.getActivity(this, 102, showIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        android.app.AlarmManager.AlarmClockInfo clockInfo =
+                new android.app.AlarmManager.AlarmClockInfo(targetAlarmTimeMs, showPendingIntent);
 
         try {
-            startActivity(intent);
+            alarmManager.setAlarmClock(clockInfo, pendingIntent);
             java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
             String formattedTime = timeFormat.format(new java.util.Date(targetAlarmTimeMs));
             EventLogger.log(this, "Wake-Up Alarm '" + ALARM_SEARCH_NAME + "' scheduled for " + formattedTime);
@@ -441,14 +448,16 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void cancelWakeupAlarm() {
-        Intent intent = new Intent(android.provider.AlarmClock.ACTION_DISMISS_ALARM)
-                .putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        try {
-            startActivity(intent);
+        if (alarmManager == null) {
+            return;
+        }
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 101, intent,
+                PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
+        if (pendingIntent != null) {
+            alarmManager.cancel(pendingIntent);
+            pendingIntent.cancel();
             EventLogger.log(this, "Wake-Up Alarm '" + ALARM_SEARCH_NAME + "' cancelled");
-        } catch (Exception e) {
-            // Dismiss alarm may not be supported on all devices, fall back safely
         }
     }
 
