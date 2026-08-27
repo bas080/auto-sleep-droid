@@ -68,7 +68,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private android.os.HandlerThread sensorThread;
     private Handler sensorHandler;
     private android.os.Vibrator vibrator;
-    private long lastScheduledWakeupAlarmTimeMs = 0L;
 
     private SleepTimerStateMachine stateMachine;
 
@@ -405,7 +404,14 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
 
         long targetAlarmTimeMs = calAlarm.getTimeInMillis();
-        lastScheduledWakeupAlarmTimeMs = targetAlarmTimeMs;
+        long lastScheduled = preferences != null ? preferences.getLong(KEY_WAKEUP_LAST_SCHEDULED_MS, 0L) : 0L;
+
+        if (targetAlarmTimeMs == lastScheduled) {
+            return;
+        }
+
+        dismissAutoSleepAlarm();
+
         if (preferences != null) {
             preferences.edit().putLong(KEY_WAKEUP_LAST_SCHEDULED_MS, targetAlarmTimeMs).apply();
         }
@@ -414,10 +420,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         cal.setTimeInMillis(targetAlarmTimeMs);
         int hourOfDay = cal.get(Calendar.HOUR_OF_DAY);
         int minute = cal.get(Calendar.MINUTE);
-
-        if (alarmManager == null) {
-            return;
-        }
 
         Intent alarmClockIntent = new Intent(AlarmClock.ACTION_SET_ALARM)
                 .putExtra(AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
@@ -473,6 +475,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
             startActivity(dismissIntent);
         } catch (Exception ignored) {
+        }
+        if (preferences != null) {
+            preferences.edit().remove(KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
         }
     }
 
