@@ -62,8 +62,8 @@ Responsibilities:
 - Transition from `Waiting` to `Active` when playback callback detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused (after a short 500ms delay), and revert to the `Waiting` state.
-- Upon sleep timer start/reschedule within 12 hours prior to goal time, schedule/update the `"Auto Sleep"` system clock alarm via `AlarmManager.setAlarmClock(...)` in the background if Smart Wake-Up Goal is enabled, using `Math.max(targetGoalMillis, minWakeTimeMillis)`.
-- Cancel/dismiss the `"Auto Sleep"` system clock alarm via `AlarmManager.cancel()` when the timer is explicitly turned off or when "Clear Goal" is selected.
+- Upon sleep timer start/reschedule within 12 hours prior to goal time, schedule/update the `"Auto Sleep"` background wake-up alarm via `AlarmManager.setAlarmClock(...)` if Smart Wake-Up Goal is enabled, using `Math.max(targetGoalMillis, minWakeTimeMillis)`.
+- Cancel/dismiss the `"Auto Sleep"` background wake-up alarm via `AlarmManager.cancel()` when the timer is explicitly turned off or when "Clear Goal" is selected.
 - Trigger a short, faint haptic feedback pulse (`Vibrator`) upon duration replies, turning off, volume button resets, and flip gestures.
 - Log lifecycle and state events to `EventLogger`.
 
