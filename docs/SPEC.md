@@ -10,20 +10,23 @@ Provide an Android sleep timer controlled via notification shade controls. The m
 - Fading: The timer reaches zero, initiating a 30-second volume fade along a curve that starts steep and flattens out. Completing this fade pauses media, restores pre-fade volume, and returns the app back to the Waiting state.
 
 ## Notification states and content
+Notification text is kept compact and concise when collapsed, displaying detailed contextual information only when expanded:
+
 - Off:
-  - Text: "Sleep timer is off"
+  - Collapsed Text: "Timer off"
+  - Expanded Text: "Sleep timer is off"
   - Buttons: "Set Timer" (Inline reply to change duration) and "Turn On" (Enables timer without changing configured duration).
 - Waiting: 
-  - Text: "Waiting for media playback"
-  - Duration: Displays the configured duration.
+  - Collapsed Text: "Waiting for playback"
+  - Expanded Text: "Waiting for media playback (20m configured)"
   - Buttons: "Set Timer" (Inline reply to change duration) and "Turn Off" (Disables timer and transitions to Off state).
 - Active: 
-  - Text: "Timer running"
-  - Duration: Displays the target fade-out clock time and configured duration (e.g. "Fades out at 11:15 PM (20m configured)").
+  - Collapsed Text: "Timer running (11:15 PM)"
+  - Expanded Text: "Fades out at 11:15 PM (20m configured) • Alarm set for 6:15 AM" (Alarm detail shown only when wake-up alarm is enabled).
   - Buttons: "Set Timer" (Inline reply to change duration) and "Turn Off" (Disables timer and transitions to Off state).
 - Fading: 
-  - Text: "Fading volume"
-  - Duration: Displays the original configured duration.
+  - Collapsed Text: "Fading volume"
+  - Expanded Text: "Fading volume down to pause media"
   - Buttons: "Set Timer" (Inline reply to change duration) and "Turn Off" (Cancels the fade, disables timer, and transitions to Off state).
 
 ## User interface
@@ -86,10 +89,11 @@ Provide an Android sleep timer controlled via notification shade controls. The m
   - Total combined wake-up offset range: 1 minute to 24 hours.
   - Default offset: 7 hours 0 minutes when enabled without user modification.
   - **Invalid Inputs**: Non-numeric or out-of-range hour/minute entries fall back safely to the previously configured duration offset or default (7 hours 0 minutes).
-- **Dynamic Recalculation**:
-  - **Timer Expiration**: When the sleep timer completes its fade-out, the system alarm `"auto-sleep-droid"` is scheduled or updated to fire $N$ hours and $M$ minutes from that moment.
-  - **Timer Resets (Volume / Flip gesture)**: If the sleep timer is reset during active countdown via physical volume buttons or flip gestures, the system alarm target timestamp is recalculated accordingly.
-  - **Timer Turn Off / Cancellation**: Turning off the sleep timer or tapping "Clear Alarm" cancels any pending `"auto-sleep-droid"` system wake-up alarm.
+- **Immediate Status Bar Alarm Scheduling & Dynamic Recalculation**:
+  - **Immediate Status Bar Icon**: When the sleep timer transitions to Active countdown, the system clock alarm `"auto-sleep-droid"` is scheduled immediately (`Target Alarm Time = Current Time + Sleep Duration + Wake-Up Offset`). This ensures the Android system alarm icon appears in the status bar and lockscreen right away.
+  - **Timer Resets (Volume / Flip gesture)**: When the sleep timer is reset during Active countdown via volume buttons or flip gestures, the system alarm `"auto-sleep-droid"` target time is instantly recalculated and updated to maintain the $N$ hours and $M$ minutes offset.
+  - **Timer Expiration / Fade Completion**: When the sleep timer completes its fade-out, the system alarm time is re-confirmed or updated to fire $N$ hours and $M$ minutes from fade completion.
+  - **Timer Turn Off / Cancellation**: Turning off the sleep timer or tapping "Clear Alarm" cancels any pending `"auto-sleep-droid"` system wake-up alarm and removes the status bar alarm icon.
 - **Event Logging**:
   - Every system alarm creation, update, recalculation, and cancellation event is logged line-by-line in the main activity event log.
 
@@ -103,6 +107,8 @@ Provide an Android sleep timer controlled via notification shade controls. The m
 - Post-reboot behavior respects the last saved state (preserving Off status or returning running timers to Waiting).
 - The "Set Timer" action is available across all states, the "Turn Off" button is present whenever the timer is enabled, and the "Turn On" button is present when the timer is Off.
 - The main activity UI presents top header controls ("Set Wake-Up Alarm", "Clear Alarm", and status text) to configure, display, and clear the system wake-up alarm offset.
+- Notifications remain minimal and compact when collapsed, expanding to show full details (configured duration, fade target, and scheduled wake-up alarm time).
+- Starting an active sleep timer countdown immediately schedules/updates the `"auto-sleep-droid"` system clock alarm, causing the Android status bar alarm icon to appear right away.
 - Users can configure an $N$ hours and $M$ minutes wake-up alarm offset via a main UI dialog that creates or updates a non-recurring system clock alarm labeled `"auto-sleep-droid"`.
 - If an `"auto-sleep-droid"` alarm already exists, its scheduled time is updated; if it does not exist, a new alarm is created.
 - Timer resets recalculate the target wake-up time, and disabling the timer or tapping "Clear Alarm" cancels the scheduled `"auto-sleep-droid"` alarm.
