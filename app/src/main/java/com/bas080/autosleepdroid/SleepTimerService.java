@@ -422,47 +422,28 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             preferences.edit().putLong(KEY_WAKEUP_LAST_SCHEDULED_MS, targetAlarmTimeMs).apply();
         }
 
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeInMillis(targetAlarmTimeMs);
-        int hourOfDay = cal.get(Calendar.HOUR_OF_DAY);
-        int minute = cal.get(Calendar.MINUTE);
-
         if (alarmManager == null) {
             return;
         }
 
-        Intent alarmClockIntent = new Intent(AlarmClock.ACTION_SET_ALARM)
-                .putExtra(AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
-                .putExtra(AlarmClock.EXTRA_HOUR, hourOfDay)
-                .putExtra(AlarmClock.EXTRA_MINUTES, minute)
-                .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 101, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent showIntent = new Intent(this, MainActivity.class);
+        PendingIntent showPendingIntent = PendingIntent.getActivity(this, 102, showIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        AlarmManager.AlarmClockInfo clockInfo =
+                new AlarmManager.AlarmClockInfo(targetAlarmTimeMs, showPendingIntent);
 
         try {
-            startActivity(alarmClockIntent);
+            alarmManager.setAlarmClock(clockInfo, pendingIntent);
             java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
             String formattedTime = timeFormat.format(new Date(targetAlarmTimeMs));
-            EventLogger.log(this, "Wake-Up Goal Alarm '" + ALARM_SEARCH_NAME + "' set in Clock app for " + formattedTime);
+            EventLogger.log(this, "Wake-Up Goal Alarm '" + ALARM_SEARCH_NAME + "' scheduled for " + formattedTime);
         } catch (Exception e) {
-            EventLogger.log(this, "Failed to set alarm in Clock app: " + e.getMessage());
-        }
-
-        if (alarmManager != null) {
-            Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
-            PendingIntent pendingIntent = PendingIntent.getService(this, 101, intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-            Intent showIntent = new Intent(this, MainActivity.class);
-            PendingIntent showPendingIntent = PendingIntent.getActivity(this, 102, showIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-            AlarmManager.AlarmClockInfo clockInfo =
-                    new AlarmManager.AlarmClockInfo(targetAlarmTimeMs, showPendingIntent);
-
-            try {
-                alarmManager.setAlarmClock(clockInfo, pendingIntent);
-            } catch (Exception ignored) {
-            }
+            EventLogger.log(this, "Failed to schedule wake-up goal alarm: " + e.getMessage());
         }
     }
 
@@ -475,36 +456,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 alarmManager.cancel(operationIntent);
                 operationIntent.cancel();
             }
-        }
-
-        long lastScheduled = preferences != null ? preferences.getLong(KEY_WAKEUP_LAST_SCHEDULED_MS, 0L) : 0L;
-        if (lastScheduled > 0L) {
-            Calendar cal = Calendar.getInstance();
-            cal.setTimeInMillis(lastScheduled);
-            int hour = cal.get(Calendar.HOUR_OF_DAY);
-            int minute = cal.get(Calendar.MINUTE);
-
-            try {
-                Intent dismissByTimeIntent = new Intent(AlarmClock.ACTION_DISMISS_ALARM)
-                        .putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_TIME)
-                        .putExtra(AlarmClock.EXTRA_HOUR, hour)
-                        .putExtra(AlarmClock.EXTRA_MINUTES, minute)
-                        .putExtra(AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
-                        .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(dismissByTimeIntent);
-            } catch (Exception ignored) {
-            }
-        }
-
-        try {
-            Intent dismissByLabelIntent = new Intent(AlarmClock.ACTION_DISMISS_ALARM)
-                    .putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_LABEL)
-                    .putExtra(AlarmClock.EXTRA_MESSAGE, ALARM_SEARCH_NAME)
-                    .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(dismissByLabelIntent);
-        } catch (Exception ignored) {
         }
 
         if (preferences != null) {
