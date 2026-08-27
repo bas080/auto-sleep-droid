@@ -62,8 +62,8 @@ Responsibilities:
 - Transition from `Waiting` to `Active` when playback callback detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused (after a short 500ms delay), and revert to the `Waiting` state.
-- Upon sleep timer start/reschedule within 12 hours prior to goal time, schedule/update the `"Auto Sleep"` clock app alarm via `AlarmClock.ACTION_SET_ALARM` if Smart Wake-Up Goal is enabled while hiding the UI.
-- Cancel/dismiss the `"Auto Sleep"` system clock alarm via `AlarmClock.ACTION_DISMISS_ALARM` on stop or smart alarm cancel while hiding UI.
+- Upon sleep timer start/reschedule within 12 hours prior to goal time, schedule/update the `"Auto Sleep"` wake-up alarm via `AlarmManager.setAlarmClock` if Smart Wake-Up Goal is enabled in the background without launching external UI activities.
+- Cancel/dismiss the `"Auto Sleep"` wake-up alarm via `AlarmManager.cancel` on stop or smart alarm cancel in the background.
 - Trigger a short, faint haptic feedback pulse (`Vibrator`) upon duration replies, turning off, volume button resets, and flip gestures.
 - Log lifecycle and state events to `EventLogger`.
 
@@ -174,12 +174,10 @@ In-memory state in `SleepTimerService`:
 1. The user taps `Turn Off` in the notification (available in `Waiting`, `Active`, and `Fading` states).
 2. Any active countdown or fade callbacks are cancelled.
 3. `enabled` is set to false and persisted in `SharedPreferences`.
-4. Dismisses any scheduled `"Auto Sleep"` alarm via `AlarmClock.ACTION_DISMISS_ALARM` while hiding UI.
+4. Dismisses any scheduled `"Auto Sleep"` alarm via `AlarmManager.cancel` in the background.
 5. Current volume and media playback remain unchanged.
 6. The notification updates to the `Off` state ("Timer off").
 7. `EventLogger` logs the turn off action.
-
-> https://developer.android.com/reference/android/provider/AlarmClock
 
 ### Volume reset, Gesture flip & Media playback start
 
