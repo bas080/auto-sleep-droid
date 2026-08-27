@@ -74,11 +74,10 @@ Important constants:
 - Alarm search label: `"Auto Sleep"`
 
 Wake-Up Alarm Scheduling:
-- Bedtime is determined by capturing the timestamp when the sleep timer completes countdown without further resets (`onPauseMedia()`) within the sleep window relative to the target goal time (e.g. 12 hours prior to goal time), persisted as `last_bedtime_ms`.
-- `SleepTimerService` computes and schedules the target wake-up time exclusively upon timer completion (`onPauseMedia()`) when bedtime is determined, preventing duplicate alarm creation during active timer countdown or resets.
-- The circadian phase-shifting algorithm proposes a 15-minute daily step toward the user's target wake-up goal time (`wakeup_alarm_hours`, `wakeup_alarm_minutes`), while enforcing a minimum sleep duration safeguard (`wakeup_min_sleep_hours`, default 7.5h) based on recorded bedtime.
+- `SleepTimerService` computes and schedules the target wake-up time upon timer completion (`onPauseMedia()`), preventing duplicate alarm creation during active timer countdown or resets.
+- The target alarm time is calculated directly using `Math.max(goalTimeMs, minAllowedWakeTimeMs)`, where `minAllowedWakeTimeMs = timerEndsAt + minSleepHours`. Decreasing `minSleepHours` allows setting the alarm closer to the target goal time, whereas increasing `minSleepHours` provides a larger safeguard margin.
 - Alarms are scheduled silently in the background using `AlarmManager.setAlarmClock()`, displaying the status bar alarm icon without opening external apps.
-- Existing alarms matching label `"Auto Sleep"` are dismissed via `AlarmClock.ACTION_DISMISS_ALARM` before setting a new alarm when bedtime is determined, maintaining a single alarm entry in the system Clock app.
+- Existing alarms matching label `"Auto Sleep"` are dismissed via `AlarmClock.ACTION_DISMISS_ALARM` before setting a new alarm, maintaining a single alarm entry in the system Clock app.
 
 ### `MainActivity`
 

@@ -74,12 +74,11 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - If the app was explicitly in the **Off** state prior to reboot, keep it in the **Off** state.
 
 ## Smart Incremental Target Wake-Up Goal ("Auto Sleep")
-- **Purpose**: Gently adjust your daily wake-up alarm 15 minutes earlier each day until you reach your goal wake-up time, while ensuring you always get enough sleep.
+- **Purpose**: Set a wake-up alarm toward your target goal time while ensuring your alarm is never set too early so your minimum sleep duration is always met.
 - **How It Works**:
-  1. **Daily 15-Minute Adjustment**: Each night when you start the sleep timer, the app takes your previous wake-up time and shifts it 15 minutes earlier toward your target goal time (e.g., from 7:30 AM to 7:15 AM toward a goal of 6:30 AM).
-  2. **Bedtime & Sleep Duration Determination**: The exact bedtime (and calculated sleep duration) is determined by recording the wall-clock timestamp when the user stops resetting the sleep timer and the timer completes within the expected sleep window relative to the target goal time (e.g. within the 12 hours prior to the goal time, accommodating night shifts and non-standard schedules).
-  3. **Minimum Sleep Safeguard**: To make sure you never lose sleep when staying up late, the app ensures your alarm is set no earlier than your recorded bedtime plus your minimum sleep duration (default 7.5 hours).
-  4. **Single Alarm Creation at Bedtime**: The app maintains only one alarm in your Clock app named `"Auto Sleep"`. The alarm is set only when bedtime is determined upon sleep timer completion, preventing duplicate or premature alarms during timer start and countdown resets.
+  1. **Wake-Up Alarm Calculation**: The alarm time is set to your target goal time, or postponed to `Timer End Time + Minimum Sleep Duration` (default 7.5 hours) using a simple `Math.max(Goal Time, Bedtime + Min Sleep Duration)` calculation.
+  2. **Minimum Sleep Safeguard**: Decreasing your minimum sleep duration allows setting the alarm closer to your target goal time even when going to bed later, while increasing it provides a larger sleep safeguard margin.
+  3. **Single Alarm Entry**: The app maintains only one alarm in your Clock app named `"Auto Sleep"`. The alarm is set when the sleep timer completes, clearing any existing `"Auto Sleep"` alarm first to prevent duplicate alarms.
 - **Disabled by Default**: The feature is off by default until you tap "Set Wake-Up Goal". Tapping "Clear Goal" turns it off and removes the alarm.
 - **User Inputs**:
   - **Target Goal Time** (e.g., `06:30 AM`).
@@ -101,5 +100,5 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - The Smart Wake-Up Goal feature is disabled by default until explicitly configured by the user.
 - The main activity UI presents top header controls ("Set Wake-Up Goal", "Clear Goal", and status text) to configure, display, and clear the target wake-up goal and minimum sleep duration.
 - Notifications remain minimal and compact when collapsed, expanding to show full details (configured duration, fade target, and scheduled wake-up alarm time).
-- Completing a sleep timer countdown determines bedtime and schedules/updates the `"Auto Sleep"` system clock alarm (when enabled) using a 15-minute daily incremental step towards the goal while enforcing a minimum sleep duration safeguard (default 7.5h).
+- Completing a sleep timer countdown determines bedtime and schedules/updates the `"Auto Sleep"` system clock alarm (when enabled) to the target goal time while enforcing a minimum sleep duration safeguard (default 7.5h).
 - Disabling the timer or tapping "Clear Goal" cancels the scheduled `"Auto Sleep"` alarm in the background.

@@ -415,7 +415,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         int goalHour = preferences.getInt(KEY_WAKEUP_HOURS, 6);
         int goalMinute = preferences.getInt(KEY_WAKEUP_MINUTES, 30);
         float minSleepHours = preferences.getFloat(KEY_WAKEUP_MIN_SLEEP_HOURS, 7.5f);
-        long lastScheduledMs = preferences.getLong(KEY_WAKEUP_LAST_SCHEDULED_MS, 0L);
 
         long targetExpiryMs = stateMachine.getTimerEndsAt();
         if (targetExpiryMs <= 0L) {
@@ -436,31 +435,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
         long goalTimeMs = goalCal.getTimeInMillis();
 
-        long proposedWakeTimeMs;
-        if (lastScheduledMs > 0L) {
-            java.util.Calendar lastCal = java.util.Calendar.getInstance();
-            lastCal.setTimeInMillis(lastScheduledMs);
-            int lastHour = lastCal.get(java.util.Calendar.HOUR_OF_DAY);
-            int lastMinute = lastCal.get(java.util.Calendar.MINUTE);
-
-            java.util.Calendar proposedCal = java.util.Calendar.getInstance();
-            proposedCal.setTimeInMillis(targetExpiryMs);
-            proposedCal.set(java.util.Calendar.HOUR_OF_DAY, lastHour);
-            proposedCal.set(java.util.Calendar.MINUTE, lastMinute);
-            proposedCal.set(java.util.Calendar.SECOND, 0);
-            proposedCal.set(java.util.Calendar.MILLISECOND, 0);
-
-            if (proposedCal.getTimeInMillis() <= targetExpiryMs) {
-                proposedCal.add(java.util.Calendar.DAY_OF_YEAR, 1);
-            }
-
-            proposedCal.add(java.util.Calendar.MINUTE, -15);
-            proposedWakeTimeMs = Math.max(goalTimeMs, proposedCal.getTimeInMillis());
-        } else {
-            proposedWakeTimeMs = minAllowedWakeTimeMs;
-        }
-
-        long targetAlarmTimeMs = Math.max(proposedWakeTimeMs, minAllowedWakeTimeMs);
+        long targetAlarmTimeMs = Math.max(goalTimeMs, minAllowedWakeTimeMs);
 
         scheduleOrUpdateWakeupAlarm(targetAlarmTimeMs);
     }
