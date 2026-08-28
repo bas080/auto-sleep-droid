@@ -4,25 +4,13 @@
 
 Auto Sleep Droid is driven by an event-based state machine architecture (`SleepTimerStateMachine`) managed by `SleepTimerService`. The core state machine controls timer countdowns, audio volume fade-outs, media pausing, and background listener registrations, while communicating system side-effects back through a callback interface.
 
-This document describes all possible system states, listener lifecycles, input and system events, transition rules, state-event matrix, state diagram, and logged event messages.
+This document describes all possible system states, listener lifecycles, input and system events, transition rules, state-event matrix, and logged event messages.
 
 ---
 
 ## System States
 
 The system operates in one of four mutually exclusive states defined in `SleepTimerStateMachine.State`:
-
-```
-   +------+       Turn On / Playback       +---------+
-   | OFF  | -----------------------------> | WAITING |
-   +------+                                +---------+
-      ^                                      |     ^
-      | Turn Off                Media Starts |     | Media Paused /
-      |                                      v     | Playback Stopped
-   +--------+                             +--------+
-   | FADING | <-------------------------- | ACTIVE |
-   +--------+        Timer Expired        +--------+
-```
 
 ### 1. `OFF`
 
@@ -197,40 +185,6 @@ The table below maps each `(Current State, Event)` pair to its resulting `Next S
 | **FADING** | `SET_DURATION` | `ACTIVE` | Validates input, vibrates, cancels fade, restores pre-fade volume, reschedules timer with new duration, updates notification |
 | **FADING** | `TURN_OFF` | `OFF` | Vibrates, cancels fade runnable, cancels alarms, persists state (`active=false`), updates notification |
 | **Any State** | `BOOT_COMPLETED` / Init | Restored State | Restores `WAITING` or `ACTIVE` if previously enabled; restores `OFF` if previously `OFF` |
-
----
-
-## State Transition Diagram
-
-```mermaid
-stateDiagram-v2
-    [*] --> OFF: Service Created / Saved State Off
-    [*] --> WAITING: Service Created / Saved State Enabled & Inactive
-    [*] --> ACTIVE: Service Created / Saved State Active & Countdown Remaining
-
-    OFF --> WAITING: TURN_ON (Music Inactive)
-    OFF --> ACTIVE: TURN_ON (Music Active)
-    OFF --> WAITING: SET_DURATION (Music Inactive)
-    OFF --> ACTIVE: SET_DURATION (Music Active)
-
-    WAITING --> ACTIVE: PLAYBACK_STARTED
-    WAITING --> OFF: TURN_OFF
-    WAITING --> WAITING: SET_DURATION (Music Inactive)
-    WAITING --> ACTIVE: SET_DURATION (Music Active)
-
-    ACTIVE --> ACTIVE: PLAYBACK_STOPPED (Log Event, Timer Remains Active)
-    ACTIVE --> ACTIVE: VOLUME_CHANGED (Reschedule Countdown)
-    ACTIVE --> ACTIVE: PHONE_FLIPPED (Reschedule Countdown)
-    ACTIVE --> ACTIVE: SET_DURATION (Reschedule Countdown)
-    ACTIVE --> FADING: TIMER_EXPIRED
-    ACTIVE --> OFF: TURN_OFF
-
-    FADING --> ACTIVE: VOLUME_CHANGED (Cancel Fade, Keep Vol, Reschedule)
-    FADING --> ACTIVE: PHONE_FLIPPED (Cancel Fade, Restore Vol, Reschedule)
-    FADING --> ACTIVE: SET_DURATION (Cancel Fade, Restore Vol, Reschedule)
-    FADING --> WAITING: FADE_COMPLETED (Pause Media, Restore Vol)
-    FADING --> OFF: TURN_OFF
-```
 
 ---
 
