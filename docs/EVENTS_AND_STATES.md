@@ -107,7 +107,7 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
    * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`, or when `ACTION_WAKEUP_ALARM_EXPIRY` triggers the wake-up alarm.
    * **Background Threading**: Registered on a dedicated `HandlerThread` (`SensorThread`) with `SensorManager.SENSOR_DELAY_NORMAL` and 300ms temporal throttling to preserve battery.
    * **Active Lifetime**: **`ACTIVE` and `FADING` states, or while Wake-Up Alarm is Ringing**.
-   * **Purpose**: Detects phone flip gestures (face-up to face-down or face-down to face-up). Flips during `ACTIVE` reset countdown timer; flips during `FADING` cancel fade-out, restore pre-fade volume, and reset countdown timer; flips while wake-up alarm is ringing snooze the wake-up alarm for 10 minutes.
+   * **Purpose**: Detects phone flip gestures (face-up to face-down or face-down to face-up). Flips during `ACTIVE` reset countdown timer; flips during `FADING` cancel fade-out, restore pre-fade volume, and reset countdown timer; flips while wake-up alarm is ringing snooze the wake-up alarm for 9 minutes.
    * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing), when wake-up alarm stops ringing in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked. The background `HandlerThread` is safely terminated (`quitSafely()`).
 
 3. **Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver)**:
