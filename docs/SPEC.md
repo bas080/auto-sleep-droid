@@ -14,7 +14,7 @@ Provide an Android sleep timer controlled via notification shade controls. The m
 ## System states
 - Off: The timer is manually disabled. Media continues playing normally, and the current volume remains entirely unchanged.
 - Waiting: A duration is configured and auto-sleep is turned on. The app sits passively listening for active media playback via playback state listeners.
-- Active: Triggered by media playback, the timer actively counts down from the configured duration.
+- Active: Triggered by media playback, the timer actively counts down from the configured duration towards expiration. Pausing media while active does not pause or send the timer back to Waiting; the active countdown continues towards expiration and can be reset to the configured duration via volume changes, flip gestures, or duration updates.
 - Fading: The timer reaches zero, initiating a 30-second volume fade along a curve that starts steep and flattens out. Completing this fade pauses media, restores pre-fade volume, and returns the app back to the Waiting state.
 
 ## Notification states and content
@@ -59,7 +59,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - Store the original configured duration while the timer is active.
 - Prefill or suggest the default or last configured duration in the inline notification reply.
 - **Invalid inputs:** If the user enters an invalid duration (e.g., non-numeric, out of range), fall back safely to the already configured time or the default duration.
-- Use a playback listener API to detect when audio playback starts or stops automatically.
+- Use a playback listener API while in the Waiting state to detect when audio playback starts automatically.
 - When in the Waiting state, communicate that the timer is waiting for playback rather than stopped.
 - Show the configured duration in waiting, active, and fade states.
 
