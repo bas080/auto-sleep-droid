@@ -1,0 +1,207 @@
+# Auto Sleep Droid Events and States
+
+## Overview
+
+Auto Sleep Droid is driven by an event-based state machine architecture (`SleepTimerStateMachine`) managed by `SleepTimerService`. The core state machine controls timer countdowns, audio volume fade-outs, media pausing, and background listener registrations, while communicating system side-effects back through a callback interface.
+
+This document describes all possible system states, input and system events, transition rules, state-event matrix, state diagram, and logged event messages.
+
+---
+
+## System States
+
+The system operates in one of four mutually exclusive states defined in `SleepTimerStateMachine.State`:
+
+```
+   +------+       Turn On / Playback       +---------+
+   | OFF  | -----------------------------> | WAITING |
+   +------+                                +---------+
+      ^                                      |     ^
+      | Turn Off                Media Starts |     | Media Paused /
+      |                                      v     | Playback Stopped
+   +--------+                             +--------+
+   | FADING | <-------------------------- | ACTIVE |
+   +--------+        Timer Expired        +--------+
+```
+
+### 1. `OFF`
+
+* **Definition**: The sleep timer is manually disabled. The application does not monitor playback changes, volume adjustments, or gesture movements for timer purposes.
+* **Background Resources & Listeners**:
+  * `AudioPlaybackCallback`: Registered (monitors system playback state passively).
+  * `SensorEventListener` (Accelerometer): Unregistered.
+  * Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver): Unregistered.
+  * Alarm Clock & AlarmManager: No alarms scheduled; any active `"Auto Sleep"` wake-up alarm is cancelled.
+* **Notification Presentation**:
+  * Collapsed Text: `"Timer off"`
+  * Expanded Text: `"Sleep timer is off"`
+  * Action Buttons: `"Set Timer"` (inline reply input) and `"Turn On"`.
+* **State Invariants**: `enabled = false`, `timerEndsAt = 0`.
+
+### 2. `WAITING`
+
+* **Definition**: The timer is enabled with a valid configured duration (default: 20 minutes), but no media is currently playing. The system sits passively waiting for active audio playback to begin.
+* **Background Resources & Listeners**:
+  * `AudioPlaybackCallback`: Registered (actively checks for music playback start).
+  * `SensorEventListener` (Accelerometer): Unregistered.
+  * Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver): Unregistered.
+  * Alarm Clock & AlarmManager: No timer alarms scheduled.
+* **Notification Presentation**:
+  * Collapsed Text: `"Waiting for playback"`
+  * Expanded Text: `"Waiting for media playback (<X>m configured)"`
+  * Action Buttons: `"Set Timer"` (inline reply input) and `"Turn Off"`.
+* **State Invariants**: `enabled = true`, `timerEndsAt = 0`.
+
+### 3. `ACTIVE`
+
+* **Definition**: Media is actively playing and the timer is counting down towards expiration (`timerEndsAt`).
+* **Background Resources & Listeners**:
+  * `AudioPlaybackCallback`: Registered (monitors for playback stop).
+  * `SensorEventListener` (Accelerometer): Registered on a dedicated `HandlerThread` with 300ms temporal throttling.
+  * Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver): Registered.
+  * `AlarmManager`: Exact timer expiration alarm scheduled using `setExactAndAllowWhileIdle()` (or fallback if permission missing).
+  * Smart Wake-Up Goal: If enabled and within 12 hours prior to goal time, schedules/updates `"Auto Sleep"` system clock alarm via `AlarmClock.ACTION_SET_ALARM`.
+* **Notification Presentation**:
+  * Collapsed Text: `"Timer running (<target_time>)"` (e.g., `"Timer running (11:15 PM)"`)
+  * Expanded Text: `"Fades out at <target_time> (<X>m configured)"` (appends `" • Alarm set for <alarm_time>"` when Smart Wake-Up Goal alarm is set).
+  * Action Buttons: `"Set Timer"` (inline reply input) and `"Turn Off"`.
+* **State Invariants**: `enabled = true`, `timerEndsAt > 0`.
+
+### 4. `FADING`
+
+* **Definition**: The countdown timer has expired. The app gradually decreases the media stream volume over 30 seconds along a quadratic ease-out curve down to zero before pausing active media playback.
+* **Background Resources & Listeners**:
+  * `AudioPlaybackCallback`: Registered.
+  * `SensorEventListener` (Accelerometer): Registered (detects phone flip gestures to cancel fade, restore volume, and reset timer).
+  * Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver): Registered (detects user volume changes to cancel fade, preserve new volume, and reset timer).
+  * Fade Handler: Executes 30 steps at 1-second intervals (`FADE_STEP_INTERVAL_MS = 1000ms`, `TOTAL_FADE_STEPS = 30`).
+* **Notification Presentation**:
+  * Collapsed Text: `"Fading volume"`
+  * Expanded Text: `"Fading volume down to pause media"`
+  * Action Buttons: `"Set Timer"` (inline reply input) and `"Turn Off"`.
+* **State Invariants**: `enabled = true`.
+
+---
+
+## Input & System Events
+
+Events in Auto Sleep Droid originate from user interactions, hardware sensors, system audio callbacks, alarm timers, and system broadcasts.
+
+### User Input Events
+
+* **`TURN_ON`**: User taps `"Turn On"` in notification (available when in `OFF` state).
+* **`TURN_OFF`**: User taps `"Turn Off"` in notification (available in `WAITING`, `ACTIVE`, and `FADING` states).
+* **`SET_DURATION`**: User submits a duration via the inline `"Set Timer"` notification reply (`RemoteInput`).
+* **`SET_WAKE_UP_GOAL`**: User configures target wake-up goal time and minimum sleep duration safeguard in `MainActivity`.
+* **`CLEAR_GOAL`**: User clears wake-up goal in `MainActivity` or taps clear action.
+
+### System & Sensor Events
+
+* **`PLAYBACK_STARTED`**: Audio playback becomes active (`isMusicActive() == true`) reported by `AudioPlaybackCallback`.
+* **`PLAYBACK_STOPPED`**: Audio playback stops (`isMusicActive() == false`) reported by `AudioPlaybackCallback`.
+* **`VOLUME_CHANGED`**: Music stream volume adjusted by user via hardware volume buttons (`VOLUME_CHANGED_ACTION` broadcast).
+* **`PHONE_FLIPPED`**: Accelerometer detects phone flip gesture (face-up to face-down or face-down to face-up).
+
+### Timer & Expiry Events
+
+* **`TIMER_EXPIRED`**: Countdown reaches `timerEndsAt` or `AlarmManager` trigger fires `ACTION_ALARM_EXPIRY`.
+* **`FADE_STEP`**: Periodic 1-second step executed during volume fade-out.
+* **`FADE_COMPLETED`**: 30th fade step completed; triggers media pause via transient audio focus request.
+* **`RESTORE_VOLUME`**: 500ms post-pause timer completes; restores volume to `volumeBeforeFade`.
+
+### Lifecycle & Restoration Events
+
+* **`SERVICE_INITIALIZE`**: Foreground service creates/restores state from `SharedPreferences`.
+* **`BOOT_COMPLETED`**: Device reboot received by `BootReceiver`; re-starts foreground service to restore persisted state.
+
+---
+
+## State Transition Matrix
+
+The table below maps each `(Current State, Event)` pair to its resulting `Next State` and side-effects / callbacks:
+
+| Current State | Event | Next State | Callbacks & Side-Effects |
+|---|---|---|---|
+| **OFF** | `TURN_ON` (Music Active) | `ACTIVE` | Vibrates, calculates `timerEndsAt`, schedules alarm, persists state (`active=true`), updates notification |
+| **OFF** | `TURN_ON` (Music Inactive) | `WAITING` | Vibrates, persists state (`active=true`), updates notification |
+| **OFF** | `SET_DURATION` (Music Active) | `ACTIVE` | Validates input (1-1440m), vibrates, sets duration, calculates `timerEndsAt`, schedules alarm, persists state, updates notification |
+| **OFF** | `SET_DURATION` (Music Inactive) | `WAITING` | Validates input (1-1440m), vibrates, sets duration, persists state, updates notification |
+| **OFF** | `PLAYBACK_STARTED` | `OFF` | No transition (timer disabled) |
+| **OFF** | `VOLUME_CHANGED` / `PHONE_FLIPPED` | `OFF` | Ignored (listeners unregistered) |
+| **WAITING** | `PLAYBACK_STARTED` | `ACTIVE` | Calculates `timerEndsAt`, schedules alarm, updates notification |
+| **WAITING** | `TURN_OFF` | `OFF` | Vibrates, cancels alarms/goal alarms, persists state (`active=false`), updates notification |
+| **WAITING** | `SET_DURATION` (Music Active) | `ACTIVE` | Validates input, vibrates, sets duration, calculates `timerEndsAt`, schedules alarm, persists state, updates notification |
+| **WAITING** | `SET_DURATION` (Music Inactive) | `WAITING` | Validates input, vibrates, sets duration, persists state, updates notification |
+| **WAITING** | `VOLUME_CHANGED` / `PHONE_FLIPPED` | `WAITING` | Ignored (listeners unregistered) |
+| **ACTIVE** | `PLAYBACK_STOPPED` | `WAITING` | Cancels timer alarm, updates notification |
+| **ACTIVE** | `VOLUME_CHANGED` | `ACTIVE` | Vibrates, reschedules timer countdown to configured duration, updates notification |
+| **ACTIVE** | `PHONE_FLIPPED` | `ACTIVE` | Vibrates, reschedules timer countdown to configured duration, updates notification |
+| **ACTIVE** | `SET_DURATION` | `ACTIVE` | Validates input, vibrates, sets new duration, reschedules timer countdown, updates notification |
+| **ACTIVE** | `TIMER_EXPIRED` | `FADING` | Captures `volumeBeforeFade`, registers sensor & volume listeners, starts 30s fade runnable, updates notification |
+| **ACTIVE** | `TURN_OFF` | `OFF` | Vibrates, cancels timer & wake-up alarms, persists state (`active=false`), updates notification |
+| **FADING** | `VOLUME_CHANGED` | `ACTIVE` | Vibrates, cancels fade, keeps user-selected volume, reschedules timer countdown, updates notification |
+| **FADING** | `PHONE_FLIPPED` | `ACTIVE` | Vibrates, cancels fade, restores pre-fade volume, reschedules timer countdown, updates notification |
+| **FADING** | `FADE_STEP` (step < 30) | `FADING` | Calculates next step volume along ease-out curve, applies stream volume (with `suppressVolumeReset=true`) |
+| **FADING** | `FADE_COMPLETED` (step == 30) | `WAITING` | Requests transient audio focus to pause media, schedules 500ms post-pause runnable to restore pre-fade volume, transitions to `WAITING` |
+| **FADING** | `SET_DURATION` | `ACTIVE` | Validates input, vibrates, cancels fade, restores pre-fade volume, reschedules timer with new duration, updates notification |
+| **FADING** | `TURN_OFF` | `OFF` | Vibrates, cancels fade runnable, cancels alarms, persists state (`active=false`), updates notification |
+| **Any State** | `BOOT_COMPLETED` / Init | Restored State | Restores `WAITING` or `ACTIVE` if previously enabled; restores `OFF` if previously `OFF` |
+
+---
+
+## State Transition Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> OFF: Service Created / Saved State Off
+    [*] --> WAITING: Service Created / Saved State Enabled & Inactive
+    [*] --> ACTIVE: Service Created / Saved State Active & Countdown Remaining
+
+    OFF --> WAITING: TURN_ON (Music Inactive)
+    OFF --> ACTIVE: TURN_ON (Music Active)
+    OFF --> WAITING: SET_DURATION (Music Inactive)
+    OFF --> ACTIVE: SET_DURATION (Music Active)
+
+    WAITING --> ACTIVE: PLAYBACK_STARTED
+    WAITING --> OFF: TURN_OFF
+    WAITING --> WAITING: SET_DURATION (Music Inactive)
+    WAITING --> ACTIVE: SET_DURATION (Music Active)
+
+    ACTIVE --> WAITING: PLAYBACK_STOPPED
+    ACTIVE --> ACTIVE: VOLUME_CHANGED (Reschedule Countdown)
+    ACTIVE --> ACTIVE: PHONE_FLIPPED (Reschedule Countdown)
+    ACTIVE --> ACTIVE: SET_DURATION (Reschedule Countdown)
+    ACTIVE --> FADING: TIMER_EXPIRED
+    ACTIVE --> OFF: TURN_OFF
+
+    FADING --> ACTIVE: VOLUME_CHANGED (Cancel Fade, Keep Vol, Reschedule)
+    FADING --> ACTIVE: PHONE_FLIPPED (Cancel Fade, Restore Vol, Reschedule)
+    FADING --> ACTIVE: SET_DURATION (Cancel Fade, Restore Vol, Reschedule)
+    FADING --> WAITING: FADE_COMPLETED (Pause Media, Restore Vol)
+    FADING --> OFF: TURN_OFF
+```
+
+---
+
+## Logged Events Reference
+
+All system state changes and input triggers are logged to `EventLogger` with a timestamp format (`M/d HH:mm:ss`). Below is a reference of standard log messages produced during operation:
+
+| Event / Trigger | Log Message Format |
+|---|---|
+| Service Created | `SleepTimerService created` |
+| State Initialized | `SleepTimerService state initialized (enabled: <bool>, duration: <X>m)` |
+| Turn On Action | `Timer turned on` |
+| Turn Off Action | `Timer turned off` |
+| Set Duration Action | `Duration set to <X>m (input: '<raw_input>')` |
+| Playback Started | `Music playback started` |
+| Playback Stopped | `Music playback stopped` |
+| Volume Adjusted | `Volume changed to <new_vol>` |
+| Phone Flip Detected | `Phone flip gesture detected` |
+| Timer Alarm Triggered | `AlarmManager trigger received` |
+| Fade-Out Started | `Fade-out started` |
+| Pre-Fade Vol Restored | `Restored pre-fade volume to <vol>` |
+| Media Paused | `Timer expired: pausing media` |
+| Wake-Up Goal Alarm Set | `Wake-Up Goal Alarm 'Auto Sleep' set in Clock app for <formatted_time>` |
+| Wake-Up Alarm Triggered | `Auto Sleep wake-up alarm triggered` |
+| Service Destroyed | `SleepTimerService destroyed` |
