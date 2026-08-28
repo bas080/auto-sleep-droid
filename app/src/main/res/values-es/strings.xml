@@ -21,6 +21,7 @@
     <string name="configured_duration">%1$dm configurado</string>
     <string name="set_timer_input_label">Minutos (%1$sm)</string>
     <string name="action_set_timer">Configurar temporizador</string>
+    <string name="action_sleep_duration">Dormir %1$s</string>
     <string name="action_turn_off">Desactivar</string>
     <string name="action_turn_on">Activar</string>
     <string name="action_set_goal">Configurar objetivo</string>
