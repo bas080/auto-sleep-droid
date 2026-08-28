@@ -15,7 +15,11 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.AudioAttributes;
 import android.media.AudioManager;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -202,6 +206,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 stateMachine.handleAlarmExpiry(currentVol);
             } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, "Auto Sleep wake-up alarm triggered");
+                playWakeUpAlarmSound();
             } else if (ACTION_CLEAR_GOAL.equals(intent.getAction())) {
                 dismissAutoSleepAlarm();
                 updateNotification();
@@ -502,6 +507,30 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public void onTimerRescheduled() {
         scheduleExpiry();
         checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
+    }
+
+    private void playWakeUpAlarmSound() {
+        try {
+            Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+            if (alarmUri == null) {
+                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            }
+            Ringtone ringtone = RingtoneManager.getRingtone(getApplicationContext(), alarmUri);
+            if (ringtone != null) {
+                if (android.os.Build.VERSION.SDK_INT >= 21) {
+                    ringtone.setAudioAttributes(new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build());
+                } else {
+                    ringtone.setStreamType(AudioManager.STREAM_ALARM);
+                }
+                ringtone.play();
+                EventLogger.log(this, "Wake-Up Goal alarm tone started playing");
+            }
+        } catch (Exception e) {
+            EventLogger.log(this, "Failed to play wake-up alarm sound: " + e.getMessage());
+        }
     }
 
     private void pauseMediaViaAudioFocus() {
