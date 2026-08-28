@@ -82,11 +82,13 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
 | AudioPlaybackCallback              | Transition to WAITING | WAITING only           | Transition to OFF, ACTIVE, FADING, or    |
 | (AudioManager.AudioPlaybackCallback| state                 |                        | Service Destruction (onDestroy)          |
 +------------------------------------+-----------------------+------------------------+------------------------------------------+
-| Motion Accelerometer Listener      | Transition to ACTIVE  | ACTIVE, FADING only    | Transition to OFF or WAITING, or         |
-| (SensorEventListener)              | or FADING state       |                        | Service Destruction (onDestroy)          |
+| Motion Accelerometer Listener      | Transition to ACTIVE  | ACTIVE, FADING, or     | Transition to OFF or WAITING (when alarm  |
+| (SensorEventListener)              | / FADING or Wake-Up   | Wake-Up Alarm Ringing  | not ringing), or Service Destruction      |
+|                                    | Alarm Expiry          |                        |                                          |
 +------------------------------------+-----------------------+------------------------+------------------------------------------+
-| Volume Broadcast Receiver          | Transition to ACTIVE  | ACTIVE, FADING only    | Transition to OFF or WAITING, or         |
-| (VOLUME_CHANGED_ACTION)            | or FADING state       |                        | Service Destruction (onDestroy)          |
+| Volume Broadcast Receiver          | Transition to ACTIVE  | ACTIVE, FADING, or     | Transition to OFF or WAITING (when alarm  |
+| (VOLUME_CHANGED_ACTION)            | / FADING or Wake-Up   | Wake-Up Alarm Ringing  | not ringing), or Service Destruction      |
+|                                    | Alarm Expiry          |                        |                                          |
 +------------------------------------+-----------------------+------------------------+------------------------------------------+
 | Live Event Log UI Listener         | MainActivity onResume | UI Foreground          | MainActivity onPause                     |
 | (EventLogger.Listener)             |                       |                        |                                          |
@@ -102,17 +104,17 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
    * **Removal Point**: Unregistered immediately upon transition to `OFF`, `ACTIVE`, or `FADING` state, or when `SleepTimerService.onDestroy()` is called.
 
 2. **Motion Sensor Listener (`TYPE_ACCELEROMETER`)**:
-   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`.
+   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`, or when `ACTION_WAKEUP_ALARM_EXPIRY` triggers the wake-up alarm.
    * **Background Threading**: Registered on a dedicated `HandlerThread` (`SensorThread`) with `SensorManager.SENSOR_DELAY_NORMAL` and 300ms temporal throttling to preserve battery.
-   * **Active Lifetime**: **`ACTIVE` and `FADING` states only**.
-   * **Purpose**: Detects phone flip gestures (face-up to face-down or face-down to face-up). Flips during `ACTIVE` reset countdown timer; flips during `FADING` cancel fade-out, restore pre-fade volume, and reset countdown timer.
-   * **Removal Point**: Unregistered immediately upon transition to `OFF` or `WAITING` state, or when `SleepTimerService.onDestroy()` is invoked. The background `HandlerThread` is safely terminated (`quitSafely()`).
+   * **Active Lifetime**: **`ACTIVE` and `FADING` states, or while Wake-Up Alarm is Ringing**.
+   * **Purpose**: Detects phone flip gestures (face-up to face-down or face-down to face-up). Flips during `ACTIVE` reset countdown timer; flips during `FADING` cancel fade-out, restore pre-fade volume, and reset countdown timer; flips while wake-up alarm is ringing snooze the wake-up alarm for 10 minutes.
+   * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing), when wake-up alarm stops ringing in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked. The background `HandlerThread` is safely terminated (`quitSafely()`).
 
 3. **Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver)**:
-   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`.
-   * **Active Lifetime**: **`ACTIVE` and `FADING` states only**.
-   * **Purpose**: Detects manual volume button presses on `STREAM_MUSIC`. Volume changes during `ACTIVE` reset countdown timer; volume changes during `FADING` cancel fade-out, preserve new volume, and reset countdown timer. Programmatic volume changes made by the app during fade/restore steps are suppressed via `suppressVolumeReset`.
-   * **Removal Point**: Unregistered immediately upon transition to `OFF` or `WAITING` state, or when `SleepTimerService.onDestroy()` is invoked.
+   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`, or when `ACTION_WAKEUP_ALARM_EXPIRY` triggers the wake-up alarm.
+   * **Active Lifetime**: **`ACTIVE` and `FADING` states, or while Wake-Up Alarm is Ringing**.
+   * **Purpose**: Detects manual volume button presses on `STREAM_MUSIC` or `STREAM_ALARM`. Volume changes during `ACTIVE` reset countdown timer; volume changes during `FADING` cancel fade-out, preserve new volume, and reset countdown timer; lowering alarm stream volume all the way to 0 while wake-up alarm is ringing dismisses the wake-up alarm and restores alarm stream volume to pre-alarm level. Programmatic volume changes made by the app during fade/restore steps are suppressed via `suppressVolumeReset`.
+   * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing), when wake-up alarm stops ringing in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked.
 
 4. **Event Logger Listener (`EventLogger.Listener`)**:
    * **Registration Point**: Registered in `MainActivity.onResume()`.
@@ -209,4 +211,7 @@ All system state changes and input triggers are logged to `EventLogger` with a t
 | Media Paused | `Timer expired: pausing media` |
 | Wake-Up Goal Alarm Set | `Wake-Up Goal Alarm 'Auto Sleep' set in Clock app for <formatted_time>` |
 | Wake-Up Alarm Triggered | `Auto Sleep wake-up alarm triggered` |
+| Wake-Up Alarm Snoozed via Flip | `Wake-Up Goal alarm snoozed via flip gesture` |
+| Wake-Up Alarm Dismissed via Volume Zero | `Wake-Up Goal alarm dismissed via volume zero gesture` |
+| Restored Pre-Alarm Volume | `Restored pre-alarm volume to <vol>` |
 | Service Destroyed | `SleepTimerService destroyed` |
