@@ -806,6 +806,24 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             builder.addAction(turnOnAction);
         }
 
+        boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
+        String goalTitle;
+        if (goalEnabled && preferences != null) {
+            int goalHour = preferences.getInt("wake_up_goal_hour", 6);
+            int goalMin = preferences.getInt("wake_up_goal_minute", 30);
+            String formattedGoalTime = formatTime(goalHour, goalMin);
+            goalTitle = getString(R.string.action_goal_time, formattedGoalTime);
+        } else {
+            goalTitle = getString(R.string.action_set_goal);
+        }
+
+        Notification.Action goalAction = new Notification.Action.Builder(
+                Icon.createWithResource(this, android.R.drawable.ic_menu_my_calendar),
+                goalTitle,
+                goalIntent())
+                .build();
+        builder.addAction(goalAction);
+
         return builder.build();
     }
 
@@ -831,6 +849,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private PendingIntent turnOnIntent() {
         Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_TURN_ON);
         return PendingIntent.getService(this, 7, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private PendingIntent goalIntent() {
+        Intent intent = new Intent(this, GoalSettingsDialogActivity.class);
+        return PendingIntent.getActivity(this, 10, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 

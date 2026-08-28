@@ -4,7 +4,7 @@
 
 This document describes the implementation that currently exists in the repository. Use it as the code-oriented source of truth when modifying the app.
 
-The app is an Android sleep timer controlled from the notification shade. The main activity UI displays top header controls for the Smart Wake-Up Goal feature above a real-time event log.
+The app is an Android sleep timer controlled from the notification shade. The main activity UI displays a real-time event log for debugging.
 
 ## Project structure
 
@@ -17,6 +17,7 @@ The app is an Android sleep timer controlled from the notification shade. The ma
 │       ├── java/com/bas080/autosleepdroid/
 │       │   ├── BootReceiver.java
 │       │   ├── EventLogger.java
+│       │   ├── GoalSettingsDialogActivity.java
 │       │   ├── MainActivity.java
 │       │   └── SleepTimerService.java
 │       └── res/
@@ -30,7 +31,9 @@ The app is an Android sleep timer controlled from the notification shade. The ma
 ├── .github/workflows/android-release.yml
 ├── README.md
 ├── docs/
+│   ├── EVENTS_AND_STATES.md
 │   ├── IMPLEMENTATION.md
+│   ├── NOTIFICATION_GOAL_INPUT_OPTIONS.md
 │   ├── NOTIFICATION_INPUT_OPTIONS.md
 │   ├── PERFORMANCE.md
 │   └── SPEC.md
@@ -53,7 +56,7 @@ Responsibilities:
 - Create the low-importance ongoing notification (`setOngoing(true)`) representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`.
 - Display compact/concise text when collapsed (`setContentText`) and detailed contextual information when expanded (`Notification.BigTextStyle.bigText`).
 - Omit a content intent from the notification so tapping/clicking expands or collapses the notification rather than launching an activity.
-- Expose notification actions for `Set Timer` (with numeric keypad `RemoteInput`), `Turn Off` (when enabled), and `Turn On` (when Off).
+- Expose notification actions for `Set Timer` (with numeric keypad `RemoteInput`), `Turn Off` / `Turn On` state toggle, and `Set Goal` / `Goal HH:MM` (which launches `GoalSettingsDialogActivity`).
 - Parse and validate the inline notification reply using `parseDurationMinutes` to support natural duration inputs (`30`, `1h`, `2h15m`, ignoring seconds specifiers like `2h10m5s`), gracefully defaulting to the previously configured duration or 20-minute default on malformed/invalid input.
 - Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), and wake-up goal settings in `SharedPreferences`.
 - Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
@@ -75,17 +78,24 @@ Important constants:
 - Maximum duration: `1440` minutes (24 hours)
 - Fade duration: `30_000` milliseconds
 
+### `GoalSettingsDialogActivity`
+
+File: `app/src/main/java/com/bas080/autosleepdroid/GoalSettingsDialogActivity.java`
+
+A dialog-themed activity (`@android:style/Theme.Material.Light.Dialog`) launched from Action Slot 3 in the notification shade ("Set Goal" / "Goal HH:MM").
+
+Responsibilities:
+
+- Displays a modal dialog overlay over the foreground app with a `TimePicker` widget for setting target goal time and an `EditText` for configuring minimum sleep duration safeguard in hours (default 7.5h / 450 minutes).
+- Includes "Save" / "OK", "Clear Goal" (when goal is enabled), and "Cancel" buttons.
+- On "Save": updates `wake_up_goal_enabled`, `wake_up_goal_hour`, `wake_up_goal_minute`, `min_sleep_duration_minutes` in `SharedPreferences`, logs the event to `EventLogger`, sends `ACTION_REDRAW_NOTIFICATION` intent to `SleepTimerService`, and calls `finish()`.
+- On "Clear Goal": sets `wake_up_goal_enabled = false` in `SharedPreferences`, sends `ACTION_CLEAR_GOAL` intent to `SleepTimerService`, logs the event to `EventLogger`, and calls `finish()`.
+
 ### `MainActivity`
 
 File: `app/src/main/java/com/bas080/autosleepdroid/MainActivity.java`
 
-The launcher activity starts `SleepTimerService`, requests `POST_NOTIFICATIONS` on Android 13+, prompts for exact alarm permissions on Android 12+, and displays the UI (`activity_main.xml`).
-
-Header Controls & Status View:
-
-- **"Set Wake-Up Goal" button**: Displays dialogs (`TimePickerDialog` for target goal time and input dialog for minimum sleep duration safeguard, default 7.5 hours) to enable and configure Smart Wake-Up Goal.
-- **"Clear Goal" button**: Disables Smart Wake-Up Goal, dismisses existing `"Auto Sleep"` system alarms, and updates status.
-- **Wake-Up Goal Status View**: Summarizes current goal settings and calculated alarm progress (e.g. `"Goal: 06:30 AM • Tonight's Alarm: 07:15 AM"` or `"Wake-Up Goal: Disabled"`).
+The launcher activity starts `SleepTimerService`, requests `POST_NOTIFICATIONS` on Android 13+, prompts for exact alarm permissions on Android 12+, and displays the live event log UI (`activity_main.xml`).
 
 Main Event Log:
 
@@ -102,15 +112,6 @@ Centralized logging utility that formats event lines with timestamps (`yyyy-MM-d
 File: `app/src/main/java/com/bas080/autosleepdroid/BootReceiver.java`
 
 Receives `BOOT_COMPLETED`, logs the reboot event, and starts the foreground service. `SleepTimerService` then reads persisted state. If previously in an enabled/running state (`Waiting`, `Active`, `Fading`), it restores to the `Waiting` state using the configured duration; if explicitly in `Off` state, it remains `Off`.
-
-### `MediaSessionAccessService`
-
-File: `app/src/main/java/com/bas080/autosleepdroid/MediaSessionAccessService.java`
-
-Extends `NotificationListenerService` to provide the notification-access component required by `MediaSessionManager`. `pauseAll()` sends `pause()` to every active session. Logs pause operations and active session counts to `EventLogger`. Automatic start detection is handled by `SleepTimerService` polling instead of this service.
-
-Android notification access must be granted by the user. The service catches `SecurityException` when access has not been granted.
-
 
 ## State and persistence
 
@@ -156,7 +157,7 @@ In-memory state in `SleepTimerService`:
 ### Initial launch
 
 1. Android launches `MainActivity`.
-2. `MainActivity` displays header controls, status view, and the event log UI.
+2. `MainActivity` displays the live event log UI.
 3. The activity requests notification permission (`POST_NOTIFICATIONS`) on Android 13+ if needed.
 4. Once notification permission is granted (or immediately on Android < 33), the activity starts `SleepTimerService` as a foreground service.
 
@@ -169,6 +170,13 @@ In-memory state in `SleepTimerService`:
 5. If invalid or empty, the duration falls back safely to the previously configured duration or the 20-minute default, and `enabled` is set to true.
 6. If media is currently active, the timer transitions to `Active` and starts counting down; otherwise, it enters `Waiting`.
 7. `EventLogger` logs the configuration action.
+
+### Set Goal / Goal HH:MM action
+
+1. The user taps `Set Goal` or `Goal HH:MM` in Action Slot 3 of the notification shade.
+2. Android launches `GoalSettingsDialogActivity` as a compact modal dialog overlay over the foreground app.
+3. The user configures target goal time and minimum sleep duration safeguard, then taps "Save" (or "Clear Goal").
+4. `GoalSettingsDialogActivity` saves settings to `SharedPreferences`, logs the event, sends an intent to `SleepTimerService` to recalculate alarms and redraw the notification, and finishes.
 
 ### Turn Off action
 
