@@ -2,7 +2,9 @@
 
 ## Overview
 
-This document provides technical research, framework analysis, UX trade-offs, and architectural options for bringing the Smart Wake-Up Goal ("Auto Sleep") configuration UI directly into or triggering from the ongoing sleep timer notification shade in Auto Sleep Droid.
+This document provides technical research, framework analysis, UX trade-offs, and architectural recommendations for bringing the Smart Wake-Up Goal ("Auto Sleep") configuration UI to the ongoing sleep timer notification shade in Auto Sleep Droid.
+
+After evaluating available Android System UI mechanisms, **the Dialog Activity Overlay approach (`GoalSettingsDialogActivity`) is selected as the primary, recommended architecture.**
 
 ---
 
@@ -21,14 +23,14 @@ Currently, setting or clearing the wake-up goal requires opening the main app sc
 - **Notification Visibility**: The expanded notification shade displays current alarm status (e.g. `Alarm set for 6:15 AM`), but offers no interactive controls to set or clear the goal from the shade.
 
 ### Objective
-Provide screen-free or notification-first access to configure and clear the wake-up goal directly from the notification shade without requiring the user to open `MainActivity`.
+Provide direct, screen-free or notification-triggered access to configure and clear the wake-up goal without requiring the user to open `MainActivity`.
 
 ---
 
 ## 2. Android Framework & System UI Constraints
 
 ### 1. System UI Execution Context
-Notifications are rendered outside the application process by **Android System UI** (`com.android.systemui`). Interactive UI elements inside notifications must strictly adhere to System UI APIs.
+Notifications are rendered outside the application process by **Android System UI** (`com.android.systemui`). Interactive UI elements inside notifications must strictly adhere to System UI capabilities and constraints.
 
 ### 2. Custom Layout (`RemoteViews`) Restrictions
 Android OS explicitly prohibits interactive input controls within custom notification layouts (`RemoteViews`). Interactive components such as `TimePicker`, `DatePicker`, `EditText`, `SeekBar`, `Spinner`, or custom wheel views are **stripped or ignored** by `NotificationManager`.
@@ -37,127 +39,90 @@ Android OS explicitly prohibits interactive input controls within custom notific
 Standard Android notification layouts render up to **3 visible action buttons** per notification:
 - **Slot 1 (In Use)**: `"Set Timer"` (`RemoteInput` for sleep timer duration in minutes).
 - **Slot 2 (In Use)**: `"Turn Off"` (when timer is enabled) or `"Turn On"` (when timer is disabled).
-- **Slot 3 (Available)**: Currently unallocated in all notification states (`Off`, `Waiting`, `Active`, `Fading`), providing exactly 1 free action button slot for goal management.
+- **Slot 3 (Available)**: Currently unallocated across all notification states (`Off`, `Waiting`, `Active`, `Fading`), providing exactly 1 free action button slot for goal management.
 
-### 4. Inline Reply Capabilities (`RemoteInput`)
-- `RemoteInput` allows users to type text or pick preset chips directly inside the notification shade.
-- On API 28+, `RemoteInput.Builder.setChoices(...)` displays quick-reply chips below the notification text field.
-- System UI delivers input text asynchronously to `SleepTimerService` via a `PendingIntent`.
-
-### 5. Dialog Activity Overlay Capabilities (`PendingIntent.getActivity`)
-- A notification action button can trigger a `PendingIntent.getActivity()` that opens a lightweight, dialog-themed Activity (`Theme.Material.Dialog`) directly overlaid above whichever app or screen the user is currently viewing.
+### 4. Dialog Activity Overlay Capabilities (`PendingIntent.getActivity`)
+- A notification action button can trigger a `PendingIntent.getActivity()` that opens a lightweight, dialog-themed Activity (`Theme.Material.Dialog` or `Theme.DeviceDefault.Dialog.Alert`) directly overlaid above whichever app or screen the user is currently viewing.
+- The dialog renders native GUI controls (`TimePicker`, numeric input) with full input validation and instant dismissal upon completion.
 
 ---
 
-## 3. Evaluation of Architectural Options
+## 3. Analysis of Technical Options
 
-### Option A: Dedicated "Set Goal" Action with Inline `RemoteInput` & Quick Chips
-- **Description**: Occupy Action Slot 3 with a `"Set Goal"` action button that opens an inline `RemoteInput` text field with predefined quick choice chips (e.g., `["6:00 AM", "6:30 AM", "7:00 AM", "7:30 AM", "Clear Goal"]`) via `setChoices()`.
-- **User Experience**: Tapping `"Set Goal"` expands inline choices directly under the notification shade. The user can tap a single chip to set a goal time instantly, or type a custom time (e.g. `6:30`, `7am`, `22:00`, `clear`).
+### Option A: Dialog Activity Overlay (`GoalSettingsDialogActivity`) — **RECOMMENDED**
+- **Description**: Action Slot 3 displays a `"Set Goal"` (or `"Goal: 06:30"`) action button that fires a `PendingIntent.getActivity()`. This opens a lightweight, dialog-themed activity (`GoalSettingsDialogActivity`) directly over the foreground app.
+- **User Experience**: Tapping `"Set Goal"` immediately presents a clean dialog containing a native `TimePicker` (clock wheel or digital time selector), a Minimum Sleep Duration input, and an "OK" / "Clear Goal" / "Cancel" button set. Tapping "OK" updates the goal and dismisses the dialog instantly, returning the user to their current app while updating the notification in the background.
 - **Pros**:
-  - 100% in-shade experience without leaving the notification shade or opening window overlays.
-  - Quick-reply chips provide 1-tap goal selection for popular wake-up times.
-  - Fully utilizes the 3rd available notification action slot across all service states.
+  - **Native GUI Controls**: Full access to Android's built-in `TimePicker` and formatted inputs.
+  - **Zero String Parsing Ambiguity**: 100% guaranteed input validation for hours, minutes, AM/PM, and minimum sleep safeguard.
+  - **Multi-Parameter Support**: Naturally configures both Target Goal Time AND Minimum Sleep Duration in a single, clean interface.
+  - **Seamless UX**: Opens directly over whichever app the user is using (e.g., YouTube, Spotify, podcast player) and vanishes immediately upon confirmation.
+  - **Fits Action Slot 3**: Occupies the single remaining notification action slot.
 - **Cons**:
-  - Requires parsing time strings on the backend (`SleepTimerService`).
-  - Configuring minimum sleep safeguard duration alongside goal time in a single text field requires a structured string format (e.g., `6:30 8h`) or defaulting minimum sleep duration to its previously saved value.
+  - Momentarily displays a window overlay over the current app instead of remaining purely within the expanded notification shade bounds.
 
-### Option B: Dialog Activity Overlay (`Theme.Material.Dialog`) Launched from Notification Action
-- **Description**: The `"Set Goal"` notification action launches a lightweight, transparent/dialog-themed Activity (`GoalSettingsDialogActivity`) over the foreground screen, displaying native `TimePicker` and Minimum Sleep `EditText` controls.
-- **User Experience**: Tapping `"Set Goal"` immediately presents a centered, dark/light dialog overlay. The user selects the time on the `TimePicker` wheel, adjusts minimum sleep duration if needed, and taps "OK". The dialog vanishes instantly, returning focus to the previous app while updating the notification.
-- **Pros**:
-  - Full native Android GUI controls (`TimePicker` wheel/digital clock, numeric `EditText`).
-  - Guaranteed 100% input validation (no freeform text parsing needed).
-  - Allows precise configuration of both Goal Time AND Minimum Sleep Duration simultaneously.
-- **Cons**:
-  - Briefly pops up a visual overlay window over the foreground app rather than remaining strictly inside the notification shade.
+### Option B: Inline `RemoteInput` with Text Parsing & Quick Choice Chips
+- **Description**: Action Slot 3 opens an inline reply field where the user types a time string (e.g. `6:30`, `7am`, `22:00`, `clear`) or picks from preset quick chips (`["6:00 AM", "6:30 AM", "7:00 AM", "Clear"]`).
+- **Pros**: Stays entirely inside the expanded notification shade.
+- **Why It Is Secondary/Inadequate**:
+  - **Complex Freeform String Entry**: Typing clock times (`6:30` vs `0630` vs `6:30 PM`) on a soft keyboard requires complex string parsing and error-prone keyboard interactions.
+  - **Inability to Configure Minimum Sleep Safeguard**: Inline text replies cannot cleanly capture both a target wake-up time AND a minimum sleep safeguard duration without requiring cumbersome syntax (e.g. `6:30 8h`).
+  - **Limited Chip Presets**: Preset chips only work for fixed times and cannot cover custom wake-up schedules.
 
 ### Option C: Quick Action Toggle / Preset Cycle Button
-- **Description**: Action Slot 3 displays current goal status (e.g., `"Goal: 06:30"` or `"Set Goal"`). Tapping the action toggles Goal ON/OFF, or cycles through preset goal times (e.g. `06:00` -> `06:30` -> `07:00` -> `Off`).
-- **User Experience**: Single-tap interaction to enable/disable or step through common goal times.
-- **Pros**:
-  - Extremely fast 1-tap interaction.
-  - 100% guaranteed valid values (no text parsing or dialogs).
-- **Cons**:
-  - Inflexible if the user wants to set a custom wake-up time not included in the preset cycle.
+- **Description**: Tapping Action Slot 3 toggles the goal ON/OFF or cycles through pre-saved goal times (`6:00 AM` -> `6:30 AM` -> `7:00 AM` -> `Off`).
+- **Why It Is Secondary/Inadequate**: Extremely limited; cannot set arbitrary custom wake-up times or adjust minimum sleep safeguards.
 
-### Option D: Unified "Set Timer / Goal" Inline `RemoteInput` Action
-- **Description**: Keep only two notification actions (`"Set Timer"` and `"Turn Off"`/`"Turn On"`), and update the `"Set Timer"` inline reply to support both duration and goal input using prefix syntax (e.g. typing `20` sets 20-minute sleep timer; typing `@6:30` or `goal 6:30` sets wake-up goal time; typing `goal off` clears goal).
-- **User Experience**: Power users enter commands into a single inline reply field.
-- **Pros**:
-  - Preserves Action Slot 3 for future extensions.
-- **Cons**:
-  - Less intuitive for casual users; requires discovering or remembering prefix syntax.
-
-### Option E: Custom Notification Layout (`RemoteViews`) - Feasibility Analysis
-- **Feasibility**: **Not Feasible.**
-- **Reasoning**: As established in Section 2, Android System UI prohibits interactive widgets like `TimePicker` or `EditText` in custom `RemoteViews` notification layouts.
+### Option D: Custom Notification Layout (`RemoteViews`) — **NOT FEASIBLE**
+- **Feasibility**: Prohibited by Android System UI (interactive widgets like `TimePicker` are not supported in `RemoteViews`).
 
 ---
 
 ## 4. Comparison Summary Matrix
 
-| Option | In-Shade Native? | Strict Validation? | Sets Time & Min Sleep? | UX Quality | Complexity |
+| Option | Native GUI `TimePicker`? | Strict Input Validation? | Sets Time & Min Sleep? | UX Quality | Recommendation Status |
 |---|---|---|---|---|---|
-| **Option A (Inline `RemoteInput` + Chips)** | Yes | Backend String Parser | Time (Min Sleep uses saved default) | Excellent (1-tap chips or text) | Low-Medium |
-| **Option B (Dialog Activity Overlay)** | No (Dialog overlay) | Yes (Native `TimePicker`) | Yes (Both parameters) | Excellent (Visual GUI picker) | Low-Medium |
-| **Option C (Toggle / Cycle Action Button)** | Yes | Yes (Presets) | Saved Min Sleep | Good (1-tap toggle) | Low |
-| **Option D (Unified `RemoteInput` Prefix)** | Yes | Backend String Parser | Time (Min Sleep uses saved default) | Moderate (Requires syntax) | Medium |
-| **Option E (Custom `RemoteViews` Layout)** | N/A | Impossible | N/A | N/A | Unsupported |
+| **Option A (Dialog Activity Overlay)** | Yes (`TimePicker`) | Yes (100% Guaranteed) | Yes (Both fields) | Excellent (Visual picker over app) | **PRIMARY / PREFERRED** |
+| **Option B (Inline `RemoteInput` + Chips)** | No (Text field) | No (Requires parser) | Partial (Time only) | Moderate (Typing required) | Deprecated / Secondary |
+| **Option C (Toggle / Cycle Action Button)** | No | Yes (Presets) | No (Uses saved min sleep) | Fair (Presets only) | Secondary |
+| **Option D (Custom `RemoteViews` Layout)** | N/A | N/A | N/A | N/A | Unsupported by Android |
 
 ---
 
-## 5. Specification for Goal Inline Text Parsing (Option A)
+## 5. Detailed Architectural Specification for the Dialog Approach
 
-When using inline reply (`RemoteInput`) for goal setting, `SleepTimerService` must parse input strings flexibly while safely handling edge cases.
+### 1. Notification Action Integration
+In `SleepTimerService.buildNotification()`, allocate **Action Slot 3** for Goal Alarm management across all service states (`Off`, `Waiting`, `Active`, `Fading`):
 
-### Supported Input Formats
+- **Action Title**:
+  - When Goal is Disabled: `"Set Goal"`
+  - When Goal is Enabled: `"Goal: 06:30 AM"` (displays formatted goal time)
+- **PendingIntent**:
+  - `PendingIntent.getActivity(...)` targeting `GoalSettingsDialogActivity`.
 
-1. **12-Hour Time Format (`H:MM am/pm` or `H:MM`):**
-   - `6:30` -> 06:30 AM
-   - `6:30am` or `6:30 am` -> 06:30 AM
-   - `11:15pm` or `11:15 pm` -> 11:15 PM
-   - `7am` or `7 PM` -> 07:00 AM / 07:00 PM
-2. **24-Hour Time Format (`HH:MM` or `HHMM`):**
-   - `06:30` -> 06:30 AM
-   - `22:00` -> 10:00 PM
-   - `0700` -> 07:00 AM
-3. **Combined Goal Time & Minimum Sleep Safeguard:**
-   - `6:30 8h` -> Goal Time `06:30 AM`, Minimum Sleep `8.0 hours`
-   - `7:00am 7.5h` -> Goal Time `07:00 AM`, Minimum Sleep `7.5 hours`
-   - `06:30 450m` -> Goal Time `06:30 AM`, Minimum Sleep `450 minutes` (7.5h)
-4. **Clear / Disable Commands:**
-   - `clear`, `off`, `disable`, `none`, `cancel`, `0` -> Disables goal alarm (`wake_up_goal_enabled = false`).
+### 2. Dialog Activity Component (`GoalSettingsDialogActivity`)
+- **Theme**: `android:theme="@android:style/Theme.Material.Dialog"` (or `Theme.DeviceDefault.Dialog.Alert`) for a compact, clean modal overlay.
+- **Layout Controls**:
+  1. **Minimum Sleep Duration Field**: An `EditText` (decimal input) prefilled with the currently configured minimum sleep duration in hours (default `7.5`).
+  2. **Target Goal `TimePicker`**: Native `TimePicker` widget prefilled with saved goal hour and minute (default `06:30 AM`).
+  3. **Action Buttons**:
+     - **"Save" / "OK"**: Saves goal time and minimum sleep duration, enables goal (`wake_up_goal_enabled = true`), triggers `checkAndScheduleSmartWakeUpAlarm()`, redrawn notification, and calls `finish()`.
+     - **"Clear Goal"**: Disables goal (`wake_up_goal_enabled = false`), cancels scheduled alarms, redrawn notification, and calls `finish()`.
+     - **"Cancel"**: Closes dialog with no changes.
 
-### Summary Table of Parsing Behavior
-
-| User Input String | Target Goal Time | Min Sleep Duration | Goal Enabled? | Status / Action |
-|---|---|---|---|---|
-| `6:30` | 06:30 AM | Saved value (7.5h) | True | Valid (12-hour AM default) |
-| `6:30am` | 06:30 AM | Saved value (7.5h) | True | Valid |
-| `11:00pm` | 11:00 PM | Saved value (7.5h) | True | Valid |
-| `22:30` | 10:30 PM | Saved value (7.5h) | True | Valid (24-hour format) |
-| `0700` | 07:00 AM | Saved value (7.5h) | True | Valid (Compact 4-digit) |
-| `6:30 8h` | 06:30 AM | 8.0 hours (480m) | True | Valid (Time + Min Sleep) |
-| `7:00am 7.5h` | 07:00 AM | 7.5 hours (450m) | True | Valid (Time + Min Sleep) |
-| `clear` / `off` | Unchanged | Unchanged | False | Goal disabled & alarm cancelled |
-| `invalid_text` | Unchanged | Unchanged | Unchanged | Safe fallback; keeps current goal |
+### 3. Data & State Flow
+1. User taps `"Set Goal"` or `"Goal: 06:30 AM"` in the notification shade.
+2. System UI fires the `PendingIntent` and opens `GoalSettingsDialogActivity` as a lightweight overlay over the foreground app.
+3. User selects target wake-up time on the `TimePicker` wheel and taps "Save".
+4. `GoalSettingsDialogActivity` writes values to `SharedPreferences` (`wake_up_goal_enabled`, `wake_up_goal_hour`, `wake_up_goal_minute`, `min_sleep_duration_minutes`).
+5. `GoalSettingsDialogActivity` sends an intent to `SleepTimerService` (`ACTION_REDRAW_NOTIFICATION` / `ACTION_UPDATE_GOAL`) to recalculate the `"Auto Sleep"` system alarm and redraw the notification shade immediately.
+6. `GoalSettingsDialogActivity` calls `finish()` and closes, returning the user instantly to their active app.
 
 ---
 
-## 6. Recommended Architectural Strategy
+## 6. Conclusion & Summary
 
-### Recommended Hybrid Implementation
-The optimal solution combines **Option A (Inline `RemoteInput` with Quick Chips)** for in-shade convenience with **Option B (Dialog Activity Overlay)** for rich visual time picking:
-
-1. **Action Slot 3 in Notification (`"Set Goal"`)**:
-   - Add `"Set Goal"` action button across all service states (`Off`, `Waiting`, `Active`, `Fading`).
-   - Attach `RemoteInput` with predefined quick-reply chips: `["6:00 AM", "6:30 AM", "7:00 AM", "7:30 AM", "Clear"]`.
-2. **Inline Fast Path**:
-   - Tapping a preset chip (or typing `6:30`) instantly sets the goal time in the notification shade without opening any app window.
-3. **Rich Dialog Overlay Path**:
-   - Long-pressing or tapping a dedicated dialog trigger (or including a `"More..."` choice chip) launches a lightweight `GoalSettingsDialogActivity` featuring native `TimePicker` and Minimum Sleep duration inputs for users who prefer a visual wheel picker.
-4. **State Persistence & Alarm Scheduling**:
-   - Upon receiving valid goal input, `SleepTimerService` updates `SharedPreferences` (`wake_up_goal_enabled`, `wake_up_goal_hour`, `wake_up_goal_minute`, `min_sleep_duration_minutes`).
-   - The service recalculates and schedules/updates the `"Auto Sleep"` system alarm via `checkAndScheduleSmartWakeUpAlarm()`.
-   - The notification is redrawn immediately to reflect the updated goal and tonight's alarm schedule.
+The **Dialog Activity Overlay approach** is the primary, recommended strategy for configuring the Smart Wake-Up Goal from the notification shade:
+- It leverages Android's native `TimePicker` and dialog themes to deliver an intuitive, error-free experience.
+- It seamlessly configures both goal parameters (Target Wake-Up Time and Minimum Sleep Safeguard).
+- It fits perfectly into the notification shade's 3rd action slot while keeping the interaction fast and lightweight.
