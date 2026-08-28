@@ -238,6 +238,18 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         return START_STICKY;
     }
 
+    public static String formatDurationString(int totalMinutes) {
+        if (totalMinutes < 60) {
+            return totalMinutes + "m";
+        }
+        int hours = totalMinutes / 60;
+        int mins = totalMinutes % 60;
+        if (mins == 0) {
+            return hours + "h";
+        }
+        return hours + "h " + mins + "m";
+    }
+
     public static int parseDurationMinutes(String input) {
         if (input == null) {
             return -1;
@@ -782,9 +794,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         remoteInput.getExtras().putInt("android.intent.extra.inputType", InputType.TYPE_CLASS_NUMBER);
         remoteInput.getExtras().putInt("inputType", InputType.TYPE_CLASS_NUMBER);
 
+        String formattedDurationStr = formatDurationString(stateMachine.getConfiguredDurationMinutes());
+        String actionTitle = getString(R.string.action_sleep_duration, formattedDurationStr);
+
         Notification.Action setTimerAction = new Notification.Action.Builder(
                 Icon.createWithResource(this, android.R.drawable.ic_input_add),
-                getString(R.string.action_set_timer),
+                actionTitle,
                 durationIntent())
                 .addRemoteInput(remoteInput)
                 .build();
