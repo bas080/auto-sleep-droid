@@ -47,7 +47,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private static final String WAKEUP_CHANNEL_ID = "wakeup_alarm";
     private static final int NOTIFICATION_ID = 1001;
     private static final int WAKEUP_NOTIFICATION_ID = 1002;
-    private static final long SNOOZE_DURATION_MS = 10 * 60_000L;
+    private static final long SNOOZE_DURATION_MS = 9 * 60_000L;
     private static final String PREFERENCES = "sleep_timer";
     private static final String KEY_ENABLED = "active";
     private static final String KEY_DURATION_MINUTES = "duration_minutes";
@@ -237,7 +237,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 isWakeUpAlarmRinging = false;
                 updateListenersRegistration();
             } else if (ACTION_SNOOZE_WAKEUP_ALARM.equals(intent.getAction())) {
-                EventLogger.log(this, "Wake-Up Goal alarm snoozed for 10m");
+                EventLogger.log(this, "Wake-Up Goal alarm snoozed for 9m");
                 stopWakeUpAlarmSound();
                 cancelWakeUpAlarmNotification();
                 snoozeWakeUpAlarm();
