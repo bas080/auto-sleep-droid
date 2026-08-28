@@ -25,7 +25,7 @@
     <string name="action_turn_off">Desactivar</string>
     <string name="action_turn_on">Activar</string>
     <string name="action_set_goal">Configurar objetivo</string>
-    <string name="action_goal_time">Objetivo %1$s</string>
+    <string name="action_goal_time">Alarma %1$s</string>
     <string name="time_format_hours_minutes">%1$dh %2$02dm</string>
     <string name="time_format_minutes">%1$dm</string>
     <string name="btn_set_wake_up_goal">Configurar objetivo de despierto</string>

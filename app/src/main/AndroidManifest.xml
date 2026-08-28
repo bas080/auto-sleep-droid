@@ -27,6 +27,9 @@
         <activity
             android:name=".GoalSettingsDialogActivity"
             android:theme="@android:style/Theme.Material.Light.Dialog"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
             android:exported="false" />
 
         <service
