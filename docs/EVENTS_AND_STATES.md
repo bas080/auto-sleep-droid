@@ -54,9 +54,9 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 
 ### 3. `ACTIVE`
 
-* **Definition**: Media is actively playing and the timer is counting down towards expiration (`timerEndsAt`).
+* **Definition**: The timer is counting down towards expiration (`timerEndsAt`). Note that pausing media while the timer is active does not send the timer to `WAITING`—the active countdown remains running towards expiration and can be reset to the configured sleep duration via volume adjustments, phone flip gestures, or duration updates.
 * **Background Resources & Listeners**:
-  * `AudioPlaybackCallback`: Registered (monitors for playback stop).
+  * `AudioPlaybackCallback`: Registered (logs playback start/stop events).
   * `SensorEventListener` (Accelerometer): Registered on a dedicated `HandlerThread` with 300ms temporal throttling.
   * Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver): Registered.
   * `AlarmManager`: Exact timer expiration alarm scheduled using `setExactAndAllowWhileIdle()` (or fallback if permission missing).
@@ -110,7 +110,7 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
 1. **`AudioManager.AudioPlaybackCallback` (API 26+)**:
    * **Registration Point**: Registered during `SleepTimerService.onCreate()` inside `initializeStateAndNotification()`.
    * **Active Lifetime**: Remains active across **all states** (`OFF`, `WAITING`, `ACTIVE`, `FADING`) while `SleepTimerService` is alive.
-   * **Purpose**: Passively listens for active music playback changes (`isMusicActive()`). When in `WAITING` state, active playback triggers timer start (`ACTIVE`). When in `ACTIVE` state, playback stop transitions the app back to `WAITING`.
+   * **Purpose**: Passively listens for active music playback changes (`isMusicActive()`). When in `WAITING` state, active playback triggers timer start (`ACTIVE`). Logs playback events across states; pausing media while in `ACTIVE` state does not interrupt or send the active timer to `WAITING`.
    * **Removal Point**: Unregistered exclusively when `SleepTimerService.onDestroy()` is called.
 
 2. **Motion Sensor Listener (`TYPE_ACCELEROMETER`)**:
@@ -184,7 +184,7 @@ The table below maps each `(Current State, Event)` pair to its resulting `Next S
 | **WAITING** | `SET_DURATION` (Music Active) | `ACTIVE` | Validates input, vibrates, sets duration, calculates `timerEndsAt`, schedules alarm, persists state, updates notification |
 | **WAITING** | `SET_DURATION` (Music Inactive) | `WAITING` | Validates input, vibrates, sets duration, persists state, updates notification |
 | **WAITING** | `VOLUME_CHANGED` / `PHONE_FLIPPED` | `WAITING` | Ignored (listeners unregistered) |
-| **ACTIVE** | `PLAYBACK_STOPPED` | `WAITING` | Cancels timer alarm, updates notification |
+| **ACTIVE** | `PLAYBACK_STOPPED` | `ACTIVE` | Logs playback stop event; active countdown remains running and can be reset to sleep duration via volume change, flip gesture, or duration set |
 | **ACTIVE** | `VOLUME_CHANGED` | `ACTIVE` | Vibrates, reschedules timer countdown to configured duration, updates notification |
 | **ACTIVE** | `PHONE_FLIPPED` | `ACTIVE` | Vibrates, reschedules timer countdown to configured duration, updates notification |
 | **ACTIVE** | `SET_DURATION` | `ACTIVE` | Validates input, vibrates, sets new duration, reschedules timer countdown, updates notification |
@@ -218,7 +218,7 @@ stateDiagram-v2
     WAITING --> WAITING: SET_DURATION (Music Inactive)
     WAITING --> ACTIVE: SET_DURATION (Music Active)
 
-    ACTIVE --> WAITING: PLAYBACK_STOPPED
+    ACTIVE --> ACTIVE: PLAYBACK_STOPPED (Log Event, Timer Remains Active)
     ACTIVE --> ACTIVE: VOLUME_CHANGED (Reschedule Countdown)
     ACTIVE --> ACTIVE: PHONE_FLIPPED (Reschedule Countdown)
     ACTIVE --> ACTIVE: SET_DURATION (Reschedule Countdown)

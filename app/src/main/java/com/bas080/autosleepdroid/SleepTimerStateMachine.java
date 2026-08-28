@@ -296,11 +296,6 @@ public class SleepTimerStateMachine {
         if (isEnabled()) {
             if (state == State.WAITING && musicActive) {
                 startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true);
-            } else if (state == State.ACTIVE && playbackStopped) {
-                if (callback != null) {
-                    callback.onCancelAlarm();
-                }
-                transitionTo(State.WAITING);
             }
         }
     }

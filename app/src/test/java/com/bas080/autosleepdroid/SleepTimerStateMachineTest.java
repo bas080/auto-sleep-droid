@@ -166,4 +166,19 @@ public class SleepTimerStateMachineTest {
         assertEquals(SleepTimerStateMachine.State.ACTIVE, stateMachine.getState());
         assertFalse(stateMachine.isFading());
     }
+
+    @Test
+    public void testActiveTimerDoesNotTransitionToWaitingOnMediaPause() {
+        long now = System.currentTimeMillis();
+        long futureEndsAt = now + 20 * 60_000L;
+
+        stateMachine.initialize(true, 20, futureEndsAt, 10, true, now);
+        assertEquals(SleepTimerStateMachine.State.ACTIVE, stateMachine.getState());
+
+        // Simulate media playback stopping (pause)
+        stateMachine.onPlaybackStateChanged(false, now + 1000L);
+
+        // Verify state remains ACTIVE and does not transition to WAITING
+        assertEquals(SleepTimerStateMachine.State.ACTIVE, stateMachine.getState());
+    }
 }
