@@ -87,9 +87,9 @@ A dialog-themed activity (`@android:style/Theme.Material.Light.Dialog`) launched
 Responsibilities:
 
 - Displays a modal dialog overlay over the foreground app with a `TimePicker` widget for setting target goal time and an `EditText` for configuring minimum sleep duration safeguard in hours (default 7.5h / 450 minutes).
-- Includes "Save" / "OK", "Clear Goal" (when goal is enabled), and "Cancel" buttons.
-- On "Save": updates `wake_up_goal_enabled`, `wake_up_goal_hour`, `wake_up_goal_minute`, `min_sleep_duration_minutes` in `SharedPreferences`, logs the event to `EventLogger`, sends `ACTION_REDRAW_NOTIFICATION` intent to `SleepTimerService`, and calls `finish()`.
-- On "Clear Goal": sets `wake_up_goal_enabled = false` in `SharedPreferences`, sends `ACTION_CLEAR_GOAL` intent to `SleepTimerService`, logs the event to `EventLogger`, and calls `finish()`.
+- Includes "OK" and "Stop" buttons (with "Stop" disabled when `wake_up_goal_enabled` is false).
+- On "OK": saves `wake_up_goal_enabled = true`, `wake_up_goal_hour`, `wake_up_goal_minute`, and `min_sleep_duration_minutes` into `SharedPreferences`, sends `ACTION_REDRAW_NOTIFICATION` intent to `SleepTimerService`, logs the event to `EventLogger`, and calls `finish()`.
+- On "Stop": sets `wake_up_goal_enabled = false` in `SharedPreferences`, sends `ACTION_CLEAR_GOAL` intent to `SleepTimerService`, logs the event to `EventLogger`, and calls `finish()`.
 
 ### `MainActivity`
 
@@ -175,7 +175,7 @@ In-memory state in `SleepTimerService`:
 
 1. The user taps `Set Goal` or `Goal HH:MM` in Action Slot 3 of the notification shade.
 2. Android launches `GoalSettingsDialogActivity` as a compact modal dialog overlay over the foreground app.
-3. The user configures target goal time and minimum sleep duration safeguard, then taps "Save" (or "Clear Goal").
+3. The user configures target goal time and minimum sleep duration safeguard, then taps "OK" (or "Stop").
 4. `GoalSettingsDialogActivity` saves settings to `SharedPreferences`, logs the event, sends an intent to `SleepTimerService` to recalculate alarms and redraw the notification, and finishes.
 
 ### Turn Off action

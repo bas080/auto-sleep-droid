@@ -74,18 +74,19 @@ public class GoalSettingsDialogActivity extends Activity {
             finish();
         });
 
-        if (goalEnabled) {
-            builder.setNeutralButton(getString(R.string.btn_clear_goal), (dialog, which) -> {
-                clearWakeUpGoal();
-                finish();
-            });
-        }
+        builder.setNegativeButton(getString(R.string.dialog_stop), (dialog, which) -> {
+            clearWakeUpGoal();
+            finish();
+        });
 
-        builder.setNegativeButton(getString(R.string.dialog_cancel), (dialog, which) -> finish());
         builder.setOnCancelListener(dialog -> finish());
 
         AlertDialog alertDialog = builder.create();
         alertDialog.show();
+
+        if (!goalEnabled) {
+            alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);
+        }
     }
 
     private void saveWakeUpGoal(int goalHour, int goalMinute, int minSleepMinutes) {
