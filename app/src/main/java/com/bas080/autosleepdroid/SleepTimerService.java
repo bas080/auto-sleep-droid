@@ -79,6 +79,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private android.os.Vibrator vibrator;
     private long lastScheduledWakeupAlarmTimeMs = 0L;
     private Ringtone currentAlarmRingtone;
+    private boolean isWakeUpAlarmRinging = false;
+    private int preAlarmVolume = -1;
 
     private SleepTimerStateMachine stateMachine;
 
@@ -144,6 +146,17 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 public void onReceive(Context context, Intent intent) {
                     if ("android.media.VOLUME_CHANGED_ACTION".equals(intent.getAction())) {
                         int streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1);
+                        if (isWakeUpAlarmRinging) {
+                            if (streamType == AudioManager.STREAM_ALARM || streamType == -1) {
+                                if (audioManager != null) {
+                                    int currentAlarmVol = audioManager.getStreamVolume(AudioManager.STREAM_ALARM);
+                                    if (currentAlarmVol == 0) {
+                                        dismissWakeUpAlarmViaVolumeZero();
+                                        return;
+                                    }
+                                }
+                            }
+                        }
                         if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
                             if (audioManager != null) {
                                 int currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
@@ -210,17 +223,26 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 stateMachine.handleAlarmExpiry(currentVol);
             } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, "Auto Sleep wake-up alarm triggered");
+                isWakeUpAlarmRinging = true;
+                if (audioManager != null) {
+                    preAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM);
+                }
+                updateListenersRegistration();
                 playWakeUpAlarmSound();
                 showWakeUpAlarmNotification();
             } else if (ACTION_DISMISS_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, "Wake-Up Goal alarm dismissed");
                 stopWakeUpAlarmSound();
                 cancelWakeUpAlarmNotification();
+                isWakeUpAlarmRinging = false;
+                updateListenersRegistration();
             } else if (ACTION_SNOOZE_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, "Wake-Up Goal alarm snoozed for 10m");
                 stopWakeUpAlarmSound();
                 cancelWakeUpAlarmNotification();
                 snoozeWakeUpAlarm();
+                isWakeUpAlarmRinging = false;
+                updateListenersRegistration();
             } else if (ACTION_CLEAR_GOAL.equals(intent.getAction())) {
                 dismissAutoSleepAlarm();
                 updateNotification();
@@ -294,6 +316,17 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
     }
 
+    private void updateListenersRegistration() {
+        boolean needSensorAndVolume = stateMachine.isActive() || isWakeUpAlarmRinging;
+        if (needSensorAndVolume) {
+            registerSensorListener();
+            registerVolumeObserver();
+        } else {
+            unregisterSensorListener();
+            unregisterVolumeObserver();
+        }
+    }
+
     @Override
     public void onStateChanged(SleepTimerStateMachine.State newState) {
         cancelTimerCallbacks();
@@ -301,25 +334,21 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             unregisterAudioPlaybackCallback();
             onCancelAlarm();
             dismissAutoSleepAlarm();
-            unregisterSensorListener();
-            unregisterVolumeObserver();
+            updateListenersRegistration();
             startForeground(NOTIFICATION_ID, buildNotification());
         } else if (newState == SleepTimerStateMachine.State.WAITING) {
             registerAudioPlaybackCallback();
             onCancelAlarm();
-            unregisterSensorListener();
-            unregisterVolumeObserver();
+            updateListenersRegistration();
             startForeground(NOTIFICATION_ID, buildNotification());
         } else if (newState == SleepTimerStateMachine.State.FADING) {
             unregisterAudioPlaybackCallback();
-            registerSensorListener();
-            registerVolumeObserver();
+            updateListenersRegistration();
             startForeground(NOTIFICATION_ID, buildNotification());
             startFadeRunnable();
         } else if (newState == SleepTimerStateMachine.State.ACTIVE) {
             unregisterAudioPlaybackCallback();
-            registerSensorListener();
-            registerVolumeObserver();
+            updateListenersRegistration();
             checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
             startForeground(NOTIFICATION_ID, buildNotification());
             scheduleExpiry();
@@ -635,6 +664,29 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
     }
 
+    private void snoozeWakeUpAlarmViaFlip() {
+        EventLogger.log(this, "Wake-Up Goal alarm snoozed via flip gesture");
+        stopWakeUpAlarmSound();
+        cancelWakeUpAlarmNotification();
+        snoozeWakeUpAlarm();
+        isWakeUpAlarmRinging = false;
+        onTriggerVibration();
+        updateListenersRegistration();
+    }
+
+    private void dismissWakeUpAlarmViaVolumeZero() {
+        EventLogger.log(this, "Wake-Up Goal alarm dismissed via volume zero gesture");
+        stopWakeUpAlarmSound();
+        cancelWakeUpAlarmNotification();
+        isWakeUpAlarmRinging = false;
+        if (audioManager != null && preAlarmVolume >= 0) {
+            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, preAlarmVolume, 0);
+            EventLogger.log(this, "Restored pre-alarm volume to " + preAlarmVolume);
+        }
+        onTriggerVibration();
+        updateListenersRegistration();
+    }
+
     private void pauseMediaViaAudioFocus() {
         if (audioManager == null) {
             return;
@@ -808,7 +860,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
             if (currentOrientation != ORIENTATION_UNKNOWN) {
                 if (lastOrientation != ORIENTATION_UNKNOWN && lastOrientation != currentOrientation) {
-                    handler.post(() -> stateMachine.onPhoneFlipped(now));
+                    handler.post(() -> {
+                        if (isWakeUpAlarmRinging) {
+                            snoozeWakeUpAlarmViaFlip();
+                        } else {
+                            stateMachine.onPhoneFlipped(now);
+                        }
+                    });
                 }
                 lastOrientation = currentOrientation;
             }
@@ -822,6 +880,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onDestroy() {
         EventLogger.log(this, "SleepTimerService destroyed");
+        stopWakeUpAlarmSound();
+        cancelWakeUpAlarmNotification();
+        isWakeUpAlarmRinging = false;
         unregisterSensorListener();
         unregisterVolumeObserver();
         unregisterAudioPlaybackCallback();

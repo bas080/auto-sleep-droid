@@ -84,9 +84,12 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 ## Smart Target Wake-Up Goal ("Auto Sleep")
 - **Purpose**: Automatically set your daily wake-up alarm to your target wake-up goal time while ensuring you always get enough sleep.
 - **How It Works**:
-  1. **Alarm Calculation at Timer Start**: When the sleep timer starts or is reset, the wake-up alarm is set to `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)`. Upon expiration, the app plays the default system alarm tone and shows a high-priority notification with Dismiss and Snooze (10 minutes) options.
+  1. **Alarm Calculation at Timer Start**: When the sleep timer starts or is reset, the wake-up alarm is set to the maximum of target goal time and timer start time plus sleep timer duration plus minimum sleep duration safeguard. Upon expiration, the app plays the default system alarm tone and shows a high-priority notification with Dismiss and Snooze (10 minutes) options.
   2. **12-Hour Window Safeguard**: The alarm is scheduled only when the timer starts within 12 hours prior to the target goal time.
   3. **Single Alarm Creation**: The app maintains only one wake-up alarm named `"Auto Sleep"`.
+  4. **Wake-Up Alarm Gestures**:
+     - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 10 minutes.
+     - **Volume Zero to Dismiss**: Lowering the alarm volume all the way to zero while the wake-up alarm is ringing dismisses the alarm and restores the alarm volume to its pre-alarm level. Lowering volume to a value above zero does not dismiss the alarm.
 - **Disabled by Default**: The feature is off by default until you tap "Set Wake-Up Goal". Tapping "Clear Goal" turns it off and removes the alarm.
 - **User Inputs**:
   - **Target Goal Time** (e.g., `06:30 AM`).
@@ -110,3 +113,5 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - Notifications remain minimal and compact when collapsed, expanding to show full details (configured duration, fade target, and scheduled wake-up alarm time).
 - Starting the sleep timer within 12 hours of the target goal time schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
 - Disabling the timer or tapping "Clear Goal" cancels the scheduled `"Auto Sleep"` alarm in the background without launching external Clock app UI activities.
+- Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 10 minutes.
+- Lowering the alarm volume to zero while the wake-up alarm is ringing dismisses the alarm and resets alarm volume to pre-alarm level.
