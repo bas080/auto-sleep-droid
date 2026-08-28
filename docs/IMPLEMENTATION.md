@@ -62,7 +62,7 @@ Responsibilities:
 - Transition from `Waiting` to `Active` when playback callback detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused (after a short 500ms delay), and revert to the `Waiting` state.
-- Upon sleep timer start/reschedule within 12 hours prior to goal time, schedule/update the `"Auto Sleep"` wake-up alarm via `AlarmManager.setAlarmClock` if Smart Wake-Up Goal is enabled in the background. When triggered (`ACTION_WAKEUP_ALARM_EXPIRY`), `SleepTimerService` plays the default system alarm tone using `RingtoneManager` and posts a high-priority notification with "Dismiss" and "Snooze" (9 minutes) action buttons. Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes, and lowering the alarm stream volume (`STREAM_ALARM`) to 0 dismisses the alarm and restores the pre-alarm volume level.
+- Upon sleep timer start/reschedule within 12 hours prior to goal time, schedule/update the `"Auto Sleep"` wake-up alarm via `AlarmManager.setAlarmClock` if Smart Wake-Up Goal is enabled in the background. When triggered (`ACTION_WAKEUP_ALARM_EXPIRY`), `SleepTimerService` plays the default system alarm tone using `RingtoneManager` and posts a high-priority notification with "Dismiss" and "Snooze" (9 minutes) action buttons. Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes, while notification buttons can be used to dismiss the alarm.
 - Cancel/dismiss the `"Auto Sleep"` wake-up alarm via `AlarmManager.cancel` on stop or smart alarm cancel in the background.
 - Trigger a short, faint haptic feedback pulse (`Vibrator`) upon duration replies, turning off, volume button resets, and flip gestures.
 - Log lifecycle and state events to `EventLogger`.
@@ -150,7 +150,6 @@ In-memory state in `SleepTimerService`:
 - `lastObservedVolume`: music volume from the previous input poll.
 - `lastObservedMediaActive`: playback state from the previous input poll.
 - `isWakeUpAlarmRinging`: tracks whether the wake-up alarm is currently ringing.
-- `preAlarmVolume`: alarm stream volume (`STREAM_ALARM`) captured prior to wake-up alarm ringing.
 
 ## Runtime flows
 

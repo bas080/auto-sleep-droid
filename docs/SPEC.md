@@ -89,7 +89,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
   3. **Single Alarm Creation**: The app maintains only one wake-up alarm named `"Auto Sleep"`.
   4. **Wake-Up Alarm Gestures**:
      - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
-     - **Volume Zero to Dismiss**: Lowering the alarm volume all the way to zero while the wake-up alarm is ringing dismisses the alarm and restores the alarm volume to its pre-alarm level. Lowering volume to a value above zero does not dismiss the alarm.
+     - **Dismiss**: Tapping the Dismiss button on the wake-up alarm notification dismisses the alarm.
 - **Disabled by Default**: The feature is off by default until you tap "Set Wake-Up Goal". Tapping "Clear Goal" turns it off and removes the alarm.
 - **User Inputs**:
   - **Target Goal Time** (e.g., `06:30 AM`).
@@ -114,4 +114,3 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - Starting the sleep timer within 12 hours of the target goal time schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
 - Disabling the timer or tapping "Clear Goal" cancels the scheduled `"Auto Sleep"` alarm in the background without launching external Clock app UI activities.
 - Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
-- Lowering the alarm volume to zero while the wake-up alarm is ringing dismisses the alarm and resets alarm volume to pre-alarm level.

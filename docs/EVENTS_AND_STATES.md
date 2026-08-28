@@ -111,9 +111,9 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
    * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing), when wake-up alarm stops ringing in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked. The background `HandlerThread` is safely terminated (`quitSafely()`).
 
 3. **Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver)**:
-   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`, or when `ACTION_WAKEUP_ALARM_EXPIRY` triggers the wake-up alarm.
-   * **Active Lifetime**: **`ACTIVE` and `FADING` states, or while Wake-Up Alarm is Ringing**.
-   * **Purpose**: Detects manual volume button presses on `STREAM_MUSIC` or `STREAM_ALARM`. Volume changes during `ACTIVE` reset countdown timer; volume changes during `FADING` cancel fade-out, preserve new volume, and reset countdown timer; lowering alarm stream volume all the way to 0 while wake-up alarm is ringing dismisses the wake-up alarm and restores alarm stream volume to pre-alarm level. Programmatic volume changes made by the app during fade/restore steps are suppressed via `suppressVolumeReset`.
+   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`.
+   * **Active Lifetime**: **`ACTIVE` and `FADING` states only**.
+   * **Purpose**: Detects manual volume button presses on `STREAM_MUSIC`. Volume changes during `ACTIVE` reset countdown timer; volume changes during `FADING` cancel fade-out, preserve new volume, and reset countdown timer. Programmatic volume changes made by the app during fade/restore steps are suppressed via `suppressVolumeReset`.
    * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing), when wake-up alarm stops ringing in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked.
 
 4. **Event Logger Listener (`EventLogger.Listener`)**:
@@ -212,6 +212,4 @@ All system state changes and input triggers are logged to `EventLogger` with a t
 | Wake-Up Goal Alarm Set | `Wake-Up Goal Alarm 'Auto Sleep' set in Clock app for <formatted_time>` |
 | Wake-Up Alarm Triggered | `Auto Sleep wake-up alarm triggered` |
 | Wake-Up Alarm Snoozed via Flip | `Wake-Up Goal alarm snoozed via flip gesture` |
-| Wake-Up Alarm Dismissed via Volume Zero | `Wake-Up Goal alarm dismissed via volume zero gesture` |
-| Restored Pre-Alarm Volume | `Restored pre-alarm volume to <vol>` |
 | Service Destroyed | `SleepTimerService destroyed` |

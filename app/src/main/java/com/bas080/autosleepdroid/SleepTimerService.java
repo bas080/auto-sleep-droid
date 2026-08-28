@@ -80,7 +80,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private long lastScheduledWakeupAlarmTimeMs = 0L;
     private Ringtone currentAlarmRingtone;
     private boolean isWakeUpAlarmRinging = false;
-    private int preAlarmVolume = -1;
 
     private SleepTimerStateMachine stateMachine;
 
@@ -146,17 +145,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 public void onReceive(Context context, Intent intent) {
                     if ("android.media.VOLUME_CHANGED_ACTION".equals(intent.getAction())) {
                         int streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1);
-                        if (isWakeUpAlarmRinging) {
-                            if (streamType == AudioManager.STREAM_ALARM || streamType == -1) {
-                                if (audioManager != null) {
-                                    int currentAlarmVol = audioManager.getStreamVolume(AudioManager.STREAM_ALARM);
-                                    if (currentAlarmVol == 0) {
-                                        dismissWakeUpAlarmViaVolumeZero();
-                                        return;
-                                    }
-                                }
-                            }
-                        }
                         if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
                             if (audioManager != null) {
                                 int currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
@@ -224,9 +212,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, "Auto Sleep wake-up alarm triggered");
                 isWakeUpAlarmRinging = true;
-                if (audioManager != null) {
-                    preAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM);
-                }
                 updateListenersRegistration();
                 playWakeUpAlarmSound();
                 showWakeUpAlarmNotification();
@@ -670,19 +655,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         cancelWakeUpAlarmNotification();
         snoozeWakeUpAlarm();
         isWakeUpAlarmRinging = false;
-        onTriggerVibration();
-        updateListenersRegistration();
-    }
-
-    private void dismissWakeUpAlarmViaVolumeZero() {
-        EventLogger.log(this, "Wake-Up Goal alarm dismissed via volume zero gesture");
-        stopWakeUpAlarmSound();
-        cancelWakeUpAlarmNotification();
-        isWakeUpAlarmRinging = false;
-        if (audioManager != null && preAlarmVolume >= 0) {
-            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, preAlarmVolume, 0);
-            EventLogger.log(this, "Restored pre-alarm volume to " + preAlarmVolume);
-        }
         onTriggerVibration();
         updateListenersRegistration();
     }
