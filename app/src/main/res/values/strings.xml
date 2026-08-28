@@ -32,4 +32,8 @@
     <string name="dialog_min_sleep_title">Minimum Sleep Duration (hours)</string>
     <string name="dialog_ok">OK</string>
     <string name="dialog_cancel">Cancel</string>
+    <string name="wakeup_alarm_title">Wake-Up Goal Alarm</string>
+    <string name="wakeup_alarm_text">Wake up time reached</string>
+    <string name="action_dismiss_alarm">Dismiss</string>
+    <string name="action_snooze_alarm">Snooze</string>
 </resources>
