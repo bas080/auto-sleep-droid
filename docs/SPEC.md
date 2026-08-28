@@ -52,13 +52,13 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 
 ## Timer configuration
 - The user can turn the sleep timer on or off using notification controls.
-- The duration is entered in minutes when configured.
+- The duration is entered in minutes when configured, supporting natural duration input strings (e.g., plain integers default to minutes like `30`, hours `1h`, hours and minutes `2h15m`, while seconds specifiers like `2h10m5s` or `15m30s` ignore seconds).
 - Minimum duration: 1 minute.
 - Maximum duration: 24 hours.
 - Default duration: 20 minutes when the user has not configured a duration.
 - Store the original configured duration while the timer is active.
 - Prefill or suggest the default or last configured duration in the inline notification reply.
-- **Invalid inputs:** If the user enters an invalid duration (e.g., non-numeric, out of range), fall back safely to the already configured time or the default duration.
+- **Invalid inputs:** If the user enters an invalid or malformed duration string (e.g. `10x10h4m`, `10m10`, `abc`, or out of range values), fall back safely to the already configured time or the default duration.
 - Use a playback listener API while in the Waiting state to detect when audio playback starts automatically.
 - When in the Waiting state, communicate that the timer is waiting for playback rather than stopped.
 - Show the configured duration in waiting, active, and fade states.

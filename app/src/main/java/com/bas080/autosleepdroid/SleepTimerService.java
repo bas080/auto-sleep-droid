@@ -238,19 +238,77 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         return START_STICKY;
     }
 
+    public static int parseDurationMinutes(String input) {
+        if (input == null) {
+            return -1;
+        }
+        String s = input.trim().toLowerCase(java.util.Locale.US);
+        if (s.isEmpty()) {
+            return -1;
+        }
+
+        try {
+            if (s.matches("^[0-9]+$")) {
+                long val = Long.parseLong(s);
+                return (val > 0 && val <= Integer.MAX_VALUE) ? (int) val : -1;
+            }
+
+            java.util.regex.Matcher m;
+
+            m = java.util.regex.Pattern.compile("^([0-9]+)h$").matcher(s);
+            if (m.matches()) {
+                long hours = Long.parseLong(m.group(1));
+                long total = hours * 60L;
+                return (total > 0 && total <= Integer.MAX_VALUE) ? (int) total : -1;
+            }
+
+            m = java.util.regex.Pattern.compile("^([0-9]+)m$").matcher(s);
+            if (m.matches()) {
+                long mins = Long.parseLong(m.group(1));
+                return (mins > 0 && mins <= Integer.MAX_VALUE) ? (int) mins : -1;
+            }
+
+            m = java.util.regex.Pattern.compile("^([0-9]+)h([0-9]+)m$").matcher(s);
+            if (m.matches()) {
+                long hours = Long.parseLong(m.group(1));
+                long mins = Long.parseLong(m.group(2));
+                long total = hours * 60L + mins;
+                return (total > 0 && total <= Integer.MAX_VALUE) ? (int) total : -1;
+            }
+
+            m = java.util.regex.Pattern.compile("^([0-9]+)m[0-9]+s$").matcher(s);
+            if (m.matches()) {
+                long mins = Long.parseLong(m.group(1));
+                return (mins > 0 && mins <= Integer.MAX_VALUE) ? (int) mins : -1;
+            }
+
+            m = java.util.regex.Pattern.compile("^([0-9]+)h[0-9]+s$").matcher(s);
+            if (m.matches()) {
+                long hours = Long.parseLong(m.group(1));
+                long total = hours * 60L;
+                return (total > 0 && total <= Integer.MAX_VALUE) ? (int) total : -1;
+            }
+
+            m = java.util.regex.Pattern.compile("^([0-9]+)h([0-9]+)m[0-9]+s$").matcher(s);
+            if (m.matches()) {
+                long hours = Long.parseLong(m.group(1));
+                long mins = Long.parseLong(m.group(2));
+                long total = hours * 60L + mins;
+                return (total > 0 && total <= Integer.MAX_VALUE) ? (int) total : -1;
+            }
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
+
+        return -1;
+    }
+
     private void handleDurationReply(Intent intent) {
         CharSequence reply = RemoteInput.getResultsFromIntent(intent) == null
                 ? null
                 : RemoteInput.getResultsFromIntent(intent).getCharSequence(REMOTE_INPUT_KEY);
 
-        int duration = -1;
-        if (!TextUtils.isEmpty(reply)) {
-            try {
-                duration = Integer.parseInt(reply.toString().trim());
-            } catch (NumberFormatException ignored) {
-                duration = -1;
-            }
-        }
+        int duration = parseDurationMinutes(reply != null ? reply.toString() : null);
 
         boolean musicActive = audioManager != null && audioManager.isMusicActive();
         stateMachine.handleDurationReply(duration, musicActive, System.currentTimeMillis(), true);

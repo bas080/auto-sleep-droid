@@ -100,6 +100,42 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testParseDurationMinutes() {
+        assertEquals(30, SleepTimerService.parseDurationMinutes("30"));
+        assertEquals(60, SleepTimerService.parseDurationMinutes("1h"));
+        assertEquals(120, SleepTimerService.parseDurationMinutes("2H"));
+        assertEquals(135, SleepTimerService.parseDurationMinutes("2h15m"));
+        assertEquals(130, SleepTimerService.parseDurationMinutes("2h10m5s"));
+        assertEquals(15, SleepTimerService.parseDurationMinutes("15m30s"));
+        assertEquals(-1, SleepTimerService.parseDurationMinutes("10x10h4m"));
+        assertEquals(-1, SleepTimerService.parseDurationMinutes("10m10"));
+        assertEquals(-1, SleepTimerService.parseDurationMinutes("10h20h"));
+        assertEquals(-1, SleepTimerService.parseDurationMinutes("abc"));
+        assertEquals(-1, SleepTimerService.parseDurationMinutes(null));
+        assertEquals(-1, SleepTimerService.parseDurationMinutes("  "));
+    }
+
+    @Test
+    public void testSetFlexibleDurationViaRemoteInput() {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        Intent setIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_SET_DURATION);
+
+        Bundle results = new Bundle();
+        results.putCharSequence("duration_minutes", "2h15m");
+        RemoteInput.addResultsToIntent(new RemoteInput[]{
+                new RemoteInput.Builder("duration_minutes").build()
+        }, setIntent, results);
+
+        service.onStartCommand(setIntent, 0, 1);
+
+        assertEquals(135, preferences.getInt("duration_minutes", -1));
+        assertTrue(preferences.getBoolean("active", false));
+    }
+
+    @Test
     public void testSetValidDurationViaRemoteInput() {
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
