@@ -40,4 +40,12 @@
     <string name="wakeup_alarm_text">Hora de despertar alcanzada</string>
     <string name="action_dismiss_alarm">Descartar</string>
     <string name="action_snooze_alarm">Posponer</string>
+    <string name="toast_duration_set">Temporizador configurado en %1$s</string>
+    <string name="toast_duration_invalid">Duración no válida</string>
+    <string name="toast_timer_turned_on">Temporizador activado</string>
+    <string name="toast_timer_turned_off">Temporizador desactivado</string>
+    <string name="toast_goal_set">Objetivo de despierto configurado para las %1$s</string>
+    <string name="toast_goal_stopped">Objetivo de despierto detenido</string>
+    <string name="toast_alarm_dismissed">Alarma descartada</string>
+    <string name="toast_alarm_snoozed">Alarma pospuesta por 9m</string>
 </resources>

@@ -199,10 +199,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             if (ACTION_TURN_OFF.equals(intent.getAction())) {
                 EventLogger.log(this, "Timer turned off");
                 stateMachine.handleTurnOff(true);
+                android.widget.Toast.makeText(this, R.string.toast_timer_turned_off, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_TURN_ON.equals(intent.getAction())) {
                 EventLogger.log(this, "Timer turned on");
                 boolean musicActive = audioManager != null && audioManager.isMusicActive();
                 stateMachine.handleTurnOn(musicActive, System.currentTimeMillis(), true);
+                android.widget.Toast.makeText(this, R.string.toast_timer_turned_on, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_SET_DURATION.equals(intent.getAction())) {
                 handleDurationReply(intent);
             } else if (ACTION_ALARM_EXPIRY.equals(intent.getAction())) {
@@ -221,6 +223,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 cancelWakeUpAlarmNotification();
                 isWakeUpAlarmRinging = false;
                 updateListenersRegistration();
+                android.widget.Toast.makeText(this, R.string.toast_alarm_dismissed, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_SNOOZE_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, "Wake-Up Goal alarm snoozed for 9m");
                 stopWakeUpAlarmSound();
@@ -228,6 +231,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 snoozeWakeUpAlarm();
                 isWakeUpAlarmRinging = false;
                 updateListenersRegistration();
+                android.widget.Toast.makeText(this, R.string.toast_alarm_snoozed, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_CLEAR_GOAL.equals(intent.getAction())) {
                 dismissAutoSleepAlarm();
                 updateNotification();
@@ -325,6 +329,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         boolean musicActive = audioManager != null && audioManager.isMusicActive();
         stateMachine.handleDurationReply(duration, musicActive, System.currentTimeMillis(), true);
         EventLogger.log(this, "Duration set to " + stateMachine.getConfiguredDurationMinutes() + "m (input: '" + reply + "')");
+
+        if (duration != -1) {
+            String formattedStr = formatDurationString(stateMachine.getConfiguredDurationMinutes());
+            android.widget.Toast.makeText(this, getString(R.string.toast_duration_set, formattedStr), android.widget.Toast.LENGTH_SHORT).show();
+        } else {
+            android.widget.Toast.makeText(this, R.string.toast_duration_invalid, android.widget.Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void startFadeRunnable() {

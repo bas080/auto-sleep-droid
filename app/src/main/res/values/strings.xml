@@ -40,4 +40,12 @@
     <string name="wakeup_alarm_text">Wake up time reached</string>
     <string name="action_dismiss_alarm">Dismiss</string>
     <string name="action_snooze_alarm">Snooze</string>
+    <string name="toast_duration_set">Sleep timer set to %1$s</string>
+    <string name="toast_duration_invalid">Invalid duration</string>
+    <string name="toast_timer_turned_on">Sleep timer turned on</string>
+    <string name="toast_timer_turned_off">Sleep timer turned off</string>
+    <string name="toast_goal_set">Wake-up goal set for %1$s</string>
+    <string name="toast_goal_stopped">Wake-up goal stopped</string>
+    <string name="toast_alarm_dismissed">Alarm dismissed</string>
+    <string name="toast_alarm_snoozed">Alarm snoozed for 9m</string>
 </resources>
