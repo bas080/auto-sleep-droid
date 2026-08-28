@@ -35,6 +35,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public static final String ACTION_TURN_ON = "com.bas080.autosleepdroid.TURN_ON";
     public static final String ACTION_ALARM_EXPIRY = "com.bas080.autosleepdroid.ALARM_EXPIRY";
     public static final String ACTION_WAKEUP_ALARM_EXPIRY = "com.bas080.autosleepdroid.AUTO_SLEEP_ALARM_EXPIRY";
+    public static final String ACTION_DISMISS_WAKEUP_ALARM = "com.bas080.autosleepdroid.DISMISS_WAKEUP_ALARM";
+    public static final String ACTION_SNOOZE_WAKEUP_ALARM = "com.bas080.autosleepdroid.SNOOZE_WAKEUP_ALARM";
     public static final String ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION";
     public static final String ACTION_CLEAR_GOAL = "com.bas080.autosleepdroid.CLEAR_GOAL";
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
@@ -42,7 +44,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = "wakeup_last_scheduled_ms";
 
     private static final String CHANNEL_ID = "sleep_timer";
+    private static final String WAKEUP_CHANNEL_ID = "wakeup_alarm";
     private static final int NOTIFICATION_ID = 1001;
+    private static final int WAKEUP_NOTIFICATION_ID = 1002;
+    private static final long SNOOZE_DURATION_MS = 10 * 60_000L;
     private static final String PREFERENCES = "sleep_timer";
     private static final String KEY_ENABLED = "active";
     private static final String KEY_DURATION_MINUTES = "duration_minutes";
@@ -73,6 +78,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private Handler sensorHandler;
     private android.os.Vibrator vibrator;
     private long lastScheduledWakeupAlarmTimeMs = 0L;
+    private Ringtone currentAlarmRingtone;
 
     private SleepTimerStateMachine stateMachine;
 
@@ -207,6 +213,16 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, "Auto Sleep wake-up alarm triggered");
                 playWakeUpAlarmSound();
+                showWakeUpAlarmNotification();
+            } else if (ACTION_DISMISS_WAKEUP_ALARM.equals(intent.getAction())) {
+                EventLogger.log(this, "Wake-Up Goal alarm dismissed");
+                stopWakeUpAlarmSound();
+                cancelWakeUpAlarmNotification();
+            } else if (ACTION_SNOOZE_WAKEUP_ALARM.equals(intent.getAction())) {
+                EventLogger.log(this, "Wake-Up Goal alarm snoozed for 10m");
+                stopWakeUpAlarmSound();
+                cancelWakeUpAlarmNotification();
+                snoozeWakeUpAlarm();
             } else if (ACTION_CLEAR_GOAL.equals(intent.getAction())) {
                 dismissAutoSleepAlarm();
                 updateNotification();
@@ -510,26 +526,110 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void playWakeUpAlarmSound() {
+        stopWakeUpAlarmSound();
         try {
             Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
             if (alarmUri == null) {
                 alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
             }
-            Ringtone ringtone = RingtoneManager.getRingtone(getApplicationContext(), alarmUri);
-            if (ringtone != null) {
+            currentAlarmRingtone = RingtoneManager.getRingtone(getApplicationContext(), alarmUri);
+            if (currentAlarmRingtone != null) {
                 if (android.os.Build.VERSION.SDK_INT >= 21) {
-                    ringtone.setAudioAttributes(new AudioAttributes.Builder()
+                    currentAlarmRingtone.setAudioAttributes(new AudioAttributes.Builder()
                             .setUsage(AudioAttributes.USAGE_ALARM)
                             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                             .build());
                 } else {
-                    ringtone.setStreamType(AudioManager.STREAM_ALARM);
+                    currentAlarmRingtone.setStreamType(AudioManager.STREAM_ALARM);
                 }
-                ringtone.play();
+                currentAlarmRingtone.play();
                 EventLogger.log(this, "Wake-Up Goal alarm tone started playing");
             }
         } catch (Exception e) {
             EventLogger.log(this, "Failed to play wake-up alarm sound: " + e.getMessage());
+        }
+    }
+
+    private void stopWakeUpAlarmSound() {
+        if (currentAlarmRingtone != null) {
+            try {
+                if (currentAlarmRingtone.isPlaying()) {
+                    currentAlarmRingtone.stop();
+                }
+            } catch (Exception ignored) {
+            }
+            currentAlarmRingtone = null;
+        }
+    }
+
+    private void showWakeUpAlarmNotification() {
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (manager == null) {
+            return;
+        }
+
+        Intent dismissIntent = new Intent(this, SleepTimerService.class).setAction(ACTION_DISMISS_WAKEUP_ALARM);
+        PendingIntent dismissPendingIntent = PendingIntent.getService(this, 103, dismissIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent snoozeIntent = new Intent(this, SleepTimerService.class).setAction(ACTION_SNOOZE_WAKEUP_ALARM);
+        PendingIntent snoozePendingIntent = PendingIntent.getService(this, 104, snoozeIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent fullScreenIntent = new Intent(this, MainActivity.class);
+        PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(this, 105, fullScreenIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Notification.Builder builder = new Notification.Builder(this, WAKEUP_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_zzz)
+                .setContentTitle(getString(R.string.wakeup_alarm_title))
+                .setContentText(getString(R.string.wakeup_alarm_text))
+                .setCategory(Notification.CATEGORY_ALARM)
+                .setPriority(Notification.PRIORITY_HIGH)
+                .setFullScreenIntent(fullScreenPendingIntent, true)
+                .setOngoing(true)
+                .addAction(new Notification.Action.Builder(
+                        Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                        getString(R.string.action_dismiss_alarm),
+                        dismissPendingIntent).build())
+                .addAction(new Notification.Action.Builder(
+                        Icon.createWithResource(this, android.R.drawable.ic_popup_reminder),
+                        getString(R.string.action_snooze_alarm),
+                        snoozePendingIntent).build());
+
+        manager.notify(WAKEUP_NOTIFICATION_ID, builder.build());
+    }
+
+    private void cancelWakeUpAlarmNotification() {
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.cancel(WAKEUP_NOTIFICATION_ID);
+        }
+    }
+
+    private void snoozeWakeUpAlarm() {
+        if (alarmManager == null) {
+            return;
+        }
+        long snoozeTimeMs = System.currentTimeMillis() + SNOOZE_DURATION_MS;
+
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 101, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent showIntent = new Intent(this, MainActivity.class);
+        PendingIntent showPendingIntent = PendingIntent.getActivity(this, 102, showIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(snoozeTimeMs, showPendingIntent);
+
+        try {
+            alarmManager.setAlarmClock(clockInfo, pendingIntent);
+            java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
+            String formattedTime = timeFormat.format(new Date(snoozeTimeMs));
+            EventLogger.log(this, "Wake-Up Goal alarm snoozed until " + formattedTime);
+        } catch (Exception e) {
+            EventLogger.log(this, "Failed to schedule snooze alarm: " + e.getMessage());
         }
     }
 
@@ -678,6 +778,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                     CHANNEL_ID, getString(R.string.notification_channel_name), NotificationManager.IMPORTANCE_LOW);
             channel.setDescription(getString(R.string.notification_channel_description));
             manager.createNotificationChannel(channel);
+
+            NotificationChannel wakeupChannel = new NotificationChannel(
+                    WAKEUP_CHANNEL_ID, getString(R.string.wakeup_alarm_title), NotificationManager.IMPORTANCE_HIGH);
+            wakeupChannel.setDescription(getString(R.string.wakeup_alarm_text));
+            wakeupChannel.setSound(null, null);
+            manager.createNotificationChannel(wakeupChannel);
         }
     }
 
