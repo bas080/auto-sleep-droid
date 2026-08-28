@@ -4,7 +4,7 @@
 
 Auto Sleep Droid is driven by an event-based state machine architecture (`SleepTimerStateMachine`) managed by `SleepTimerService`. The core state machine controls timer countdowns, audio volume fade-outs, media pausing, and background listener registrations, while communicating system side-effects back through a callback interface.
 
-This document describes all possible system states, input and system events, transition rules, state-event matrix, state diagram, and logged event messages.
+This document describes all possible system states, listener lifecycles, input and system events, transition rules, state-event matrix, state diagram, and logged event messages.
 
 ---
 
@@ -80,6 +80,57 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
   * Expanded Text: `"Fading volume down to pause media"`
   * Action Buttons: `"Set Timer"` (inline reply input) and `"Turn Off"`.
 * **State Invariants**: `enabled = true`.
+
+---
+
+## Listener Lifecycle & Registration Rules
+
+To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in Auto Sleep Droid follow strict registration and unregistration lifecycle rules:
+
+```
++------------------------------------+-----------------------+------------------------+------------------------------------------+
+| Listener Component                 | Registered On         | Active States          | Unregistered / Removed On                |
++------------------------------------+-----------------------+------------------------+------------------------------------------+
+| AudioPlaybackCallback              | Service Initialization| ALL (OFF, WAITING,     | Service Destruction (onDestroy)          |
+| (AudioManager.AudioPlaybackCallback| (onCreate)            | ACTIVE, FADING)        |                                          |
++------------------------------------+-----------------------+------------------------+------------------------------------------+
+| Motion Accelerometer Listener      | Transition to ACTIVE  | ACTIVE, FADING only    | Transition to OFF or WAITING, or         |
+| (SensorEventListener)              | or FADING state       |                        | Service Destruction (onDestroy)          |
++------------------------------------+-----------------------+------------------------+------------------------------------------+
+| Volume Broadcast Receiver          | Transition to ACTIVE  | ACTIVE, FADING only    | Transition to OFF or WAITING, or         |
+| (VOLUME_CHANGED_ACTION)            | or FADING state       |                        | Service Destruction (onDestroy)          |
++------------------------------------+-----------------------+------------------------+------------------------------------------+
+| Live Event Log UI Listener         | MainActivity onResume | UI Foreground          | MainActivity onPause                     |
+| (EventLogger.Listener)             |                       |                        |                                          |
++------------------------------------+-----------------------+------------------------+------------------------------------------+
+```
+
+### Detailed Registration Details
+
+1. **`AudioManager.AudioPlaybackCallback` (API 26+)**:
+   * **Registration Point**: Registered during `SleepTimerService.onCreate()` inside `initializeStateAndNotification()`.
+   * **Active Lifetime**: Remains active across **all states** (`OFF`, `WAITING`, `ACTIVE`, `FADING`) while `SleepTimerService` is alive.
+   * **Purpose**: Passively listens for active music playback changes (`isMusicActive()`). When in `WAITING` state, active playback triggers timer start (`ACTIVE`). When in `ACTIVE` state, playback stop transitions the app back to `WAITING`.
+   * **Removal Point**: Unregistered exclusively when `SleepTimerService.onDestroy()` is called.
+
+2. **Motion Sensor Listener (`TYPE_ACCELEROMETER`)**:
+   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`.
+   * **Background Threading**: Registered on a dedicated `HandlerThread` (`SensorThread`) with `SensorManager.SENSOR_DELAY_NORMAL` and 300ms temporal throttling to preserve battery.
+   * **Active Lifetime**: **`ACTIVE` and `FADING` states only**.
+   * **Purpose**: Detects phone flip gestures (face-up to face-down or face-down to face-up). Flips during `ACTIVE` reset countdown timer; flips during `FADING` cancel fade-out, restore pre-fade volume, and reset countdown timer.
+   * **Removal Point**: Unregistered immediately upon transition to `OFF` or `WAITING` state, or when `SleepTimerService.onDestroy()` is invoked. The background `HandlerThread` is safely terminated (`quitSafely()`).
+
+3. **Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver)**:
+   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`.
+   * **Active Lifetime**: **`ACTIVE` and `FADING` states only**.
+   * **Purpose**: Detects manual volume button presses on `STREAM_MUSIC`. Volume changes during `ACTIVE` reset countdown timer; volume changes during `FADING` cancel fade-out, preserve new volume, and reset countdown timer. Programmatic volume changes made by the app during fade/restore steps are suppressed via `suppressVolumeReset`.
+   * **Removal Point**: Unregistered immediately upon transition to `OFF` or `WAITING` state, or when `SleepTimerService.onDestroy()` is invoked.
+
+4. **Event Logger Listener (`EventLogger.Listener`)**:
+   * **Registration Point**: Registered in `MainActivity.onResume()`.
+   * **Active Lifetime**: Active only while `MainActivity` is in the foreground.
+   * **Purpose**: Delivers live log lines directly to the main UI scrollable log view.
+   * **Removal Point**: Removed (`EventLogger.setListener(null)`) in `MainActivity.onPause()` to prevent UI leaks when app is backgrounded.
 
 ---
 
