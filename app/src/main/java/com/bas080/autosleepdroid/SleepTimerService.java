@@ -103,8 +103,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void initializeStateAndNotification() {
-        registerAudioPlaybackCallback();
-
         boolean savedEnabled = preferences.getBoolean(KEY_ENABLED, true);
         int savedDuration = preferences.getInt(KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
         long savedEndsAt = preferences.getLong(KEY_TIMER_ENDS_AT, 0L);
@@ -300,22 +298,26 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public void onStateChanged(SleepTimerStateMachine.State newState) {
         cancelTimerCallbacks();
         if (newState == SleepTimerStateMachine.State.OFF) {
+            unregisterAudioPlaybackCallback();
             onCancelAlarm();
             dismissAutoSleepAlarm();
             unregisterSensorListener();
             unregisterVolumeObserver();
             startForeground(NOTIFICATION_ID, buildNotification());
         } else if (newState == SleepTimerStateMachine.State.WAITING) {
+            registerAudioPlaybackCallback();
             onCancelAlarm();
             unregisterSensorListener();
             unregisterVolumeObserver();
             startForeground(NOTIFICATION_ID, buildNotification());
         } else if (newState == SleepTimerStateMachine.State.FADING) {
+            unregisterAudioPlaybackCallback();
             registerSensorListener();
             registerVolumeObserver();
             startForeground(NOTIFICATION_ID, buildNotification());
             startFadeRunnable();
         } else if (newState == SleepTimerStateMachine.State.ACTIVE) {
+            unregisterAudioPlaybackCallback();
             registerSensorListener();
             registerVolumeObserver();
             checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());

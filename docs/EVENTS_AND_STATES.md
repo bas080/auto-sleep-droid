@@ -28,7 +28,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 
 * **Definition**: The sleep timer is manually disabled. The application does not monitor playback changes, volume adjustments, or gesture movements for timer purposes.
 * **Background Resources & Listeners**:
-  * `AudioPlaybackCallback`: Registered (monitors system playback state passively).
+  * `AudioPlaybackCallback`: Unregistered.
   * `SensorEventListener` (Accelerometer): Unregistered.
   * Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver): Unregistered.
   * Alarm Clock & AlarmManager: No alarms scheduled; any active `"Auto Sleep"` wake-up alarm is cancelled.
@@ -56,7 +56,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 
 * **Definition**: The timer is counting down towards expiration (`timerEndsAt`). Note that pausing media while the timer is active does not send the timer to `WAITING`—the active countdown remains running towards expiration and can be reset to the configured sleep duration via volume adjustments, phone flip gestures, or duration updates.
 * **Background Resources & Listeners**:
-  * `AudioPlaybackCallback`: Registered (logs playback start/stop events).
+  * `AudioPlaybackCallback`: Unregistered (timer countdown is already active).
   * `SensorEventListener` (Accelerometer): Registered on a dedicated `HandlerThread` with 300ms temporal throttling.
   * Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver): Registered.
   * `AlarmManager`: Exact timer expiration alarm scheduled using `setExactAndAllowWhileIdle()` (or fallback if permission missing).
@@ -71,7 +71,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 
 * **Definition**: The countdown timer has expired. The app gradually decreases the media stream volume over 30 seconds along a quadratic ease-out curve down to zero before pausing active media playback.
 * **Background Resources & Listeners**:
-  * `AudioPlaybackCallback`: Registered.
+  * `AudioPlaybackCallback`: Unregistered.
   * `SensorEventListener` (Accelerometer): Registered (detects phone flip gestures to cancel fade, restore volume, and reset timer).
   * Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver): Registered (detects user volume changes to cancel fade, preserve new volume, and reset timer).
   * Fade Handler: Executes 30 steps at 1-second intervals (`FADE_STEP_INTERVAL_MS = 1000ms`, `TOTAL_FADE_STEPS = 30`).
@@ -91,8 +91,8 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
 +------------------------------------+-----------------------+------------------------+------------------------------------------+
 | Listener Component                 | Registered On         | Active States          | Unregistered / Removed On                |
 +------------------------------------+-----------------------+------------------------+------------------------------------------+
-| AudioPlaybackCallback              | Service Initialization| ALL (OFF, WAITING,     | Service Destruction (onDestroy)          |
-| (AudioManager.AudioPlaybackCallback| (onCreate)            | ACTIVE, FADING)        |                                          |
+| AudioPlaybackCallback              | Transition to WAITING | WAITING only           | Transition to OFF, ACTIVE, FADING, or    |
+| (AudioManager.AudioPlaybackCallback| state                 |                        | Service Destruction (onDestroy)          |
 +------------------------------------+-----------------------+------------------------+------------------------------------------+
 | Motion Accelerometer Listener      | Transition to ACTIVE  | ACTIVE, FADING only    | Transition to OFF or WAITING, or         |
 | (SensorEventListener)              | or FADING state       |                        | Service Destruction (onDestroy)          |
@@ -108,10 +108,10 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
 ### Detailed Registration Details
 
 1. **`AudioManager.AudioPlaybackCallback` (API 26+)**:
-   * **Registration Point**: Registered during `SleepTimerService.onCreate()` inside `initializeStateAndNotification()`.
-   * **Active Lifetime**: Remains active across **all states** (`OFF`, `WAITING`, `ACTIVE`, `FADING`) while `SleepTimerService` is alive.
-   * **Purpose**: Passively listens for active music playback changes (`isMusicActive()`). When in `WAITING` state, active playback triggers timer start (`ACTIVE`). Logs playback events across states; pausing media while in `ACTIVE` state does not interrupt or send the active timer to `WAITING`.
-   * **Removal Point**: Unregistered exclusively when `SleepTimerService.onDestroy()` is called.
+   * **Registration Point**: Registered dynamically when entering `WAITING` state via `SleepTimerService.onStateChanged()`.
+   * **Active Lifetime**: **`WAITING` state only**.
+   * **Purpose**: Passively listens for active music playback changes (`isMusicActive()`). When in `WAITING` state, active playback triggers timer start (`ACTIVE`). Unnecessary in `OFF` (timer disabled), `ACTIVE` (countdown running towards expiration), and `FADING` states.
+   * **Removal Point**: Unregistered immediately upon transition to `OFF`, `ACTIVE`, or `FADING` state, or when `SleepTimerService.onDestroy()` is called.
 
 2. **Motion Sensor Listener (`TYPE_ACCELEROMETER`)**:
    * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`.
