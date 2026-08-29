@@ -46,21 +46,21 @@ public class EventLogger {
         ensureLoaded(targetContext);
 
         String timestamp = new SimpleDateFormat("M/d HH:mm:ss", Locale.US).format(new Date());
-        String tag;
+        char marker;
         switch (level) {
             case LEVEL_LOW:
-                tag = "[L]";
+                marker = '\u0000';
                 break;
             case LEVEL_HIGH:
-                tag = "[H]";
+                marker = '\u0002';
                 break;
             case LEVEL_NORMAL:
             default:
-                tag = "[N]";
+                marker = '\u0001';
                 break;
         }
 
-        String line = timestamp + " " + tag + " " + message;
+        String line = timestamp + " " + marker + message;
 
         events.add(line);
         if (events.size() > MAX_LOGS) {
@@ -102,39 +102,50 @@ public class EventLogger {
         if (line == null || line.isEmpty()) {
             return "";
         }
-        SpannableString spannable = new SpannableString(line);
+
         int spaceIdx = line.indexOf(' ');
         int secondSpaceIdx = spaceIdx != -1 ? line.indexOf(' ', spaceIdx + 1) : -1;
         int timestampEnd = secondSpaceIdx != -1 ? secondSpaceIdx : (spaceIdx != -1 ? spaceIdx : 0);
 
-        int levelStart = timestampEnd < line.length() ? timestampEnd : 0;
-        int levelEnd = levelStart;
+        int level = LEVEL_NORMAL;
+        String timestamp = timestampEnd > 0 ? line.substring(0, timestampEnd) : "";
+        String rawMessage = timestampEnd < line.length() ? line.substring(timestampEnd) : "";
+
+        if (rawMessage.contains("\u0000")) {
+            level = LEVEL_LOW;
+            rawMessage = rawMessage.replace("\u0000", "");
+        } else if (rawMessage.contains("\u0002")) {
+            level = LEVEL_HIGH;
+            rawMessage = rawMessage.replace("\u0002", "");
+        } else if (rawMessage.contains("\u0001")) {
+            level = LEVEL_NORMAL;
+            rawMessage = rawMessage.replace("\u0001", "");
+        }
+
+        String displayString = timestamp.isEmpty() ? rawMessage.trim() : (timestamp + rawMessage);
+        SpannableString spannable = new SpannableString(displayString);
+
+        if (!timestamp.isEmpty() && timestamp.length() <= displayString.length()) {
+            spannable.setSpan(new ForegroundColorSpan(0xFF999999), 0, timestamp.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+
+        int messageStart = timestamp.isEmpty() ? 0 : timestamp.length();
 
         int textColor = 0xFF444444;
         boolean isBold = false;
 
-        String rest = line.substring(levelStart).trim();
-        if (rest.startsWith("[L]")) {
+        if (level == LEVEL_LOW) {
             textColor = 0xFF888888;
-            levelEnd = line.indexOf("[L]", levelStart) + 3;
-        } else if (rest.startsWith("[H]")) {
+        } else if (level == LEVEL_HIGH) {
             textColor = 0xFF000000;
             isBold = true;
-            levelEnd = line.indexOf("[H]", levelStart) + 3;
-        } else if (rest.startsWith("[N]")) {
-            textColor = 0xFF444444;
-            levelEnd = line.indexOf("[N]", levelStart) + 3;
         }
 
-        int messageStart = levelEnd < line.length() ? levelEnd : levelStart;
-
-        if (messageStart > 0) {
-            spannable.setSpan(new ForegroundColorSpan(0xFF999999), 0, messageStart, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
-
-        spannable.setSpan(new ForegroundColorSpan(textColor), messageStart, line.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        if (isBold) {
-            spannable.setSpan(new StyleSpan(Typeface.BOLD), messageStart, line.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        if (messageStart < displayString.length()) {
+            spannable.setSpan(new ForegroundColorSpan(textColor), messageStart, displayString.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            if (isBold) {
+                spannable.setSpan(new StyleSpan(Typeface.BOLD), messageStart, displayString.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
         }
 
         return spannable;
