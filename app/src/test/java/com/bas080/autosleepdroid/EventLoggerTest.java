@@ -42,6 +42,7 @@ public class EventLoggerTest {
         assertTrue(formattedLow instanceof Spanned);
         ForegroundColorSpan[] lowSpans = ((Spanned) formattedLow).getSpans(0, formattedLow.length(), ForegroundColorSpan.class);
         assertTrue(lowSpans.length >= 2);
+        assertEquals(0xFF999999, lowSpans[0].getForegroundColor());
         assertEquals(0xFF888888, lowSpans[1].getForegroundColor());
 
         // Check LEVEL_NORMAL line format and span color
@@ -49,6 +50,7 @@ public class EventLoggerTest {
         assertTrue(formattedNormal instanceof Spanned);
         ForegroundColorSpan[] normalSpans = ((Spanned) formattedNormal).getSpans(0, formattedNormal.length(), ForegroundColorSpan.class);
         assertTrue(normalSpans.length >= 2);
+        assertEquals(0xFF999999, normalSpans[0].getForegroundColor());
         assertEquals(0xFF444444, normalSpans[1].getForegroundColor());
 
         // Check LEVEL_HIGH line format and span color
@@ -56,6 +58,7 @@ public class EventLoggerTest {
         assertTrue(formattedHigh instanceof Spanned);
         ForegroundColorSpan[] highSpans = ((Spanned) formattedHigh).getSpans(0, formattedHigh.length(), ForegroundColorSpan.class);
         assertTrue(highSpans.length >= 2);
+        assertEquals(0xFF999999, highSpans[0].getForegroundColor());
         assertEquals(0xFF000000, highSpans[1].getForegroundColor());
     }
 }
