@@ -26,11 +26,11 @@ Notification text is kept compact and concise when collapsed, displaying detaile
   - Buttons: "Set Timer" (Inline reply to change duration), "Turn On" (Enables timer without changing configured duration), and "Set Goal" (Opens Wake-Up Goal settings dialog).
 - Waiting: 
   - Collapsed Text: "Waiting for playback"
-  - Expanded Text: "Waiting for media playback (20m configured)"
+  - Expanded Text: "Waiting for media playback"
   - Buttons: "Set Timer" (Inline reply to change duration), "Turn Off" (Disables timer and transitions to Off state), and "Set Goal" / "Goal HH:MM" (Opens Wake-Up Goal settings dialog).
 - Active: 
-  - Collapsed Text: "Timer running (11:15 PM)"
-  - Expanded Text: "Fades out at 11:15 PM (20m configured) • Alarm set for 6:15 AM" (Alarm detail shown only when wake-up alarm is enabled).
+  - Collapsed Text: "Fades out at 11:15 PM"
+  - Expanded Text: "Fades out at 11:15 PM • Alarm at 6:15 AM" (Alarm detail shown only when wake-up alarm is enabled).
   - Buttons: "Set Timer" (Inline reply to change duration), "Turn Off" (Disables timer and transitions to Off state), and "Set Goal" / "Goal HH:MM" (Opens Wake-Up Goal settings dialog).
 - Fading: 
   - Collapsed Text: "Fading volume"
@@ -106,7 +106,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - The "Set Timer" action is available across all states, the "Turn Off" button is present whenever the timer is enabled, and the "Turn On" button is present when the timer is Off.
 - The Smart Wake-Up Goal feature is disabled by default until explicitly configured by the user.
 - The notification shade provides a "Set Goal" / "Goal HH:MM" action button that opens a dialog overlay (`GoalSettingsDialogActivity`) to configure, display, stop, or enable the target wake-up goal and minimum sleep duration.
-- Notifications remain minimal and compact when collapsed, expanding to show full details (configured duration, fade target, and scheduled wake-up alarm time).
+- Notifications remain minimal and compact when collapsed, expanding to show full details (fade target and scheduled wake-up alarm time).
 - Starting the sleep timer within 12 hours of the target goal time schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
 - Disabling the timer or tapping "Stop" in the settings dialog cancels the scheduled `"Auto Sleep"` alarm in the background without launching external Clock app UI activities.
 - Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.

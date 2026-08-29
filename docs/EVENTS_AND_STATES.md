@@ -36,7 +36,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
   * Alarm Clock & AlarmManager: No timer alarms scheduled.
 * **Notification Presentation**:
   * Collapsed Text: `"Waiting for playback"`
-  * Expanded Text: `"Waiting for media playback (<X>m configured)"`
+  * Expanded Text: `"Waiting for media playback"`
   * Action Buttons: `"Set Timer"` (inline reply input) and `"Turn Off"`.
 * **State Invariants**: `enabled = true`, `timerEndsAt = 0`.
 
@@ -50,8 +50,8 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
   * `AlarmManager`: Exact timer expiration alarm scheduled using `setExactAndAllowWhileIdle()` (or fallback if permission missing).
   * Smart Wake-Up Goal: If enabled and within 12 hours prior to goal time, schedules/updates `"Auto Sleep"` system clock alarm via `AlarmClock.ACTION_SET_ALARM`.
 * **Notification Presentation**:
-  * Collapsed Text: `"Timer running (<target_time>)"` (e.g., `"Timer running (11:15 PM)"`)
-  * Expanded Text: `"Fades out at <target_time> (<X>m configured)"` (appends `" • Alarm set for <alarm_time>"` when Smart Wake-Up Goal alarm is set).
+  * Collapsed Text: `"Fades out at <target_time>"` (e.g., `"Fades out at 11:15 PM"`)
+  * Expanded Text: `"Fades out at <target_time>"` (appends `" • Alarm at <alarm_time>"` when Smart Wake-Up Goal alarm is set).
   * Action Buttons: `"Set Timer"` (inline reply input) and `"Turn Off"`.
 * **State Invariants**: `enabled = true`, `timerEndsAt > 0`.
 

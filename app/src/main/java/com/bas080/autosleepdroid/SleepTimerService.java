@@ -689,36 +689,40 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private Notification buildNotification() {
-        String configuredDuration = getString(R.string.configured_duration, stateMachine.getConfiguredDurationMinutes());
+        String title;
         String collapsedText;
         String expandedText;
 
         if (!stateMachine.isEnabled()) {
+            title = getString(R.string.timer_off_collapsed);
             collapsedText = getString(R.string.timer_off_collapsed);
             expandedText = getString(R.string.timer_off_expanded);
         } else if (stateMachine.isFading()) {
+            title = getString(R.string.fading_title);
             collapsedText = getString(R.string.fading_collapsed);
             expandedText = getString(R.string.fading_expanded);
         } else if (stateMachine.isActive()) {
             String targetTimeStr = formatTargetTime();
+            title = getString(R.string.active_title);
             collapsedText = getString(R.string.active_collapsed, targetTimeStr);
 
             Calendar scheduledAlarm = calculateScheduledAlarm(this, System.currentTimeMillis(), stateMachine.getTimerEndsAt());
 
             if (scheduledAlarm != null) {
                 String formattedAlarmTime = formatTime(scheduledAlarm.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE));
-                expandedText = getString(R.string.active_expanded_alarm, targetTimeStr, configuredDuration, formattedAlarmTime);
+                expandedText = getString(R.string.active_expanded_alarm, targetTimeStr, formattedAlarmTime);
             } else {
-                expandedText = getString(R.string.active_expanded, targetTimeStr, configuredDuration);
+                expandedText = getString(R.string.active_expanded, targetTimeStr);
             }
         } else {
+            title = getString(R.string.waiting_title);
             collapsedText = getString(R.string.waiting_collapsed);
-            expandedText = getString(R.string.waiting_expanded, configuredDuration);
+            expandedText = getString(R.string.waiting_expanded);
         }
 
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_zzz)
-                .setContentTitle(collapsedText)
+                .setContentTitle(title)
                 .setContentText(collapsedText)
                 .setStyle(new Notification.BigTextStyle().bigText(expandedText))
                 .setCategory(Notification.CATEGORY_SERVICE)
