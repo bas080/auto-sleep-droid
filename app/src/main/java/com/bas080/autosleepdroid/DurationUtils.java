@@ -6,6 +6,11 @@ import java.util.regex.Pattern;
 
 public class DurationUtils {
 
+    public enum DefaultUnit {
+        MINUTES,
+        HOURS
+    }
+
     public static String formatDurationString(int totalMinutes) {
         if (totalMinutes < 60) {
             return totalMinutes + "m";
@@ -19,14 +24,10 @@ public class DurationUtils {
     }
 
     public static int parseDurationMinutes(String input) {
-        return parseDurationMinutesInternal(input, false);
+        return parseDurationMinutes(input, DefaultUnit.MINUTES);
     }
 
-    public static int parseDurationMinutesForGoal(String input) {
-        return parseDurationMinutesInternal(input, true);
-    }
-
-    private static int parseDurationMinutesInternal(String input, boolean defaultPlainNumbersToHours) {
+    public static int parseDurationMinutes(String input, DefaultUnit defaultUnit) {
         if (input == null) {
             return -1;
         }
@@ -42,7 +43,7 @@ public class DurationUtils {
                 if (val <= 0) {
                     return -1;
                 }
-                long totalMins = defaultPlainNumbersToHours ? Math.round(val * 60.0) : Math.round(val);
+                long totalMins = (defaultUnit == DefaultUnit.HOURS) ? Math.round(val * 60.0) : Math.round(val);
                 return (totalMins > 0 && totalMins <= Integer.MAX_VALUE) ? (int) totalMins : -1;
             }
 

@@ -58,7 +58,7 @@ public class GoalSettingsDialogActivity extends Activity {
 
         builder.setPositiveButton(getString(R.string.dialog_ok), (dialog, which) -> {
             String text = inputMinSleep.getText().toString().trim();
-            int minMinutes = DurationUtils.parseDurationMinutesForGoal(text);
+            int minMinutes = DurationUtils.parseDurationMinutes(text, DurationUtils.DefaultUnit.HOURS);
             if (minMinutes <= 0) {
                 minMinutes = 450;
             }

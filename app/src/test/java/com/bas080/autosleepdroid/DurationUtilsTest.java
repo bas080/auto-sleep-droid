@@ -34,28 +34,28 @@ public class DurationUtilsTest {
     }
 
     @Test
-    public void testParseDurationMinutesForGoalPlainNumbersAsHours() {
+    public void testParseDurationMinutesWithHoursDefaultUnit() {
         // Plain integer represents hours
-        assertEquals(420, DurationUtils.parseDurationMinutesForGoal("7"));
-        assertEquals(60, DurationUtils.parseDurationMinutesForGoal("1"));
+        assertEquals(420, DurationUtils.parseDurationMinutes("7", DurationUtils.DefaultUnit.HOURS));
+        assertEquals(60, DurationUtils.parseDurationMinutes("1", DurationUtils.DefaultUnit.HOURS));
 
         // Plain float represents hours (e.g. 0.5 = 30m, 7.5 = 450m)
-        assertEquals(30, DurationUtils.parseDurationMinutesForGoal("0.5"));
-        assertEquals(30, DurationUtils.parseDurationMinutesForGoal("0,5"));
-        assertEquals(450, DurationUtils.parseDurationMinutesForGoal("7.5"));
-        assertEquals(450, DurationUtils.parseDurationMinutesForGoal("7,5"));
+        assertEquals(30, DurationUtils.parseDurationMinutes("0.5", DurationUtils.DefaultUnit.HOURS));
+        assertEquals(30, DurationUtils.parseDurationMinutes("0,5", DurationUtils.DefaultUnit.HOURS));
+        assertEquals(450, DurationUtils.parseDurationMinutes("7.5", DurationUtils.DefaultUnit.HOURS));
+        assertEquals(450, DurationUtils.parseDurationMinutes("7,5", DurationUtils.DefaultUnit.HOURS));
 
         // Explicit units override default
-        assertEquals(30, DurationUtils.parseDurationMinutesForGoal("30m"));
-        assertEquals(450, DurationUtils.parseDurationMinutesForGoal("450m"));
-        assertEquals(420, DurationUtils.parseDurationMinutesForGoal("7h"));
-        assertEquals(450, DurationUtils.parseDurationMinutesForGoal("7h 30m"));
-        assertEquals(450, DurationUtils.parseDurationMinutesForGoal("7h30m"));
+        assertEquals(30, DurationUtils.parseDurationMinutes("30m", DurationUtils.DefaultUnit.HOURS));
+        assertEquals(450, DurationUtils.parseDurationMinutes("450m", DurationUtils.DefaultUnit.HOURS));
+        assertEquals(420, DurationUtils.parseDurationMinutes("7h", DurationUtils.DefaultUnit.HOURS));
+        assertEquals(450, DurationUtils.parseDurationMinutes("7h 30m", DurationUtils.DefaultUnit.HOURS));
+        assertEquals(450, DurationUtils.parseDurationMinutes("7h30m", DurationUtils.DefaultUnit.HOURS));
 
         // Invalid inputs
-        assertEquals(-1, DurationUtils.parseDurationMinutesForGoal("abc"));
-        assertEquals(-1, DurationUtils.parseDurationMinutesForGoal(null));
-        assertEquals(-1, DurationUtils.parseDurationMinutesForGoal("  "));
-        assertEquals(-1, DurationUtils.parseDurationMinutesForGoal("0"));
+        assertEquals(-1, DurationUtils.parseDurationMinutes("abc", DurationUtils.DefaultUnit.HOURS));
+        assertEquals(-1, DurationUtils.parseDurationMinutes(null, DurationUtils.DefaultUnit.HOURS));
+        assertEquals(-1, DurationUtils.parseDurationMinutes("  ", DurationUtils.DefaultUnit.HOURS));
+        assertEquals(-1, DurationUtils.parseDurationMinutes("0", DurationUtils.DefaultUnit.HOURS));
     }
 }
