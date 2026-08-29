@@ -44,7 +44,7 @@
     <string name="toast_duration_invalid">Invalid duration</string>
     <string name="toast_timer_turned_on">Sleep timer turned on</string>
     <string name="toast_timer_turned_off">Sleep timer turned off</string>
-    <string name="toast_goal_set">Wake-up goal set for %1$s</string>
+    <string name="toast_goal_set">Wake-up goal set for %1$s (%2$s min sleep)</string>
     <string name="toast_goal_stopped">Wake-up goal stopped</string>
     <string name="toast_alarm_dismissed">Alarm dismissed</string>
     <string name="toast_alarm_snoozed">Alarm snoozed for 9m</string>

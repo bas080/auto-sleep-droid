@@ -115,7 +115,7 @@ public class GoalSettingsDialogActivity extends Activity {
         String formattedGoalTime = formatTime(goalHour, goalMinute);
         String formattedMinSleep = DurationUtils.formatDurationString(minSleepMinutes);
         EventLogger.log(this, "Smart Wake-Up Goal set to " + formattedGoalTime + " (min sleep: " + formattedMinSleep + ")");
-        android.widget.Toast.makeText(this, getString(R.string.toast_goal_set, formattedGoalTime), android.widget.Toast.LENGTH_SHORT).show();
+        android.widget.Toast.makeText(this, getString(R.string.toast_goal_set, formattedGoalTime, formattedMinSleep), android.widget.Toast.LENGTH_SHORT).show();
 
         Intent redrawIntent = new Intent(this, SleepTimerService.class);
         redrawIntent.setAction(SleepTimerService.ACTION_REDRAW_NOTIFICATION);
