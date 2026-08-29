@@ -32,9 +32,9 @@
     <string name="btn_clear_goal">Borrar objetivo</string>
     <string name="wake_up_goal_disabled">Objetivo de despertar desactivado</string>
     <string name="dialog_set_goal_title">Hora de despertar deseada</string>
-    <string name="dialog_goal_description">Programa una alarma a tu hora deseada, ajustándola para garantizar tu tiempo de sueño mínimo</string>
+    <string name="dialog_target_time_explanation">La alarma se ajusta automáticamente si te duermes tarde</string>
     <string name="dialog_min_sleep_title">Sueño mínimo</string>
-    <string name="dialog_min_sleep_explanation">Tiempo de sueño mínimo garantizado (ej. 7h 30m)</string>
+    <string name="dialog_min_sleep_explanation">Garantiza un tiempo mínimo de sueño (ej. 7h 30m)</string>
     <string name="dialog_ok">Aceptar</string>
     <string name="dialog_stop">Detener</string>
     <string name="dialog_cancel">Cancelar</string>

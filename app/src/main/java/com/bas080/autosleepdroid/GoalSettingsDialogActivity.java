@@ -29,37 +29,24 @@ public class GoalSettingsDialogActivity extends Activity {
         int defaultGoalMin = prefs.getInt("wake_up_goal_minute", 30);
         int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
 
-        TextView titleView = new TextView(this);
-        titleView.setText(R.string.dialog_set_goal_title);
-        titleView.setTextSize(18.0f);
-        titleView.setTypeface(null, Typeface.BOLD);
-        titleView.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-        titleView.setPadding(dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(8));
-
         ScrollView scrollView = new ScrollView(this);
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(dpToPx(20), dpToPx(8), dpToPx(20), dpToPx(8));
+        container.setPadding(dpToPx(20), dpToPx(16), dpToPx(20), dpToPx(8));
         scrollView.addView(container);
-
-        TextView descView = new TextView(this);
-        descView.setText(R.string.dialog_goal_description);
-        descView.setTextSize(13.0f);
-        descView.setTextColor(0xFF666666);
-        descView.setPadding(0, 0, 0, dpToPx(12));
-        container.addView(descView);
 
         TextView labelMinSleep = new TextView(this);
         labelMinSleep.setText(R.string.dialog_min_sleep_title);
-        labelMinSleep.setTextSize(14.0f);
+        labelMinSleep.setTextSize(15.0f);
         labelMinSleep.setTypeface(null, Typeface.BOLD);
-        labelMinSleep.setGravity(Gravity.START);
         container.addView(labelMinSleep);
 
-        LinearLayout minSleepRow = new LinearLayout(this);
-        minSleepRow.setOrientation(LinearLayout.HORIZONTAL);
-        minSleepRow.setGravity(Gravity.CENTER_VERTICAL);
-        minSleepRow.setPadding(0, dpToPx(4), 0, dpToPx(12));
+        TextView helperMinSleep = new TextView(this);
+        helperMinSleep.setText(R.string.dialog_min_sleep_explanation);
+        helperMinSleep.setTextSize(12.0f);
+        helperMinSleep.setTextColor(0xFF666666);
+        helperMinSleep.setPadding(0, dpToPx(2), 0, dpToPx(4));
+        container.addView(helperMinSleep);
 
         final EditText inputMinSleep = new EditText(this);
         inputMinSleep.setInputType(InputType.TYPE_CLASS_TEXT);
@@ -67,16 +54,21 @@ public class GoalSettingsDialogActivity extends Activity {
         inputMinSleep.setEms(6);
         inputMinSleep.setGravity(Gravity.START);
         inputMinSleep.setText(DurationUtils.formatDurationString(minSleepMin));
-        minSleepRow.addView(inputMinSleep);
+        container.addView(inputMinSleep);
 
-        TextView helperMinSleep = new TextView(this);
-        helperMinSleep.setText(R.string.dialog_min_sleep_explanation);
-        helperMinSleep.setTextSize(12.0f);
-        helperMinSleep.setTextColor(0xFF666666);
-        helperMinSleep.setPadding(dpToPx(12), 0, 0, 0);
-        minSleepRow.addView(helperMinSleep);
+        TextView labelTargetTime = new TextView(this);
+        labelTargetTime.setText(R.string.dialog_set_goal_title);
+        labelTargetTime.setTextSize(15.0f);
+        labelTargetTime.setTypeface(null, Typeface.BOLD);
+        labelTargetTime.setPadding(0, dpToPx(14), 0, 0);
+        container.addView(labelTargetTime);
 
-        container.addView(minSleepRow);
+        TextView helperTargetTime = new TextView(this);
+        helperTargetTime.setText(R.string.dialog_target_time_explanation);
+        helperTargetTime.setTextSize(12.0f);
+        helperTargetTime.setTextColor(0xFF666666);
+        helperTargetTime.setPadding(0, dpToPx(2), 0, dpToPx(4));
+        container.addView(helperTargetTime);
 
         final TimePicker timePicker = new TimePicker(this, null, 0, R.style.SpinnerTimePickerStyle);
         timePicker.setIs24HourView(false);
@@ -90,7 +82,6 @@ public class GoalSettingsDialogActivity extends Activity {
         container.addView(timePicker);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setCustomTitle(titleView);
         builder.setView(scrollView);
 
         builder.setPositiveButton(getString(R.string.dialog_ok), (dialog, which) -> {
