@@ -67,6 +67,21 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testFormatColoredEvent() {
+        CharSequence formatted = EventLogger.formatColoredEvent("8/29 14:30:00 Timer turned on");
+        assertNotNull(formatted);
+        assertTrue(formatted instanceof android.text.Spanned);
+
+        android.text.Spanned spanned = (android.text.Spanned) formatted;
+        android.text.style.ForegroundColorSpan[] colorSpans =
+                spanned.getSpans(0, spanned.length(), android.text.style.ForegroundColorSpan.class);
+        assertTrue(colorSpans.length >= 2);
+
+        assertEquals(0xFF888888, colorSpans[0].getForegroundColor());
+        assertEquals(0xFF000000, colorSpans[1].getForegroundColor());
+    }
+
+    @Test
     public void testNewIntentHandling() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();

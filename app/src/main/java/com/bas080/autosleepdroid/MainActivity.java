@@ -111,12 +111,12 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private void refreshEventLog() {
         List<String> events = EventLogger.getEvents(this);
-        StringBuilder sb = new StringBuilder();
+        android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder();
         for (String event : events) {
-            sb.append(event).append("\n");
+            ssb.append(EventLogger.formatColoredEvent(event)).append("\n");
         }
         if (eventLogText != null) {
-            eventLogText.setText(sb.toString());
+            eventLogText.setText(ssb);
             scrollToBottom();
         }
     }
@@ -124,7 +124,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     @Override
     public void onEventLogged(String event) {
         if (eventLogText != null) {
-            eventLogText.append(event + "\n");
+            eventLogText.append(EventLogger.formatColoredEvent(event));
+            eventLogText.append("\n");
             scrollToBottom();
         }
     }
