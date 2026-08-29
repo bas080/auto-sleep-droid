@@ -258,7 +258,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (input == null) {
             return -1;
         }
-        String s = input.trim().toLowerCase(java.util.Locale.US);
+        String s = input.replaceAll("\\s+", "").toLowerCase(java.util.Locale.US);
         if (s.isEmpty()) {
             return -1;
         }

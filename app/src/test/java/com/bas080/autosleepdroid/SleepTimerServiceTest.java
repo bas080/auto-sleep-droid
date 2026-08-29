@@ -105,6 +105,9 @@ public class SleepTimerServiceTest {
         assertEquals(60, SleepTimerService.parseDurationMinutes("1h"));
         assertEquals(120, SleepTimerService.parseDurationMinutes("2H"));
         assertEquals(135, SleepTimerService.parseDurationMinutes("2h15m"));
+        assertEquals(450, SleepTimerService.parseDurationMinutes("7h30m"));
+        assertEquals(450, SleepTimerService.parseDurationMinutes("7h 30m"));
+        assertEquals(75, SleepTimerService.parseDurationMinutes("1 h 15 m"));
         assertEquals(130, SleepTimerService.parseDurationMinutes("2h10m5s"));
         assertEquals(15, SleepTimerService.parseDurationMinutes("15m30s"));
         assertEquals(-1, SleepTimerService.parseDurationMinutes("10x10h4m"));
@@ -113,6 +116,54 @@ public class SleepTimerServiceTest {
         assertEquals(-1, SleepTimerService.parseDurationMinutes("abc"));
         assertEquals(-1, SleepTimerService.parseDurationMinutes(null));
         assertEquals(-1, SleepTimerService.parseDurationMinutes("  "));
+    }
+
+    @Test
+    public void testGoalSettingsDialogActivityWithDurationStrings() {
+        org.robolectric.android.controller.ActivityController<GoalSettingsDialogActivity> activityController =
+                Robolectric.buildActivity(GoalSettingsDialogActivity.class);
+        GoalSettingsDialogActivity activity = activityController.create().start().resume().get();
+        assertNotNull(activity);
+
+        android.widget.EditText inputMinSleep = null;
+        android.widget.LinearLayout container = (android.widget.LinearLayout)
+                activity.getWindow().getDecorView().findViewWithTag("container");
+
+        android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(dialog);
+
+        // Locate inputMinSleep from dialog view hierarchy
+        java.util.ArrayList<android.widget.EditText> editTexts = new java.util.ArrayList<>();
+        if (dialog.getWindow() != null) {
+            findViewsOfType(dialog.getWindow().getDecorView(), android.widget.EditText.class, editTexts);
+        }
+        assertFalse(editTexts.isEmpty());
+        inputMinSleep = editTexts.get(0);
+
+        // Verify initial text is formatted duration string (e.g., 7h 30m for default 450 min)
+        assertEquals("7h 30m", inputMinSleep.getText().toString());
+
+        inputMinSleep.setText("8h30m");
+
+        android.widget.Button okButton = dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
+        assertNotNull(okButton);
+        okButton.performClick();
+
+        org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+        assertEquals(510, preferences.getInt("min_sleep_duration_minutes", -1));
+        assertTrue(preferences.getBoolean("wake_up_goal_enabled", false));
+    }
+
+    private <T extends android.view.View> void findViewsOfType(android.view.View root, Class<T> clazz, java.util.List<T> outList) {
+        if (clazz.isInstance(root)) {
+            outList.add(clazz.cast(root));
+        }
+        if (root instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) root;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                findViewsOfType(group.getChildAt(i), clazz, outList);
+            }
+        }
     }
 
     @Test

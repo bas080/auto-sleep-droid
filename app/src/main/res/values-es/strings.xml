@@ -32,7 +32,7 @@
     <string name="btn_clear_goal">Borrar objetivo</string>
     <string name="wake_up_goal_disabled">Objetivo de despierto: Desactivado</string>
     <string name="dialog_set_goal_title">Configurar hora de objetivo de despierto</string>
-    <string name="dialog_min_sleep_title">Duración mínima de sueño (horas)</string>
+    <string name="dialog_min_sleep_title">Duración mínima de sueño</string>
     <string name="dialog_ok">Aceptar</string>
     <string name="dialog_stop">Detener</string>
     <string name="dialog_cancel">Cancelar</string>
