@@ -49,17 +49,18 @@ public class DurationUtils {
 
             Matcher m;
 
-            m = Pattern.compile("^([0-9]+)h$").matcher(s);
+            m = Pattern.compile("^([0-9]+([.,][0-9]+)?)h$").matcher(s);
             if (m.matches()) {
-                long hours = Long.parseLong(m.group(1));
-                long total = hours * 60L;
+                double hours = Double.parseDouble(m.group(1).replace(',', '.'));
+                long total = Math.round(hours * 60.0);
                 return (total > 0 && total <= Integer.MAX_VALUE) ? (int) total : -1;
             }
 
-            m = Pattern.compile("^([0-9]+)m$").matcher(s);
+            m = Pattern.compile("^([0-9]+([.,][0-9]+)?)m$").matcher(s);
             if (m.matches()) {
-                long mins = Long.parseLong(m.group(1));
-                return (mins > 0 && mins <= Integer.MAX_VALUE) ? (int) mins : -1;
+                double mins = Double.parseDouble(m.group(1).replace(',', '.'));
+                long total = Math.round(mins);
+                return (total > 0 && total <= Integer.MAX_VALUE) ? (int) total : -1;
             }
 
             m = Pattern.compile("^([0-9]+)h([0-9]+)m$").matcher(s);
