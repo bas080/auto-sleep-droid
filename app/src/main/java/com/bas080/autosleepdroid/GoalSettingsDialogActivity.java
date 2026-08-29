@@ -78,7 +78,7 @@ public class GoalSettingsDialogActivity extends Activity {
 
         container.addView(minSleepRow);
 
-        final TimePicker timePicker = new TimePicker(this);
+        final TimePicker timePicker = new TimePicker(this, null, 0, R.style.SpinnerTimePickerStyle);
         timePicker.setIs24HourView(false);
         if (Build.VERSION.SDK_INT >= 23) {
             timePicker.setHour(defaultGoalHour);
