@@ -107,10 +107,6 @@ public class EventLogger {
         int secondSpaceIdx = spaceIdx != -1 ? line.indexOf(' ', spaceIdx + 1) : -1;
         int timestampEnd = secondSpaceIdx != -1 ? secondSpaceIdx : (spaceIdx != -1 ? spaceIdx : 0);
 
-        if (timestampEnd > 0) {
-            spannable.setSpan(new ForegroundColorSpan(0xFF888888), 0, timestampEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
-
         int levelStart = timestampEnd < line.length() ? timestampEnd : 0;
         int levelEnd = levelStart;
 
@@ -131,6 +127,10 @@ public class EventLogger {
         }
 
         int messageStart = levelEnd < line.length() ? levelEnd : levelStart;
+
+        if (messageStart > 0) {
+            spannable.setSpan(new ForegroundColorSpan(0xFF999999), 0, messageStart, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
 
         spannable.setSpan(new ForegroundColorSpan(textColor), messageStart, line.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         if (isBold) {

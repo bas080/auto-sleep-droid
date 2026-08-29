@@ -77,7 +77,7 @@ public class MainActivityTest {
                 spanned.getSpans(0, spanned.length(), android.text.style.ForegroundColorSpan.class);
         assertTrue(colorSpans.length >= 2);
 
-        assertEquals(0xFF888888, colorSpans[0].getForegroundColor());
+        assertEquals(0xFF999999, colorSpans[0].getForegroundColor());
         assertEquals(0xFF000000, colorSpans[1].getForegroundColor());
     }
 
