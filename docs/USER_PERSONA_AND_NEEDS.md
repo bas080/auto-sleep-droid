@@ -35,9 +35,9 @@ Built-in sleep timers inside media apps suffer from two major flaws:
 ### Persona B: Sam — "The Sleep Schedule Disciplinarian"
 * **Demographics**: 35 years old, Project Manager & Parent.
 * **Bedtime Routine**: Goes to bed at varying times depending on family schedule, but must wake up early for work.
-* **Goal**: Get at least 7.5 hours of sleep each night and ensure an alarm wakes her up in time.
+* **Goal**: Get at least 7.5 hours of overnight sleep each night and ensure an alarm wakes her up in time for work.
 * **Pain Point**: "When I go to bed late, if I set a fixed 6:30 AM alarm, I won't get enough sleep. But if I set a timer for 8 hours, I might oversleep my meeting."
-* **Auto Sleep Droid Solution**: Uses the **Smart Wake-Up Goal** feature. Auto Sleep Droid calculates `Math.max(desiredWakeTime, bedtime + timerDuration + minSleepSafeguard)` and schedules a system wake-up alarm automatically.
+* **Auto Sleep Droid Solution**: Uses the **Smart Wake-Up Goal** feature designed for overnight sleep schedules. Auto Sleep Droid calculates `Math.max(desiredWakeTime, bedtime + timerDuration + minSleepSafeguard)` and schedules a system wake-up alarm automatically. *(Note: Short daytime power naps are out of scope for the Smart Wake-Up Goal feature; see `docs/NAP_FEATURE_OPTIONS.md` for nap feature research).*
 
 ### Persona C: Morgan — "The Low-Friction Minimalist"
 * **Demographics**: 42 years old, Teacher.
@@ -56,7 +56,7 @@ Built-in sleep timers inside media apps suffer from two major flaws:
 | **Effortless Extension** | Extending an expired timer requires unlocking the phone and navigating UIs. | Flip phone gesture (face-up <-> face-down) resets timer instantly in the dark. |
 | **Gentle Transitions** | Sudden audio pauses jar the user awake. | Smooth 30-second volume fade-out along an ease-out curve before pausing. |
 | **Natural Time Formatting** | Numeric-only inputs require calculating minutes vs hours. | Natural duration format parsing (`20m`, `1h`, `1h 15m`, `7h 30m`, `0.5h`). |
-| **Wake-Up Safeguard** | Fixed alarms don't adapt to late bedtimes; sleep timers don't guarantee wake times. | Smart Wake-Up Goal dynamically schedules alarm respecting minimum sleep duration. |
+| **Overnight Wake-Up Safeguard** | Fixed alarms don't adapt to late bedtimes; sleep timers don't guarantee wake times. | Smart Wake-Up Goal dynamically schedules alarm respecting minimum sleep duration for overnight sleep. |
 
 ---
 
@@ -71,8 +71,8 @@ Users expect bedtime tools to be unobtrusive. Heads-up banners, loud notificatio
 ### 3. "If I'm still awake, I want a physical gesture"
 When a user feels the volume fading down while still awake, their reasoning is tactile: "I don't want to open my eyes or look at light." Flipping the phone over on the nightstand cancels the fade, restores pre-fade volume, and resets the countdown without visual engagement.
 
-### 4. "Protect my minimum sleep"
-When configuring a wake-up goal (e.g. `6:30 AM`), the user reasons: "I want to wake up at 6:30 AM, but if I fall asleep at 1:00 AM, I need at least 7.5 hours of sleep." The app automatically enforces `min_sleep_duration_minutes` so the alarm dynamically shifts if bedtime is delayed.
+### 4. "Protect my minimum overnight sleep"
+When configuring a wake-up goal (e.g. `6:30 AM`), the user reasons: "I want to wake up at 6:30 AM, but if I fall asleep at 1:00 AM, I need at least 7.5 hours of sleep." The app automatically enforces `min_sleep_duration_minutes` so the alarm dynamically shifts if bedtime is delayed. (Daytime power naps are intentionally distinct and unsupported by this overnight feature; see research in `docs/NAP_FEATURE_OPTIONS.md`).
 
 ---
 
@@ -110,6 +110,17 @@ When configuring a wake-up goal (e.g. `6:30 AM`), the user reasons: "I want to w
 
 ---
 
-## 6. Summary
+## 6. Feature Scope & Out-of-Scope Clarification
+
+- **Supported Use Cases**:
+  - Sleep timer for media playback auto-pause.
+  - Flip gesture timer extension.
+  - Smart Wake-Up Goal for overnight sleep schedule safeguard.
+- **Explicitly Unsupported / Future Research**:
+  - **Daytime Power Naps**: Short daytime naps (e.g., 20-30 minute power naps relative to sleep start) are not covered by the Smart Wake-Up Goal. Feature research and architectural options for power naps are documented separately in `docs/NAP_FEATURE_OPTIONS.md`.
+
+---
+
+## 7. Summary
 
 Auto Sleep Droid fulfills the needs of nighttime media listeners by providing a frictionless, screen-free sleep management experience. By combining notification shade controls, natural duration parsing (`7h 30m`, `0.5h`), gesture-based timer extension, and dynamic wake-up goal safeguards, the app aligns perfectly with the nighttime mental model of its users.
