@@ -32,7 +32,9 @@
     <string name="btn_clear_goal">Clear Goal</string>
     <string name="wake_up_goal_disabled">Wake-up goal disabled</string>
     <string name="dialog_set_goal_title">Target wake-up time</string>
+    <string name="dialog_goal_description">Schedules an alarm for your target wake time, adjusting automatically to guarantee your minimum sleep duration</string>
     <string name="dialog_min_sleep_title">Minimum sleep</string>
+    <string name="dialog_min_sleep_explanation">Guaranteed sleep safeguard (e.g. 7h 30m)</string>
     <string name="dialog_ok">OK</string>
     <string name="dialog_stop">Stop</string>
     <string name="dialog_cancel">Cancel</string>
