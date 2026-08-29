@@ -119,10 +119,14 @@ public class GoalSettingsDialogActivity extends Activity {
 
         Intent redrawIntent = new Intent(this, SleepTimerService.class);
         redrawIntent.setAction(SleepTimerService.ACTION_REDRAW_NOTIFICATION);
-        if (Build.VERSION.SDK_INT >= 26) {
-            startForegroundService(redrawIntent);
-        } else {
-            startService(redrawIntent);
+        try {
+            if (Build.VERSION.SDK_INT >= 26) {
+                startForegroundService(redrawIntent);
+            } else {
+                startService(redrawIntent);
+            }
+        } catch (Exception e) {
+            EventLogger.log(this, "Failed to redraw notification service: " + e.getMessage());
         }
     }
 
@@ -135,10 +139,14 @@ public class GoalSettingsDialogActivity extends Activity {
 
         Intent clearIntent = new Intent(this, SleepTimerService.class);
         clearIntent.setAction(SleepTimerService.ACTION_CLEAR_GOAL);
-        if (Build.VERSION.SDK_INT >= 26) {
-            startForegroundService(clearIntent);
-        } else {
-            startService(clearIntent);
+        try {
+            if (Build.VERSION.SDK_INT >= 26) {
+                startForegroundService(clearIntent);
+            } else {
+                startService(clearIntent);
+            }
+        } catch (Exception e) {
+            EventLogger.log(this, "Failed to clear goal service: " + e.getMessage());
         }
 
         EventLogger.log(this, "Smart Wake-Up Goal cleared");

@@ -787,7 +787,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private void updateNotification() {
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) {
-            manager.notify(NOTIFICATION_ID, buildNotification());
+            Notification notification = buildNotification();
+            try {
+                startForeground(NOTIFICATION_ID, notification);
+            } catch (Exception e) {
+                EventLogger.log(this, "Failed to startForeground in updateNotification: " + e.getMessage());
+            }
+            manager.notify(NOTIFICATION_ID, notification);
         }
     }
 
