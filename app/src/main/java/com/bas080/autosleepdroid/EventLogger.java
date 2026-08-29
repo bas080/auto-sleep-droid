@@ -2,8 +2,13 @@ package com.bas080.autosleepdroid;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -65,6 +70,44 @@ public class EventLogger {
     public static synchronized List<String> getEvents(Context context) {
         ensureLoaded(context);
         return Collections.unmodifiableList(new ArrayList<>(events));
+    }
+
+    public static CharSequence formatColoredEvent(String line) {
+        if (line == null || line.isEmpty()) {
+            return "";
+        }
+        SpannableString spannable = new SpannableString(line);
+        int spaceIdx = line.indexOf(' ');
+        int secondSpaceIdx = spaceIdx != -1 ? line.indexOf(' ', spaceIdx + 1) : -1;
+        int timestampEnd = secondSpaceIdx != -1 ? secondSpaceIdx : (spaceIdx != -1 ? spaceIdx : 0);
+
+        if (timestampEnd > 0) {
+            spannable.setSpan(new ForegroundColorSpan(0xFF888888), 0, timestampEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+
+        int messageStart = timestampEnd < line.length() ? timestampEnd : 0;
+        String message = line.substring(messageStart);
+
+        int textColor = 0xFF444444;
+        boolean isBold = false;
+
+        String lower = message.toLowerCase(Locale.US);
+        if (lower.contains("mainactivity") || lower.contains("created") || lower.contains("resumed")
+                || lower.contains("paused") || lower.contains("destroyed") || lower.contains("permission")) {
+            textColor = 0xFF888888;
+        } else if (lower.contains("timer turned") || lower.contains("duration set") || lower.contains("fade-out")
+                || lower.contains("expired") || lower.contains("wake-up goal") || lower.contains("alarm")
+                || lower.contains("crash")) {
+            textColor = 0xFF000000;
+            isBold = true;
+        }
+
+        spannable.setSpan(new ForegroundColorSpan(textColor), messageStart, line.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        if (isBold) {
+            spannable.setSpan(new StyleSpan(Typeface.BOLD), messageStart, line.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+
+        return spannable;
     }
 
     public static synchronized void clear(Context context) {
