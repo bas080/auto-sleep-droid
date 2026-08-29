@@ -4,16 +4,17 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.Gravity;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.TimePicker;
 
 import java.util.Calendar;
-import java.util.Locale;
 
 public class GoalSettingsDialogActivity extends Activity {
 
@@ -27,22 +28,34 @@ public class GoalSettingsDialogActivity extends Activity {
         int defaultGoalMin = prefs.getInt("wake_up_goal_minute", 30);
         int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
 
+        TextView titleView = new TextView(this);
+        titleView.setText(R.string.dialog_set_goal_title);
+        titleView.setTextSize(18.0f);
+        titleView.setTypeface(null, Typeface.BOLD);
+        titleView.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        titleView.setPadding(dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(8));
+
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(32, 16, 32, 16);
+        container.setPadding(dpToPx(20), dpToPx(8), dpToPx(20), dpToPx(8));
 
         TextView labelMinSleep = new TextView(this);
         labelMinSleep.setText(R.string.dialog_min_sleep_title);
         labelMinSleep.setTextSize(14.0f);
+        labelMinSleep.setGravity(Gravity.START);
+        labelMinSleep.setPadding(0, dpToPx(4), 0, dpToPx(4));
         container.addView(labelMinSleep);
 
         final EditText inputMinSleep = new EditText(this);
         inputMinSleep.setInputType(InputType.TYPE_CLASS_TEXT);
+        inputMinSleep.setSingleLine(true);
+        inputMinSleep.setGravity(Gravity.START);
         inputMinSleep.setText(DurationUtils.formatDurationString(minSleepMin));
         container.addView(inputMinSleep);
 
         final TimePicker timePicker = new TimePicker(this);
         timePicker.setIs24HourView(false);
+        timePicker.setPadding(0, dpToPx(12), 0, 0);
         if (Build.VERSION.SDK_INT >= 23) {
             timePicker.setHour(defaultGoalHour);
             timePicker.setMinute(defaultGoalMin);
@@ -53,7 +66,7 @@ public class GoalSettingsDialogActivity extends Activity {
         container.addView(timePicker);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(getString(R.string.dialog_set_goal_title));
+        builder.setCustomTitle(titleView);
         builder.setView(container);
 
         builder.setPositiveButton(getString(R.string.dialog_ok), (dialog, which) -> {
@@ -82,6 +95,11 @@ public class GoalSettingsDialogActivity extends Activity {
         if (!goalEnabled) {
             alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);
         }
+    }
+
+    private int dpToPx(int dp) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(dp * density);
     }
 
     private void saveWakeUpGoal(int goalHour, int goalMinute, int minSleepMinutes) {
