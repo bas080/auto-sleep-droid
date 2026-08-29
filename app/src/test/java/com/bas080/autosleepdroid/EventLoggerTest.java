@@ -13,6 +13,7 @@ import org.robolectric.annotation.Config;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -40,6 +41,8 @@ public class EventLoggerTest {
         // Check LEVEL_LOW line format and span color
         CharSequence formattedLow = EventLogger.formatColoredEvent(events.get(0));
         assertTrue(formattedLow instanceof Spanned);
+        assertFalse(formattedLow.toString().contains("[L]"));
+        assertTrue(formattedLow.toString().contains("Low importance message"));
         ForegroundColorSpan[] lowSpans = ((Spanned) formattedLow).getSpans(0, formattedLow.length(), ForegroundColorSpan.class);
         assertTrue(lowSpans.length >= 2);
         assertEquals(0xFF999999, lowSpans[0].getForegroundColor());
@@ -48,6 +51,8 @@ public class EventLoggerTest {
         // Check LEVEL_NORMAL line format and span color
         CharSequence formattedNormal = EventLogger.formatColoredEvent(events.get(1));
         assertTrue(formattedNormal instanceof Spanned);
+        assertFalse(formattedNormal.toString().contains("[N]"));
+        assertTrue(formattedNormal.toString().contains("Normal importance message"));
         ForegroundColorSpan[] normalSpans = ((Spanned) formattedNormal).getSpans(0, formattedNormal.length(), ForegroundColorSpan.class);
         assertTrue(normalSpans.length >= 2);
         assertEquals(0xFF999999, normalSpans[0].getForegroundColor());
@@ -56,6 +61,8 @@ public class EventLoggerTest {
         // Check LEVEL_HIGH line format and span color
         CharSequence formattedHigh = EventLogger.formatColoredEvent(events.get(2));
         assertTrue(formattedHigh instanceof Spanned);
+        assertFalse(formattedHigh.toString().contains("[H]"));
+        assertTrue(formattedHigh.toString().contains("High importance message"));
         ForegroundColorSpan[] highSpans = ((Spanned) formattedHigh).getSpans(0, formattedHigh.length(), ForegroundColorSpan.class);
         assertTrue(highSpans.length >= 2);
         assertEquals(0xFF999999, highSpans[0].getForegroundColor());

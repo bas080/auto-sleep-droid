@@ -68,9 +68,10 @@ public class MainActivityTest {
 
     @Test
     public void testFormatColoredEvent() {
-        CharSequence formatted = EventLogger.formatColoredEvent("8/29 14:30:00 [H] Timer turned on");
+        CharSequence formatted = EventLogger.formatColoredEvent("8/29 14:30:00 \u0002Timer turned on");
         assertNotNull(formatted);
         assertTrue(formatted instanceof android.text.Spanned);
+        assertFalse(formatted.toString().contains("\u0002"));
 
         android.text.Spanned spanned = (android.text.Spanned) formatted;
         android.text.style.ForegroundColorSpan[] colorSpans =
