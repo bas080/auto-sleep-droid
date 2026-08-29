@@ -13,7 +13,7 @@ public class AutoSleepApplication extends Application {
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
             try {
                 String logMsg = "CRASH on thread '" + thread.getName() + "': " + Log.getStackTraceString(throwable);
-                EventLogger.log(this, logMsg);
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, logMsg);
             } catch (Throwable ignored) {
             }
             if (defaultHandler != null) {
