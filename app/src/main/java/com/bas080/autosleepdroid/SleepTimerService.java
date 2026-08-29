@@ -86,7 +86,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onCreate() {
         super.onCreate();
-        EventLogger.log(this, "SleepTimerService created");
+        EventLogger.log(this, EventLogger.LEVEL_LOW, "SleepTimerService created");
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         alarmManager = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
         preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
@@ -197,35 +197,35 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
             if (ACTION_TURN_OFF.equals(intent.getAction())) {
-                EventLogger.log(this, "Timer turned off");
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer turned off");
                 stateMachine.handleTurnOff(true);
                 android.widget.Toast.makeText(this, R.string.toast_timer_turned_off, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_TURN_ON.equals(intent.getAction())) {
-                EventLogger.log(this, "Timer turned on");
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer turned on");
                 boolean musicActive = audioManager != null && audioManager.isMusicActive();
                 stateMachine.handleTurnOn(musicActive, System.currentTimeMillis(), true);
                 android.widget.Toast.makeText(this, R.string.toast_timer_turned_on, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_SET_DURATION.equals(intent.getAction())) {
                 handleDurationReply(intent);
             } else if (ACTION_ALARM_EXPIRY.equals(intent.getAction())) {
-                EventLogger.log(this, "AlarmManager trigger received");
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "AlarmManager trigger received");
                 int currentVol = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
                 stateMachine.handleAlarmExpiry(currentVol);
             } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
-                EventLogger.log(this, "Auto Sleep wake-up alarm triggered");
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep wake-up alarm triggered");
                 isWakeUpAlarmRinging = true;
                 updateListenersRegistration();
                 playWakeUpAlarmSound();
                 showWakeUpAlarmNotification();
             } else if (ACTION_DISMISS_WAKEUP_ALARM.equals(intent.getAction())) {
-                EventLogger.log(this, "Wake-Up Goal alarm dismissed");
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed");
                 stopWakeUpAlarmSound();
                 cancelWakeUpAlarmNotification();
                 isWakeUpAlarmRinging = false;
                 updateListenersRegistration();
                 android.widget.Toast.makeText(this, R.string.toast_alarm_dismissed, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_SNOOZE_WAKEUP_ALARM.equals(intent.getAction())) {
-                EventLogger.log(this, "Wake-Up Goal alarm snoozed for 9m");
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed for 9m");
                 stopWakeUpAlarmSound();
                 cancelWakeUpAlarmNotification();
                 snoozeWakeUpAlarm();
@@ -259,7 +259,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         boolean musicActive = audioManager != null && audioManager.isMusicActive();
         stateMachine.handleDurationReply(duration, musicActive, System.currentTimeMillis(), true);
-        EventLogger.log(this, "Duration set to " + stateMachine.getConfiguredDurationMinutes() + "m (input: '" + reply + "')");
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Duration set to " + stateMachine.getConfiguredDurationMinutes() + "m (input: '" + reply + "')");
 
         if (duration != -1) {
             String formattedStr = formatDurationString(stateMachine.getConfiguredDurationMinutes());
@@ -270,7 +270,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void startFadeRunnable() {
-        EventLogger.log(this, "Fade-out started");
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Fade-out started");
         fadeRunnable = this::runFadeStep;
         handler.post(fadeRunnable);
     }
@@ -402,7 +402,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     @Override
     public void onPauseMedia() {
-        EventLogger.log(this, "Timer expired: pausing media");
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer expired: pausing media");
         pauseMediaViaAudioFocus();
 
         restoreVolumeRunnable = () -> stateMachine.restoreVolumeAfterPause();
@@ -891,7 +891,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     @Override
     public void onDestroy() {
-        EventLogger.log(this, "SleepTimerService destroyed");
+        EventLogger.log(this, EventLogger.LEVEL_LOW, "SleepTimerService destroyed");
         stopWakeUpAlarmSound();
         cancelWakeUpAlarmNotification();
         isWakeUpAlarmRinging = false;

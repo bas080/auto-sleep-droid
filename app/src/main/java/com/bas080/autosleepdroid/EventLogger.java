@@ -18,6 +18,10 @@ import java.util.List;
 import java.util.Locale;
 
 public class EventLogger {
+    public static final int LEVEL_LOW = 0;
+    public static final int LEVEL_NORMAL = 1;
+    public static final int LEVEL_HIGH = 2;
+
     private static final String PREF_NAME = "event_logger";
     private static final String KEY_LOGS = "logs";
     private static final int MAX_LOGS = 500;
@@ -34,7 +38,7 @@ public class EventLogger {
         listener = l;
     }
 
-    public static synchronized void log(Context context, String message) {
+    public static synchronized void log(Context context, int level, String message) {
         if (context != null && appContext == null) {
             appContext = context.getApplicationContext();
         }
@@ -42,7 +46,21 @@ public class EventLogger {
         ensureLoaded(targetContext);
 
         String timestamp = new SimpleDateFormat("M/d HH:mm:ss", Locale.US).format(new Date());
-        String line = timestamp + " " + message;
+        String tag;
+        switch (level) {
+            case LEVEL_LOW:
+                tag = "[L]";
+                break;
+            case LEVEL_HIGH:
+                tag = "[H]";
+                break;
+            case LEVEL_NORMAL:
+            default:
+                tag = "[N]";
+                break;
+        }
+
+        String line = timestamp + " " + tag + " " + message;
 
         events.add(line);
         if (events.size() > MAX_LOGS) {
@@ -63,8 +81,16 @@ public class EventLogger {
         }
     }
 
+    public static synchronized void log(Context context, String message) {
+        log(context, LEVEL_NORMAL, message);
+    }
+
+    public static synchronized void log(int level, String message) {
+        log(null, level, message);
+    }
+
     public static synchronized void log(String message) {
-        log(null, message);
+        log(null, LEVEL_NORMAL, message);
     }
 
     public static synchronized List<String> getEvents(Context context) {
@@ -85,22 +111,26 @@ public class EventLogger {
             spannable.setSpan(new ForegroundColorSpan(0xFF888888), 0, timestampEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
 
-        int messageStart = timestampEnd < line.length() ? timestampEnd : 0;
-        String message = line.substring(messageStart);
+        int levelStart = timestampEnd < line.length() ? timestampEnd : 0;
+        int levelEnd = levelStart;
 
         int textColor = 0xFF444444;
         boolean isBold = false;
 
-        String lower = message.toLowerCase(Locale.US);
-        if (lower.contains("mainactivity") || lower.contains("created") || lower.contains("resumed")
-                || lower.contains("paused") || lower.contains("destroyed") || lower.contains("permission")) {
+        String rest = line.substring(levelStart).trim();
+        if (rest.startsWith("[L]")) {
             textColor = 0xFF888888;
-        } else if (lower.contains("timer turned") || lower.contains("duration set") || lower.contains("fade-out")
-                || lower.contains("expired") || lower.contains("wake-up goal") || lower.contains("alarm")
-                || lower.contains("crash")) {
+            levelEnd = line.indexOf("[L]", levelStart) + 3;
+        } else if (rest.startsWith("[H]")) {
             textColor = 0xFF000000;
             isBold = true;
+            levelEnd = line.indexOf("[H]", levelStart) + 3;
+        } else if (rest.startsWith("[N]")) {
+            textColor = 0xFF444444;
+            levelEnd = line.indexOf("[N]", levelStart) + 3;
         }
+
+        int messageStart = levelEnd < line.length() ? levelEnd : levelStart;
 
         spannable.setSpan(new ForegroundColorSpan(textColor), messageStart, line.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         if (isBold) {

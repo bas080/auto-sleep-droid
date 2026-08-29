@@ -25,7 +25,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         scrollView = findViewById(R.id.event_scroll_view);
         eventLogText = findViewById(R.id.event_log_text);
 
-        EventLogger.log(this, "MainActivity created");
+        EventLogger.log(this, EventLogger.LEVEL_LOW, "MainActivity created");
 
         startOrRequestNotificationPermission();
         requestExactAlarmPermissionIfNeeded();
@@ -35,7 +35,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (Build.VERSION.SDK_INT >= 31) {
             android.app.AlarmManager alarmManager = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
             if (alarmManager != null && !alarmManager.canScheduleExactAlarms()) {
-                EventLogger.log(this, "Opening exact alarm settings");
+                EventLogger.log(this, EventLogger.LEVEL_LOW, "Opening exact alarm settings");
                 Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
                 intent.setData(android.net.Uri.parse("package:" + getPackageName()));
                 startActivity(intent);
@@ -47,14 +47,14 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        EventLogger.log(this, "MainActivity new intent");
+        EventLogger.log(this, EventLogger.LEVEL_LOW, "MainActivity new intent");
         startOrRequestNotificationPermission();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        EventLogger.log(this, "MainActivity resumed");
+        EventLogger.log(this, EventLogger.LEVEL_LOW, "MainActivity resumed");
         EventLogger.setListener(this);
         refreshEventLog();
         redrawNotification();
@@ -73,7 +73,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     @Override
     protected void onPause() {
         super.onPause();
-        EventLogger.log(this, "MainActivity paused");
+        EventLogger.log(this, EventLogger.LEVEL_LOW, "MainActivity paused");
         EventLogger.setListener(null);
     }
 
@@ -81,7 +81,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
-            EventLogger.log(this, "Requesting notification permission");
+            EventLogger.log(this, EventLogger.LEVEL_LOW, "Requesting notification permission");
             requestPermissions(
                     new String[]{Manifest.permission.POST_NOTIFICATIONS},
                     NOTIFICATION_PERMISSION_REQUEST);
@@ -95,7 +95,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-            EventLogger.log(this, "Notification permission granted: " + granted);
+            EventLogger.log(this, EventLogger.LEVEL_LOW, "Notification permission granted: " + granted);
             startOrRequestNotificationPermission();
         }
     }

@@ -68,7 +68,7 @@ public class MainActivityTest {
 
     @Test
     public void testFormatColoredEvent() {
-        CharSequence formatted = EventLogger.formatColoredEvent("8/29 14:30:00 Timer turned on");
+        CharSequence formatted = EventLogger.formatColoredEvent("8/29 14:30:00 [H] Timer turned on");
         assertNotNull(formatted);
         assertTrue(formatted instanceof android.text.Spanned);
 
