@@ -38,7 +38,7 @@ public class GoalSettingsDialogActivity extends Activity {
 
         final EditText inputMinSleep = new EditText(this);
         inputMinSleep.setInputType(InputType.TYPE_CLASS_TEXT);
-        inputMinSleep.setText(SleepTimerService.formatDurationString(minSleepMin));
+        inputMinSleep.setText(DurationUtils.formatDurationString(minSleepMin));
         container.addView(inputMinSleep);
 
         final TimePicker timePicker = new TimePicker(this);
@@ -58,18 +58,7 @@ public class GoalSettingsDialogActivity extends Activity {
 
         builder.setPositiveButton(getString(R.string.dialog_ok), (dialog, which) -> {
             String text = inputMinSleep.getText().toString().trim();
-            int minMinutes = SleepTimerService.parseDurationMinutes(text);
-            if (minMinutes <= 0) {
-                if (!text.isEmpty()) {
-                    try {
-                        double hours = Double.parseDouble(text.replace(',', '.'));
-                        if (hours > 0) {
-                            minMinutes = (int) Math.round(hours * 60.0);
-                        }
-                    } catch (NumberFormatException ignored) {
-                    }
-                }
-            }
+            int minMinutes = DurationUtils.parseDurationMinutesForGoal(text);
             if (minMinutes <= 0) {
                 minMinutes = 450;
             }
@@ -106,7 +95,7 @@ public class GoalSettingsDialogActivity extends Activity {
                 .apply();
 
         String formattedGoalTime = formatTime(goalHour, goalMinute);
-        String formattedMinSleep = SleepTimerService.formatDurationString(minSleepMinutes);
+        String formattedMinSleep = DurationUtils.formatDurationString(minSleepMinutes);
         EventLogger.log(this, "Smart Wake-Up Goal set to " + formattedGoalTime + " (min sleep: " + formattedMinSleep + ")");
         android.widget.Toast.makeText(this, getString(R.string.toast_goal_set, formattedGoalTime), android.widget.Toast.LENGTH_SHORT).show();
 

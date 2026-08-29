@@ -119,15 +119,13 @@ public class SleepTimerServiceTest {
     }
 
     @Test
-    public void testGoalSettingsDialogActivityWithDurationStrings() {
+    public void testGoalSettingsDialogActivityWithFloatAndDurationStrings() {
         org.robolectric.android.controller.ActivityController<GoalSettingsDialogActivity> activityController =
                 Robolectric.buildActivity(GoalSettingsDialogActivity.class);
         GoalSettingsDialogActivity activity = activityController.create().start().resume().get();
         assertNotNull(activity);
 
         android.widget.EditText inputMinSleep = null;
-        android.widget.LinearLayout container = (android.widget.LinearLayout)
-                activity.getWindow().getDecorView().findViewWithTag("container");
 
         android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
         assertNotNull(dialog);
@@ -143,14 +141,15 @@ public class SleepTimerServiceTest {
         // Verify initial text is formatted duration string (e.g., 7h 30m for default 450 min)
         assertEquals("7h 30m", inputMinSleep.getText().toString());
 
-        inputMinSleep.setText("8h30m");
+        // Test float hours input "0.5" -> 30 min
+        inputMinSleep.setText("0.5");
 
         android.widget.Button okButton = dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
         assertNotNull(okButton);
         okButton.performClick();
 
         org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
-        assertEquals(510, preferences.getInt("min_sleep_duration_minutes", -1));
+        assertEquals(30, preferences.getInt("min_sleep_duration_minutes", -1));
         assertTrue(preferences.getBoolean("wake_up_goal_enabled", false));
     }
 
