@@ -243,80 +243,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     public static String formatDurationString(int totalMinutes) {
-        if (totalMinutes < 60) {
-            return totalMinutes + "m";
-        }
-        int hours = totalMinutes / 60;
-        int mins = totalMinutes % 60;
-        if (mins == 0) {
-            return hours + "h";
-        }
-        return hours + "h " + mins + "m";
+        return DurationUtils.formatDurationString(totalMinutes);
     }
 
     public static int parseDurationMinutes(String input) {
-        if (input == null) {
-            return -1;
-        }
-        String s = input.replaceAll("\\s+", "").toLowerCase(java.util.Locale.US);
-        if (s.isEmpty()) {
-            return -1;
-        }
-
-        try {
-            if (s.matches("^[0-9]+$")) {
-                long val = Long.parseLong(s);
-                return (val > 0 && val <= Integer.MAX_VALUE) ? (int) val : -1;
-            }
-
-            java.util.regex.Matcher m;
-
-            m = java.util.regex.Pattern.compile("^([0-9]+)h$").matcher(s);
-            if (m.matches()) {
-                long hours = Long.parseLong(m.group(1));
-                long total = hours * 60L;
-                return (total > 0 && total <= Integer.MAX_VALUE) ? (int) total : -1;
-            }
-
-            m = java.util.regex.Pattern.compile("^([0-9]+)m$").matcher(s);
-            if (m.matches()) {
-                long mins = Long.parseLong(m.group(1));
-                return (mins > 0 && mins <= Integer.MAX_VALUE) ? (int) mins : -1;
-            }
-
-            m = java.util.regex.Pattern.compile("^([0-9]+)h([0-9]+)m$").matcher(s);
-            if (m.matches()) {
-                long hours = Long.parseLong(m.group(1));
-                long mins = Long.parseLong(m.group(2));
-                long total = hours * 60L + mins;
-                return (total > 0 && total <= Integer.MAX_VALUE) ? (int) total : -1;
-            }
-
-            m = java.util.regex.Pattern.compile("^([0-9]+)m[0-9]+s$").matcher(s);
-            if (m.matches()) {
-                long mins = Long.parseLong(m.group(1));
-                return (mins > 0 && mins <= Integer.MAX_VALUE) ? (int) mins : -1;
-            }
-
-            m = java.util.regex.Pattern.compile("^([0-9]+)h[0-9]+s$").matcher(s);
-            if (m.matches()) {
-                long hours = Long.parseLong(m.group(1));
-                long total = hours * 60L;
-                return (total > 0 && total <= Integer.MAX_VALUE) ? (int) total : -1;
-            }
-
-            m = java.util.regex.Pattern.compile("^([0-9]+)h([0-9]+)m[0-9]+s$").matcher(s);
-            if (m.matches()) {
-                long hours = Long.parseLong(m.group(1));
-                long mins = Long.parseLong(m.group(2));
-                long total = hours * 60L + mins;
-                return (total > 0 && total <= Integer.MAX_VALUE) ? (int) total : -1;
-            }
-        } catch (NumberFormatException ignored) {
-            return -1;
-        }
-
-        return -1;
+        return DurationUtils.parseDurationMinutes(input);
     }
 
     private void handleDurationReply(Intent intent) {
