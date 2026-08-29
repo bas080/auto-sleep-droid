@@ -25,6 +25,9 @@ public class DurationUtilsTest {
         assertEquals(75, DurationUtils.parseDurationMinutes("1 h 15 m"));
         assertEquals(130, DurationUtils.parseDurationMinutes("2h10m5s"));
         assertEquals(15, DurationUtils.parseDurationMinutes("15m30s"));
+        assertEquals(18, DurationUtils.parseDurationMinutes("0.3h"));
+        assertEquals(18, DurationUtils.parseDurationMinutes("0,3h"));
+        assertEquals(90, DurationUtils.parseDurationMinutes("1.5h"));
         assertEquals(-1, DurationUtils.parseDurationMinutes("10x10h4m"));
         assertEquals(-1, DurationUtils.parseDurationMinutes("10m10"));
         assertEquals(-1, DurationUtils.parseDurationMinutes("10h20h"));
@@ -44,6 +47,11 @@ public class DurationUtilsTest {
         assertEquals(30, DurationUtils.parseDurationMinutes("0,5", DurationUtils.DefaultUnit.HOURS));
         assertEquals(450, DurationUtils.parseDurationMinutes("7.5", DurationUtils.DefaultUnit.HOURS));
         assertEquals(450, DurationUtils.parseDurationMinutes("7,5", DurationUtils.DefaultUnit.HOURS));
+
+        // Float with 'h' suffix
+        assertEquals(18, DurationUtils.parseDurationMinutes("0.3h", DurationUtils.DefaultUnit.HOURS));
+        assertEquals(18, DurationUtils.parseDurationMinutes("0,3h", DurationUtils.DefaultUnit.HOURS));
+        assertEquals(90, DurationUtils.parseDurationMinutes("1.5h", DurationUtils.DefaultUnit.HOURS));
 
         // Explicit units override default
         assertEquals(30, DurationUtils.parseDurationMinutes("30m", DurationUtils.DefaultUnit.HOURS));
