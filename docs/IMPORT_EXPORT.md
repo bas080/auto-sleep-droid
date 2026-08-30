@@ -4,17 +4,17 @@
 
 This document provides the specification, data format design, user experience workflows, and technical architecture for the **Import and Export Settings** feature in Auto Sleep Droid ([Issue #61](https://github.com/bas080/auto-sleep-droid/issues/61)).
 
-The Import and Export feature enables users to easily backup, restore, or transfer their application configuration (sleep timer duration, state, Smart Wake-Up Goal settings, and minimum sleep safeguard) across devices or app reinstallations using a simple string copied to or pasted from the Android system clipboard.
+The Import and Export feature enables users to easily backup, restore, or transfer their application configuration (sleep timer duration, state, Smart Wake-Up Goal settings, and minimum sleep safeguard) across devices or app reinstallations using a simple JSON string shared via Android's native system share sheet or pasted into an import dialog.
 
 ---
 
 ## 1. Requirements Summary
 
 As specified in Issue #61 and user design updates:
-- **Export**: Copies an application configuration string directly to the device clipboard and displays a Toast confirmation message.
+- **Export**: Serializes configuration into a JSON string and launches a system share action (`Intent.ACTION_SEND`) allowing the user to copy or send settings.
 - **Import**: Presents an instructional dialog prompting the user to paste or enter an application configuration string and updates application settings.
 - **Data Format**: A standardized, structured JSON string format.
-- **UI Location**: Placed on `MainActivity` rendered in the header's scrollable list of action links or directly underneath the live event log UI.
+- **UI Location**: Placed on `MainActivity` rendered in the header's scrollable list of action links alongside Releases, GitHub, Issues, and Donate.
 
 ---
 
@@ -72,7 +72,7 @@ The export string must be a valid JSON object adhering to schema version `1`:
 
 ### Placement on `MainActivity`
 
-The Import/Export control section is located on `MainActivity` (`activity_main.xml`), integrated into the header's horizontal scrollable link list alongside existing action links (`Releases`, `GitHub`, `Issues`, `Donate`), or positioned directly underneath the event log `ScrollView`:
+The Import/Export control section is located on `MainActivity` (`activity_main.xml`), integrated into the header's horizontal scrollable link list alongside existing action links (`Releases`, `GitHub`, `Issues`, `Donate`):
 
 ```text
 +-------------------------------------------------------------+
@@ -80,30 +80,26 @@ The Import/Export control section is located on `MainActivity` (`activity_main.x
 | [Releases] [GitHub] [Issues] [Donate] [Export] [Import]     |
 +-------------------------------------------------------------+
 | EVENT LOGS                                                  |
-| 8/29 14:02:10 - MainActivity created                        |
 | 8/29 14:02:11 - SleepTimerService initialized               |
 | ...                                                         |
-+-------------------------------------------------------------+
-| (Alternative placement: [Export Settings] [Import Settings])|
 +-------------------------------------------------------------+
 ```
 
 ### Layout Components
-- **Header Link Bar Integration**: Borderless button action links (`btn_export` for "Export" and `btn_import` for "Import") added to the horizontal scrollable header bar.
-- **Alternative Bottom Bar**: Horizontal button bar directly underneath the log `ScrollView`.
+- **Header Link Bar Integration**: Borderless button action links (`btn_export` for "Export" and `btn_import` for "Import") added to the horizontal scrollable header bar inside `activity_main.xml`.
 
 ---
 
 ## 5. User Workflows & Experience
 
-### Export Workflow
+### Export Workflow (System Share Action)
 
 1. User opens `MainActivity` and taps **"Export"** (or **"Export Settings"**).
 2. `MainActivity` reads current preferences from `SharedPreferences` (`sleep_timer` file).
 3. `MainActivity` constructs the JSON payload according to Schema Version 1.
-4. The JSON string is copied to the system clipboard using `ClipboardManager`.
-5. A Toast message ("Settings copied to clipboard") confirms success.
-6. An entry is added to `EventLogger` (`"Exported settings to clipboard"`).
+4. `MainActivity` launches Android's native system share sheet via `Intent.ACTION_SEND` (`Intent.createChooser` with MIME type `text/plain` and `Intent.EXTRA_TEXT` set to the JSON string).
+5. The system share sheet allows the user to copy the configuration string to clipboard, send via messaging/email apps, or save to notes.
+6. An entry is added to `EventLogger` (`"Exported settings via system share sheet"`).
 
 ### Import Workflow with Instructional Dialog
 
@@ -136,10 +132,10 @@ The Import/Export control section is located on `MainActivity` (`activity_main.x
 ```text
 [ SharedPreferences ] <==== Read/Write ====> [ MainActivity ]
                                                     |
-                                          (ClipboardManager)
+                                         (Intent.ACTION_SEND)
                                                     |
                                                     v
-                                         [ System Clipboard ]
+                                         [ System Share Sheet ]
 
 [ MainActivity ] ---- Intent (ACTION_REDRAW_NOTIFICATION) ----> [ SleepTimerService ]
                                                                         |
@@ -148,7 +144,8 @@ The Import/Export control section is located on `MainActivity` (`activity_main.x
 ```
 
 ### Key Android APIs
-- `android.content.ClipboardManager` and `android.content.ClipData` for clipboard interaction.
+- `android.content.Intent.ACTION_SEND` and `Intent.createChooser` for native share sheet export.
+- `android.content.ClipboardManager` and `android.content.ClipData` for import clipboard detection.
 - `org.json.JSONObject` for JSON parsing and serialization.
 - `android.app.AlertDialog` for the instructional import dialog.
 - `android.widget.Toast` for user feedback bubbles.
@@ -158,4 +155,4 @@ The Import/Export control section is located on `MainActivity` (`activity_main.x
 
 ## 7. Summary
 
-The Import and Export Settings feature provides a clean, dependency-free mechanism for users to back up, restore, or share their Auto Sleep Droid configuration via a standardized JSON string. Integrated into `MainActivity` with Toast feedback upon export and an instructional dialog upon import, it combines convenient zero-friction clipboard actions with safety validation.
+The Import and Export Settings feature provides a clean, dependency-free mechanism for users to back up, restore, or share their Auto Sleep Droid configuration via a standardized JSON string. Integrated into `MainActivity` with system share action (`ACTION_SEND`) upon export and an instructional dialog upon import, it combines convenient zero-friction sharing with safety validation.
