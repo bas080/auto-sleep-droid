@@ -26,7 +26,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
   - Buttons: "Set Timer" (Inline reply to change duration), "Turn On" (Enables timer without changing configured duration), and "Set Goal" (Opens Wake-Up Goal settings dialog).
 - Waiting: 
   - Collapsed Text: "Waiting for playback"
-  - Expanded Text: "Waiting for media playback"
+  - Expanded Text: "Waiting for media playback • Alarm at 6:15 AM" (Alarm detail shown only when wake-up alarm is enabled).
   - Buttons: "Set Timer" (Inline reply to change duration), "Turn Off" (Disables timer and transitions to Off state), and "Set Goal" / "Goal HH:MM" (Opens Wake-Up Goal settings dialog).
 - Active: 
   - Collapsed Text: "Fades out at 11:15 PM"

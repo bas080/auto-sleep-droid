@@ -36,7 +36,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
   * Alarm Clock & AlarmManager: No timer alarms scheduled.
 * **Notification Presentation**:
   * Collapsed Text: `"Waiting for playback"`
-  * Expanded Text: `"Waiting for media playback"`
+  * Expanded Text: `"Waiting for media playback"` (appends `" • Alarm at <alarm_time>"` when Smart Wake-Up Goal alarm is set).
   * Action Buttons: `"Set Timer"` (inline reply input) and `"Turn Off"`.
 * **State Invariants**: `enabled = true`, `timerEndsAt = 0`.
 

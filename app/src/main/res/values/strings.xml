@@ -7,6 +7,7 @@
     <string name="timer_off">Sleep timer is off</string>
     <string name="waiting_collapsed">Waiting for playback</string>
     <string name="waiting_expanded">Waiting for media playback</string>
+    <string name="waiting_expanded_alarm">Waiting for media playback • Alarm at %1$s</string>
     <string name="waiting_title">Waiting for playback</string>
     <string name="waiting_text">Waiting for media playback</string>
     <string name="active_collapsed">Fades out at %1$s</string>
