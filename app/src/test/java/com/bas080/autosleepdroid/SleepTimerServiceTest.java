@@ -265,7 +265,9 @@ public class SleepTimerServiceTest {
         NotificationManager notificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
-        assertNotNull(shadowNotificationManager.getNotification(1001));
+        android.app.Notification notification = shadowNotificationManager.getNotification(1001);
+        assertNotNull(notification);
+        assertNotNull(notification.contentIntent);
     }
 
     @Test

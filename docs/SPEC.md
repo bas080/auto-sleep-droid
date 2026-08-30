@@ -42,7 +42,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
   - A scrollable, line-by-line list of timestamped events fills the main UI for debugging purposes.
 - Notification Shade Controls:
   - Use notification buttons for sleep-timer controls ("Set Timer" inline reply to change duration, "Turn Off" action button when enabled, "Turn On" action button when Off, and "Set Goal" / "Goal HH:MM" action button to configure target wake-up goal).
-  - Tapping/clicking the notification body expands or collapses the notification in all states.
+  - Tapping/clicking the notification body opens MainActivity.
   - Keep the notification ongoing across all states (including when Off) so the user cannot swipe it away or accidentally dismiss it.
   - Enter sleep timer duration through a minimal inline notification reply using Android's native text input mechanism.
 
