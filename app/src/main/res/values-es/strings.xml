@@ -21,7 +21,7 @@
     <string name="fading_text">Atenuando volumen para pausar medios</string>
     <string name="configured_duration">%1$dm configurados</string>
     <string name="set_timer_input_label">Minutos (%1$sm)</string>
-    <string name="action_set_timer">Configurar temporizador</string>
+    <string name="action_set_timer">Ajustar</string>
     <string name="action_sleep_duration">Dormir %1$s</string>
     <string name="action_timer_on">Activo</string>
     <string name="action_timer_off">Inactivo</string>
