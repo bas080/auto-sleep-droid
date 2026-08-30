@@ -30,6 +30,7 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 
 - **UX Design Decisions:** Consult `docs/USER_PERSONA_AND_NEEDS.md` whenever making UX design decisions to ensure alignment with target user personas, mental models, zero-gaze nighttime interaction principles, and user needs.
 - **Documentation Boundaries:** `docs/SPEC.md` must focus purely on product requirements, acceptance criteria, and user-visible behavior without technical implementation details (such as Android API names, classes, or code constructs). Technical implementation details belong exclusively in `docs/IMPLEMENTATION.md`.
+- **No Text Codeblock Diagrams:** Do not render ASCII or text-art codeblock diagrams in documentation files. Text diagrams are not computer parseable and are less desired.
 - **UI & Notification Strings:** Do not include trailing punctuation, colons, or ellipses in UI and notification string resource values (`strings.xml`).
 - **Localization:** Maintain default English resources in `app/src/main/res/values/strings.xml` and Spanish translations in `app/src/main/res/values-es/strings.xml`.
 - **Test-Driven Development (TDD):** When attempting a fix, follow a TDD approach where possible: write a test that fails first, and then implement the fix to make that test pass.
