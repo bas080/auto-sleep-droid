@@ -76,17 +76,6 @@
                     android:text="@string/link_donate" />
             </LinearLayout>
         </HorizontalScrollView>
-
-        <TextView
-            android:id="@+id/event_log_header_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="4dp"
-            android:text="@string/event_log_header"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="#888888" />
     </LinearLayout>
 
     <ScrollView
