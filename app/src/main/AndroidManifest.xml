@@ -27,7 +27,7 @@
 
         <activity
             android:name=".GoalSettingsDialogActivity"
-            android:theme="@android:style/Theme.Material.Light.Dialog"
+            android:theme="@style/GoalDialogTheme"
             android:taskAffinity=""
             android:excludeFromRecents="true"
             android:noHistory="true"
