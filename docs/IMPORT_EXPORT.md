@@ -72,18 +72,7 @@ The export string must be a valid JSON object adhering to schema version `1`:
 
 ### Placement on `MainActivity`
 
-The Import/Export control section is located on `MainActivity` (`activity_main.xml`), integrated into the header's horizontal scrollable link list alongside existing action links (`Releases`, `GitHub`, `Issues`, `Donate`):
-
-```text
-+-------------------------------------------------------------+
-| Auto Sleep Droid  v1.3.0                                    |
-| [Releases] [GitHub] [Issues] [Donate] [Export] [Import]     |
-+-------------------------------------------------------------+
-| EVENT LOGS                                                  |
-| 8/29 14:02:11 - SleepTimerService initialized               |
-| ...                                                         |
-+-------------------------------------------------------------+
-```
+The Import/Export control section is located on `MainActivity` (`activity_main.xml`), integrated into the header's horizontal scrollable link list alongside existing action links (`Releases`, `GitHub`, `Issues`, `Donate`).
 
 ### Layout Components
 - **Header Link Bar Integration**: Borderless button action links (`btn_export` for "Export" and `btn_import` for "Import") added to the horizontal scrollable header bar inside `activity_main.xml`.
@@ -126,22 +115,6 @@ The Import/Export control section is located on `MainActivity` (`activity_main.x
 ---
 
 ## 6. Technical Architecture & Data Synchronization
-
-### Data Flow Diagram
-
-```text
-[ SharedPreferences ] <==== Read/Write ====> [ MainActivity ]
-                                                    |
-                                         (Intent.ACTION_SEND)
-                                                    |
-                                                    v
-                                         [ System Share Sheet ]
-
-[ MainActivity ] ---- Intent (ACTION_REDRAW_NOTIFICATION) ----> [ SleepTimerService ]
-                                                                        |
-                                                                        v
-                                                           [ AlarmManager & Notification ]
-```
 
 ### Key Android APIs
 - `android.content.Intent.ACTION_SEND` and `Intent.createChooser` for native share sheet export.
