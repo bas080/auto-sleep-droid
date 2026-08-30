@@ -29,8 +29,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         setupHeaderAndLinks();
 
-        EventLogger.log(this, EventLogger.LEVEL_LOW, "MainActivity created");
-
         startOrRequestNotificationPermission();
         requestExactAlarmPermissionIfNeeded();
     }
@@ -82,7 +80,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     @Override
     protected void onResume() {
         super.onResume();
-        EventLogger.log(this, EventLogger.LEVEL_LOW, "MainActivity resumed");
         EventLogger.setListener(this);
         refreshEventLog();
         redrawNotification();
@@ -101,7 +98,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     @Override
     protected void onPause() {
         super.onPause();
-        EventLogger.log(this, EventLogger.LEVEL_LOW, "MainActivity paused");
         EventLogger.setListener(null);
     }
 
