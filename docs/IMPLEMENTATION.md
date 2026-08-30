@@ -36,7 +36,8 @@ The app is an Android sleep timer controlled from the notification shade. The ma
 │   ├── NOTIFICATION_GOAL_INPUT_OPTIONS.md
 │   ├── NOTIFICATION_INPUT_OPTIONS.md
 │   ├── PERFORMANCE.md
-│   └── SPEC.md
+│   ├── SPEC.md
+│   └── UPDATE_NOTIFICATIONS.md
 ├── build.gradle
 ├── gradle.properties
 ├── gradlew
