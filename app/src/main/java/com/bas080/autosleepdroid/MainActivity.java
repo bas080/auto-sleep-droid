@@ -2,15 +2,26 @@ package com.bas080.autosleepdroid;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.net.Uri;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.List;
 
@@ -43,6 +54,147 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setupLinkButton(R.id.btn_github, "https://github.com/bas080/auto-sleep-droid");
         setupLinkButton(R.id.btn_issues, "https://github.com/bas080/auto-sleep-droid/issues");
         setupLinkButton(R.id.btn_donate, "https://liberapay.com/bas080");
+
+        Button btnExport = findViewById(R.id.btn_export);
+        if (btnExport != null) {
+            btnExport.setOnClickListener(v -> exportSettings());
+        }
+
+        Button btnImport = findViewById(R.id.btn_import);
+        if (btnImport != null) {
+            btnImport.setOnClickListener(v -> showImportDialog());
+        }
+    }
+
+    private void exportSettings() {
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        try {
+            JSONObject json = new JSONObject();
+            json.put("version", 1);
+            json.put("duration_minutes", prefs.getInt("duration_minutes", 20));
+            json.put("active", prefs.getBoolean("active", false));
+            json.put("wake_up_goal_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
+            json.put("wake_up_goal_hour", prefs.getInt("wake_up_goal_hour", 6));
+            json.put("wake_up_goal_minute", prefs.getInt("wake_up_goal_minute", 30));
+            json.put("min_sleep_duration_minutes", prefs.getInt("min_sleep_duration_minutes", 450));
+
+            String jsonString = json.toString();
+
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(Intent.EXTRA_TEXT, jsonString);
+            startActivity(Intent.createChooser(shareIntent, getString(R.string.link_export)));
+
+            EventLogger.log(this, EventLogger.LEVEL_LOW, "Exported settings via system share sheet");
+        } catch (JSONException e) {
+            EventLogger.log(this, EventLogger.LEVEL_LOW, "Failed to export settings: " + e.getMessage());
+        }
+    }
+
+    private void showImportDialog() {
+        EditText input = new EditText(this);
+        input.setHint("{\"version\":1,...}");
+
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard != null && clipboard.hasPrimaryClip()) {
+            ClipData clip = clipboard.getPrimaryClip();
+            if (clip != null && clip.getItemCount() > 0) {
+                CharSequence text = clip.getItemAt(0).getText();
+                if (text != null) {
+                    String clipString = text.toString().trim();
+                    if (clipString.startsWith("{") && clipString.endsWith("}")) {
+                        try {
+                            new JSONObject(clipString);
+                            input.setText(clipString);
+                        } catch (JSONException ignored) {
+                        }
+                    }
+                }
+            }
+        }
+
+        FrameLayout container = new FrameLayout(this);
+        int padding = (int) (16 * getResources().getDisplayMetrics().density);
+        container.setPadding(padding, padding / 2, padding, 0);
+        container.addView(input);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.import_settings_title)
+                .setMessage(R.string.import_settings_instruction)
+                .setView(container)
+                .setPositiveButton(R.string.action_import, (dialog, which) -> {
+                    String jsonString = input.getText().toString().trim();
+                    processImportString(jsonString);
+                })
+                .setNegativeButton(R.string.dialog_cancel, null)
+                .show();
+    }
+
+    private void processImportString(String jsonString) {
+        if (jsonString.isEmpty()) {
+            Toast.makeText(this, R.string.import_settings_toast_invalid, Toast.LENGTH_SHORT).show();
+            EventLogger.log(this, EventLogger.LEVEL_LOW, "Failed to import settings: empty input");
+            return;
+        }
+
+        try {
+            JSONObject json = new JSONObject(jsonString);
+            int version = json.optInt("version", -1);
+            if (version != 1) {
+                Toast.makeText(this, R.string.import_settings_toast_invalid, Toast.LENGTH_SHORT).show();
+                EventLogger.log(this, EventLogger.LEVEL_LOW, "Failed to import settings: unsupported version " + version);
+                return;
+            }
+
+            int durationMinutes = json.optInt("duration_minutes", 20);
+            if (durationMinutes < 1 || durationMinutes > 1440) {
+                Toast.makeText(this, R.string.import_settings_toast_invalid, Toast.LENGTH_SHORT).show();
+                EventLogger.log(this, EventLogger.LEVEL_LOW, "Failed to import settings: duration_minutes out of range");
+                return;
+            }
+
+            int wakeUpGoalHour = json.optInt("wake_up_goal_hour", 6);
+            if (wakeUpGoalHour < 0 || wakeUpGoalHour > 23) {
+                Toast.makeText(this, R.string.import_settings_toast_invalid, Toast.LENGTH_SHORT).show();
+                EventLogger.log(this, EventLogger.LEVEL_LOW, "Failed to import settings: wake_up_goal_hour out of range");
+                return;
+            }
+
+            int wakeUpGoalMinute = json.optInt("wake_up_goal_minute", 30);
+            if (wakeUpGoalMinute < 0 || wakeUpGoalMinute > 59) {
+                Toast.makeText(this, R.string.import_settings_toast_invalid, Toast.LENGTH_SHORT).show();
+                EventLogger.log(this, EventLogger.LEVEL_LOW, "Failed to import settings: wake_up_goal_minute out of range");
+                return;
+            }
+
+            int minSleepDurationMinutes = json.optInt("min_sleep_duration_minutes", 450);
+            if (minSleepDurationMinutes < 1 || minSleepDurationMinutes > 1440) {
+                Toast.makeText(this, R.string.import_settings_toast_invalid, Toast.LENGTH_SHORT).show();
+                EventLogger.log(this, EventLogger.LEVEL_LOW, "Failed to import settings: min_sleep_duration_minutes out of range");
+                return;
+            }
+
+            boolean active = json.optBoolean("active", false);
+            boolean wakeUpGoalEnabled = json.optBoolean("wake_up_goal_enabled", false);
+
+            SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+            prefs.edit()
+                    .putInt("duration_minutes", durationMinutes)
+                    .putBoolean("active", active)
+                    .putBoolean("wake_up_goal_enabled", wakeUpGoalEnabled)
+                    .putInt("wake_up_goal_hour", wakeUpGoalHour)
+                    .putInt("wake_up_goal_minute", wakeUpGoalMinute)
+                    .putInt("min_sleep_duration_minutes", minSleepDurationMinutes)
+                    .apply();
+
+            Toast.makeText(this, R.string.import_settings_toast_success, Toast.LENGTH_SHORT).show();
+            EventLogger.log(this, EventLogger.LEVEL_LOW, "Imported settings from string");
+
+            redrawNotification();
+        } catch (JSONException e) {
+            Toast.makeText(this, R.string.import_settings_toast_invalid, Toast.LENGTH_SHORT).show();
+            EventLogger.log(this, EventLogger.LEVEL_LOW, "Failed to import settings: invalid JSON format");
+        }
     }
 
     private void setupLinkButton(int buttonId, String url) {

@@ -97,6 +97,38 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testExportLinkClick() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+
+        activity.findViewById(R.id.btn_export).performClick();
+
+        Intent chooserIntent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(chooserIntent);
+        assertEquals(Intent.ACTION_CHOOSER, chooserIntent.getAction());
+
+        Intent targetIntent = chooserIntent.getParcelableExtra(Intent.EXTRA_INTENT);
+        assertNotNull(targetIntent);
+        assertEquals(Intent.ACTION_SEND, targetIntent.getAction());
+        assertEquals("text/plain", targetIntent.getType());
+        String sharedText = targetIntent.getStringExtra(Intent.EXTRA_TEXT);
+        assertNotNull(sharedText);
+        assertTrue(sharedText.contains("\"version\":1"));
+    }
+
+    @Test
+    public void testImportLinkClickOpensDialog() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+
+        activity.findViewById(R.id.btn_import).performClick();
+
+        android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(dialog);
+        assertTrue(dialog.isShowing());
+    }
+
+    @Test
     public void testResumeRemainsOpenAndLogsEvents() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();

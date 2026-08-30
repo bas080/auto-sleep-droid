@@ -56,4 +56,11 @@
     <string name="link_github">GitHub</string>
     <string name="link_issues">Problemas</string>
     <string name="link_donate">Donar</string>
+    <string name="link_export">Exportar</string>
+    <string name="link_import">Importar</string>
+    <string name="import_settings_title">Importar configuración</string>
+    <string name="import_settings_instruction">Pegue la cadena de configuración JSON de su configuración a continuación para importar las preferencias</string>
+    <string name="import_settings_toast_success">Configuración importada con éxito</string>
+    <string name="import_settings_toast_invalid">Formato de configuración no válido</string>
+    <string name="action_import">Importar</string>
 </resources>

@@ -56,4 +56,11 @@
     <string name="link_github">GitHub</string>
     <string name="link_issues">Issues</string>
     <string name="link_donate">Donate</string>
+    <string name="link_export">Export</string>
+    <string name="link_import">Import</string>
+    <string name="import_settings_title">Import Settings</string>
+    <string name="import_settings_instruction">Paste your settings JSON configuration string below to import app preferences</string>
+    <string name="import_settings_toast_success">Settings imported successfully</string>
+    <string name="import_settings_toast_invalid">Invalid settings format</string>
+    <string name="action_import">Import</string>
 </resources>

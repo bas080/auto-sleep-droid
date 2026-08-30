@@ -74,6 +74,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/link_donate" />
+
+                <Button
+                    android:id="@+id/btn_export"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/link_export" />
+
+                <Button
+                    android:id="@+id/btn_import"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/link_import" />
             </LinearLayout>
         </HorizontalScrollView>
     </LinearLayout>
