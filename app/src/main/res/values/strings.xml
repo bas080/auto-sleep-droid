@@ -50,4 +50,10 @@
     <string name="toast_goal_stopped">Goal stopped</string>
     <string name="toast_alarm_dismissed">Alarm dismissed</string>
     <string name="toast_alarm_snoozed">Alarm snoozed 9m</string>
+    <string name="version_label">Version %1$s</string>
+    <string name="link_releases">Releases</string>
+    <string name="link_github">GitHub</string>
+    <string name="link_issues">Issues</string>
+    <string name="link_donate">Donate</string>
+    <string name="event_log_header">Live Event Log</string>
 </resources>
