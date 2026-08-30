@@ -758,7 +758,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (stateMachine.isEnabled()) {
             setTimerAction = new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    getString(R.string.action_turn_off),
+                    getString(R.string.action_timer_on),
                     turnOffIntent())
                     .build();
         } else {
@@ -783,13 +783,17 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
         Notification.Action goalAction;
         if (goalEnabled && preferences != null) {
+            int goalHour = preferences.getInt("wake_up_goal_hour", 6);
+            int goalMin = preferences.getInt("wake_up_goal_minute", 30);
+            String formattedGoalTime = formatTime(goalHour, goalMin);
+            String clearGoalTitle = getString(R.string.action_clear_time, formattedGoalTime);
             goalAction = new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    getString(R.string.btn_clear_goal),
+                    clearGoalTitle,
                     clearGoalIntent())
                     .build();
         } else {
-            String goalTitle = getString(R.string.action_set_goal);
+            String goalTitle = getString(R.string.action_set_alarm);
             goalAction = new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_my_calendar),
                     goalTitle,
