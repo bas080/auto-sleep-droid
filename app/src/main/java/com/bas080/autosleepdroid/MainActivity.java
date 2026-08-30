@@ -8,9 +8,19 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.net.Uri;
+import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.List;
 
@@ -43,6 +53,130 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setupLinkButton(R.id.btn_github, "https://github.com/bas080/auto-sleep-droid");
         setupLinkButton(R.id.btn_issues, "https://github.com/bas080/auto-sleep-droid/issues");
         setupLinkButton(R.id.btn_donate, "https://liberapay.com/bas080");
+
+        Button btnExport = findViewById(R.id.btn_export);
+        if (btnExport != null) {
+            btnExport.setOnClickListener(v -> exportSettings());
+        }
+
+        Button btnImport = findViewById(R.id.btn_import);
+        if (btnImport != null) {
+            btnImport.setOnClickListener(v -> showImportDialog());
+        }
+    }
+
+    private void exportSettings() {
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        try {
+            JSONObject json = new JSONObject();
+            json.put("version", 1);
+            json.put("duration_minutes", prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES));
+            json.put("active", prefs.getBoolean("active", true));
+            json.put("wake_up_goal_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
+            json.put("wake_up_goal_hour", prefs.getInt("wake_up_goal_hour", 6));
+            json.put("wake_up_goal_minute", prefs.getInt("wake_up_goal_minute", 30));
+            json.put("min_sleep_duration_minutes", prefs.getInt("min_sleep_duration_minutes", 450));
+
+            String exportStr = json.toString();
+            Intent sendIntent = new Intent(Intent.ACTION_SEND);
+            sendIntent.putExtra(Intent.EXTRA_TEXT, exportStr);
+            sendIntent.setType("text/plain");
+            startActivity(Intent.createChooser(sendIntent, getString(R.string.link_export)));
+
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Exported settings via system share sheet");
+        } catch (JSONException e) {
+            EventLogger.log(this, "Failed to export settings: " + e.getMessage());
+        }
+    }
+
+    private void showImportDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.dialog_import_title);
+        builder.setMessage(R.string.dialog_import_message);
+
+        final EditText input = new EditText(this);
+        input.setSingleLine(false);
+        input.setLines(4);
+
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard != null && clipboard.hasPrimaryClip()) {
+            ClipData clipData = clipboard.getPrimaryClip();
+            if (clipData != null && clipData.getItemCount() > 0) {
+                CharSequence text = clipData.getItemAt(0).getText();
+                if (text != null) {
+                    String str = text.toString().trim();
+                    if (str.startsWith("{") && str.endsWith("}")) {
+                        input.setText(str);
+                    }
+                }
+            }
+        }
+
+        builder.setView(input);
+
+        builder.setPositiveButton(R.string.dialog_import_action, (dialog, which) -> {
+            String importStr = input.getText().toString().trim();
+            importSettings(importStr);
+        });
+        builder.setNegativeButton(R.string.dialog_cancel, (dialog, which) -> dialog.dismiss());
+
+        builder.show();
+    }
+
+    private void importSettings(String jsonStr) {
+        if (jsonStr == null || jsonStr.isEmpty()) {
+            Toast.makeText(this, R.string.toast_import_invalid, Toast.LENGTH_SHORT).show();
+            EventLogger.log(this, "Failed to import settings: empty input");
+            return;
+        }
+
+        try {
+            JSONObject json = new JSONObject(jsonStr);
+            if (!json.has("version") || json.getInt("version") != 1) {
+                throw new JSONException("Unsupported schema version");
+            }
+
+            int durationMinutes = json.getInt("duration_minutes");
+            if (durationMinutes < 1 || durationMinutes > 1440) {
+                throw new JSONException("duration_minutes out of range");
+            }
+
+            boolean active = json.optBoolean("active", false);
+            boolean wakeUpGoalEnabled = json.getBoolean("wake_up_goal_enabled");
+            int wakeUpGoalHour = json.getInt("wake_up_goal_hour");
+            if (wakeUpGoalHour < 0 || wakeUpGoalHour > 23) {
+                throw new JSONException("wake_up_goal_hour out of range");
+            }
+
+            int wakeUpGoalMinute = json.getInt("wake_up_goal_minute");
+            if (wakeUpGoalMinute < 0 || wakeUpGoalMinute > 59) {
+                throw new JSONException("wake_up_goal_minute out of range");
+            }
+
+            int minSleepMinutes = json.getInt("min_sleep_duration_minutes");
+            if (minSleepMinutes < 1 || minSleepMinutes > 1440) {
+                throw new JSONException("min_sleep_duration_minutes out of range");
+            }
+
+            SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+            prefs.edit()
+                    .putInt("duration_minutes", durationMinutes)
+                    .putBoolean("active", active)
+                    .putBoolean("wake_up_goal_enabled", wakeUpGoalEnabled)
+                    .putInt("wake_up_goal_hour", wakeUpGoalHour)
+                    .putInt("wake_up_goal_minute", wakeUpGoalMinute)
+                    .putInt("min_sleep_duration_minutes", minSleepMinutes)
+                    .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                    .apply();
+
+            Toast.makeText(this, R.string.toast_import_success, Toast.LENGTH_SHORT).show();
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Imported settings from string");
+
+            redrawNotification();
+        } catch (JSONException e) {
+            Toast.makeText(this, R.string.toast_import_invalid, Toast.LENGTH_SHORT).show();
+            EventLogger.log(this, "Failed to import settings: invalid format (" + e.getMessage() + ")");
+        }
     }
 
     private void setupLinkButton(int buttonId, String url) {

@@ -51,11 +51,16 @@
     <string name="toast_goal_stopped">Goal stopped</string>
     <string name="toast_alarm_dismissed">Alarm dismissed</string>
     <string name="toast_alarm_snoozed">Alarm snoozed 9m</string>
-    <string name="tile_subtitle_on">On</string>
-    <string name="tile_subtitle_off">Off</string>
     <string name="version_label">Version %1$s</string>
     <string name="link_releases">Releases</string>
     <string name="link_github">GitHub</string>
     <string name="link_issues">Issues</string>
     <string name="link_donate">Donate</string>
+    <string name="link_export">Export</string>
+    <string name="link_import">Import</string>
+    <string name="dialog_import_title">Import Settings</string>
+    <string name="dialog_import_message">Paste your settings JSON configuration string below to import app preferences:</string>
+    <string name="dialog_import_action">Import</string>
+    <string name="toast_import_success">Settings imported successfully</string>
+    <string name="toast_import_invalid">Invalid settings format</string>
 </resources>

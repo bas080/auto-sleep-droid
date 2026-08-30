@@ -46,11 +46,6 @@ Notification text is kept compact and concise when collapsed, displaying detaile
   - Tapping/clicking the notification body opens MainActivity.
   - Keep the notification ongoing across all states (including when Off) so the user cannot swipe it away or accidentally dismiss it.
   - Enter sleep timer duration through a minimal inline notification reply using Android's native text input mechanism.
-- Quick Settings (QS) Tile:
-  - A Quick Settings toggle tile is provided (labeled "Auto Sleep") just like a Wi-Fi or Bluetooth system toggle tile.
-  - Tapping/clicking the tile toggles the sleep timer on or off.
-  - Long-pressing the tile opens `MainActivity`.
-  - The tile state reflects whether the timer is currently enabled (active/on) or disabled (inactive/off).
 
 ## Timer configuration
 - The user can turn the sleep timer on or off using notification controls.
@@ -98,30 +93,29 @@ Notification text is kept compact and concise when collapsed, displaying detaile
   4. **Wake-Up Alarm Gestures**:
      - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
      - **Dismiss**: Tapping the Dismiss button on the wake-up alarm notification dismisses the alarm.
-- **Disabled by Default**: The feature is off by default until configured via the "Set Goal" notification action button. Tapping "Stop" in the settings dialog turns it off and removes the alarm.
+- **Disabled by Default**: The feature is off by default until configured via the "Set Goal" notification action button. Tapping "Alarm HH:MM" in the notification turns it off and removes the alarm.
 - **User Inputs**:
   - **Target Goal Time** (e.g., `06:30 AM`).
   - **Minimum Sleep Duration** (default `7.5 hours`).
 - **Goal Settings Dialog (`GoalSettingsDialogActivity`)**:
-  - Accessed via the notification action button ("Set Goal" / "Goal HH:MM"), presenting a modal overlay containing a target goal time picker, minimum sleep duration safeguard input, prefilled with configured preferences or defaults, and "OK" and "Stop" buttons (where "Stop" is disabled when the feature is off).
+  - Accessed via the notification action button ("Set Goal" / "Goal HH:MM"), presenting a modal overlay containing a target goal time picker, minimum sleep duration safeguard input, prefilled with configured preferences or defaults, and "OK" and "Cancel" buttons.
 - **Event Logging**:
   - Every calculation and alarm update is logged line-by-line in the debug event log.
 
 ## Acceptance criteria
 - The main activity prints a list of events, one per line, for debugging.
-- The complete timer workflow is possible from the notification bar, system volume buttons, Quick Settings tile, and phone flip gesture.
-- A Quick Settings Tile is provided to toggle Auto Sleep Droid on or off with a single click and open `MainActivity` on long-press.
+- The complete timer workflow is possible from the notification bar, system volume buttons, and phone flip gesture.
 - Volume-up and volume-down both reset an active timer while preserving their normal volume behavior.
 - Expiration pauses active media after a 30-second fade-out, restores pre-fade volume after pausing media, and successfully reverts to the Waiting state.
 - Disabling the timer does not pause media or change the current volume.
 - Invalid inline reply inputs gracefully default to the last valid or default duration.
 - Post-reboot behavior respects the last saved state (preserving Off status or returning running timers to Waiting).
-- The "Set Timer" and "Set Goal" actions are available across all notification states, while toggling the timer on/off is performed via the Quick Settings Tile.
+- Toggling the timer on/off and managing the wake-up goal are performed via notification action clicks. When the timer is enabled, tapping the duration action ("Sleep <duration>") turns the timer off; when disabled, tapping it opens inline duration edit. When a wake-up goal is set, tapping the goal action ("Alarm HH:MM") disables/clears the goal; when disabled, tapping it opens the goal settings dialog.
 - The Smart Wake-Up Goal feature is disabled by default until explicitly configured by the user.
 - The notification shade provides a "Set Goal" / "Goal HH:MM" action button that opens a dialog overlay (`GoalSettingsDialogActivity`) to configure, display, stop, or enable the target wake-up goal and minimum sleep duration.
 - Notifications remain minimal and compact when collapsed, expanding to show full details (fade target and scheduled wake-up alarm time).
 - Starting the sleep timer within 12 hours of the target goal time schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
-- Disabling the timer or tapping "Stop" in the settings dialog cancels the scheduled `"Auto Sleep"` alarm in the background without launching external Clock app UI activities.
+- Disabling the timer or tapping the goal notification action ("Alarm HH:MM") cancels the scheduled `"Auto Sleep"` alarm in the background without launching external Clock app UI activities.
 - Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
 - The main screen includes "Export" and "Import" action links rendered in the header link list.
 - Tapping "Export" serializes configuration settings and launches a system share action (`ACTION_SEND`).

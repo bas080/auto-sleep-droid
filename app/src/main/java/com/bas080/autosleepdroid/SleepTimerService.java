@@ -10,7 +10,6 @@ import android.app.RemoteInput;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.service.quicksettings.TileService;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Icon;
 import android.hardware.Sensor;
@@ -235,7 +234,15 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 updateListenersRegistration();
                 android.widget.Toast.makeText(this, R.string.toast_alarm_snoozed, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_CLEAR_GOAL.equals(intent.getAction())) {
+                if (preferences != null) {
+                    preferences.edit()
+                            .putBoolean("wake_up_goal_enabled", false)
+                            .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
+                            .apply();
+                }
                 dismissAutoSleepAlarm();
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Smart Wake-Up Goal cleared");
+                android.widget.Toast.makeText(this, R.string.toast_goal_stopped, android.widget.Toast.LENGTH_SHORT).show();
                 updateNotification();
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
                 updateNotification();
@@ -744,42 +751,55 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 .setOnlyAlertOnce(true)
                 .setShowWhen(false);
 
-        String durationStr = String.valueOf(stateMachine.getConfiguredDurationMinutes());
-        builder.getExtras().putString(Notification.EXTRA_REMOTE_INPUT_DRAFT, durationStr);
-
-        RemoteInput remoteInput = new RemoteInput.Builder(REMOTE_INPUT_KEY)
-                .setLabel(getString(R.string.set_timer_input_label, durationStr))
-                .build();
-        remoteInput.getExtras().putInt("android.intent.extra.inputType", InputType.TYPE_CLASS_NUMBER);
-        remoteInput.getExtras().putInt("inputType", InputType.TYPE_CLASS_NUMBER);
-
         String formattedDurationStr = formatDurationString(stateMachine.getConfiguredDurationMinutes());
         String actionTitle = getString(R.string.action_sleep_duration, formattedDurationStr);
 
-        Notification.Action setTimerAction = new Notification.Action.Builder(
-                Icon.createWithResource(this, android.R.drawable.ic_input_add),
-                actionTitle,
-                durationIntent())
-                .addRemoteInput(remoteInput)
-                .build();
+        Notification.Action setTimerAction;
+        if (stateMachine.isEnabled()) {
+            setTimerAction = new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                    actionTitle,
+                    turnOffIntent())
+                    .build();
+        } else {
+            String durationStr = String.valueOf(stateMachine.getConfiguredDurationMinutes());
+            builder.getExtras().putString(Notification.EXTRA_REMOTE_INPUT_DRAFT, durationStr);
+
+            RemoteInput remoteInput = new RemoteInput.Builder(REMOTE_INPUT_KEY)
+                    .setLabel(getString(R.string.set_timer_input_label, durationStr))
+                    .build();
+            remoteInput.getExtras().putInt("android.intent.extra.inputType", InputType.TYPE_CLASS_NUMBER);
+            remoteInput.getExtras().putInt("inputType", InputType.TYPE_CLASS_NUMBER);
+
+            setTimerAction = new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_input_add),
+                    actionTitle,
+                    durationIntent())
+                    .addRemoteInput(remoteInput)
+                    .build();
+        }
         builder.addAction(setTimerAction);
 
         boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
-        String goalTitle;
+        Notification.Action goalAction;
         if (goalEnabled && preferences != null) {
             int goalHour = preferences.getInt("wake_up_goal_hour", 6);
             int goalMin = preferences.getInt("wake_up_goal_minute", 30);
             String formattedGoalTime = formatTime(goalHour, goalMin);
-            goalTitle = getString(R.string.action_goal_time, formattedGoalTime);
+            String goalTitle = getString(R.string.action_goal_time, formattedGoalTime);
+            goalAction = new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                    goalTitle,
+                    clearGoalIntent())
+                    .build();
         } else {
-            goalTitle = getString(R.string.action_set_goal);
+            String goalTitle = getString(R.string.action_set_goal);
+            goalAction = new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_menu_my_calendar),
+                    goalTitle,
+                    goalIntent())
+                    .build();
         }
-
-        Notification.Action goalAction = new Notification.Action.Builder(
-                Icon.createWithResource(this, android.R.drawable.ic_menu_my_calendar),
-                goalTitle,
-                goalIntent())
-                .build();
         builder.addAction(goalAction);
 
         return builder.build();
@@ -790,16 +810,18 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (manager != null) {
             manager.notify(NOTIFICATION_ID, buildNotification());
         }
-        try {
-            TileService.requestListeningState(this, new ComponentName(this, SleepTileService.class));
-        } catch (Exception ignored) {
-        }
     }
 
     private PendingIntent durationIntent() {
         Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_SET_DURATION);
         return PendingIntent.getService(this, 3, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
+    }
+
+    private PendingIntent clearGoalIntent() {
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_CLEAR_GOAL);
+        return PendingIntent.getService(this, 11, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private PendingIntent turnOffIntent() {
