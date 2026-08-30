@@ -7,8 +7,10 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.app.RemoteInput;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.service.quicksettings.TileService;
 import android.content.SharedPreferences;
 import android.graphics.drawable.Icon;
 import android.hardware.Sensor;
@@ -803,6 +805,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) {
             manager.notify(NOTIFICATION_ID, buildNotification());
+        }
+        try {
+            TileService.requestListeningState(this, new ComponentName(this, SleepTileService.class));
+        } catch (Exception ignored) {
         }
     }
 

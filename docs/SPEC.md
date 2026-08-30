@@ -45,6 +45,11 @@ Notification text is kept compact and concise when collapsed, displaying detaile
   - Tapping/clicking the notification body opens MainActivity.
   - Keep the notification ongoing across all states (including when Off) so the user cannot swipe it away or accidentally dismiss it.
   - Enter sleep timer duration through a minimal inline notification reply using Android's native text input mechanism.
+- Quick Settings (QS) Tile:
+  - A Quick Settings toggle tile is provided (labeled "Auto Sleep") just like a Wi-Fi or Bluetooth system toggle tile.
+  - Tapping/clicking the tile toggles the sleep timer on or off.
+  - Long-pressing the tile opens `MainActivity`.
+  - The tile state reflects whether the timer is currently enabled (active/on) or disabled (inactive/off).
 
 ## Timer configuration
 - The user can turn the sleep timer on or off using notification controls.
@@ -97,7 +102,8 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 
 ## Acceptance criteria
 - The main activity prints a list of events, one per line, for debugging.
-- The complete timer workflow is possible from the notification bar, system volume buttons, and phone flip gesture.
+- The complete timer workflow is possible from the notification bar, system volume buttons, Quick Settings tile, and phone flip gesture.
+- A Quick Settings Tile is provided to toggle Auto Sleep Droid on or off with a single click and open `MainActivity` on long-press.
 - Volume-up and volume-down both reset an active timer while preserving their normal volume behavior.
 - Expiration pauses active media after a 30-second fade-out, restores pre-fade volume after pausing media, and successfully reverts to the Waiting state.
 - Disabling the timer does not pause media or change the current volume.
