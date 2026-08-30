@@ -19,7 +19,7 @@ Auto Sleep Droid includes a Smart Wake-Up Goal feature ("Auto Sleep") designed t
 ### Current Goal UI Location
 Currently, setting or clearing the wake-up goal requires opening the main app screen (`MainActivity`):
 - **Set Goal**: Tapping "Set Goal" opens an `AlertDialog` containing an `EditText` for minimum sleep hours (`7.5`) and a native `TimePicker` widget.
-- **Stop**: Tapping "Stop" disables the goal (`wake_up_goal_enabled = false`) and cancels scheduled alarms (disabled when goal is off).
+- **Cancel**: Tapping "Cancel" closes the dialog without changing goal settings.
 - **Notification Visibility**: The expanded notification shade displays current alarm status (e.g. `Alarm set for 6:15 AM`), but offers no interactive controls to set or clear the goal from the shade.
 
 ### Objective
@@ -37,9 +37,8 @@ Android OS explicitly prohibits interactive input controls within custom notific
 
 ### 3. Notification Action Slot Budget
 Standard Android notification layouts render up to **3 visible action buttons** per notification:
-- **Slot 1 (In Use)**: `"Set Timer"` (`RemoteInput` for sleep timer duration in minutes).
-- **Slot 2 (In Use)**: `"Turn Off"` (when timer is enabled) or `"Turn On"` (when timer is disabled).
-- **Slot 3 (Available)**: Currently unallocated across all notification states (`Off`, `Waiting`, `Active`, `Fading`), providing exactly 1 free action button slot for goal management.
+- **Slot 1 (In Use)**: `"Sleep <duration>"` (toggles timer off when enabled or opens `RemoteInput` duration input when disabled).
+- **Slot 2 (In Use)**: `"Set Goal"` (launches Goal settings dialog when goal is disabled) or `"Alarm HH:MM"` (clears/disables wake-up goal when goal is set).
 
 ### 4. Dialog Activity Overlay Capabilities (`PendingIntent.getActivity`)
 - A notification action button can trigger a `PendingIntent.getActivity()` that opens a lightweight, dialog-themed Activity (`Theme.Material.Dialog` or `Theme.DeviceDefault.Dialog.Alert`) directly overlaid above whichever app or screen the user is currently viewing.
@@ -51,7 +50,7 @@ Standard Android notification layouts render up to **3 visible action buttons** 
 
 ### Option A: Dialog Activity Overlay (`GoalSettingsDialogActivity`) — **RECOMMENDED**
 - **Description**: Action Slot 3 displays a `"Set Goal"` (or `"Goal: 06:30"`) action button that fires a `PendingIntent.getActivity()`. This opens a lightweight, dialog-themed activity (`GoalSettingsDialogActivity`) directly over the foreground app.
-- **User Experience**: Tapping `"Set Goal"` immediately presents a clean dialog containing a native `TimePicker` (clock wheel or digital time selector), a Minimum Sleep Duration input, and an "OK" / "Stop" button set. Tapping "OK" updates the goal and dismisses the dialog instantly, returning the user to their current app while updating the notification in the background.
+- **User Experience**: Tapping `"Set Goal"` immediately presents a clean dialog containing a native `TimePicker` (clock wheel or digital time selector), a Minimum Sleep Duration input, and an "OK" / "Cancel" button set. Tapping "OK" updates the goal and dismisses the dialog instantly, returning the user to their current app while updating the notification in the background.
 - **Pros**:
   - **Native GUI Controls**: Full access to Android's built-in `TimePicker` and formatted inputs.
   - **Zero String Parsing Ambiguity**: 100% guaranteed input validation for hours, minutes, AM/PM, and minimum sleep safeguard.
@@ -107,7 +106,7 @@ In `SleepTimerService.buildNotification()`, allocate **Action Slot 3** for Goal 
   2. **Target Goal `TimePicker`**: Native `TimePicker` widget prefilled with saved goal hour and minute (default `06:30 AM`).
   3. **Action Buttons**:
      - **"OK"**: Saves goal time and minimum sleep duration, enables goal (`wake_up_goal_enabled = true`), triggers `checkAndScheduleSmartWakeUpAlarm()`, redrawn notification, and calls `finish()`.
-     - **"Stop"**: Disables goal (`wake_up_goal_enabled = false`), cancels scheduled alarms, redrawn notification, and calls `finish()` (disabled when goal is off).
+     - **"Cancel"**: Closes dialog without making changes (`finish()`).
 
 ### 3. Data & State Flow
 1. User taps `"Set Goal"` or `"Goal: 06:30 AM"` in the notification shade.

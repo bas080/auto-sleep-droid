@@ -97,19 +97,12 @@ public class GoalSettingsDialogActivity extends Activity {
             finish();
         });
 
-        builder.setNegativeButton(getString(R.string.dialog_stop), (dialog, which) -> {
-            clearWakeUpGoal();
-            finish();
-        });
+        builder.setNegativeButton(getString(R.string.dialog_cancel), (dialog, which) -> finish());
 
         builder.setOnCancelListener(dialog -> finish());
 
         AlertDialog alertDialog = builder.create();
         alertDialog.show();
-
-        if (!goalEnabled) {
-            alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);
-        }
     }
 
     private int dpToPx(int dp) {
@@ -141,24 +134,6 @@ public class GoalSettingsDialogActivity extends Activity {
         }
     }
 
-    private void clearWakeUpGoal() {
-        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-        prefs.edit()
-                .putBoolean("wake_up_goal_enabled", false)
-                .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
-                .apply();
-
-        Intent clearIntent = new Intent(this, SleepTimerService.class);
-        clearIntent.setAction(SleepTimerService.ACTION_CLEAR_GOAL);
-        if (Build.VERSION.SDK_INT >= 26) {
-            startForegroundService(clearIntent);
-        } else {
-            startService(clearIntent);
-        }
-
-        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Smart Wake-Up Goal cleared");
-        android.widget.Toast.makeText(this, R.string.toast_goal_stopped, android.widget.Toast.LENGTH_SHORT).show();
-    }
 
     private String formatTime(int hour, int minute) {
         Calendar cal = Calendar.getInstance();

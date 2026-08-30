@@ -97,6 +97,71 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testExportButtonClickLaunchesShareIntent() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+        activity.findViewById(R.id.btn_export).performClick();
+
+        Intent chooserIntent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(chooserIntent);
+        assertEquals(Intent.ACTION_CHOOSER, chooserIntent.getAction());
+
+        Intent sendIntent = chooserIntent.getParcelableExtra(Intent.EXTRA_INTENT);
+        assertNotNull(sendIntent);
+        assertEquals(Intent.ACTION_SEND, sendIntent.getAction());
+        assertTrue(sendIntent.getStringExtra(Intent.EXTRA_TEXT).contains("\"version\":1"));
+    }
+
+    @Test
+    public void testImportButtonClickShowsDialogAndImportsValidJSON() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+        activity.findViewById(R.id.btn_import).performClick();
+
+        android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(dialog);
+
+        android.widget.EditText editText = null;
+        if (dialog.getWindow() != null) {
+            java.util.ArrayList<android.widget.EditText> list = new java.util.ArrayList<>();
+            findViewsOfType(dialog.getWindow().getDecorView(), android.widget.EditText.class, list);
+            if (!list.isEmpty()) {
+                editText = list.get(0);
+            }
+        }
+        assertNotNull(editText);
+
+        String json = "{\"version\":1,\"duration_minutes\":45,\"active\":true,\"wake_up_goal_enabled\":true,\"wake_up_goal_hour\":7,\"wake_up_goal_minute\":15,\"min_sleep_duration_minutes\":480}";
+        editText.setText(json);
+
+        android.widget.Button importBtn = dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
+        assertNotNull(importBtn);
+        importBtn.performClick();
+
+        org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+
+        android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
+        assertEquals(45, prefs.getInt("duration_minutes", -1));
+        assertTrue(prefs.getBoolean("active", false));
+        assertTrue(prefs.getBoolean("wake_up_goal_enabled", false));
+        assertEquals(7, prefs.getInt("wake_up_goal_hour", -1));
+        assertEquals(15, prefs.getInt("wake_up_goal_minute", -1));
+        assertEquals(480, prefs.getInt("min_sleep_duration_minutes", -1));
+    }
+
+    private <T extends android.view.View> void findViewsOfType(android.view.View root, Class<T> clazz, java.util.List<T> outList) {
+        if (clazz.isInstance(root)) {
+            outList.add(clazz.cast(root));
+        }
+        if (root instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) root;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                findViewsOfType(group.getChildAt(i), clazz, outList);
+            }
+        }
+    }
+
+    @Test
     public void testResumeRemainsOpenAndLogsEvents() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();

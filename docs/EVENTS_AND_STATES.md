@@ -130,9 +130,8 @@ Events in Auto Sleep Droid originate from user interactions, hardware sensors, s
 
 ### User Input Events
 
-* **`TURN_ON`**: User taps `"Turn On"` in notification or clicks the Quick Settings Tile (when in `OFF` state).
-* **`TURN_OFF`**: User taps `"Turn Off"` in notification or clicks the Quick Settings Tile (when in `WAITING`, `ACTIVE`, or `FADING` state).
-* **`TOGGLE_QS_TILE`**: User clicks the Quick Settings Tile ("Auto Sleep") in Android Quick Settings shade to toggle timer on or off.
+* **`TURN_ON`**: User taps notification action when timer is off (when in `OFF` state).
+* **`TURN_OFF`**: User taps `"Sleep <duration>"` in notification when timer is enabled (when in `WAITING`, `ACTIVE`, or `FADING` state).
 * **`SET_DURATION`**: User submits a duration via the inline `"Set Timer"` notification reply (`RemoteInput`).
 * **`SET_WAKE_UP_GOAL`**: User configures target wake-up goal time and minimum sleep duration safeguard in `MainActivity`.
 * **`CLEAR_GOAL`**: User clears wake-up goal in `MainActivity` or taps clear action.

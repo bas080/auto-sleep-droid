@@ -19,7 +19,6 @@ The app is an Android sleep timer controlled from the notification shade. The ma
 │       │   ├── EventLogger.java
 │       │   ├── GoalSettingsDialogActivity.java
 │       │   ├── MainActivity.java
-│       │   ├── SleepTileService.java
 │       │   └── SleepTimerService.java
 │       └── res/
 │           ├── layout/
@@ -59,7 +58,7 @@ Responsibilities:
 - Create the low-importance ongoing notification (`setOngoing(true)`) representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`.
 - Display compact/concise text when collapsed (`setContentText`) and detailed contextual information when expanded (`Notification.BigTextStyle.bigText`).
 - Set content intent targeting `MainActivity` so tapping the notification opens `MainActivity`.
-- Expose notification actions for `Set Timer` (with numeric keypad `RemoteInput`) and `Set Goal` / `Goal HH:MM` (which launches `GoalSettingsDialogActivity`). State toggle (on/off) is handled via the Quick Settings Tile (`SleepTileService`).
+- Expose notification actions for `Sleep <duration>` (toggles timer off when enabled, opens `RemoteInput` when disabled) and `Set Goal` / `Alarm HH:MM` (disables goal when set, launches `GoalSettingsDialogActivity` when disabled).
 - Parse and validate the inline notification reply using `parseDurationMinutes` to support natural duration inputs (`30`, `1h`, `2h15m`, ignoring seconds specifiers like `2h10m5s`), gracefully defaulting to the previously configured duration or 20-minute default on malformed/invalid input.
 - Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), and wake-up goal settings in `SharedPreferences`.
 - Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
@@ -81,21 +80,6 @@ Important constants:
 - Maximum duration: `1440` minutes (24 hours)
 - Fade duration: `30_000` milliseconds
 
-### `SleepTileService`
-
-File: `app/src/main/java/com/bas080/autosleepdroid/SleepTileService.java`
-
-A Quick Settings Tile service (`android.service.quicksettings.TileService`) allowing users to toggle Auto Sleep Droid on or off directly from Android Quick Settings.
-
-Responsibilities:
-
-- Extends `TileService` to manage the Quick Settings tile state (`Tile.STATE_ACTIVE` vs `Tile.STATE_INACTIVE`).
-- Reads timer enabled state from `SharedPreferences` (`sleep_timer` file, key `active`).
-- Updates the tile state, label ("Auto Sleep"), and subtitle ("On" / "Off" or state description) during `onStartListening()` and in response to state changes.
-- In `onClick()`, toggles state by sending `ACTION_TURN_OFF` (if active) or `ACTION_TURN_ON` (if inactive) intent to `SleepTimerService`.
-- Tapping or long-pressing the tile is handled natively by System UI, where long-press launches `MainActivity`.
-- Declared in `AndroidManifest.xml` with `android.permission.BIND_QUICK_SETTINGS_TILE` and intent filter `android.service.quicksettings.action.QS_TILE`.
-
 ### `GoalSettingsDialogActivity`
 
 File: `app/src/main/java/com/bas080/autosleepdroid/GoalSettingsDialogActivity.java`
@@ -105,9 +89,9 @@ A dialog-themed activity (`@android:style/Theme.Material.Light.Dialog`) launched
 Responsibilities:
 
 - Displays a modal dialog overlay over the foreground app with a `TimePicker` widget for setting target goal time and an `EditText` for configuring minimum sleep duration safeguard in hours (default 7.5h / 450 minutes).
-- Includes "OK" and "Stop" buttons (with "Stop" disabled when `wake_up_goal_enabled` is false).
+- Includes "OK" and "Cancel" buttons.
 - On "OK": saves `wake_up_goal_enabled = true`, `wake_up_goal_hour`, `wake_up_goal_minute`, and `min_sleep_duration_minutes` into `SharedPreferences`, sends `ACTION_REDRAW_NOTIFICATION` intent to `SleepTimerService`, logs the event to `EventLogger`, and calls `finish()`.
-- On "Stop": sets `wake_up_goal_enabled = false` in `SharedPreferences`, sends `ACTION_CLEAR_GOAL` intent to `SleepTimerService`, logs the event to `EventLogger`, and calls `finish()`.
+- On "Cancel": calls `finish()` without modifying settings.
 
 ### `MainActivity`
 

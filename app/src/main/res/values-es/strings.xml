@@ -51,11 +51,16 @@
     <string name="toast_goal_stopped">Objetivo de despertar detenido</string>
     <string name="toast_alarm_dismissed">Alarma descartada</string>
     <string name="toast_alarm_snoozed">Alarma pospuesta 9m</string>
-    <string name="tile_subtitle_on">Activado</string>
-    <string name="tile_subtitle_off">Desactivado</string>
     <string name="version_label">Versión %1$s</string>
     <string name="link_releases">Lanzamientos</string>
     <string name="link_github">GitHub</string>
     <string name="link_issues">Problemas</string>
     <string name="link_donate">Donar</string>
+    <string name="link_export">Exportar</string>
+    <string name="link_import">Importar</string>
+    <string name="dialog_import_title">Importar ajustes</string>
+    <string name="dialog_import_message">Pega tu cadena de configuración JSON a continuación para importar los ajustes:</string>
+    <string name="dialog_import_action">Importar</string>
+    <string name="toast_import_success">Ajustes importados correctamente</string>
+    <string name="toast_import_invalid">Formato de ajustes no válido</string>
 </resources>
