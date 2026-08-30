@@ -51,6 +51,8 @@
     <string name="toast_goal_stopped">Objetivo de despertar detenido</string>
     <string name="toast_alarm_dismissed">Alarma descartada</string>
     <string name="toast_alarm_snoozed">Alarma pospuesta 9m</string>
+    <string name="tile_subtitle_on">Activado</string>
+    <string name="tile_subtitle_off">Desactivado</string>
     <string name="version_label">Versión %1$s</string>
     <string name="link_releases">Lanzamientos</string>
     <string name="link_github">GitHub</string>

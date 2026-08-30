@@ -44,10 +44,10 @@ public class SleepTileService extends TileService {
 
         if (enabled) {
             tile.setState(Tile.STATE_ACTIVE);
-            tile.setSubtitle(getString(R.string.action_turn_on));
+            tile.setSubtitle(getString(R.string.tile_subtitle_on));
         } else {
             tile.setState(Tile.STATE_INACTIVE);
-            tile.setSubtitle(getString(R.string.timer_off_collapsed));
+            tile.setSubtitle(getString(R.string.tile_subtitle_off));
         }
         tile.setIcon(Icon.createWithResource(this, R.drawable.ic_zzz));
         tile.updateTile();
