@@ -764,22 +764,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 .build();
         builder.addAction(setTimerAction);
 
-        if (stateMachine.isEnabled()) {
-            Notification.Action turnOffAction = new Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    getString(R.string.action_turn_off),
-                    turnOffIntent())
-                    .build();
-            builder.addAction(turnOffAction);
-        } else {
-            Notification.Action turnOnAction = new Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_media_play),
-                    getString(R.string.action_turn_on),
-                    turnOnIntent())
-                    .build();
-            builder.addAction(turnOnAction);
-        }
-
         boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
         String goalTitle;
         if (goalEnabled && preferences != null) {

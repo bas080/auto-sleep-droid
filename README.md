@@ -45,7 +45,7 @@ Auto Sleep Droid is a simple Android sleep timer for media playback.
 
 Auto Sleep Droid uses minimal permissions required to function reliably as a background sleep timer:
 
-- **Notifications (`POST_NOTIFICATIONS`)**: Displays live timer status and controls (Set Timer, Turn Off/On) directly in your notification shade.
+- **Notifications (`POST_NOTIFICATIONS`)**: Displays live timer status and controls (Set Timer, Goal Settings) directly in your notification shade.
 - **Foreground Service (`FOREGROUND_SERVICE` & `FOREGROUND_SERVICE_MEDIA_PLAYBACK`)**: Keeps the timer service running reliably in the background while media plays.
 - **Audio Settings (`MODIFY_AUDIO_SETTINGS`)**: Fades music volume down to zero at expiry and restores pre-fade volume after pausing.
 - **Vibration (`VIBRATE`)**: Provides faint haptic feedback confirming your actions (setting timer, turning off, volume button resets, and phone flips).
