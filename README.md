@@ -34,6 +34,8 @@ Auto Sleep Droid is a simple Android sleep timer for media playback.
 4. When the alarm rings, flip your phone over to snooze for 9 minutes, or tap **"Dismiss"** on the alarm notification.
 5. Tap **"Alarm HH:MM"** in the notification whenever you want to disable the wake-up alarm goal feature.
 
+> **Note:** Auto Sleep Droid is not a conventional alarm clock. Going to bed late will push the alarm till later to safeguard your minimum sleep duration, which might overshoot your required wake-up time. It is suggested to keep using a normal alarm and use Auto Sleep Droid to help you wake up at a time before your actual alarm goes off.
+
 ## Permissions Used
 
 Auto Sleep Droid uses minimal permissions required to function reliably as a background sleep timer:
