@@ -717,7 +717,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         } else {
             title = getString(R.string.waiting_title);
             collapsedText = getString(R.string.waiting_collapsed);
-            expandedText = getString(R.string.waiting_expanded);
+            Calendar scheduledAlarm = calculateScheduledAlarm(this, System.currentTimeMillis(), stateMachine.getTimerEndsAt());
+            if (scheduledAlarm != null) {
+                String formattedAlarmTime = formatTime(scheduledAlarm.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE));
+                expandedText = getString(R.string.waiting_expanded_alarm, formattedAlarmTime);
+            } else {
+                expandedText = getString(R.string.waiting_expanded);
+            }
         }
 
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
