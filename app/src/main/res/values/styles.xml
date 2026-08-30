@@ -3,6 +3,9 @@
         <item name="android:windowNoTitle">true</item>
     </style>
 
+    <style name="GoalDialogTheme" parent="android:style/Theme.Material.Light.Dialog">
+    </style>
+
     <style name="SpinnerTimePickerStyle" parent="android:style/Widget.Material.Light.TimePicker">
         <item name="android:timePickerMode">spinner</item>
     </style>

@@ -39,7 +39,7 @@ public class EventLogger {
     }
 
     public static synchronized void log(Context context, int level, String message) {
-        if (context != null && appContext == null) {
+        if (context != null) {
             appContext = context.getApplicationContext();
         }
         Context targetContext = context != null ? context : appContext;
@@ -98,10 +98,27 @@ public class EventLogger {
         return Collections.unmodifiableList(new ArrayList<>(events));
     }
 
+    public static boolean isDarkMode(Context context) {
+        if (context == null) {
+            context = appContext;
+        }
+        if (context == null || context.getResources() == null || context.getResources().getConfiguration() == null) {
+            return false;
+        }
+        int currentNightMode = context.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+        return currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+    }
+
     public static CharSequence formatColoredEvent(String line) {
+        return formatColoredEvent(null, line);
+    }
+
+    public static CharSequence formatColoredEvent(Context context, String line) {
         if (line == null || line.isEmpty()) {
             return "";
         }
+
+        boolean darkMode = isDarkMode(context);
 
         int spaceIdx = line.indexOf(' ');
         int secondSpaceIdx = spaceIdx != -1 ? line.indexOf(' ', spaceIdx + 1) : -1;
@@ -125,20 +142,34 @@ public class EventLogger {
         String displayString = timestamp.isEmpty() ? rawMessage.trim() : (timestamp + rawMessage);
         SpannableString spannable = new SpannableString(displayString);
 
+        int timestampColor = darkMode ? 0xFF888888 : 0xFF999999;
         if (!timestamp.isEmpty() && timestamp.length() <= displayString.length()) {
-            spannable.setSpan(new ForegroundColorSpan(0xFF999999), 0, timestamp.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            spannable.setSpan(new ForegroundColorSpan(timestampColor), 0, timestamp.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
 
         int messageStart = timestamp.isEmpty() ? 0 : timestamp.length();
 
-        int textColor = 0xFF444444;
+        int textColor;
         boolean isBold = false;
 
-        if (level == LEVEL_LOW) {
-            textColor = 0xFF888888;
-        } else if (level == LEVEL_HIGH) {
-            textColor = 0xFF000000;
-            isBold = true;
+        if (darkMode) {
+            if (level == LEVEL_LOW) {
+                textColor = 0xFFAAAAAA;
+            } else if (level == LEVEL_HIGH) {
+                textColor = 0xFFFFFFFF;
+                isBold = true;
+            } else {
+                textColor = 0xFFDDDDDD;
+            }
+        } else {
+            if (level == LEVEL_LOW) {
+                textColor = 0xFF888888;
+            } else if (level == LEVEL_HIGH) {
+                textColor = 0xFF000000;
+                isBold = true;
+            } else {
+                textColor = 0xFF444444;
+            }
         }
 
         if (messageStart < displayString.length()) {
@@ -153,6 +184,8 @@ public class EventLogger {
 
     public static synchronized void clear(Context context) {
         events.clear();
+        appContext = null;
+        loaded = false;
         if (context != null) {
             SharedPreferences prefs = context.getApplicationContext().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
             prefs.edit().remove(KEY_LOGS).apply();

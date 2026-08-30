@@ -44,7 +44,7 @@ public class GoalSettingsDialogActivity extends Activity {
         TextView helperMinSleep = new TextView(this);
         helperMinSleep.setText(R.string.dialog_min_sleep_explanation);
         helperMinSleep.setTextSize(12.0f);
-        helperMinSleep.setTextColor(0xFF666666);
+        helperMinSleep.setTextAppearance(android.R.style.TextAppearance_Small);
         helperMinSleep.setPadding(0, dpToPx(2), 0, dpToPx(4));
         container.addView(helperMinSleep);
 
@@ -66,7 +66,7 @@ public class GoalSettingsDialogActivity extends Activity {
         TextView helperTargetTime = new TextView(this);
         helperTargetTime.setText(R.string.dialog_target_time_explanation);
         helperTargetTime.setTextSize(12.0f);
-        helperTargetTime.setTextColor(0xFF666666);
+        helperTargetTime.setTextAppearance(android.R.style.TextAppearance_Small);
         helperTargetTime.setPadding(0, dpToPx(2), 0, dpToPx(4));
         container.addView(helperTargetTime);
 
