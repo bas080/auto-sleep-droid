@@ -758,7 +758,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (stateMachine.isEnabled()) {
             setTimerAction = new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    getString(R.string.action_timer_on),
+                    getString(R.string.action_timer_off),
                     turnOffIntent())
                     .build();
         } else {
@@ -773,7 +773,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
             setTimerAction = new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_input_add),
-                    actionTitle,
+                    getString(R.string.action_set_timer),
                     durationIntent())
                     .addRemoteInput(remoteInput)
                     .build();
