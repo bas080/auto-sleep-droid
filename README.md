@@ -17,6 +17,8 @@ Auto Sleep Droid is a simple Android sleep timer for media playback.
 3. **Fade & pause:** At expiry, volume fades down over 30 seconds, media playback pauses via system media controls, and original volume is restored.
 4. **Smart wake-up alarm:** If enabled, the app automatically calculates and sets your wake-up alarm for your target time (or later if you went to bed late) to protect your minimum sleep duration.
 
+> **Note on Naps:** The sleep timer does not have specific use cases for naps—just use your device's alarm or timer app. However, if you decide to listen to something when going for a nap, Auto Sleep Droid will still fade out your audio.
+
 ## Usage Instructions
 
 1. Launch Auto Sleep Droid and grant notification access when prompted.
