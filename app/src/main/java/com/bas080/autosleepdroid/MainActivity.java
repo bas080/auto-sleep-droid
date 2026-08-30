@@ -7,6 +7,8 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.net.Uri;
+import android.widget.Button;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -25,10 +27,36 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         scrollView = findViewById(R.id.event_scroll_view);
         eventLogText = findViewById(R.id.event_log_text);
 
+        setupHeaderAndLinks();
+
         EventLogger.log(this, EventLogger.LEVEL_LOW, "MainActivity created");
 
         startOrRequestNotificationPermission();
         requestExactAlarmPermissionIfNeeded();
+    }
+
+    private void setupHeaderAndLinks() {
+        TextView versionText = findViewById(R.id.app_version_text);
+        if (versionText != null) {
+            versionText.setText(getString(R.string.version_label, BuildConfig.VERSION_NAME));
+        }
+
+        setupLinkButton(R.id.btn_releases, "https://github.com/bas080/auto-sleep-droid/releases");
+        setupLinkButton(R.id.btn_github, "https://github.com/bas080/auto-sleep-droid");
+        setupLinkButton(R.id.btn_issues, "https://github.com/bas080/auto-sleep-droid/issues");
+        setupLinkButton(R.id.btn_donate, "https://liberapay.com/bas080");
+    }
+
+    private void setupLinkButton(int buttonId, String url) {
+        Button btn = findViewById(buttonId);
+        if (btn != null) {
+            btn.setOnClickListener(v -> openUrl(url));
+        }
+    }
+
+    private void openUrl(String url) {
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        startActivity(intent);
     }
 
     private void requestExactAlarmPermissionIfNeeded() {

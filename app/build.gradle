@@ -6,6 +6,10 @@ android {
     namespace "com.bas080.autosleepdroid"
     compileSdk 35
 
+    buildFeatures {
+        buildConfig true
+    }
+
     defaultConfig {
         applicationId "com.bas080.autosleepdroid"
         minSdk 26

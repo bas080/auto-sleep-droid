@@ -40,6 +40,63 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testVersionDisplay() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+        TextView versionView = activity.findViewById(R.id.app_version_text);
+        assertNotNull(versionView);
+        assertTrue(versionView.getText().toString().contains(BuildConfig.VERSION_NAME));
+    }
+
+    @Test
+    public void testReleasesLinkClick() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+        activity.findViewById(R.id.btn_releases).performClick();
+
+        Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(intent);
+        assertEquals(Intent.ACTION_VIEW, intent.getAction());
+        assertEquals("https://github.com/bas080/auto-sleep-droid/releases", intent.getDataString());
+    }
+
+    @Test
+    public void testGitHubLinkClick() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+        activity.findViewById(R.id.btn_github).performClick();
+
+        Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(intent);
+        assertEquals(Intent.ACTION_VIEW, intent.getAction());
+        assertEquals("https://github.com/bas080/auto-sleep-droid", intent.getDataString());
+    }
+
+    @Test
+    public void testIssuesLinkClick() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+        activity.findViewById(R.id.btn_issues).performClick();
+
+        Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(intent);
+        assertEquals(Intent.ACTION_VIEW, intent.getAction());
+        assertEquals("https://github.com/bas080/auto-sleep-droid/issues", intent.getDataString());
+    }
+
+    @Test
+    public void testDonateLinkClick() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+        activity.findViewById(R.id.btn_donate).performClick();
+
+        Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(intent);
+        assertEquals(Intent.ACTION_VIEW, intent.getAction());
+        assertEquals("https://liberapay.com/bas080", intent.getDataString());
+    }
+
+    @Test
     public void testResumeRemainsOpenAndLogsEvents() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();
