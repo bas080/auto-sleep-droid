@@ -23,11 +23,13 @@
     <string name="set_timer_input_label">Minutes (%1$sm)</string>
     <string name="action_set_timer">Set Timer</string>
     <string name="action_sleep_duration">Sleep %1$s</string>
-    <string name="action_stop_sleep_duration">Stop %1$s</string>
+    <string name="action_timer_on">On</string>
+    <string name="action_timer_off">Off</string>
     <string name="action_turn_off">Turn Off</string>
     <string name="action_turn_on">Turn On</string>
     <string name="action_set_goal">Set Goal</string>
-    <string name="action_stop_goal_time">Stop %1$s</string>
+    <string name="action_set_alarm">Set Alarm</string>
+    <string name="action_clear_time">Clear %1$s</string>
     <string name="action_goal_time">Alarm %1$s</string>
     <string name="time_format_hours_minutes">%1$dh %2$02dm</string>
     <string name="time_format_minutes">%1$dm</string>
