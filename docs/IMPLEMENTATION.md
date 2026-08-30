@@ -19,6 +19,7 @@ The app is an Android sleep timer controlled from the notification shade. The ma
 │       │   ├── EventLogger.java
 │       │   ├── GoalSettingsDialogActivity.java
 │       │   ├── MainActivity.java
+│       │   ├── SleepTileService.java
 │       │   └── SleepTimerService.java
 │       └── res/
 │           ├── layout/
@@ -79,6 +80,21 @@ Important constants:
 - Minimum duration: `1` minute
 - Maximum duration: `1440` minutes (24 hours)
 - Fade duration: `30_000` milliseconds
+
+### `SleepTileService`
+
+File: `app/src/main/java/com/bas080/autosleepdroid/SleepTileService.java`
+
+A Quick Settings Tile service (`android.service.quicksettings.TileService`) allowing users to toggle Auto Sleep Droid on or off directly from Android Quick Settings.
+
+Responsibilities:
+
+- Extends `TileService` to manage the Quick Settings tile state (`Tile.STATE_ACTIVE` vs `Tile.STATE_INACTIVE`).
+- Reads timer enabled state from `SharedPreferences` (`sleep_timer` file, key `active`).
+- Updates the tile state, label ("Auto Sleep"), and subtitle ("On" / "Off" or state description) during `onStartListening()` and in response to state changes.
+- In `onClick()`, toggles state by sending `ACTION_TURN_OFF` (if active) or `ACTION_TURN_ON` (if inactive) intent to `SleepTimerService`.
+- Tapping or long-pressing the tile is handled natively by System UI, where long-press launches `MainActivity`.
+- Declared in `AndroidManifest.xml` with `android.permission.BIND_QUICK_SETTINGS_TILE` and intent filter `android.service.quicksettings.action.QS_TILE`.
 
 ### `GoalSettingsDialogActivity`
 
