@@ -33,6 +33,7 @@ The app is an Android sleep timer controlled from the notification shade. The ma
 ├── docs/
 │   ├── EVENTS_AND_STATES.md
 │   ├── IMPLEMENTATION.md
+│   ├── IMPORT_EXPORT.md
 │   ├── NOTIFICATION_GOAL_INPUT_OPTIONS.md
 │   ├── NOTIFICATION_INPUT_OPTIONS.md
 │   ├── PERFORMANCE.md
@@ -98,9 +99,12 @@ File: `app/src/main/java/com/bas080/autosleepdroid/MainActivity.java`
 
 The launcher activity starts `SleepTimerService`, requests `POST_NOTIFICATIONS` on Android 13+, prompts for exact alarm permissions on Android 12+, and displays the live event log UI (`activity_main.xml`).
 
-Main Event Log:
+Main Event Log & Import/Export Controls:
 
 - A scrollable `ScrollView` with monospace `TextView` listening to `EventLogger` for live log updates, scrolling automatically to the newest line.
+- Horizontal button bar located underneath the log `ScrollView` containing "Export Settings" (`btn_export`) and "Import Settings" (`btn_import`).
+- Export Settings Action: Serializes current preferences from `sleep_timer` `SharedPreferences` into a Schema Version 1 JSON string (`JSONObject`), writes it to the system clipboard (`ClipboardManager`), displays a confirmation Toast, and logs the export event to `EventLogger`.
+- Import Settings Action: Prompts the user with an `AlertDialog` containing an `EditText` (auto-pasting clipboard string if valid JSON), validates JSON syntax and numeric ranges (`duration_minutes` 1–1440, `wake_up_goal_hour` 0–23, `wake_up_goal_minute` 0–59, `min_sleep_duration_minutes` 1–1440), writes valid values to `SharedPreferences`, sends `ACTION_REDRAW_NOTIFICATION` intent to `SleepTimerService` to recalculate alarms and update notifications, displays a Toast, and logs the event to `EventLogger`. Invalid inputs leave existing preferences unchanged and present an error Toast.
 
 ### `EventLogger`
 
@@ -214,6 +218,17 @@ In-memory state in `SleepTimerService`:
 3. The service loads `active` (`enabled`) and `duration_minutes` from preferences.
 4. If `enabled` was true, the timer restores to `Waiting` state (or `Active` if media is playing).
 5. If explicitly `Off`, the timer remains `Off`.
+
+### Import & Export Settings
+
+1. User taps **Export Settings** in `MainActivity`.
+2. `MainActivity` reads configuration from `SharedPreferences`, serializes values into JSON Schema Version 1 (`version`, `duration_minutes`, `active`, `wake_up_goal_enabled`, `wake_up_goal_hour`, `wake_up_goal_minute`, `min_sleep_duration_minutes`), and copies the output to system clipboard using `ClipboardManager`.
+3. Displays a Toast confirmation and logs to `EventLogger`.
+4. User taps **Import Settings** in `MainActivity`.
+5. An `AlertDialog` input prompt appears (pre-filled with valid clipboard JSON if present).
+6. User confirms import; `MainActivity` validates JSON syntax, schema version, and numeric boundaries.
+7. Upon successful validation, preferences are written to `SharedPreferences`, an `ACTION_REDRAW_NOTIFICATION` intent is sent to `SleepTimerService` to reload state and redraw the notification shade, a success Toast is shown, and the action is logged to `EventLogger`.
+8. Upon invalid JSON or out-of-range parameters, preferences are left untouched, an error Toast is displayed, and a warning is logged to `EventLogger`.
 
 ## Android manifest and permissions
 
