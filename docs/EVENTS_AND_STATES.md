@@ -23,7 +23,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 * **Notification Presentation**:
   * Collapsed Text: `"Timer off"`
   * Expanded Text: `"Sleep timer is off"`
-  * Action Buttons: `"Set Timer"` (inline reply input) and `"Turn On"`.
+  - Action Buttons: `"Set Timer"` (inline reply input) and `"Set Goal"`.
 * **State Invariants**: `enabled = false`, `timerEndsAt = 0`.
 
 ### 2. `WAITING`
@@ -37,7 +37,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 * **Notification Presentation**:
   * Collapsed Text: `"Waiting for playback"`
   * Expanded Text: `"Waiting for media playback"` (appends `" • Alarm at <alarm_time>"` when Smart Wake-Up Goal alarm is set).
-  * Action Buttons: `"Set Timer"` (inline reply input) and `"Turn Off"`.
+  - Action Buttons: `"Set Timer"` (inline reply input) and `"Set Goal"` / `"Goal HH:MM"`.
 * **State Invariants**: `enabled = true`, `timerEndsAt = 0`.
 
 ### 3. `ACTIVE`
@@ -52,7 +52,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 * **Notification Presentation**:
   * Collapsed Text: `"Fades out at <target_time>"` (e.g., `"Fades out at 11:15 PM"`)
   * Expanded Text: `"Fades out at <target_time>"` (appends `" • Alarm at <alarm_time>"` when Smart Wake-Up Goal alarm is set).
-  * Action Buttons: `"Set Timer"` (inline reply input) and `"Turn Off"`.
+  - Action Buttons: `"Set Timer"` (inline reply input) and `"Set Goal"` / `"Goal HH:MM"`.
 * **State Invariants**: `enabled = true`, `timerEndsAt > 0`.
 
 ### 4. `FADING`
@@ -66,7 +66,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 * **Notification Presentation**:
   * Collapsed Text: `"Fading volume"`
   * Expanded Text: `"Fading volume down to pause media"`
-  * Action Buttons: `"Set Timer"` (inline reply input) and `"Turn Off"`.
+  - Action Buttons: `"Set Timer"` (inline reply input) and `"Set Goal"` / `"Goal HH:MM"`.
 * **State Invariants**: `enabled = true`.
 
 ---

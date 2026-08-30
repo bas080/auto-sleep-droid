@@ -23,19 +23,19 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - Off:
   - Collapsed Text: "Timer off"
   - Expanded Text: "Sleep timer is off"
-  - Buttons: "Set Timer" (Inline reply to change duration), "Turn On" (Enables timer without changing configured duration), and "Set Goal" (Opens Wake-Up Goal settings dialog).
+  - Buttons: "Set Timer" (Inline reply to change duration) and "Set Goal" (Opens Wake-Up Goal settings dialog).
 - Waiting: 
   - Collapsed Text: "Waiting for playback"
   - Expanded Text: "Waiting for media playback • Alarm at 6:15 AM" (Alarm detail shown only when wake-up alarm is enabled).
-  - Buttons: "Set Timer" (Inline reply to change duration), "Turn Off" (Disables timer and transitions to Off state), and "Set Goal" / "Goal HH:MM" (Opens Wake-Up Goal settings dialog).
+  - Buttons: "Set Timer" (Inline reply to change duration) and "Set Goal" / "Goal HH:MM" (Opens Wake-Up Goal settings dialog).
 - Active: 
   - Collapsed Text: "Fades out at 11:15 PM"
   - Expanded Text: "Fades out at 11:15 PM • Alarm at 6:15 AM" (Alarm detail shown only when wake-up alarm is enabled).
-  - Buttons: "Set Timer" (Inline reply to change duration), "Turn Off" (Disables timer and transitions to Off state), and "Set Goal" / "Goal HH:MM" (Opens Wake-Up Goal settings dialog).
+  - Buttons: "Set Timer" (Inline reply to change duration) and "Set Goal" / "Goal HH:MM" (Opens Wake-Up Goal settings dialog).
 - Fading: 
   - Collapsed Text: "Fading volume"
   - Expanded Text: "Fading volume down to pause media"
-  - Buttons: "Set Timer" (Inline reply to change duration), "Turn Off" (Cancels the fade, disables timer, and transitions to Off state), and "Set Goal" / "Goal HH:MM" (Opens Wake-Up Goal settings dialog).
+  - Buttons: "Set Timer" (Inline reply to change duration) and "Set Goal" / "Goal HH:MM" (Opens Wake-Up Goal settings dialog).
 
 ## User interface
 - Main Application Screen (`MainActivity`):
@@ -72,7 +72,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - If a phone flip gesture occurs during fade-out: cancel the fade-out, restore the volume to pre-fade level, and reset the timer.
 - If volume-up or volume-down is pressed during fade-out: cancel the fade-out, keep the new user-selected volume, and reset the timer.
 - When the timer expires: fade to zero over 30 seconds (starting fast and slowing down along a curve), pause all active media apps, restore the pre-fade volume after pausing media, and return to the Waiting state.
-- When the timer is turned off: leave the current volume unchanged, display the Off notification with "Turn On" button, and allow media to continue playing.
+- When the timer is turned off: leave the current volume unchanged, display the Off notification, and allow media to continue playing.
 - Provide haptic feedback (a short, faint vibration) to confirm user actions (setting duration reply, turning off, volume button resets, and flip gestures).
 
 ## Reboot behavior & Alarm persistence
@@ -109,7 +109,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - Disabling the timer does not pause media or change the current volume.
 - Invalid inline reply inputs gracefully default to the last valid or default duration.
 - Post-reboot behavior respects the last saved state (preserving Off status or returning running timers to Waiting).
-- The "Set Timer" action is available across all states, the "Turn Off" button is present whenever the timer is enabled, and the "Turn On" button is present when the timer is Off.
+- The "Set Timer" and "Set Goal" actions are available across all notification states, while toggling the timer on/off is performed via the Quick Settings Tile.
 - The Smart Wake-Up Goal feature is disabled by default until explicitly configured by the user.
 - The notification shade provides a "Set Goal" / "Goal HH:MM" action button that opens a dialog overlay (`GoalSettingsDialogActivity`) to configure, display, stop, or enable the target wake-up goal and minimum sleep duration.
 - Notifications remain minimal and compact when collapsed, expanding to show full details (fade target and scheduled wake-up alarm time).

@@ -58,7 +58,7 @@ Responsibilities:
 - Create the low-importance ongoing notification (`setOngoing(true)`) representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`.
 - Display compact/concise text when collapsed (`setContentText`) and detailed contextual information when expanded (`Notification.BigTextStyle.bigText`).
 - Set content intent targeting `MainActivity` so tapping the notification opens `MainActivity`.
-- Expose notification actions for `Set Timer` (with numeric keypad `RemoteInput`), `Turn Off` / `Turn On` state toggle, and `Set Goal` / `Goal HH:MM` (which launches `GoalSettingsDialogActivity`).
+- Expose notification actions for `Set Timer` (with numeric keypad `RemoteInput`) and `Set Goal` / `Goal HH:MM` (which launches `GoalSettingsDialogActivity`). State toggle (on/off) is handled via the Quick Settings Tile (`SleepTileService`).
 - Parse and validate the inline notification reply using `parseDurationMinutes` to support natural duration inputs (`30`, `1h`, `2h15m`, ignoring seconds specifiers like `2h10m5s`), gracefully defaulting to the previously configured duration or 20-minute default on malformed/invalid input.
 - Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), and wake-up goal settings in `SharedPreferences`.
 - Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
