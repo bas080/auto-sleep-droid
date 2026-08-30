@@ -51,6 +51,8 @@
     <string name="toast_goal_stopped">Goal stopped</string>
     <string name="toast_alarm_dismissed">Alarm dismissed</string>
     <string name="toast_alarm_snoozed">Alarm snoozed 9m</string>
+    <string name="tile_subtitle_on">On</string>
+    <string name="tile_subtitle_off">Off</string>
     <string name="version_label">Version %1$s</string>
     <string name="link_releases">Releases</string>
     <string name="link_github">GitHub</string>
