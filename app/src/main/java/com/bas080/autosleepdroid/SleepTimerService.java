@@ -726,10 +726,15 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             }
         }
 
+        Intent contentIntent = new Intent(this, MainActivity.class);
+        PendingIntent contentPendingIntent = PendingIntent.getActivity(this, 0, contentIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_zzz)
                 .setContentTitle(title)
                 .setContentText(collapsedText)
+                .setContentIntent(contentPendingIntent)
                 .setStyle(new Notification.BigTextStyle().bigText(expandedText))
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .setOngoing(true)
