@@ -756,9 +756,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         Notification.Action setTimerAction;
         if (stateMachine.isEnabled()) {
+            String stopTimerTitle = getString(R.string.action_stop_sleep_duration, formattedDurationStr);
             setTimerAction = new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    actionTitle,
+                    stopTimerTitle,
                     turnOffIntent())
                     .build();
         } else {
@@ -786,10 +787,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             int goalHour = preferences.getInt("wake_up_goal_hour", 6);
             int goalMin = preferences.getInt("wake_up_goal_minute", 30);
             String formattedGoalTime = formatTime(goalHour, goalMin);
-            String goalTitle = getString(R.string.action_goal_time, formattedGoalTime);
+            String stopGoalTitle = getString(R.string.action_stop_goal_time, formattedGoalTime);
             goalAction = new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    goalTitle,
+                    stopGoalTitle,
                     clearGoalIntent())
                     .build();
         } else {
