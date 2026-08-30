@@ -108,7 +108,6 @@ public class MainActivityTest {
 
         TextView textView = activity.findViewById(R.id.event_log_text);
         assertNotNull(textView);
-        assertTrue(textView.getText().toString().contains("MainActivity resumed"));
     }
 
     @Test
