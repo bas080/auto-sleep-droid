@@ -102,8 +102,8 @@ The launcher activity starts `SleepTimerService`, requests `POST_NOTIFICATIONS` 
 Main Event Log & Import/Export Controls:
 
 - A scrollable `ScrollView` with monospace `TextView` listening to `EventLogger` for live log updates, scrolling automatically to the newest line.
-- Main UI action links ("Export" and "Import") rendered in the header's scrollable action link list or directly underneath the log `ScrollView`.
-- Export Settings Action: Serializes current preferences from `sleep_timer` `SharedPreferences` into a Schema Version 1 JSON string (`JSONObject`), writes it to the system clipboard (`ClipboardManager`), displays a Toast confirmation ("Settings copied to clipboard"), and logs the export event to `EventLogger`.
+- Main UI action links ("Export" and "Import") rendered in the header's scrollable action link list alongside Releases, GitHub, Issues, and Donate.
+- Export Settings Action: Serializes current preferences from `sleep_timer` `SharedPreferences` into a Schema Version 1 JSON string (`JSONObject`), launches Android system share action (`Intent.ACTION_SEND` / `Intent.createChooser` with `text/plain` MIME type and `Intent.EXTRA_TEXT`), and logs the export event to `EventLogger`.
 - Import Settings Action: Prompts the user with an instructional `AlertDialog` titled "Import Settings" containing clear instructions and an `EditText` (auto-pasting clipboard string if valid JSON), validates JSON syntax and numeric ranges (`duration_minutes` 1–1440, `wake_up_goal_hour` 0–23, `wake_up_goal_minute` 0–59, `min_sleep_duration_minutes` 1–1440), writes valid values to `SharedPreferences`, sends `ACTION_REDRAW_NOTIFICATION` intent to `SleepTimerService` to recalculate alarms and update notifications, displays a Toast confirmation ("Settings imported successfully"), and logs the event to `EventLogger`. Invalid inputs leave existing preferences unchanged and present an error Toast ("Invalid settings format").
 
 ### `EventLogger`
@@ -222,8 +222,8 @@ In-memory state in `SleepTimerService`:
 ### Import & Export Settings
 
 1. User taps **Export** in `MainActivity`.
-2. `MainActivity` reads configuration from `SharedPreferences`, serializes values into JSON Schema Version 1 (`version`, `duration_minutes`, `active`, `wake_up_goal_enabled`, `wake_up_goal_hour`, `wake_up_goal_minute`, `min_sleep_duration_minutes`), and copies the output to system clipboard using `ClipboardManager`.
-3. Displays a Toast confirmation ("Settings copied to clipboard") and logs to `EventLogger`.
+2. `MainActivity` reads configuration from `SharedPreferences`, serializes values into JSON Schema Version 1 (`version`, `duration_minutes`, `active`, `wake_up_goal_enabled`, `wake_up_goal_hour`, `wake_up_goal_minute`, `min_sleep_duration_minutes`), and launches Android's native system share sheet via `Intent.ACTION_SEND` with MIME type `text/plain`.
+3. Logs the action to `EventLogger`.
 4. User taps **Import** in `MainActivity`.
 5. An instructional `AlertDialog` input prompt appears with explanatory instructions (pre-filled with valid clipboard JSON if present).
 6. User confirms import; `MainActivity` validates JSON syntax, schema version, and numeric boundaries.

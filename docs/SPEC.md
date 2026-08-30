@@ -40,7 +40,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 ## User interface
 - Main Application Screen (`MainActivity`):
   - A scrollable, line-by-line list of timestamped events fills the main UI for debugging purposes.
-  - Action links for "Export" and "Import" are rendered on the main UI in the header action link list or directly underneath the event log view.
+  - Action links for "Export" and "Import" are rendered on the main UI in the header action link list alongside Releases, GitHub, Issues, and Donate.
 - Notification Shade Controls:
   - Use notification buttons for sleep-timer controls ("Set Timer" inline reply to change duration, "Turn Off" action button when enabled, "Turn On" action button when Off, and "Set Goal" / "Goal HH:MM" action button to configure target wake-up goal).
   - Tapping/clicking the notification body opens MainActivity.
@@ -80,7 +80,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 
 ## Import & Export Settings
 - **Purpose**: Enable users to back up, restore, or transfer app configuration (sleep timer duration, timer state, Smart Wake-Up Goal preferences, and minimum sleep safeguard) across devices.
-- **Export Settings**: Tapping "Export" serializes current settings into a standardized configuration string, copies it to the device clipboard, displays a Toast confirmation message, and logs the action to the event log.
+- **Export Settings**: Tapping "Export" serializes current settings into a standardized configuration string, launches Android's native system share action (`ACTION_SEND`) allowing the user to copy or send settings, and logs the action to the event log.
 - **Import Settings**: Tapping "Import" opens an instructional dialog guiding the user on pasting or editing a configuration string (pre-filling valid clipboard content automatically). Applying a valid configuration updates application settings, refreshes ongoing notifications and scheduled alarms, displays a Toast confirmation message, and logs the event.
 - **Invalid Input Safeguard**: If an imported string is invalid, malformed, or contains out-of-range parameters, existing settings remain completely unchanged, an error Toast message is shown, and the failure is logged to the event log.
 
@@ -117,6 +117,6 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - Starting the sleep timer within 12 hours of the target goal time schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
 - Disabling the timer or tapping "Stop" in the settings dialog cancels the scheduled `"Auto Sleep"` alarm in the background without launching external Clock app UI activities.
 - Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
-- The main screen includes "Export" and "Import" controls rendered in the main UI link list or directly underneath the event log area.
-- Tapping "Export" copies the serialized configuration string to the clipboard and displays a Toast confirmation message.
+- The main screen includes "Export" and "Import" action links rendered in the header link list.
+- Tapping "Export" serializes configuration settings and launches a system share action (`ACTION_SEND`).
 - Tapping "Import" presents an instructional dialog for pasting configuration strings, updating preferences and notifications upon valid input, or preserving existing preferences when given invalid input.
