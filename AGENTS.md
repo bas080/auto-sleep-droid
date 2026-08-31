@@ -38,3 +38,4 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 - **Reproducible Builds:** Keep `dependenciesInfo` (`includeInApk = false`, `includeInBundle = false`) disabled in `app/build.gradle` for F-Droid compliance.
 - **Releases:** Follow `scripts/release.sh <version>` for bumping versions and tagging. GitHub Actions (`.github/workflows/android-release.yml`) builds and publishes releases automatically. Point to GitHub Releases in Fastlane description metadata rather than per-version changelogs.
 - **Commit Messages:** Do not use prefixes such as `ci:`, `feat:`, `fix:`, or `chore:`. Write plain, clear titles written for normal human readers (e.g. `Add dark mode support` instead of `feat: add dark mode support`).
+- **User Manual Asset:** The user manual is bundled in `app/src/main/assets/manual.html` and must be kept in sync whenever changes affecting user-visible behavior or features occur.

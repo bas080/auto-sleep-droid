@@ -185,21 +185,26 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void showManualDialog() {
-        String markdownText = "";
-        try (java.io.InputStream is = getAssets().open("manual.md");
+        String htmlText = "";
+        try (java.io.InputStream is = getAssets().open("manual.html");
              java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
                 sb.append(line).append("\n");
             }
-            markdownText = sb.toString();
+            htmlText = sb.toString();
         } catch (java.io.IOException e) {
             EventLogger.log(this, "Failed to load manual: " + e.getMessage());
             return;
         }
 
-        CharSequence formattedText = formatMarkdown(markdownText);
+        CharSequence formattedText;
+        if (Build.VERSION.SDK_INT >= 24) {
+            formattedText = android.text.Html.fromHtml(htmlText, android.text.Html.FROM_HTML_MODE_LEGACY);
+        } else {
+            formattedText = android.text.Html.fromHtml(htmlText);
+        }
 
         TextView textView = new TextView(this);
         int paddingPx = (int) (16 * getResources().getDisplayMetrics().density);
@@ -215,44 +220,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 .setView(scrollView)
                 .setPositiveButton(R.string.dialog_ok, (dialog, which) -> dialog.dismiss())
                 .show();
-    }
-
-    private CharSequence formatMarkdown(String md) {
-        if (md == null || md.isEmpty()) {
-            return "";
-        }
-        StringBuilder html = new StringBuilder();
-        String[] lines = md.split("\n");
-        for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.startsWith("# ")) {
-                html.append("<h2><b>").append(escapeHtml(trimmed.substring(2))).append("</b></h2>");
-            } else if (trimmed.startsWith("## ")) {
-                html.append("<h3><b>").append(escapeHtml(trimmed.substring(3))).append("</b></h3>");
-            } else if (trimmed.startsWith("- ")) {
-                html.append("&bull; ").append(processInlineMarkdown(trimmed.substring(2))).append("<br>");
-            } else if (trimmed.isEmpty()) {
-                html.append("<br>");
-            } else {
-                html.append(processInlineMarkdown(trimmed)).append("<br>");
-            }
-        }
-        if (Build.VERSION.SDK_INT >= 24) {
-            return android.text.Html.fromHtml(html.toString(), android.text.Html.FROM_HTML_MODE_LEGACY);
-        } else {
-            return android.text.Html.fromHtml(html.toString());
-        }
-    }
-
-    private String processInlineMarkdown(String text) {
-        String escaped = escapeHtml(text);
-        return escaped.replaceAll("\\*\\*(.*?)\\*\\*", "<b>$1</b>");
-    }
-
-    private String escapeHtml(String text) {
-        return text.replace("&", "&amp;")
-                   .replace("<", "&lt;")
-                   .replace(">", "&gt;");
     }
 
     private void setupLinkButton(int buttonId, String url) {
