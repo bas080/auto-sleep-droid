@@ -628,4 +628,36 @@ public class SleepTimerServiceTest {
         assertEquals("lastObservedVolume must match updated stream volume", currentVolume, stateMachine.getLastObservedVolume());
         assertTrue("Fade should not be cancelled during fade step volume update", stateMachine.isFading());
     }
+
+    @Test
+    public void testWakeUpAlarmTriggersVolumeCrescendo() throws Exception {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        // Inject a non-null Ringtone instance via reflection to simulate system returning a valid Ringtone
+        java.lang.reflect.Field ringtoneField = SleepTimerService.class.getDeclaredField("currentAlarmRingtone");
+        ringtoneField.setAccessible(true);
+        java.lang.reflect.Constructor<android.media.Ringtone> constructor =
+                android.media.Ringtone.class.getDeclaredConstructor(Context.class, boolean.class);
+        constructor.setAccessible(true);
+        android.media.Ringtone mockRingtone = constructor.newInstance(context, false);
+        ringtoneField.set(service, mockRingtone);
+
+        // Invoke startWakeUpAlarmCrescendo
+        java.lang.reflect.Method crescendoMethod = SleepTimerService.class.getDeclaredMethod("startWakeUpAlarmCrescendo");
+        crescendoMethod.setAccessible(true);
+        crescendoMethod.invoke(service);
+
+        java.lang.reflect.Field runnableField = SleepTimerService.class.getDeclaredField("alarmCrescendoRunnable");
+        runnableField.setAccessible(true);
+        assertNotNull("Crescendo runnable should be scheduled when crescendo starts", runnableField.get(service));
+
+        // Dismiss wake-up alarm
+        Intent dismissIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_DISMISS_WAKEUP_ALARM);
+        service.onStartCommand(dismissIntent, 0, 1);
+
+        assertEquals("Ringtone should be cleared after dismiss", null, ringtoneField.get(service));
+        assertEquals("Crescendo runnable should be cancelled after dismiss", null, runnableField.get(service));
+    }
 }
