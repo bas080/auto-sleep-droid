@@ -7,7 +7,7 @@ Auto Sleep Droid is a simple Android sleep timer for media playback.
 - **Never be startled awake:** Fall asleep peacefully to podcasts, YouTube playlists, audiobooks, or music without waking up hours later to blaring audio or autoplay videos.
 - **Universal compatibility:** Controls playback via standard Android system media controls, making it compatible with YouTube, Spotify, podcast players, browsers, and most audio or video apps.
 - **Gentle volume fade:** Volume slowly fades down before pausing playback so you aren't jolted awake by abrupt silence.
-- **Screen-free resets:** Simply press a physical volume button or flip your phone over while in bed to reset the timer to full duration without looking at a bright screen.
+- **Screen-free resets & alarm controls:** Simply press a physical volume button or flip your phone over while in bed to reset the sleep timer, snooze the wake-up alarm (flip), or dismiss the alarm (volume button) without looking at a bright screen.
 - **Smart Wake-Up Goal:** Set your target wake-up time and minimum required sleep duration. The app automatically calculates and schedules your wake-up alarm whenever you start your sleep timer, ensuring you always get enough rest.
 
 ## How It Works
@@ -15,7 +15,7 @@ Auto Sleep Droid is a simple Android sleep timer for media playback.
 1. **Set your timer:** Enter a duration directly from the notification shade.
 2. **Automatic detection:** Sits passively until you start playing media, then automatically begins counting down.
 3. **Fade & pause:** At expiry, volume fades down over 30 seconds, media playback pauses via system media controls, and original volume is restored.
-4. **Smart wake-up alarm:** If enabled, the app automatically calculates and sets your wake-up alarm for your target time (or later if you went to bed late) to protect your minimum sleep duration.
+4. **Smart wake-up alarm:** If enabled, the app automatically calculates and sets your wake-up alarm for your target time (or later if you went to bed late) to protect your minimum sleep duration. Flip or tap **Snooze** to snooze for 9 minutes (keeping the notification open in the shade), or press a volume button / tap **Dismiss** to dismiss the alarm.
 
 > **Note on Naps:** The sleep timer does not have specific use cases for naps—just use your device's alarm or timer app. However, if you decide to listen to something when going for a nap, Auto Sleep Droid will still fade out your audio.
 
@@ -33,7 +33,7 @@ Auto Sleep Droid is a simple Android sleep timer for media playback.
 1. Tap **"Set Goal"** (or **"Alarm HH:MM"**) in the notification shade.
 2. Pick your target wake-up goal time (e.g., `06:30 AM`) and set your minimum required sleep duration in hours (default 7.5 hours).
 3. Tap **"OK"** to enable. When you start your sleep timer, Auto Sleep Droid calculates and schedules your wake-up alarm automatically.
-4. When the alarm rings, flip your phone over or tap **"Snooze"** on the notification to snooze for 9 minutes. Pressing a physical volume button or tapping **"Dismiss"** on the notification shade dismisses the alarm.
+4. When the alarm rings or is snoozed, flip your phone over or tap **"Snooze"** on the notification to snooze for 9 minutes. The wake-up alarm notification remains open in the notification shade so you can dismiss the alarm whenever you want. Pressing any physical volume button or tapping **"Dismiss"** on the notification dismisses the alarm.
 5. Tap **"Alarm HH:MM"** in the notification whenever you want to disable the wake-up alarm goal feature.
 
 > **Note:** Auto Sleep Droid is not a conventional alarm clock. Going to bed late will push the alarm till later to safeguard your minimum sleep duration, which might overshoot your required wake-up time. It is suggested to keep using a normal alarm and use Auto Sleep Droid to help you wake up at a time before your actual alarm goes off.
