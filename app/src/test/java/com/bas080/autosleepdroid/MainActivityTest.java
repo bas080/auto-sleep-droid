@@ -49,6 +49,22 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testManualLinkClickShowsDialog() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+        android.widget.Button btnManual = activity.findViewById(R.id.btn_manual);
+        assertNotNull(btnManual);
+        btnManual.performClick();
+
+        android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(dialog);
+        assertTrue(dialog.isShowing());
+
+        org.robolectric.shadows.ShadowAlertDialog shadowDialog = Shadows.shadowOf(dialog);
+        assertEquals(activity.getString(R.string.link_manual), shadowDialog.getTitle());
+    }
+
+    @Test
     public void testReleasesLinkClick() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();

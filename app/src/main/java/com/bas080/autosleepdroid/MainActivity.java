@@ -49,6 +49,11 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             versionText.setText(getString(R.string.version_label, BuildConfig.VERSION_NAME));
         }
 
+        Button btnManual = findViewById(R.id.btn_manual);
+        if (btnManual != null) {
+            btnManual.setOnClickListener(v -> showManualDialog());
+        }
+
         setupLinkButton(R.id.btn_releases, "https://github.com/bas080/auto-sleep-droid/releases");
         setupLinkButton(R.id.btn_github, "https://github.com/bas080/auto-sleep-droid");
         setupLinkButton(R.id.btn_issues, "https://github.com/bas080/auto-sleep-droid/issues");
@@ -177,6 +182,77 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             Toast.makeText(this, R.string.toast_import_invalid, Toast.LENGTH_SHORT).show();
             EventLogger.log(this, "Failed to import settings: invalid format (" + e.getMessage() + ")");
         }
+    }
+
+    private void showManualDialog() {
+        String markdownText = "";
+        try (java.io.InputStream is = getAssets().open("manual.md");
+             java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            markdownText = sb.toString();
+        } catch (java.io.IOException e) {
+            EventLogger.log(this, "Failed to load manual: " + e.getMessage());
+            return;
+        }
+
+        CharSequence formattedText = formatMarkdown(markdownText);
+
+        TextView textView = new TextView(this);
+        int paddingPx = (int) (16 * getResources().getDisplayMetrics().density);
+        textView.setPadding(paddingPx, paddingPx, paddingPx, paddingPx);
+        textView.setText(formattedText);
+        textView.setTextSize(14);
+
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.addView(textView);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.link_manual)
+                .setView(scrollView)
+                .setPositiveButton(R.string.dialog_ok, (dialog, which) -> dialog.dismiss())
+                .show();
+    }
+
+    private CharSequence formatMarkdown(String md) {
+        if (md == null || md.isEmpty()) {
+            return "";
+        }
+        StringBuilder html = new StringBuilder();
+        String[] lines = md.split("\n");
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("# ")) {
+                html.append("<h2><b>").append(escapeHtml(trimmed.substring(2))).append("</b></h2>");
+            } else if (trimmed.startsWith("## ")) {
+                html.append("<h3><b>").append(escapeHtml(trimmed.substring(3))).append("</b></h3>");
+            } else if (trimmed.startsWith("- ")) {
+                html.append("&bull; ").append(processInlineMarkdown(trimmed.substring(2))).append("<br>");
+            } else if (trimmed.isEmpty()) {
+                html.append("<br>");
+            } else {
+                html.append(processInlineMarkdown(trimmed)).append("<br>");
+            }
+        }
+        if (Build.VERSION.SDK_INT >= 24) {
+            return android.text.Html.fromHtml(html.toString(), android.text.Html.FROM_HTML_MODE_LEGACY);
+        } else {
+            return android.text.Html.fromHtml(html.toString());
+        }
+    }
+
+    private String processInlineMarkdown(String text) {
+        String escaped = escapeHtml(text);
+        return escaped.replaceAll("\\*\\*(.*?)\\*\\*", "<b>$1</b>");
+    }
+
+    private String escapeHtml(String text) {
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;");
     }
 
     private void setupLinkButton(int buttonId, String url) {
