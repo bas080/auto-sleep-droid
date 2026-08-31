@@ -86,9 +86,10 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
 | (SensorEventListener)              | / FADING or Wake-Up   | Wake-Up Alarm Ringing  | not ringing), or Service Destruction      |
 |                                    | Alarm Expiry          |                        |                                          |
 +------------------------------------+-----------------------+------------------------+------------------------------------------+
-| Volume Broadcast Receiver          | Transition to ACTIVE  | ACTIVE, FADING, or     | Transition to OFF or WAITING (when alarm  |
-| (VOLUME_CHANGED_ACTION)            | / FADING or Wake-Up   | Wake-Up Alarm Ringing  | not ringing), or Service Destruction      |
-|                                    | Alarm Expiry          |                        |                                          |
+| Volume Broadcast Receiver          | Transition to ACTIVE  | ACTIVE, FADING,        | Transition to OFF or WAITING (when alarm  |
+| (VOLUME_CHANGED_ACTION)            | / FADING, Wake-Up     | Wake-Up Alarm Ringing, | not ringing or snoozed), or Service       |
+|                                    | Alarm Expiry, or      | or Wake-Up Alarm       | Destruction                               |
+|                                    | Alarm Snoozed         | Snoozed                |                                           |
 +------------------------------------+-----------------------+------------------------+------------------------------------------+
 | Live Event Log UI Listener         | MainActivity onResume | UI Foreground          | MainActivity onPause                     |
 | (EventLogger.Listener)             |                       |                        |                                          |
@@ -111,10 +112,10 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
    * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing), when wake-up alarm stops ringing in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked. The background `HandlerThread` is safely terminated (`quitSafely()`).
 
 3. **Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver)**:
-   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`.
-   * **Active Lifetime**: **`ACTIVE` and `FADING` states only**.
-   * **Purpose**: Detects manual volume button presses on `STREAM_MUSIC`. Volume changes during `ACTIVE` reset countdown timer; volume changes during `FADING` cancel fade-out, preserve new volume, and reset countdown timer. Programmatic volume changes made by the app during fade/restore steps are suppressed via `suppressVolumeReset`.
-   * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing), when wake-up alarm stops ringing in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked.
+   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`, or when wake-up alarm is ringing / snoozed.
+   * **Active Lifetime**: **`ACTIVE` and `FADING` states, or while Wake-Up Alarm is Ringing / Snoozed**.
+   * **Purpose**: Detects manual volume button presses. Volume changes during `ACTIVE` reset countdown timer; volume changes during `FADING` cancel fade-out, preserve new volume, and reset countdown timer; volume changes while wake-up alarm is ringing or snoozed dismiss the wake-up alarm.
+   * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing or snoozed), when wake-up alarm is dismissed in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked.
 
 4. **Event Logger Listener (`EventLogger.Listener`)**:
    * **Registration Point**: Registered in `MainActivity.onResume()`.
@@ -213,4 +214,5 @@ All system state changes and input triggers are logged to `EventLogger` with a t
 | Wake-Up Alarm Triggered | `Auto Sleep wake-up alarm triggered` |
 | Wake-Up Alarm Snoozed via Flip | `Wake-Up Goal alarm snoozed via flip gesture` |
 | Wake-Up Alarm Snoozed | `Wake-Up Goal alarm snoozed for 9m` |
+| Wake-Up Alarm Dismissed via Vol | `Wake-Up Goal alarm dismissed via volume button` |
 | Service Destroyed | `SleepTimerService destroyed` |

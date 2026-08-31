@@ -503,6 +503,68 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testVolumeKeyDismissesRingingWakeUpAlarm() {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+
+        // Trigger wake-up alarm
+        Intent triggerIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_WAKEUP_ALARM_EXPIRY);
+        service.onStartCommand(triggerIntent, 0, 1);
+
+        assertNotNull(shadowNotificationManager.getNotification(1002));
+
+        // Send volume change broadcast while ringing
+        context.sendBroadcast(new Intent("android.media.VOLUME_CHANGED_ACTION"));
+        org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+
+        // Notification should be cancelled after volume button click dismiss
+        android.app.Notification dismissedNotification = shadowNotificationManager.getNotification(1002);
+        assertEquals(null, dismissedNotification);
+    }
+
+    @Test
+    public void testVolumeKeyDismissesSnoozedWakeUpAlarm() {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+
+        // Trigger wake-up alarm
+        Intent triggerIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_WAKEUP_ALARM_EXPIRY);
+        service.onStartCommand(triggerIntent, 0, 1);
+
+        // Snooze wake-up alarm
+        Intent snoozeIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_SNOOZE_WAKEUP_ALARM);
+        service.onStartCommand(snoozeIntent, 0, 1);
+
+        assertNotNull(shadowNotificationManager.getNotification(1002));
+
+        // Trigger volume button change broadcast while snoozed
+        try {
+            java.lang.reflect.Field receiverField = SleepTimerService.class.getDeclaredField("volumeReceiver");
+            receiverField.setAccessible(true);
+            android.content.BroadcastReceiver receiver = (android.content.BroadcastReceiver) receiverField.get(service);
+            assertNotNull(receiver);
+            receiver.onReceive(service, new Intent("android.media.VOLUME_CHANGED_ACTION"));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        // Notification should be cancelled after volume button click dismiss
+        android.app.Notification dismissedNotification = shadowNotificationManager.getNotification(1002);
+        assertEquals(null, dismissedNotification);
+    }
+
+    @Test
     public void testFadeVolumeStateConsistencyDuringStreamVolumeSet() throws Exception {
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();

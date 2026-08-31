@@ -81,6 +81,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private long lastScheduledWakeupAlarmTimeMs = 0L;
     private Ringtone currentAlarmRingtone;
     private boolean isWakeUpAlarmRinging = false;
+    private boolean isWakeUpAlarmSnoozed = false;
 
     private SleepTimerStateMachine stateMachine;
 
@@ -145,11 +146,15 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     if ("android.media.VOLUME_CHANGED_ACTION".equals(intent.getAction())) {
-                        int streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1);
-                        if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
-                            if (audioManager != null) {
-                                int currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-                                stateMachine.onVolumeChanged(currentVol, System.currentTimeMillis());
+                        if (isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) {
+                            dismissWakeUpAlarmViaVolumeKey();
+                        } else {
+                            int streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1);
+                            if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
+                                if (audioManager != null) {
+                                    int currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+                                    stateMachine.onVolumeChanged(currentVol, System.currentTimeMillis());
+                                }
                             }
                         }
                     }
@@ -215,6 +220,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep wake-up alarm triggered");
                 isWakeUpAlarmRinging = true;
+                isWakeUpAlarmSnoozed = false;
                 updateListenersRegistration();
                 playWakeUpAlarmSound();
                 showWakeUpAlarmNotification();
@@ -224,6 +230,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 cancelWakeUpAlarmNotification();
                 dismissAutoSleepAlarm();
                 isWakeUpAlarmRinging = false;
+                isWakeUpAlarmSnoozed = false;
                 updateListenersRegistration();
                 android.widget.Toast.makeText(this, R.string.toast_alarm_dismissed, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_SNOOZE_WAKEUP_ALARM.equals(intent.getAction())) {
@@ -231,6 +238,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 stopWakeUpAlarmSound();
                 snoozeWakeUpAlarm();
                 isWakeUpAlarmRinging = false;
+                isWakeUpAlarmSnoozed = true;
                 updateListenersRegistration();
                 android.widget.Toast.makeText(this, R.string.toast_alarm_snoozed, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_CLEAR_GOAL.equals(intent.getAction())) {
@@ -323,12 +331,17 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void updateListenersRegistration() {
-        boolean needSensorAndVolume = stateMachine.isActive() || isWakeUpAlarmRinging;
-        if (needSensorAndVolume) {
+        boolean needSensor = stateMachine.isActive() || isWakeUpAlarmRinging;
+        if (needSensor) {
             registerSensorListener();
-            registerVolumeObserver();
         } else {
             unregisterSensorListener();
+        }
+
+        boolean needVolume = stateMachine.isActive() || isWakeUpAlarmRinging || isWakeUpAlarmSnoozed;
+        if (needVolume) {
+            registerVolumeObserver();
+        } else {
             unregisterVolumeObserver();
         }
     }
@@ -675,8 +688,21 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         stopWakeUpAlarmSound();
         snoozeWakeUpAlarm();
         isWakeUpAlarmRinging = false;
+        isWakeUpAlarmSnoozed = true;
         onTriggerVibration();
         updateListenersRegistration();
+    }
+
+    private void dismissWakeUpAlarmViaVolumeKey() {
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed via volume button");
+        stopWakeUpAlarmSound();
+        cancelWakeUpAlarmNotification();
+        dismissAutoSleepAlarm();
+        isWakeUpAlarmRinging = false;
+        isWakeUpAlarmSnoozed = false;
+        onTriggerVibration();
+        updateListenersRegistration();
+        android.widget.Toast.makeText(this, R.string.toast_alarm_dismissed, android.widget.Toast.LENGTH_SHORT).show();
     }
 
     private void pauseMediaViaAudioFocus() {
@@ -921,6 +947,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         stopWakeUpAlarmSound();
         cancelWakeUpAlarmNotification();
         isWakeUpAlarmRinging = false;
+        isWakeUpAlarmSnoozed = false;
         unregisterSensorListener();
         unregisterVolumeObserver();
         unregisterAudioPlaybackCallback();
