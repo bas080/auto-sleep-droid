@@ -212,4 +212,5 @@ All system state changes and input triggers are logged to `EventLogger` with a t
 | Wake-Up Goal Alarm Set | `Wake-Up Goal Alarm 'Auto Sleep' set in Clock app for <formatted_time>` |
 | Wake-Up Alarm Triggered | `Auto Sleep wake-up alarm triggered` |
 | Wake-Up Alarm Snoozed via Flip | `Wake-Up Goal alarm snoozed via flip gesture` |
+| Wake-Up Alarm Snoozed | `Wake-Up Goal alarm snoozed for 9m` |
 | Service Destroyed | `SleepTimerService destroyed` |

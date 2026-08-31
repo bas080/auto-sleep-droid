@@ -222,13 +222,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed");
                 stopWakeUpAlarmSound();
                 cancelWakeUpAlarmNotification();
+                dismissAutoSleepAlarm();
                 isWakeUpAlarmRinging = false;
                 updateListenersRegistration();
                 android.widget.Toast.makeText(this, R.string.toast_alarm_dismissed, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_SNOOZE_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed for 9m");
                 stopWakeUpAlarmSound();
-                cancelWakeUpAlarmNotification();
                 snoozeWakeUpAlarm();
                 isWakeUpAlarmRinging = false;
                 updateListenersRegistration();
@@ -673,7 +673,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private void snoozeWakeUpAlarmViaFlip() {
         EventLogger.log(this, "Wake-Up Goal alarm snoozed via flip gesture");
         stopWakeUpAlarmSound();
-        cancelWakeUpAlarmNotification();
         snoozeWakeUpAlarm();
         isWakeUpAlarmRinging = false;
         onTriggerVibration();

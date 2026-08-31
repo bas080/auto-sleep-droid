@@ -4,7 +4,7 @@
 - **Sleep Timer**: The application feature that counts down while media is playing and fades volume down to zero to pause playback upon expiration.
 - **Sleep Timer Duration**: The user-configured duration in minutes (default 20 minutes, min 1 minute, max 24 hours) that the sleep timer counts down before fading and pausing media.
 - **Fade-Out / Fading**: The 30-second volume fade at sleep timer expiration where music volume gradually decreases along an ease-out curve down to zero before media playback is paused.
-- **Wake-Up Alarm ("Auto Sleep")**: The background wake-up alarm scheduled via AlarmManager by Auto Sleep Droid that plays the system default alarm tone and displays a high-priority notification with Dismiss and Snooze (9 minutes) action buttons to wake the user up at or after their target goal time.
+- **Wake-Up Alarm ("Auto Sleep")**: The background wake-up alarm scheduled via AlarmManager by Auto Sleep Droid that plays the system default alarm tone and displays a high-priority notification with Dismiss and Snooze (9 minutes) action buttons to wake the user up at or after their target goal time. The notification remains open when snoozed so users can dismiss the alarm at any time.
 - **Target Goal Time**: The user's desired daily wake-up clock time (e.g., `06:30 AM`).
 - **Minimum Sleep Duration**: The user-configured minimum sleep safeguard duration in hours (default 7.5 hours) ensuring that the wake-up alarm is set no earlier than `timerStartTime + sleepTimerDuration + minimumSleepDuration`.
 
@@ -90,9 +90,10 @@ Notification text is kept compact and concise when collapsed, displaying detaile
   1. **Alarm Calculation at Timer Start**: When the sleep timer starts or is reset, the wake-up alarm is set to the maximum of target goal time and timer start time plus sleep timer duration plus minimum sleep duration safeguard. Upon expiration, the app plays the default system alarm tone and shows a high-priority notification with Dismiss and Snooze (9 minutes) options.
   2. **12-Hour Window Safeguard**: The alarm is scheduled only when the timer starts within 12 hours prior to the target goal time.
   3. **Single Alarm Creation**: The app maintains only one wake-up alarm named `"Auto Sleep"`.
-  4. **Wake-Up Alarm Gestures**:
+  4. **Wake-Up Alarm Gestures & Persistence**:
      - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
-     - **Dismiss**: Tapping the Dismiss button on the wake-up alarm notification dismisses the alarm.
+     - **Notification Persistence**: Snoozing the alarm (via flip or notification action) stops the alarm sound but keeps the notification open in the notification shade so the user can dismiss the alarm when desired.
+     - **Dismiss**: Tapping the Dismiss button on the wake-up alarm notification dismisses the alarm and removes the notification.
 - **Disabled by Default**: The feature is off by default until configured via the "Set Goal" notification action button. Tapping "Alarm HH:MM" in the notification turns it off and removes the alarm.
 - **User Inputs**:
   - **Target Goal Time** (e.g., `06:30 AM`).
