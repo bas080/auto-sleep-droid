@@ -416,6 +416,93 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testWakeUpAlarmSnoozeKeepsNotificationOpen() {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+
+        // Trigger wake-up alarm
+        Intent triggerIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_WAKEUP_ALARM_EXPIRY);
+        service.onStartCommand(triggerIntent, 0, 1);
+
+        android.app.Notification wakeUpNotification = shadowNotificationManager.getNotification(1002);
+        assertNotNull(wakeUpNotification);
+
+        // Snooze wake-up alarm
+        Intent snoozeIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_SNOOZE_WAKEUP_ALARM);
+        service.onStartCommand(snoozeIntent, 0, 1);
+
+        // Notification should STILL be present after snooze
+        android.app.Notification snoozedNotification = shadowNotificationManager.getNotification(1002);
+        assertNotNull("Wake-up alarm notification must remain open when snoozed", snoozedNotification);
+
+        // Dismiss wake-up alarm
+        Intent dismissIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_DISMISS_WAKEUP_ALARM);
+        service.onStartCommand(dismissIntent, 0, 1);
+
+        // Notification should be cancelled after dismiss
+        android.app.Notification dismissedNotification = shadowNotificationManager.getNotification(1002);
+        assertEquals(null, dismissedNotification);
+    }
+
+    @Test
+    public void testWakeUpAlarmFlipSnoozeKeepsNotificationOpen() throws Exception {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+
+        // Trigger wake-up alarm expiry
+        Intent triggerIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_WAKEUP_ALARM_EXPIRY);
+        service.onStartCommand(triggerIntent, 0, 1);
+
+        assertNotNull(shadowNotificationManager.getNotification(1002));
+
+        // Simulate flip gesture via onSensorChanged
+        java.lang.reflect.Constructor<android.hardware.SensorEvent> constructor =
+                android.hardware.SensorEvent.class.getDeclaredConstructor(int.class);
+        constructor.setAccessible(true);
+        android.hardware.SensorEvent faceUpEvent = constructor.newInstance(3);
+        faceUpEvent.values[0] = 0f;
+        faceUpEvent.values[1] = 0f;
+        faceUpEvent.values[2] = 9.8f;
+
+        java.lang.reflect.Constructor<android.hardware.Sensor> sensorConstructor =
+                android.hardware.Sensor.class.getDeclaredConstructor();
+        sensorConstructor.setAccessible(true);
+        android.hardware.Sensor accelerometer = sensorConstructor.newInstance();
+        java.lang.reflect.Field typeField = android.hardware.Sensor.class.getDeclaredField("mType");
+        typeField.setAccessible(true);
+        typeField.setInt(accelerometer, android.hardware.Sensor.TYPE_ACCELEROMETER);
+        faceUpEvent.sensor = accelerometer;
+
+        service.onSensorChanged(faceUpEvent);
+
+        android.hardware.SensorEvent faceDownEvent = constructor.newInstance(3);
+        faceDownEvent.values[0] = 0f;
+        faceDownEvent.values[1] = 0f;
+        faceDownEvent.values[2] = -9.8f;
+        faceDownEvent.sensor = accelerometer;
+
+        service.onSensorChanged(faceDownEvent);
+
+        org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+
+        // Notification should STILL be present after snooze via flip
+        android.app.Notification snoozedNotification = shadowNotificationManager.getNotification(1002);
+        assertNotNull("Wake-up alarm notification must remain open when snoozed via flip", snoozedNotification);
+    }
+
+    @Test
     public void testFadeVolumeStateConsistencyDuringStreamVolumeSet() throws Exception {
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
