@@ -66,7 +66,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - When volume-up or volume-down is pressed during Active state: allow the system volume to change and reset the timer to the original configured duration.
 - When the phone is flipped (face-up to face-down, or face-down to face-down, detected via motion sensor) during Active state: reset the timer to the original configured duration.
 - If a phone flip gesture occurs during fade-out: cancel the fade-out, restore the volume to pre-fade level, and reset the timer.
-- If volume-up or volume-down is pressed during fade-out: cancel the fade-out, keep the new user-selected volume, and reset the timer.
+- If volume-up or volume-down is pressed during fade-out: cancel the fade-out, restore the volume to pre-fade level, and reset the timer.
 - When the timer expires: fade to zero over 30 seconds (starting fast and slowing down along a curve), pause all active media apps, restore the pre-fade volume after pausing media, and return to the Waiting state.
 - When the timer is turned off: leave the current volume unchanged, display the Off notification, and allow media to continue playing.
 - Provide haptic feedback (a short, faint vibration) to confirm user actions (setting duration reply, turning off, volume button resets, and flip gestures).
