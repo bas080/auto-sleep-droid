@@ -94,6 +94,45 @@ public class SleepTimerStateMachine {
         }
     }
 
+    public void reloadSettings(boolean savedEnabled, int savedDurationMinutes, boolean musicActive, long now) {
+        int newDuration = isValidDuration(savedDurationMinutes) ? savedDurationMinutes : DEFAULT_DURATION_MINUTES;
+
+        if (!savedEnabled) {
+            configuredDurationMinutes = newDuration;
+            if (state != State.OFF) {
+                handleTurnOff(false);
+            }
+            return;
+        }
+
+        if (state == State.OFF) {
+            configuredDurationMinutes = newDuration;
+            if (musicActive) {
+                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true);
+            } else {
+                if (callback != null) {
+                    callback.onPersistState(true, configuredDurationMinutes, 0L);
+                }
+                transitionTo(State.WAITING);
+            }
+        } else if (state == State.WAITING) {
+            configuredDurationMinutes = newDuration;
+            if (musicActive) {
+                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true);
+            } else {
+                if (callback != null) {
+                    callback.onUpdateNotification();
+                }
+            }
+        } else if (state == State.ACTIVE) {
+            if (newDuration != configuredDurationMinutes) {
+                startTimer(newDuration, now + newDuration * 60_000L, now, true);
+            }
+        } else if (state == State.FADING) {
+            configuredDurationMinutes = newDuration;
+        }
+    }
+
     private void transitionTo(State newState) {
         this.state = newState;
         if (callback != null) {

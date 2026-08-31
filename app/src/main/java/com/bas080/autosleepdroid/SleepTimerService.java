@@ -253,7 +253,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 android.widget.Toast.makeText(this, R.string.toast_goal_stopped, android.widget.Toast.LENGTH_SHORT).show();
                 updateNotification();
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
-                updateNotification();
+                reloadSettingsAndUpdate();
             }
         }
         return START_STICKY;
@@ -828,6 +828,29 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         builder.addAction(goalAction);
 
         return builder.build();
+    }
+
+    private void reloadSettingsAndUpdate() {
+        if (preferences == null || stateMachine == null) {
+            updateNotification();
+            return;
+        }
+
+        boolean savedEnabled = preferences.getBoolean(KEY_ENABLED, true);
+        int savedDuration = preferences.getInt(KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+        long now = System.currentTimeMillis();
+        boolean musicActive = audioManager != null && audioManager.isMusicActive();
+
+        stateMachine.reloadSettings(savedEnabled, savedDuration, musicActive, now);
+
+        boolean goalEnabled = preferences.getBoolean("wake_up_goal_enabled", false);
+        if (goalEnabled && stateMachine.isActive()) {
+            checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
+        } else if (!goalEnabled) {
+            dismissAutoSleepAlarm();
+        }
+
+        updateNotification();
     }
 
     private void updateNotification() {

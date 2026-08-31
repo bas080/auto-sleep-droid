@@ -253,14 +253,51 @@ public class SleepTimerServiceTest {
     }
 
     @Test
-    public void testRedrawNotificationAction() {
+    public void testRedrawNotificationActionReloadsSettingsAndUpdatesStateMachine() throws Exception {
+        // Initially active with 20 minutes
+        preferences.edit()
+                .putBoolean("active", true)
+                .putInt("duration_minutes", 20)
+                .commit();
+
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
+
+        java.lang.reflect.Field stateMachineField = SleepTimerService.class.getDeclaredField("stateMachine");
+        stateMachineField.setAccessible(true);
+        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
+
+        assertEquals(20, stateMachine.getConfiguredDurationMinutes());
+        assertTrue(stateMachine.isEnabled());
+
+        // Update preferences to inactive with 45 minutes duration and goal enabled
+        preferences.edit()
+                .putBoolean("active", false)
+                .putInt("duration_minutes", 45)
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 7)
+                .putInt("wake_up_goal_minute", 0)
+                .commit();
 
         Intent redrawIntent = new Intent(context, SleepTimerService.class)
                 .setAction(SleepTimerService.ACTION_REDRAW_NOTIFICATION);
 
         service.onStartCommand(redrawIntent, 0, 1);
+
+        // Verify state machine reloaded duration and updated active/enabled state
+        assertFalse(stateMachine.isEnabled());
+        assertEquals(45, stateMachine.getConfiguredDurationMinutes());
+
+        // Now test turning timer on via preferences reload
+        preferences.edit()
+                .putBoolean("active", true)
+                .putInt("duration_minutes", 60)
+                .commit();
+
+        service.onStartCommand(redrawIntent, 0, 1);
+
+        assertTrue(stateMachine.isEnabled());
+        assertEquals(60, stateMachine.getConfiguredDurationMinutes());
 
         NotificationManager notificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
