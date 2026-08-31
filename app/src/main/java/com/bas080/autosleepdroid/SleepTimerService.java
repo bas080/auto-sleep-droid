@@ -56,6 +56,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long PAUSE_RESET_DELAY_MS = 500L;
     private static final long SENSOR_THROTTLE_MS = 300L;
+    private static final long ALARM_CRESCENDO_DURATION_MS = 60_000L;
+    private static final long ALARM_CRESCENDO_INTERVAL_MS = 500L;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private AudioManager audioManager;
     private android.app.AlarmManager alarmManager;
@@ -80,6 +82,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private android.os.Vibrator vibrator;
     private long lastScheduledWakeupAlarmTimeMs = 0L;
     private Ringtone currentAlarmRingtone;
+    private Runnable alarmCrescendoRunnable;
+    private long alarmCrescendoStartTimeMs = 0L;
     private boolean isWakeUpAlarmRinging = false;
     private boolean isWakeUpAlarmSnoozed = false;
 
@@ -592,15 +596,53 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 } else {
                     currentAlarmRingtone.setStreamType(AudioManager.STREAM_ALARM);
                 }
+                if (android.os.Build.VERSION.SDK_INT >= 28) {
+                    currentAlarmRingtone.setVolume(0.0f);
+                }
                 currentAlarmRingtone.play();
                 EventLogger.log(this, "Wake-Up Goal alarm tone started playing");
+                startWakeUpAlarmCrescendo();
             }
         } catch (Exception e) {
             EventLogger.log(this, "Failed to play wake-up alarm sound: " + e.getMessage());
         }
     }
 
+    private void startWakeUpAlarmCrescendo() {
+        if (alarmCrescendoRunnable != null) {
+            handler.removeCallbacks(alarmCrescendoRunnable);
+        }
+        alarmCrescendoStartTimeMs = System.currentTimeMillis();
+        alarmCrescendoRunnable = this::runWakeUpAlarmCrescendoStep;
+        handler.post(alarmCrescendoRunnable);
+    }
+
+    private void runWakeUpAlarmCrescendoStep() {
+        if (currentAlarmRingtone == null) {
+            return;
+        }
+        long elapsedTimeMs = System.currentTimeMillis() - alarmCrescendoStartTimeMs;
+        float progress = Math.min(1.0f, (float) elapsedTimeMs / ALARM_CRESCENDO_DURATION_MS);
+
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            try {
+                currentAlarmRingtone.setVolume(progress);
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (elapsedTimeMs < ALARM_CRESCENDO_DURATION_MS && isWakeUpAlarmRinging) {
+            handler.postDelayed(alarmCrescendoRunnable, ALARM_CRESCENDO_INTERVAL_MS);
+        } else {
+            alarmCrescendoRunnable = null;
+        }
+    }
+
     private void stopWakeUpAlarmSound() {
+        if (alarmCrescendoRunnable != null) {
+            handler.removeCallbacks(alarmCrescendoRunnable);
+            alarmCrescendoRunnable = null;
+        }
         if (currentAlarmRingtone != null) {
             try {
                 if (currentAlarmRingtone.isPlaying()) {
