@@ -50,9 +50,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
 
         Button btnManual = findViewById(R.id.btn_manual);
-        if (btnManual != null) {
-            btnManual.setOnClickListener(v -> showManualDialog());
-        }
+        btnManual.setOnClickListener(v -> showManualDialog());
 
         setupLinkButton(R.id.btn_releases, "https://github.com/bas080/auto-sleep-droid/releases");
         setupLinkButton(R.id.btn_github, "https://github.com/bas080/auto-sleep-droid");
