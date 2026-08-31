@@ -149,6 +149,7 @@ public class SleepTimerStateMachineTest {
 
         assertEquals(SleepTimerStateMachine.State.ACTIVE, stateMachine.getState());
         assertFalse(stateMachine.isFading());
+        assertEquals("Pre-fade volume must be restored on manual volume change during fade", 10, callback.lastSetVolume);
     }
 
     @Test

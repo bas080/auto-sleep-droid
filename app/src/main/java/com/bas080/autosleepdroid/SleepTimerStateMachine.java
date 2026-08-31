@@ -292,16 +292,7 @@ public class SleepTimerStateMachine {
     }
 
     public void cancelFadeForVolumeChange(int currentVolume) {
-        if (callback != null) {
-            callback.onTriggerVibration();
-            callback.onCancelAlarm();
-        }
-        lastObservedVolume = currentVolume;
-        if (isValidDuration(configuredDurationMinutes)) {
-            startTimer(configuredDurationMinutes, System.currentTimeMillis() + configuredDurationMinutes * 60_000L, System.currentTimeMillis(), true);
-        } else {
-            transitionTo(State.WAITING);
-        }
+        cancelFadeForFlip();
     }
 
     public void cancelFadeForFlip() {

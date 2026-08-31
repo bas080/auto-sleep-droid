@@ -200,7 +200,7 @@ In-memory state in `SleepTimerService`:
 2. Event listeners (`AudioPlaybackCallback`, `VOLUME_CHANGED_ACTION` receiver, accelerometer sensor) notify `SleepTimerStateMachine` immediately of events.
 3. If enabled and active, a volume change or phone flip gesture resets the countdown to `configuredDurationMinutes`.
 4. If enabled and waiting, active media playback (`isMusicActive()`) transitions the timer to `Active`.
-5. If in `Fading` state, a volume change cancels fade and preserves current volume, while a phone flip gesture cancels fade, restores pre-fade volume, and resets the timer to `Active`.
+5. If in `Fading` state, a volume change or phone flip gesture cancels fade, restores pre-fade volume, and resets the timer to `Active`.
 6. Changes in volume, flip gesture detection, or media playback state are logged to `EventLogger`.
 
 ### Expiry & Smart Wake-Up Goal Alarm Creation

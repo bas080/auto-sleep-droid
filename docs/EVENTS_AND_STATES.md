@@ -61,7 +61,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 * **Background Resources & Listeners**:
   * `AudioPlaybackCallback`: Unregistered.
   * `SensorEventListener` (Accelerometer): Registered (detects phone flip gestures to cancel fade, restore volume, and reset timer).
-  * Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver): Registered (detects user volume changes to cancel fade, preserve new volume, and reset timer).
+  * Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver): Registered (detects user volume changes to cancel fade, restore pre-fade volume, and reset timer).
   * Fade Handler: Executes 30 steps at 1-second intervals (`FADE_STEP_INTERVAL_MS = 1000ms`, `TOTAL_FADE_STEPS = 30`).
 * **Notification Presentation**:
   * Collapsed Text: `"Fading volume"`
@@ -114,7 +114,7 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
 3. **Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver)**:
    * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`, or when wake-up alarm is ringing / snoozed.
    * **Active Lifetime**: **`ACTIVE` and `FADING` states, or while Wake-Up Alarm is Ringing / Snoozed**.
-   * **Purpose**: Detects manual volume button presses. Volume changes during `ACTIVE` reset countdown timer; volume changes during `FADING` cancel fade-out, preserve new volume, and reset countdown timer; volume changes while wake-up alarm is ringing or snoozed dismiss the wake-up alarm.
+   * **Purpose**: Detects manual volume button presses. Volume changes during `ACTIVE` reset countdown timer; volume changes during `FADING` cancel fade-out, restore pre-fade volume, and reset countdown timer; volume changes while wake-up alarm is ringing or snoozed dismiss the wake-up alarm.
    * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing or snoozed), when wake-up alarm is dismissed in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked.
 
 4. **Event Logger Listener (`EventLogger.Listener`)**:
@@ -181,7 +181,7 @@ The table below maps each `(Current State, Event)` pair to its resulting `Next S
 | **ACTIVE** | `SET_DURATION` | `ACTIVE` | Validates input, vibrates, sets new duration, reschedules timer countdown, updates notification |
 | **ACTIVE** | `TIMER_EXPIRED` | `FADING` | Captures `volumeBeforeFade`, registers sensor & volume listeners, starts 30s fade runnable, updates notification |
 | **ACTIVE** | `TURN_OFF` | `OFF` | Vibrates, cancels timer & wake-up alarms, persists state (`active=false`), updates notification |
-| **FADING** | `VOLUME_CHANGED` | `ACTIVE` | Vibrates, cancels fade, keeps user-selected volume, reschedules timer countdown, updates notification |
+| **FADING** | `VOLUME_CHANGED` | `ACTIVE` | Vibrates, cancels fade, restores pre-fade volume, reschedules timer countdown, updates notification |
 | **FADING** | `PHONE_FLIPPED` | `ACTIVE` | Vibrates, cancels fade, restores pre-fade volume, reschedules timer countdown, updates notification |
 | **FADING** | `FADE_STEP` (step < 30) | `FADING` | Calculates next step volume along ease-out curve, applies stream volume (with `suppressVolumeReset=true`) |
 | **FADING** | `FADE_COMPLETED` (step == 30) | `WAITING` | Requests transient audio focus to pause media, schedules 500ms post-pause runnable to restore pre-fade volume, transitions to `WAITING` |
