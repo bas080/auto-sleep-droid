@@ -710,4 +710,72 @@ public class SleepTimerServiceTest {
             assertEquals("Ringtone volume at 50% time should be 0.25 (quadratic gain)", 0.25f, mockRingtone.getVolume(), 0.05f);
         }
     }
+
+    @Test
+    public void testWakeUpAlarmTriggersNextDailyAlarm() {
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("min_sleep_duration_minutes", 450)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        long beforeMs = System.currentTimeMillis();
+
+        // Trigger wake-up alarm
+        Intent triggerIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_WAKEUP_ALARM_EXPIRY);
+        service.onStartCommand(triggerIntent, 0, 1);
+
+        long scheduledMs = preferences.getLong(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L);
+        assertTrue("Next daily alarm must be scheduled after current alarm rings", scheduledMs > beforeMs);
+    }
+
+    @Test
+    public void testDailyRecurringAlarmSnoozeDoesNotOverwriteNextDailyAlarm() {
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("min_sleep_duration_minutes", 450)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        // Trigger wake-up alarm
+        Intent triggerIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_WAKEUP_ALARM_EXPIRY);
+        service.onStartCommand(triggerIntent, 0, 1);
+
+        long dailyAlarmMs = preferences.getLong(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L);
+        assertTrue(dailyAlarmMs > 0L);
+
+        // Snooze wake-up alarm
+        Intent snoozeIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_SNOOZE_WAKEUP_ALARM);
+        service.onStartCommand(snoozeIntent, 0, 1);
+
+        // Verify the scheduled timestamp for tomorrow's daily alarm in preferences is unchanged
+        assertEquals("Snoozing must not overwrite scheduled daily recurring alarm time",
+                dailyAlarmMs, preferences.getLong(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L));
+    }
+
+    @Test
+    public void testCalculateScheduledAlarmAllowsNextDayGoal() {
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("min_sleep_duration_minutes", 450)
+                .commit();
+
+        long now = System.currentTimeMillis();
+        java.util.Calendar cal = SleepTimerService.calculateScheduledAlarm(context, now, 0L);
+        assertNotNull("calculateScheduledAlarm should return scheduled Calendar for daily goal", cal);
+        assertTrue("Scheduled alarm must be in the future", cal.getTimeInMillis() > now);
+    }
 }

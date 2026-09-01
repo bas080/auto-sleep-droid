@@ -120,6 +120,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         startForeground(NOTIFICATION_ID, buildNotification());
 
+        boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
+        if (goalEnabled) {
+            checkAndScheduleSmartWakeUpAlarm(savedEndsAt);
+        }
+
         stateMachine.initialize(savedEnabled, savedDuration, savedEndsAt, currentVolume, musicActive, System.currentTimeMillis());
     }
 
@@ -228,11 +233,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 updateListenersRegistration();
                 playWakeUpAlarmSound();
                 showWakeUpAlarmNotification();
+                checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
             } else if (ACTION_DISMISS_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed");
                 stopWakeUpAlarmSound();
                 cancelWakeUpAlarmNotification();
-                dismissAutoSleepAlarm();
+                cancelSnoozeAlarm();
                 isWakeUpAlarmRinging = false;
                 isWakeUpAlarmSnoozed = false;
                 updateListenersRegistration();
@@ -252,6 +258,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                             .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
                             .apply();
                 }
+                cancelSnoozeAlarm();
                 dismissAutoSleepAlarm();
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Smart Wake-Up Goal cleared");
                 android.widget.Toast.makeText(this, R.string.toast_goal_stopped, android.widget.Toast.LENGTH_SHORT).show();
@@ -461,12 +468,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
 
         long targetGoalMillis = calGoal.getTimeInMillis();
-        long diffMillis = targetGoalMillis - now;
-        long TWELVE_HOURS_MS = 12 * 60 * 60_000L;
-
-        if (diffMillis > TWELVE_HOURS_MS) {
-            return null;
-        }
 
         long minWakeTimeMillis = (timerEndsAt > 0L ? timerEndsAt : now) + minSleepMin * 60_000L;
         long scheduledAlarmMillis = Math.max(targetGoalMillis, minWakeTimeMillis);
@@ -536,6 +537,18 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         if (preferences != null) {
             preferences.edit().remove(KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
+        }
+    }
+
+    private void cancelSnoozeAlarm() {
+        if (alarmManager != null) {
+            Intent snoozeTriggerIntent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
+            PendingIntent snoozeOperation = PendingIntent.getService(this, 106, snoozeTriggerIntent,
+                    PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
+            if (snoozeOperation != null) {
+                alarmManager.cancel(snoozeOperation);
+                snoozeOperation.cancel();
+            }
         }
     }
 
@@ -730,7 +743,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         long snoozeTimeMs = System.currentTimeMillis() + SNOOZE_DURATION_MS;
 
         Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
-        PendingIntent pendingIntent = PendingIntent.getService(this, 101, intent,
+        PendingIntent pendingIntent = PendingIntent.getService(this, 106, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         Intent showIntent = new Intent(this, MainActivity.class);
@@ -763,7 +776,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed via volume button");
         stopWakeUpAlarmSound();
         cancelWakeUpAlarmNotification();
-        dismissAutoSleepAlarm();
+        cancelSnoozeAlarm();
         isWakeUpAlarmRinging = false;
         isWakeUpAlarmSnoozed = false;
         onTriggerVibration();
@@ -910,9 +923,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         stateMachine.reloadSettings(savedEnabled, savedDuration, musicActive, now);
 
         boolean goalEnabled = preferences.getBoolean("wake_up_goal_enabled", false);
-        if (goalEnabled && stateMachine.isActive()) {
+        if (goalEnabled) {
             checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
-        } else if (!goalEnabled) {
+        } else {
             dismissAutoSleepAlarm();
         }
 

@@ -14,7 +14,7 @@ After evaluating available Android System UI mechanisms, **the Dialog Activity O
 Auto Sleep Droid includes a Smart Wake-Up Goal feature ("Auto Sleep") designed to automatically set a daily wake-up alarm while protecting the user's sleep duration:
 - **Target Goal Time**: The user's desired daily wake-up clock time (e.g., `06:30 AM`).
 - **Minimum Sleep Duration**: A minimum sleep safeguard duration in hours (default 7.5 hours / 450 minutes).
-- **Dynamic Alarm Calculation**: When the sleep timer starts or is reset, `SleepTimerService` calculates the wake-up alarm timestamp as `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` and schedules a non-recurring system alarm via `AlarmManager.setAlarmClock`.
+- **Dynamic Alarm Calculation**: When the sleep timer starts, is reset, or when the current alarm rings, `SleepTimerService` calculates the wake-up alarm timestamp as `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` and schedules a daily recurring system alarm via `AlarmManager.setAlarmClock`.
 
 ### Current Goal UI Location
 Currently, setting or clearing the wake-up goal requires opening the main app screen (`MainActivity`):
