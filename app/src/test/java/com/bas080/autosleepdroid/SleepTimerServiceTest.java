@@ -660,4 +660,53 @@ public class SleepTimerServiceTest {
         assertEquals("Ringtone should be cleared after dismiss", null, ringtoneField.get(service));
         assertEquals("Crescendo runnable should be cancelled after dismiss", null, runnableField.get(service));
     }
+
+    @Test
+    public void testEnsureAudibleAlarmStreamVolume() throws Exception {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        android.media.AudioManager am = (android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        if (am != null) {
+            am.setStreamVolume(android.media.AudioManager.STREAM_ALARM, 0, 0);
+
+            java.lang.reflect.Method ensureVolMethod = SleepTimerService.class.getDeclaredMethod("ensureAudibleAlarmStreamVolume");
+            ensureVolMethod.setAccessible(true);
+            ensureVolMethod.invoke(service);
+
+            int maxVol = am.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM);
+            int expectedMinVol = Math.max(1, (int) Math.round(maxVol * 0.3));
+            assertEquals("STREAM_ALARM volume should be raised to minimum audible volume if muted",
+                    expectedMinVol, am.getStreamVolume(android.media.AudioManager.STREAM_ALARM));
+        }
+    }
+
+    @Test
+    public void testRunWakeUpAlarmCrescendoStepAppliesQuadraticGain() throws Exception {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        java.lang.reflect.Field ringtoneField = SleepTimerService.class.getDeclaredField("currentAlarmRingtone");
+        ringtoneField.setAccessible(true);
+        java.lang.reflect.Constructor<android.media.Ringtone> constructor =
+                android.media.Ringtone.class.getDeclaredConstructor(Context.class, boolean.class);
+        constructor.setAccessible(true);
+        android.media.Ringtone mockRingtone = constructor.newInstance(context, false);
+        ringtoneField.set(service, mockRingtone);
+
+        java.lang.reflect.Field startTimeField = SleepTimerService.class.getDeclaredField("alarmCrescendoStartTimeMs");
+        startTimeField.setAccessible(true);
+        // Set crescendo start time to 90 seconds ago (out of 180 seconds total) -> linear progress = 0.5
+        long ninetySecondsAgo = System.currentTimeMillis() - 90_000L;
+        startTimeField.setLong(service, ninetySecondsAgo);
+
+        java.lang.reflect.Method crescendoStepMethod = SleepTimerService.class.getDeclaredMethod("runWakeUpAlarmCrescendoStep");
+        crescendoStepMethod.setAccessible(true);
+        crescendoStepMethod.invoke(service);
+
+        // At 50% linear progress (0.5), quadratic gain should be 0.5 * 0.5 = 0.25
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            assertEquals("Ringtone volume at 50% time should be 0.25 (quadratic gain)", 0.25f, mockRingtone.getVolume(), 0.05f);
+        }
+    }
 }
