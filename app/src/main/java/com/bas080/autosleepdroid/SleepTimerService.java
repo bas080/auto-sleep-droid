@@ -56,7 +56,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long PAUSE_RESET_DELAY_MS = 500L;
     private static final long SENSOR_THROTTLE_MS = 300L;
-    private static final long ALARM_CRESCENDO_DURATION_MS = 60_000L;
+    private static final long ALARM_CRESCENDO_DURATION_MS = 3 * 60_000L;
     private static final long ALARM_CRESCENDO_INTERVAL_MS = 500L;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private AudioManager audioManager;
@@ -579,9 +579,30 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
     }
 
+    private void ensureAudibleAlarmStreamVolume() {
+        if (audioManager == null) {
+            return;
+        }
+        int maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM);
+        if (maxVol <= 0) {
+            return;
+        }
+        int currentVol = audioManager.getStreamVolume(AudioManager.STREAM_ALARM);
+        int minAudibleVol = Math.max(1, (int) Math.round(maxVol * 0.3));
+        if (currentVol < minAudibleVol) {
+            try {
+                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, minAudibleVol, 0);
+                EventLogger.log(this, "Adjusted STREAM_ALARM volume from " + currentVol + " to " + minAudibleVol + " for wake-up alarm");
+            } catch (Exception e) {
+                EventLogger.log(this, "Failed to adjust STREAM_ALARM volume: " + e.getMessage());
+            }
+        }
+    }
+
     private void playWakeUpAlarmSound() {
         stopWakeUpAlarmSound();
         try {
+            ensureAudibleAlarmStreamVolume();
             Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
             if (alarmUri == null) {
                 alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
@@ -622,11 +643,14 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             return;
         }
         long elapsedTimeMs = System.currentTimeMillis() - alarmCrescendoStartTimeMs;
-        float progress = Math.min(1.0f, (float) elapsedTimeMs / ALARM_CRESCENDO_DURATION_MS);
+        float linearProgress = Math.min(1.0f, (float) elapsedTimeMs / ALARM_CRESCENDO_DURATION_MS);
+        // Exponential gain curve (linearProgress^2) matching human psychoacoustic loudness perception
+        // and sleep stage arousal transitions for startle-free wake-up experience
+        float gain = linearProgress * linearProgress;
 
         if (android.os.Build.VERSION.SDK_INT >= 28) {
             try {
-                currentAlarmRingtone.setVolume(progress);
+                currentAlarmRingtone.setVolume(gain);
             } catch (Exception ignored) {
             }
         }
