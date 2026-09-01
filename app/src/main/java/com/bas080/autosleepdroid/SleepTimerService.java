@@ -230,12 +230,15 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 showWakeUpAlarmNotification();
             } else if (ACTION_DISMISS_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed");
+                recordLastWakeUpTimeOnDismissal();
                 stopWakeUpAlarmSound();
                 cancelWakeUpAlarmNotification();
                 dismissAutoSleepAlarm();
                 isWakeUpAlarmRinging = false;
                 isWakeUpAlarmSnoozed = false;
                 updateListenersRegistration();
+                checkAndScheduleSmartWakeUpAlarm(stateMachine != null && stateMachine.isActive() ? stateMachine.getTimerEndsAt() : 0L);
+                updateNotification();
                 android.widget.Toast.makeText(this, R.string.toast_alarm_dismissed, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_SNOOZE_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed for 9m");
@@ -468,8 +471,14 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             return null;
         }
 
-        long minWakeTimeMillis = (timerEndsAt > 0L ? timerEndsAt : now) + minSleepMin * 60_000L;
-        long scheduledAlarmMillis = Math.max(targetGoalMillis, minWakeTimeMillis);
+        long windowStartMillis = targetGoalMillis - TWELVE_HOURS_MS;
+        long scheduledAlarmMillis = targetGoalMillis;
+
+        // Only push alarm later if timer activity occurs within the 12-hour window before targetGoalMillis
+        if (timerEndsAt > 0L && timerEndsAt >= windowStartMillis && timerEndsAt <= targetGoalMillis) {
+            long minWakeTimeMillis = timerEndsAt + minSleepMin * 60_000L;
+            scheduledAlarmMillis = Math.max(targetGoalMillis, minWakeTimeMillis);
+        }
 
         Calendar calAlarm = Calendar.getInstance();
         calAlarm.setTimeInMillis(scheduledAlarmMillis);
@@ -477,7 +486,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void checkAndScheduleSmartWakeUpAlarm(long timerEndsAt) {
-        Calendar calAlarm = calculateScheduledAlarm(this, System.currentTimeMillis(), timerEndsAt);
+        long now = System.currentTimeMillis();
+        Calendar calAlarm = calculateScheduledAlarm(this, now, timerEndsAt);
         if (calAlarm == null) {
             return;
         }
@@ -761,6 +771,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private void dismissWakeUpAlarmViaVolumeKey() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed via volume button");
+        recordLastWakeUpTimeOnDismissal();
         stopWakeUpAlarmSound();
         cancelWakeUpAlarmNotification();
         dismissAutoSleepAlarm();
@@ -768,7 +779,32 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         isWakeUpAlarmSnoozed = false;
         onTriggerVibration();
         updateListenersRegistration();
+        checkAndScheduleSmartWakeUpAlarm(stateMachine != null && stateMachine.isActive() ? stateMachine.getTimerEndsAt() : 0L);
+        updateNotification();
         android.widget.Toast.makeText(this, R.string.toast_alarm_dismissed, android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    private void recordLastWakeUpTimeOnDismissal() {
+        if (preferences == null) {
+            return;
+        }
+        long alarmMs = lastScheduledWakeupAlarmTimeMs;
+        if (alarmMs == 0L) {
+            alarmMs = preferences.getLong(KEY_WAKEUP_LAST_SCHEDULED_MS, 0L);
+        }
+        if (alarmMs > 0L) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTimeInMillis(alarmMs);
+            int hour = cal.get(Calendar.HOUR_OF_DAY);
+            int minute = cal.get(Calendar.MINUTE);
+            preferences.edit()
+                    .putInt("wake_up_goal_hour", hour)
+                    .putInt("wake_up_goal_minute", minute)
+                    .putInt("last_wake_up_hour", hour)
+                    .putInt("last_wake_up_minute", minute)
+                    .apply();
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Recorded last wake-up time: " + hour + ":" + (minute < 10 ? "0" + minute : minute));
+        }
     }
 
     private void pauseMediaViaAudioFocus() {

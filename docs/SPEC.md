@@ -88,13 +88,13 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - **Purpose**: Automatically set your daily wake-up alarm to your target wake-up goal time while ensuring you always get enough sleep.
 - **How It Works**:
   1. **Alarm Calculation at Timer Start**: When the sleep timer starts or is reset, the wake-up alarm is set to the maximum of target goal time and timer start time plus sleep timer duration plus minimum sleep duration safeguard. Upon expiration, the app gradually increases the default system alarm tone volume over 3 minutes along a gentle psychoacoustic crescendo curve and shows a high-priority notification with Dismiss and Snooze (9 minutes) options.
-  2. **12-Hour Window Safeguard**: The alarm is scheduled only when the timer starts within 12 hours prior to the target goal time.
+  2. **12-Hour Window Safeguard & Persistence**: The alarm is scheduled for the upcoming target wake time within a 12-hour window prior to the goal time. When the current alarm is dismissed, an alarm is scheduled for the next cycle at the target wake time, ensuring an alarm is set even if no sleep timer activity occurs. Pushing the alarm later to enforce minimum sleep duration only occurs when sleep timer activity is detected within the 12-hour window (so morning or midday timer activity does not affect the target wake time).
   3. **Single Alarm Creation**: The app maintains only one wake-up alarm named `"Auto Sleep"`.
   4. **Wake-Up Alarm Gestures & Persistence**:
      - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
-     - **Volume Button to Dismiss**: Pressing a hardware volume button while the wake-up alarm is ringing or snoozed dismisses the alarm and removes the notification.
+     - **Volume Button to Dismiss**: Pressing a hardware volume button while the wake-up alarm is ringing or snoozed dismisses the alarm, records the last wake-up time in preferences, and removes the notification.
      - **Notification Persistence**: Snoozing the alarm (via flip or notification action) stops the alarm sound but keeps the notification open in the notification shade so the user can dismiss the alarm when desired.
-     - **Dismiss**: Tapping the Dismiss button on the wake-up alarm notification dismisses the alarm and removes the notification.
+     - **Dismiss**: Tapping the Dismiss button on the wake-up alarm notification dismisses the alarm, records the last wake-up time in preferences, and removes the notification.
 - **Disabled by Default**: The feature is off by default until configured via the "Set Goal" notification action button. Tapping "Alarm HH:MM" in the notification turns it off and removes the alarm.
 - **User Inputs**:
   - **Target Goal Time** (e.g., `06:30 AM`).

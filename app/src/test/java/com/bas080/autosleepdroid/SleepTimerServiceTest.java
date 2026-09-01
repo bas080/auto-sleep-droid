@@ -709,4 +709,118 @@ public class SleepTimerServiceTest {
             assertEquals("Ringtone volume at 50% time should be 0.25 (quadratic gain)", 0.25f, mockRingtone.getVolume(), 0.05f);
         }
     }
+
+    @Test
+    public void testWakeUpAlarmDismissalStoresLastWakeUpTimeAndSchedulesNextAlarm() throws Exception {
+        java.util.Calendar alarmCal = java.util.Calendar.getInstance();
+        long now = System.currentTimeMillis();
+        alarmCal.setTimeInMillis(now);
+        alarmCal.add(java.util.Calendar.HOUR_OF_DAY, 2); // 2 hours from now (< 12h)
+        int expectedHour = alarmCal.get(java.util.Calendar.HOUR_OF_DAY);
+        int expectedMinute = alarmCal.get(java.util.Calendar.MINUTE);
+        long scheduledTimeMs = alarmCal.getTimeInMillis();
+
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", expectedHour)
+                .putInt("wake_up_goal_minute", expectedMinute)
+                .putLong(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS, scheduledTimeMs)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        Intent dismissIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_DISMISS_WAKEUP_ALARM);
+        service.onStartCommand(dismissIntent, 0, 1);
+
+        assertEquals(expectedHour, preferences.getInt("wake_up_goal_hour", -1));
+        assertEquals(expectedMinute, preferences.getInt("wake_up_goal_minute", -1));
+        assertEquals(expectedHour, preferences.getInt("last_wake_up_hour", -1));
+        assertEquals(expectedMinute, preferences.getInt("last_wake_up_minute", -1));
+
+        // Alarm for the next day should now be scheduled in preferences
+        assertTrue(preferences.contains(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS));
+    }
+
+    @Test
+    public void testCalculateScheduledAlarmWithoutTimerActivity() {
+        java.util.Calendar nowCal = java.util.Calendar.getInstance();
+        nowCal.set(2025, java.util.Calendar.JANUARY, 10, 22, 0, 0); // 10:00 PM
+        long now = nowCal.getTimeInMillis();
+
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("min_sleep_duration_minutes", 450)
+                .commit();
+
+        // No timer activity (timerEndsAt == 0)
+        java.util.Calendar result = SleepTimerService.calculateScheduledAlarm(context, now, 0L);
+        assertNotNull(result);
+        assertEquals(6, result.get(java.util.Calendar.HOUR_OF_DAY));
+        assertEquals(30, result.get(java.util.Calendar.MINUTE));
+    }
+
+    @Test
+    public void testCalculateScheduledAlarmPushesAlarmWithin12hWindow() {
+        java.util.Calendar nowCal = java.util.Calendar.getInstance();
+        nowCal.set(2025, java.util.Calendar.JANUARY, 10, 23, 0, 0); // 11:00 PM
+        long now = nowCal.getTimeInMillis();
+
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30) // Target wake time: Jan 11, 06:30 AM
+                .putInt("min_sleep_duration_minutes", 480) // 8 hours min sleep
+                .commit();
+
+        // Timer ends late at 00:30 AM (Jan 11) within the 12h window
+        java.util.Calendar timerEndsCal = java.util.Calendar.getInstance();
+        timerEndsCal.set(2025, java.util.Calendar.JANUARY, 11, 0, 30, 0);
+        long timerEndsAt = timerEndsCal.getTimeInMillis();
+
+        java.util.Calendar result = SleepTimerService.calculateScheduledAlarm(context, now, timerEndsAt);
+        assertNotNull(result);
+
+        // Wake alarm should be pushed to 00:30 AM + 8h = 08:30 AM
+        assertEquals(8, result.get(java.util.Calendar.HOUR_OF_DAY));
+        assertEquals(30, result.get(java.util.Calendar.MINUTE));
+    }
+
+    @Test
+    public void testCalculateScheduledAlarmIgnoresTimerActivityOutside12hWindow() {
+        java.util.Calendar nowCal = java.util.Calendar.getInstance();
+        nowCal.set(2025, java.util.Calendar.JANUARY, 10, 10, 0, 0); // 10:00 AM
+        long now = nowCal.getTimeInMillis();
+
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30) // Target goal time: Jan 11, 06:30 AM (20h away)
+                .putInt("min_sleep_duration_minutes", 450)
+                .commit();
+
+        // Midday timer activity ending at 11:00 AM (Jan 10) - way outside 12h window of Jan 11, 06:30 AM
+        java.util.Calendar timerEndsCal = java.util.Calendar.getInstance();
+        timerEndsCal.set(2025, java.util.Calendar.JANUARY, 10, 11, 0, 0);
+        long timerEndsAt = timerEndsCal.getTimeInMillis();
+
+        // Calculate alarm at 10:00 AM - target wake time is >12h away so returns null
+        java.util.Calendar result = SleepTimerService.calculateScheduledAlarm(context, now, timerEndsAt);
+        assertEquals("Target alarm > 12h away should return null for current scheduling", null, result);
+
+        // Now test at 10:00 PM (Jan 10), within 12h window of 06:30 AM (Jan 11)
+        java.util.Calendar eveningCal = java.util.Calendar.getInstance();
+        eveningCal.set(2025, java.util.Calendar.JANUARY, 10, 22, 0, 0);
+        long eveningNow = eveningCal.getTimeInMillis();
+
+        // The morning timer activity (11:00 AM Jan 10) is outside the 12h window (Jan 10 18:30 to Jan 11 06:30)
+        java.util.Calendar eveningResult = SleepTimerService.calculateScheduledAlarm(context, eveningNow, timerEndsAt);
+        assertNotNull(eveningResult);
+        // Wake alarm time should NOT be pushed by morning timer activity; it should stay at target goal 06:30 AM
+        assertEquals(6, eveningResult.get(java.util.Calendar.HOUR_OF_DAY));
+        assertEquals(30, eveningResult.get(java.util.Calendar.MINUTE));
+    }
 }

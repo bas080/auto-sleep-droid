@@ -215,4 +215,5 @@ All system state changes and input triggers are logged to `EventLogger` with a t
 | Wake-Up Alarm Snoozed via Flip | `Wake-Up Goal alarm snoozed via flip gesture` |
 | Wake-Up Alarm Snoozed | `Wake-Up Goal alarm snoozed for 9m` |
 | Wake-Up Alarm Dismissed via Vol | `Wake-Up Goal alarm dismissed via volume button` |
+| Recorded Last Wake-Up Time | `Recorded last wake-up time: <hour>:<minute>` |
 | Service Destroyed | `SleepTimerService destroyed` |
