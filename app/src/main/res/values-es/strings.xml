@@ -24,7 +24,7 @@
     <string name="action_set_timer">Ajustar</string>
     <string name="action_sleep_duration">Dormir %1$s</string>
     <string name="action_timer_on">Activo</string>
-    <string name="action_timer_off">Inactivo</string>
+    <string name="action_timer_off">Desactivar</string>
     <string name="action_turn_off">Desactivar</string>
     <string name="action_turn_on">Activar</string>
     <string name="action_set_goal">Ajustar objetivo</string>
