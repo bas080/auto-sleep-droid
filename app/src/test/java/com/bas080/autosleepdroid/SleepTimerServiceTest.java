@@ -328,6 +328,7 @@ public class SleepTimerServiceTest {
         android.app.Notification notificationOn = shadowNotificationManager.getNotification(1001);
         assertNotNull(notificationOn);
         assertEquals(SleepTimerService.ACTION_TURN_OFF, Shadows.shadowOf(notificationOn.actions[0].actionIntent).getSavedIntent().getAction());
+        assertEquals("Disable", notificationOn.actions[0].title.toString());
     }
 
     @Test
