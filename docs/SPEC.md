@@ -87,8 +87,8 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 ## Smart Target Wake-Up Goal ("Auto Sleep")
 - **Purpose**: Automatically set your daily wake-up alarm to your target wake-up goal time while ensuring you always get enough sleep.
 - **How It Works**:
-  1. **Alarm Calculation at Timer Start**: When the sleep timer starts or is reset, the wake-up alarm is set to the maximum of target goal time and timer start time plus sleep timer duration plus minimum sleep duration safeguard. Upon expiration, the app gradually increases the default system alarm tone volume over 3 minutes along a gentle psychoacoustic crescendo curve and shows a high-priority notification with Dismiss and Snooze (9 minutes) options.
-  2. **12-Hour Window Safeguard**: The alarm is scheduled only when the timer starts within 12 hours prior to the target goal time.
+  1. **Daily Recurring Alarm**: When configured and enabled, the wake-up alarm is set daily. When the current wake-up alarm rings, the next wake-up alarm for the following day at the same target goal time is automatically set.
+  2. **Alarm Calculation at Timer Start**: When the sleep timer starts or is reset, the wake-up alarm is set to the maximum of target goal time and timer start time plus sleep timer duration plus minimum sleep duration safeguard. Upon expiration, the app gradually increases the default system alarm tone volume over 3 minutes along a gentle psychoacoustic crescendo curve and shows a high-priority notification with Dismiss and Snooze (9 minutes) options.
   3. **Single Alarm Creation**: The app maintains only one wake-up alarm named `"Auto Sleep"`.
   4. **Wake-Up Alarm Gestures & Persistence**:
      - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
@@ -116,7 +116,8 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - The Smart Wake-Up Goal feature is disabled by default until explicitly configured by the user.
 - The notification shade provides a "Set Goal" / "Goal HH:MM" action button that opens a dialog overlay (`GoalSettingsDialogActivity`) to configure, display, stop, or enable the target wake-up goal and minimum sleep duration.
 - Notifications remain minimal and compact when collapsed, expanding to show full details (fade target and scheduled wake-up alarm time).
-- Starting the sleep timer within 12 hours of the target goal time schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
+- The wake-up alarm is daily recurring, automatically scheduling the next alarm for the same target goal time when the current alarm rings.
+- Starting the sleep timer schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
 - Disabling the timer or tapping the goal notification action ("Alarm HH:MM") cancels the scheduled `"Auto Sleep"` alarm in the background without launching external Clock app UI activities.
 - Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
 - The main screen includes "Export" and "Import" action links rendered in the header link list.

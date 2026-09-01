@@ -48,7 +48,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
   * `SensorEventListener` (Accelerometer): Registered on a dedicated `HandlerThread` with 300ms temporal throttling.
   * Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver): Registered.
   * `AlarmManager`: Exact timer expiration alarm scheduled using `setExactAndAllowWhileIdle()` (or fallback if permission missing).
-  * Smart Wake-Up Goal: If enabled and within 12 hours prior to goal time, schedules/updates `"Auto Sleep"` system clock alarm via `AlarmClock.ACTION_SET_ALARM`.
+  * Smart Wake-Up Goal: If enabled, schedules/updates `"Auto Sleep"` daily recurring system clock alarm via `AlarmManager.setAlarmClock`.
 * **Notification Presentation**:
   * Collapsed Text: `"Fades out at <target_time>"` (e.g., `"Fades out at 11:15 PM"`)
   * Expanded Text: `"Fades out at <target_time>"` (appends `" • Alarm at <alarm_time>"` when Smart Wake-Up Goal alarm is set).
