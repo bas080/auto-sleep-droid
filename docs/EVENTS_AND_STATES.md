@@ -23,7 +23,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 * **Notification Presentation**:
   * Collapsed Text: `"Timer off"`
   * Expanded Text: `"Sleep timer is off"`
-  - Action Button: `"Turn On"` (if `show_notification` is `true`; notification is hidden across all states if `show_notification` is `false`).
+  - Action Button: `"Enable"` (if `show_notification` is `true`; notification is hidden across all states if `show_notification` is `false`).
 * **State Invariants**: `enabled = false`, `timerEndsAt = 0`.
 
 ### 2. `WAITING`
@@ -131,7 +131,7 @@ Events in Auto Sleep Droid originate from user interactions, hardware sensors, s
 
 ### User Input Events
 
-* **`TURN_ON`**: User toggles timer switch in `MainActivity` or taps `"Turn On"` in notification.
+* **`TURN_ON`**: User toggles timer switch in `MainActivity` or taps `"Enable"` in notification.
 * **`TURN_OFF`**: User toggles timer switch in `MainActivity` or taps `"Disable"` in notification.
 * **`SET_DURATION`**: User configures sleep timer duration in `MainActivity`.
 * **`SET_WAKE_UP_GOAL`**: User configures target wake-up goal time and minimum sleep duration safeguard in `MainActivity`.

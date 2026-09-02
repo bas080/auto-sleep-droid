@@ -242,6 +242,35 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testTargetTimeButtonClickOpensDialogAndSavesTime() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.Button btnTargetTime = activity.findViewById(R.id.btn_target_time);
+        assertNotNull(btnTargetTime);
+        assertFalse(btnTargetTime.getText().toString().isEmpty());
+
+        btnTargetTime.performClick();
+
+        android.app.Dialog dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog();
+        assertNotNull(dialog);
+        assertTrue(dialog instanceof android.app.TimePickerDialog);
+
+        android.app.TimePickerDialog timePickerDialog = (android.app.TimePickerDialog) dialog;
+        timePickerDialog.updateTime(7, 45);
+
+        android.widget.Button okButton = timePickerDialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
+        assertNotNull(okButton);
+        okButton.performClick();
+
+        org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+
+        android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
+        assertEquals(7, prefs.getInt("wake_up_goal_hour", -1));
+        assertEquals(45, prefs.getInt("wake_up_goal_minute", -1));
+    }
+
+    @Test
     public void testShowNotificationToggleRequestsPermissionWhenNotGranted() {
         Application application = ApplicationProvider.getApplicationContext();
         Shadows.shadowOf(application).denyPermissions(Manifest.permission.POST_NOTIFICATIONS);

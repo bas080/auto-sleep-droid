@@ -20,13 +20,14 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.Switch;
+import android.app.TimePickerDialog;
 import android.widget.TextView;
-import android.widget.TimePicker;
 import android.widget.Toast;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Calendar;
 import java.util.List;
 
 public class MainActivity extends Activity implements EventLogger.Listener {
@@ -42,7 +43,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private Switch switchShowNotification;
     private Switch switchEnableGoal;
     private View goalContainer;
-    private TimePicker timePickerGoal;
+    private Button btnTargetTime;
     private EditText inputMinSleep;
     private ScrollView eventScrollView;
     private TextView eventLogText;
@@ -73,14 +74,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         switchShowNotification = findViewById(R.id.switch_show_notification);
         switchEnableGoal = findViewById(R.id.switch_enable_goal);
         goalContainer = findViewById(R.id.goal_container);
-        timePickerGoal = findViewById(R.id.time_picker_goal);
+        btnTargetTime = findViewById(R.id.btn_target_time);
         inputMinSleep = findViewById(R.id.input_min_sleep);
         eventScrollView = findViewById(R.id.event_scroll_view);
         eventLogText = findViewById(R.id.event_log_text);
-
-        if (timePickerGoal != null) {
-            timePickerGoal.setIs24HourView(false);
-        }
     }
 
     private void setupHeaderAndLinks() {
@@ -271,17 +268,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             });
         }
 
-        if (timePickerGoal != null) {
-            timePickerGoal.setOnTimeChangedListener((view, hourOfDay, minute) -> {
-                if (isUpdatingUi) return;
-                SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-                prefs.edit()
-                        .putInt("wake_up_goal_hour", hourOfDay)
-                        .putInt("wake_up_goal_minute", minute)
-                        .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
-                        .apply();
-                redrawNotification();
-            });
+        if (btnTargetTime != null) {
+            btnTargetTime.setOnClickListener(v -> showTargetTimeDialog());
         }
 
         if (inputMinSleep != null) {
@@ -316,6 +304,40 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 redrawNotification();
             }
         }
+    }
+
+    private void showTargetTimeDialog() {
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        int goalHour = prefs.getInt("wake_up_goal_hour", 6);
+        int goalMin = prefs.getInt("wake_up_goal_minute", 30);
+        boolean is24Hour = android.text.format.DateFormat.is24HourFormat(this);
+
+        TimePickerDialog timePickerDialog = new TimePickerDialog(this,
+                (view, hourOfDay, minute) -> {
+                    SharedPreferences prefs1 = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+                    prefs1.edit()
+                            .putInt("wake_up_goal_hour", hourOfDay)
+                            .putInt("wake_up_goal_minute", minute)
+                            .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                            .apply();
+                    updateTargetTimeButtonText(hourOfDay, minute);
+                    redrawNotification();
+                }, goalHour, goalMin, is24Hour);
+        timePickerDialog.show();
+    }
+
+    private void updateTargetTimeButtonText(int hour, int minute) {
+        if (btnTargetTime != null) {
+            btnTargetTime.setText(formatTime(hour, minute));
+        }
+    }
+
+    private String formatTime(int hour, int minute) {
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, hour);
+        cal.set(Calendar.MINUTE, minute);
+        java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
+        return timeFormat.format(cal.getTime());
     }
 
     private void saveMinSleepFromInput() {
@@ -361,15 +383,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (goalContainer != null) {
             goalContainer.setVisibility(goalEnabled ? View.VISIBLE : View.GONE);
         }
-        if (timePickerGoal != null) {
-            if (Build.VERSION.SDK_INT >= 23) {
-                timePickerGoal.setHour(goalHour);
-                timePickerGoal.setMinute(goalMin);
-            } else {
-                timePickerGoal.setCurrentHour(goalHour);
-                timePickerGoal.setCurrentMinute(goalMin);
-            }
-        }
+        updateTargetTimeButtonText(goalHour, goalMin);
         if (inputMinSleep != null && !inputMinSleep.hasFocus()) {
             inputMinSleep.setText(DurationUtils.formatDurationString(minSleepMin));
         }

@@ -323,6 +323,7 @@ public class SleepTimerServiceTest {
         assertNotNull(notificationOff);
         assertEquals(1, notificationOff.actions.length);
         assertEquals(SleepTimerService.ACTION_TURN_ON, Shadows.shadowOf(notificationOff.actions[0].actionIntent).getSavedIntent().getAction());
+        assertEquals("Enable", notificationOff.actions[0].title.toString());
 
         // When timer is active/enabled: action 0 toggles timer off
         preferences.edit().putBoolean("active", true).commit();

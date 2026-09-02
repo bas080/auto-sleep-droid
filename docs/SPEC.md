@@ -20,7 +20,7 @@ Provide an Android sleep timer app configured directly from a single main UI scr
 ## Notification states and content
 All notification content is concise and directly visible in the notification body without hiding text in expanded views:
 
-- Off: "Timer off (20m)" • Button: "Turn On"
+- Off: "Timer off (20m)" • Button: "Enable"
 - Waiting: "Waiting for playback (20m) • Alarm at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
 - Active: "Fades out at 11:15 PM (20m) • Alarm at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
 - Fading: "Fading volume" • Button: "Disable"
@@ -39,7 +39,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - Action links in the top header: Manual, Logs, Feedback, Donate, Export, and Import.
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
-  - The notification features a single simple toggle action button: "Disable" when enabled, or "Turn On" when disabled.
+  - The notification features a single simple toggle action button: "Disable" when enabled, or "Enable" when disabled.
   - Tapping/clicking the notification body opens `MainActivity`.
 
 ## Timer configuration
@@ -100,7 +100,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - The main activity presents a single-screen configuration UI for all timer, goal, notification, and event log settings.
 - Real-time timestamped event logs are displayed directly on `MainActivity`.
 - The complete timer workflow is configurable from `MainActivity` and toggleable from the notification bar, system volume buttons, and phone flip gesture.
-- The notification action button contains a single action: "Disable" when enabled or "Turn On" when disabled.
+- The notification action button contains a single action: "Disable" when enabled or "Enable" when disabled.
 - The "Show notification" setting toggles ongoing notification shade notification visibility across all timer states.
 - Volume-up and volume-down both reset an active timer while preserving their normal volume behavior.
 - Expiration pauses active media after a 30-second fade-out, restores pre-fade volume after pausing media, and successfully reverts to the Waiting state.
