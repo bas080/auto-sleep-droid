@@ -215,83 +215,131 @@
                     android:paddingTop="16dp"
                     android:paddingBottom="4dp" />
 
-                <LinearLayout
+                <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:scrollbars="none">
 
-                    <Button
-                        android:id="@+id/btn_manual"
-                        style="?android:attr/borderlessButtonStyle"
-                        android:layout_width="match_parent"
+                    <LinearLayout
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:gravity="start|center_vertical"
-                        android:paddingStart="0dp"
-                        android:paddingEnd="0dp"
-                        android:textAllCaps="false"
-                        android:textStyle="normal"
-                        android:text="@string/link_manual" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
 
-                    <Button
-                        android:id="@+id/btn_logs"
-                        style="?android:attr/borderlessButtonStyle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="start|center_vertical"
-                        android:paddingStart="0dp"
-                        android:paddingEnd="0dp"
-                        android:textAllCaps="false"
-                        android:textStyle="normal"
-                        android:text="@string/link_logs" />
+                        <Button
+                            android:id="@+id/btn_manual"
+                            style="?android:attr/borderlessButtonStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:paddingStart="4dp"
+                            android:paddingEnd="4dp"
+                            android:textAllCaps="false"
+                            android:textStyle="normal"
+                            android:text="@string/link_manual" />
 
-                    <Button
-                        android:id="@+id/btn_issues"
-                        style="?android:attr/borderlessButtonStyle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="start|center_vertical"
-                        android:paddingStart="0dp"
-                        android:paddingEnd="0dp"
-                        android:textAllCaps="false"
-                        android:textStyle="normal"
-                        android:text="@string/link_feedback" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="·"
+                            android:textSize="14sp"
+                            android:textColor="?android:attr/textColorSecondary" />
 
-                    <Button
-                        android:id="@+id/btn_donate"
-                        style="?android:attr/borderlessButtonStyle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="start|center_vertical"
-                        android:paddingStart="0dp"
-                        android:paddingEnd="0dp"
-                        android:textAllCaps="false"
-                        android:textStyle="normal"
-                        android:text="@string/link_donate" />
+                        <Button
+                            android:id="@+id/btn_logs"
+                            style="?android:attr/borderlessButtonStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:paddingStart="4dp"
+                            android:paddingEnd="4dp"
+                            android:textAllCaps="false"
+                            android:textStyle="normal"
+                            android:text="@string/link_logs" />
 
-                    <Button
-                        android:id="@+id/btn_export"
-                        style="?android:attr/borderlessButtonStyle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="start|center_vertical"
-                        android:paddingStart="0dp"
-                        android:paddingEnd="0dp"
-                        android:textAllCaps="false"
-                        android:textStyle="normal"
-                        android:text="@string/link_export" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="·"
+                            android:textSize="14sp"
+                            android:textColor="?android:attr/textColorSecondary" />
 
-                    <Button
-                        android:id="@+id/btn_import"
-                        style="?android:attr/borderlessButtonStyle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="start|center_vertical"
-                        android:paddingStart="0dp"
-                        android:paddingEnd="0dp"
-                        android:textAllCaps="false"
-                        android:textStyle="normal"
-                        android:text="@string/link_import" />
-                </LinearLayout>
+                        <Button
+                            android:id="@+id/btn_issues"
+                            style="?android:attr/borderlessButtonStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:paddingStart="4dp"
+                            android:paddingEnd="4dp"
+                            android:textAllCaps="false"
+                            android:textStyle="normal"
+                            android:text="@string/link_feedback" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="·"
+                            android:textSize="14sp"
+                            android:textColor="?android:attr/textColorSecondary" />
+
+                        <Button
+                            android:id="@+id/btn_donate"
+                            style="?android:attr/borderlessButtonStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:paddingStart="4dp"
+                            android:paddingEnd="4dp"
+                            android:textAllCaps="false"
+                            android:textStyle="normal"
+                            android:text="@string/link_donate" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="·"
+                            android:textSize="14sp"
+                            android:textColor="?android:attr/textColorSecondary" />
+
+                        <Button
+                            android:id="@+id/btn_export"
+                            style="?android:attr/borderlessButtonStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:paddingStart="4dp"
+                            android:paddingEnd="4dp"
+                            android:textAllCaps="false"
+                            android:textStyle="normal"
+                            android:text="@string/link_export" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="·"
+                            android:textSize="14sp"
+                            android:textColor="?android:attr/textColorSecondary" />
+
+                        <Button
+                            android:id="@+id/btn_import"
+                            style="?android:attr/borderlessButtonStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:paddingStart="4dp"
+                            android:paddingEnd="4dp"
+                            android:textAllCaps="false"
+                            android:textStyle="normal"
+                            android:text="@string/link_import" />
+                    </LinearLayout>
+                </HorizontalScrollView>
 
             </LinearLayout>
         </ScrollView>
