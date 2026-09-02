@@ -41,6 +41,60 @@
                     android:textColor="?android:attr/textColorSecondary" />
             </LinearLayout>
 
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:layout_marginTop="8dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btn_manual"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/link_manual" />
+
+                    <Button
+                        android:id="@+id/btn_logs"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/link_logs" />
+
+                    <Button
+                        android:id="@+id/btn_issues"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/link_feedback" />
+
+                    <Button
+                        android:id="@+id/btn_donate"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/link_donate" />
+
+                    <Button
+                        android:id="@+id/btn_export"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/link_export" />
+
+                    <Button
+                        android:id="@+id/btn_import"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/link_import" />
+                </LinearLayout>
+            </HorizontalScrollView>
         </LinearLayout>
 
         <ScrollView
@@ -244,83 +298,6 @@
                         android:hint="@string/hint_min_sleep"
                         android:inputType="text"
                         android:singleLine="true" />
-                </LinearLayout>
-
-                <!-- Links Section -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/label_links"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:paddingBottom="4dp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <Button
-                            android:id="@+id/btn_manual"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/link_manual" />
-
-                        <Button
-                            android:id="@+id/btn_logs"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/link_logs" />
-
-                        <Button
-                            android:id="@+id/btn_issues"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/link_feedback" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <Button
-                            android:id="@+id/btn_donate"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/link_donate" />
-
-                        <Button
-                            android:id="@+id/btn_export"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/link_export" />
-
-                        <Button
-                            android:id="@+id/btn_import"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/link_import" />
-                    </LinearLayout>
                 </LinearLayout>
 
             </LinearLayout>
