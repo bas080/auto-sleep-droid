@@ -32,6 +32,11 @@ import java.util.List;
 public class MainActivity extends Activity implements EventLogger.Listener {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 100;
 
+    private View mainContentContainer;
+    private View manualOverlayContainer;
+    private TextView manualTextContent;
+    private View logsOverlayContainer;
+
     private Switch switchEnableTimer;
     private EditText inputDuration;
     private Switch switchShowNotification;
@@ -58,6 +63,11 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void bindViews() {
+        mainContentContainer = findViewById(R.id.main_content_container);
+        manualOverlayContainer = findViewById(R.id.manual_overlay_container);
+        manualTextContent = findViewById(R.id.manual_text_content);
+        logsOverlayContainer = findViewById(R.id.logs_overlay_container);
+
         switchEnableTimer = findViewById(R.id.switch_enable_timer);
         inputDuration = findViewById(R.id.input_duration);
         switchShowNotification = findViewById(R.id.switch_show_notification);
@@ -81,7 +91,22 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         Button btnManual = findViewById(R.id.btn_manual);
         if (btnManual != null) {
-            btnManual.setOnClickListener(v -> showManualDialog());
+            btnManual.setOnClickListener(v -> showManualScreen());
+        }
+
+        Button btnLogs = findViewById(R.id.btn_logs);
+        if (btnLogs != null) {
+            btnLogs.setOnClickListener(v -> showLogsScreen());
+        }
+
+        Button btnManualBack = findViewById(R.id.btn_manual_back);
+        if (btnManualBack != null) {
+            btnManualBack.setOnClickListener(v -> hideOverlays());
+        }
+
+        Button btnLogsBack = findViewById(R.id.btn_logs_back);
+        if (btnLogsBack != null) {
+            btnLogsBack.setOnClickListener(v -> hideOverlays());
         }
 
         setupLinkButton(R.id.btn_issues, "https://github.com/bas080/auto-sleep-droid/issues");
@@ -96,6 +121,82 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (btnImport != null) {
             btnImport.setOnClickListener(v -> showImportDialog());
         }
+    }
+
+    private void showManualScreen() {
+        loadManualTextIfNeeded();
+        if (manualOverlayContainer != null) {
+            manualOverlayContainer.setVisibility(View.VISIBLE);
+        }
+        if (logsOverlayContainer != null) {
+            logsOverlayContainer.setVisibility(View.GONE);
+        }
+        if (mainContentContainer != null) {
+            mainContentContainer.setVisibility(View.GONE);
+        }
+    }
+
+    private void showLogsScreen() {
+        refreshEventLog();
+        if (logsOverlayContainer != null) {
+            logsOverlayContainer.setVisibility(View.VISIBLE);
+        }
+        if (manualOverlayContainer != null) {
+            manualOverlayContainer.setVisibility(View.GONE);
+        }
+        if (mainContentContainer != null) {
+            mainContentContainer.setVisibility(View.GONE);
+        }
+    }
+
+    private void hideOverlays() {
+        if (manualOverlayContainer != null) {
+            manualOverlayContainer.setVisibility(View.GONE);
+        }
+        if (logsOverlayContainer != null) {
+            logsOverlayContainer.setVisibility(View.GONE);
+        }
+        if (mainContentContainer != null) {
+            mainContentContainer.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void loadManualTextIfNeeded() {
+        if (manualTextContent == null || manualTextContent.getText().length() > 0) {
+            return;
+        }
+        String htmlText = "";
+        try (java.io.InputStream is = getAssets().open("manual.html");
+             java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            htmlText = sb.toString();
+        } catch (java.io.IOException e) {
+            EventLogger.log(this, "Failed to load manual: " + e.getMessage());
+            return;
+        }
+
+        CharSequence formattedText;
+        if (Build.VERSION.SDK_INT >= 24) {
+            formattedText = android.text.Html.fromHtml(htmlText, android.text.Html.FROM_HTML_MODE_LEGACY);
+        } else {
+            formattedText = android.text.Html.fromHtml(htmlText);
+        }
+
+        manualTextContent.setText(formattedText);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if ((manualOverlayContainer != null && manualOverlayContainer.getVisibility() == View.VISIBLE)
+                || (logsOverlayContainer != null && logsOverlayContainer.getVisibility() == View.VISIBLE)) {
+            hideOverlays();
+            return;
+        }
+        super.onBackPressed();
     }
 
     private void setupConfigControls() {
@@ -391,44 +492,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             Toast.makeText(this, R.string.toast_import_invalid, Toast.LENGTH_SHORT).show();
             EventLogger.log(this, "Failed to import settings: invalid format (" + e.getMessage() + ")");
         }
-    }
-
-    private void showManualDialog() {
-        String htmlText = "";
-        try (java.io.InputStream is = getAssets().open("manual.html");
-             java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append("\n");
-            }
-            htmlText = sb.toString();
-        } catch (java.io.IOException e) {
-            EventLogger.log(this, "Failed to load manual: " + e.getMessage());
-            return;
-        }
-
-        CharSequence formattedText;
-        if (Build.VERSION.SDK_INT >= 24) {
-            formattedText = android.text.Html.fromHtml(htmlText, android.text.Html.FROM_HTML_MODE_LEGACY);
-        } else {
-            formattedText = android.text.Html.fromHtml(htmlText);
-        }
-
-        TextView textView = new TextView(this);
-        int paddingPx = (int) (16 * getResources().getDisplayMetrics().density);
-        textView.setPadding(paddingPx, paddingPx, paddingPx, paddingPx);
-        textView.setText(formattedText);
-        textView.setTextSize(14);
-
-        ScrollView scrollView = new ScrollView(this);
-        scrollView.addView(textView);
-
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.link_manual)
-                .setView(scrollView)
-                .setPositiveButton(R.string.dialog_ok, (dialog, which) -> dialog.dismiss())
-                .show();
     }
 
     private void setupLinkButton(int buttonId, String url) {

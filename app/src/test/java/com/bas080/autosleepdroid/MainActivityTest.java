@@ -60,19 +60,51 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testManualLinkClickShowsDialog() {
+    public void testManualLinkClickShowsFullScreenView() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();
         android.widget.Button btnManual = activity.findViewById(R.id.btn_manual);
         assertNotNull(btnManual);
+
+        android.view.View manualOverlay = activity.findViewById(R.id.manual_overlay_container);
+        android.view.View mainContent = activity.findViewById(R.id.main_content_container);
+        assertEquals(android.view.View.GONE, manualOverlay.getVisibility());
+        assertEquals(android.view.View.VISIBLE, mainContent.getVisibility());
+
         btnManual.performClick();
 
-        android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
-        assertNotNull(dialog);
-        assertTrue(dialog.isShowing());
+        assertEquals(android.view.View.VISIBLE, manualOverlay.getVisibility());
+        assertEquals(android.view.View.GONE, mainContent.getVisibility());
 
-        org.robolectric.shadows.ShadowAlertDialog shadowDialog = Shadows.shadowOf(dialog);
-        assertEquals(activity.getString(R.string.link_manual), shadowDialog.getTitle());
+        android.widget.Button btnBack = activity.findViewById(R.id.btn_manual_back);
+        assertNotNull(btnBack);
+        btnBack.performClick();
+
+        assertEquals(android.view.View.GONE, manualOverlay.getVisibility());
+        assertEquals(android.view.View.VISIBLE, mainContent.getVisibility());
+    }
+
+    @Test
+    public void testLogsLinkClickShowsFullScreenView() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+        android.widget.Button btnLogs = activity.findViewById(R.id.btn_logs);
+        assertNotNull(btnLogs);
+
+        android.view.View logsOverlay = activity.findViewById(R.id.logs_overlay_container);
+        android.view.View mainContent = activity.findViewById(R.id.main_content_container);
+        assertEquals(android.view.View.GONE, logsOverlay.getVisibility());
+        assertEquals(android.view.View.VISIBLE, mainContent.getVisibility());
+
+        btnLogs.performClick();
+
+        assertEquals(android.view.View.VISIBLE, logsOverlay.getVisibility());
+        assertEquals(android.view.View.GONE, mainContent.getVisibility());
+
+        activity.onBackPressed();
+
+        assertEquals(android.view.View.GONE, logsOverlay.getVisibility());
+        assertEquals(android.view.View.VISIBLE, mainContent.getVisibility());
     }
 
     @Test
