@@ -27,7 +27,9 @@ import android.widget.Toast;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class MainActivity extends Activity {
+import java.util.List;
+
+public class MainActivity extends Activity implements EventLogger.Listener {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 100;
 
     private Switch switchEnableTimer;
@@ -37,6 +39,8 @@ public class MainActivity extends Activity {
     private View goalContainer;
     private TimePicker timePickerGoal;
     private EditText inputMinSleep;
+    private ScrollView eventScrollView;
+    private TextView eventLogText;
 
     private boolean isUpdatingUi = false;
 
@@ -49,7 +53,7 @@ public class MainActivity extends Activity {
         setupHeaderAndLinks();
         setupConfigControls();
 
-        startOrRequestNotificationPermission();
+        startTimerService();
         requestExactAlarmPermissionIfNeeded();
     }
 
@@ -61,6 +65,8 @@ public class MainActivity extends Activity {
         goalContainer = findViewById(R.id.goal_container);
         timePickerGoal = findViewById(R.id.time_picker_goal);
         inputMinSleep = findViewById(R.id.input_min_sleep);
+        eventScrollView = findViewById(R.id.event_scroll_view);
+        eventLogText = findViewById(R.id.event_log_text);
 
         if (timePickerGoal != null) {
             timePickerGoal.setIs24HourView(false);
@@ -78,16 +84,6 @@ public class MainActivity extends Activity {
             btnManual.setOnClickListener(v -> showManualDialog());
         }
 
-        Button btnLogs = findViewById(R.id.btn_logs);
-        if (btnLogs != null) {
-            btnLogs.setOnClickListener(v -> {
-                Intent intent = new Intent(this, LogActivity.class);
-                startActivity(intent);
-            });
-        }
-
-        setupLinkButton(R.id.btn_releases, "https://github.com/bas080/auto-sleep-droid/releases");
-        setupLinkButton(R.id.btn_github, "https://github.com/bas080/auto-sleep-droid");
         setupLinkButton(R.id.btn_issues, "https://github.com/bas080/auto-sleep-droid/issues");
         setupLinkButton(R.id.btn_donate, "https://liberapay.com/bas080");
 
@@ -137,9 +133,24 @@ public class MainActivity extends Activity {
             switchShowNotification.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-                prefs.edit().putBoolean("show_notification", isChecked).apply();
-                EventLogger.log(this, EventLogger.LEVEL_NORMAL, "Show notification setting set to: " + isChecked);
-                redrawNotification();
+                if (isChecked) {
+                    if (Build.VERSION.SDK_INT >= 33
+                            && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        EventLogger.log(this, EventLogger.LEVEL_LOW, "Requesting notification permission for Show notification toggle");
+                        requestPermissions(
+                                new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                                NOTIFICATION_PERMISSION_REQUEST);
+                        return;
+                    }
+                    prefs.edit().putBoolean("show_notification", true).apply();
+                    EventLogger.log(this, EventLogger.LEVEL_NORMAL, "Show notification setting set to: true");
+                    redrawNotification();
+                } else {
+                    prefs.edit().putBoolean("show_notification", false).apply();
+                    EventLogger.log(this, EventLogger.LEVEL_NORMAL, "Show notification setting set to: false");
+                    redrawNotification();
+                }
             });
         }
 
@@ -228,7 +239,7 @@ public class MainActivity extends Activity {
 
         boolean active = prefs.getBoolean("active", true);
         int durationMinutes = prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
-        boolean showNotification = prefs.getBoolean("show_notification", true);
+        boolean showNotification = prefs.getBoolean("show_notification", false);
         boolean goalEnabled = prefs.getBoolean("wake_up_goal_enabled", false);
         int goalHour = prefs.getInt("wake_up_goal_hour", 6);
         int goalMin = prefs.getInt("wake_up_goal_minute", 30);
@@ -271,7 +282,7 @@ public class MainActivity extends Activity {
             json.put("version", 1);
             json.put("duration_minutes", prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES));
             json.put("active", prefs.getBoolean("active", true));
-            json.put("show_notification", prefs.getBoolean("show_notification", true));
+            json.put("show_notification", prefs.getBoolean("show_notification", false));
             json.put("wake_up_goal_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
             json.put("wake_up_goal_hour", prefs.getInt("wake_up_goal_hour", 6));
             json.put("wake_up_goal_minute", prefs.getInt("wake_up_goal_minute", 30));
@@ -342,7 +353,7 @@ public class MainActivity extends Activity {
             }
 
             boolean active = json.optBoolean("active", false);
-            boolean showNotification = json.optBoolean("show_notification", true);
+            boolean showNotification = json.optBoolean("show_notification", false);
             boolean wakeUpGoalEnabled = json.getBoolean("wake_up_goal_enabled");
             int wakeUpGoalHour = json.getInt("wake_up_goal_hour");
             if (wakeUpGoalHour < 0 || wakeUpGoalHour > 23) {
@@ -449,14 +460,49 @@ public class MainActivity extends Activity {
         super.onNewIntent(intent);
         setIntent(intent);
         EventLogger.log(this, EventLogger.LEVEL_LOW, "MainActivity new intent");
-        startOrRequestNotificationPermission();
+        startTimerService();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        EventLogger.setListener(this);
+        refreshEventLog();
         loadPreferencesIntoUi();
         redrawNotification();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        EventLogger.setListener(null);
+    }
+
+    private void refreshEventLog() {
+        List<String> events = EventLogger.getEvents(this);
+        android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder();
+        for (String event : events) {
+            ssb.append(EventLogger.formatColoredEvent(this, event)).append("\n");
+        }
+        if (eventLogText != null) {
+            eventLogText.setText(ssb);
+            scrollToBottom();
+        }
+    }
+
+    @Override
+    public void onEventLogged(String event) {
+        if (eventLogText != null) {
+            eventLogText.append(EventLogger.formatColoredEvent(this, event));
+            eventLogText.append("\n");
+            scrollToBottom();
+        }
+    }
+
+    private void scrollToBottom() {
+        if (eventScrollView != null) {
+            eventScrollView.post(() -> eventScrollView.fullScroll(ScrollView.FOCUS_DOWN));
+        }
     }
 
     private void redrawNotification() {
@@ -469,26 +515,23 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void startOrRequestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-            EventLogger.log(this, EventLogger.LEVEL_LOW, "Requesting notification permission");
-            requestPermissions(
-                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                    NOTIFICATION_PERMISSION_REQUEST);
-            return;
-        }
-        startTimerService();
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             EventLogger.log(this, EventLogger.LEVEL_LOW, "Notification permission granted: " + granted);
-            startOrRequestNotificationPermission();
+            SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+            prefs.edit().putBoolean("show_notification", granted).apply();
+            isUpdatingUi = true;
+            if (switchShowNotification != null) {
+                switchShowNotification.setChecked(granted);
+            }
+            isUpdatingUi = false;
+            if (granted) {
+                startTimerService();
+            }
+            redrawNotification();
         }
     }
 

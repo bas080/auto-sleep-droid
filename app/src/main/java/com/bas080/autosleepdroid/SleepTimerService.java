@@ -119,7 +119,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         EventLogger.log(this, "SleepTimerService state initialized (enabled: " + savedEnabled + ", duration: " + savedDuration + "m)");
 
         startForeground(NOTIFICATION_ID, buildNotification());
-        boolean showNotification = preferences == null || preferences.getBoolean("show_notification", true);
+        boolean showNotification = preferences != null && preferences.getBoolean("show_notification", false);
         if (!savedEnabled && !showNotification) {
             if (android.os.Build.VERSION.SDK_INT >= 24) {
                 stopForeground(STOP_FOREGROUND_REMOVE);
@@ -368,7 +368,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onStateChanged(SleepTimerStateMachine.State newState) {
         cancelTimerCallbacks();
-        boolean showNotification = preferences == null || preferences.getBoolean("show_notification", true);
+        boolean showNotification = preferences != null && preferences.getBoolean("show_notification", false);
         if (newState == SleepTimerStateMachine.State.OFF) {
             unregisterAudioPlaybackCallback();
             onCancelAlarm();
@@ -820,40 +820,35 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private Notification buildNotification() {
         String title;
-        String collapsedText;
-        String expandedText;
+        String contentText;
         String formattedDurationStr = formatDurationString(stateMachine.getConfiguredDurationMinutes());
 
         if (!stateMachine.isEnabled()) {
             title = getString(R.string.timer_off);
-            collapsedText = getString(R.string.timer_off_collapsed, formattedDurationStr);
-            expandedText = getString(R.string.timer_off_expanded, formattedDurationStr);
+            contentText = getString(R.string.timer_off_collapsed, formattedDurationStr);
         } else if (stateMachine.isFading()) {
             title = getString(R.string.fading_title);
-            collapsedText = getString(R.string.fading_collapsed);
-            expandedText = getString(R.string.fading_expanded);
+            contentText = getString(R.string.fading_collapsed);
         } else if (stateMachine.isActive()) {
             String targetTimeStr = formatTargetTime();
             title = getString(R.string.active_title);
-            collapsedText = getString(R.string.active_collapsed, targetTimeStr, formattedDurationStr);
 
             Calendar scheduledAlarm = calculateScheduledAlarm(this, System.currentTimeMillis(), stateMachine.getTimerEndsAt());
 
             if (scheduledAlarm != null) {
                 String formattedAlarmTime = formatTime(scheduledAlarm.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE));
-                expandedText = getString(R.string.active_expanded_alarm, targetTimeStr, formattedDurationStr, formattedAlarmTime);
+                contentText = getString(R.string.active_expanded_alarm, targetTimeStr, formattedDurationStr, formattedAlarmTime);
             } else {
-                expandedText = getString(R.string.active_expanded, targetTimeStr, formattedDurationStr);
+                contentText = getString(R.string.active_collapsed, targetTimeStr, formattedDurationStr);
             }
         } else {
             title = getString(R.string.waiting_title);
-            collapsedText = getString(R.string.waiting_collapsed, formattedDurationStr);
             Calendar scheduledAlarm = calculateScheduledAlarm(this, System.currentTimeMillis(), stateMachine.getTimerEndsAt());
             if (scheduledAlarm != null) {
                 String formattedAlarmTime = formatTime(scheduledAlarm.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE));
-                expandedText = getString(R.string.waiting_expanded_alarm, formattedDurationStr, formattedAlarmTime);
+                contentText = getString(R.string.waiting_expanded_alarm, formattedDurationStr, formattedAlarmTime);
             } else {
-                expandedText = getString(R.string.waiting_expanded, formattedDurationStr);
+                contentText = getString(R.string.waiting_collapsed, formattedDurationStr);
             }
         }
 
@@ -864,9 +859,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_zzz)
                 .setContentTitle(title)
-                .setContentText(collapsedText)
+                .setContentText(contentText)
                 .setContentIntent(contentPendingIntent)
-                .setStyle(new Notification.BigTextStyle().bigText(expandedText))
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .setOngoing(true)
                 .setPriority(Notification.PRIORITY_LOW)
@@ -916,7 +910,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void updateNotification() {
-        boolean showNotification = preferences == null || preferences.getBoolean("show_notification", true);
+        boolean showNotification = preferences != null && preferences.getBoolean("show_notification", false);
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (!showNotification && stateMachine != null && !stateMachine.isEnabled()) {
             if (manager != null) {

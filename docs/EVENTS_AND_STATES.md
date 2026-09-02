@@ -91,7 +91,7 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
 |                                    | Alarm Expiry, or      | or Wake-Up Alarm       | Destruction                               |
 |                                    | Alarm Snoozed         | Snoozed                |                                           |
 +------------------------------------+-----------------------+------------------------+------------------------------------------+
-| Live Event Log UI Listener         | LogActivity onResume  | UI Foreground          | LogActivity onPause                      |
+| Live Event Log UI Listener         | MainActivity onResume | UI Foreground          | MainActivity onPause                     |
 | (EventLogger.Listener)             |                       |                        |                                          |
 +------------------------------------+-----------------------+------------------------+------------------------------------------+
 ```
@@ -118,10 +118,10 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
    * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing or snoozed), when wake-up alarm is dismissed in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked.
 
 4. **Event Logger Listener (`EventLogger.Listener`)**:
-   * **Registration Point**: Registered in `LogActivity.onResume()`.
-   * **Active Lifetime**: Active only while `LogActivity` is in the foreground.
-   * **Purpose**: Delivers live log lines directly to the dedicated event log UI.
-   * **Removal Point**: Removed (`EventLogger.setListener(null)`) in `LogActivity.onPause()` to prevent UI leaks when activity is backgrounded.
+   * **Registration Point**: Registered in `MainActivity.onResume()`.
+   * **Active Lifetime**: Active only while `MainActivity` is in the foreground.
+   * **Purpose**: Delivers live log lines directly to the inline event log view on `MainActivity`.
+   * **Removal Point**: Removed (`EventLogger.setListener(null)`) in `MainActivity.onPause()` to prevent UI leaks when activity is backgrounded.
 
 ---
 
