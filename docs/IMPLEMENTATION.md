@@ -17,7 +17,6 @@ The app is an Android sleep timer app configured directly from a single main UI 
 │       ├── java/com/bas080/autosleepdroid/
 │       │   ├── BootReceiver.java
 │       │   ├── EventLogger.java
-│       │   ├── GoalSettingsDialogActivity.java
 │       │   ├── MainActivity.java
 │       │   └── SleepTimerService.java
 │       └── res/
