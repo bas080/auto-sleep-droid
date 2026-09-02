@@ -628,7 +628,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private void redrawNotification() {
         Intent serviceIntent = new Intent(this, SleepTimerService.class);
         serviceIntent.setAction(SleepTimerService.ACTION_REDRAW_NOTIFICATION);
-        if (Build.VERSION.SDK_INT >= 26) {
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        boolean showNotification = prefs.getBoolean("show_notification", false);
+        if (Build.VERSION.SDK_INT >= 26 && showNotification) {
             startForegroundService(serviceIntent);
         } else {
             startService(serviceIntent);
@@ -657,7 +659,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private void startTimerService() {
         Intent serviceIntent = new Intent(this, SleepTimerService.class);
-        if (Build.VERSION.SDK_INT >= 26) {
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        boolean showNotification = prefs.getBoolean("show_notification", false);
+        if (Build.VERSION.SDK_INT >= 26 && showNotification) {
             startForegroundService(serviceIntent);
         } else {
             startService(serviceIntent);

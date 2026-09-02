@@ -84,6 +84,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private long alarmCrescendoStartTimeMs = 0L;
     private boolean isWakeUpAlarmRinging = false;
     private boolean isWakeUpAlarmSnoozed = false;
+    private boolean isForeground = false;
 
     private SleepTimerStateMachine stateMachine;
 
@@ -116,7 +117,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         EventLogger.log(this, "SleepTimerService state initialized (enabled: " + savedEnabled + ", duration: " + savedDuration + "m)");
 
-        startForeground(NOTIFICATION_ID, buildNotification());
         showOrHideNotification();
 
         boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
@@ -864,14 +864,18 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (showNotification || isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) {
             startForeground(NOTIFICATION_ID, buildNotification());
+            isForeground = true;
         } else {
             if (manager != null) {
                 manager.cancel(NOTIFICATION_ID);
             }
-            if (android.os.Build.VERSION.SDK_INT >= 24) {
-                stopForeground(STOP_FOREGROUND_REMOVE);
-            } else {
-                stopForeground(true);
+            if (isForeground) {
+                if (android.os.Build.VERSION.SDK_INT >= 24) {
+                    stopForeground(STOP_FOREGROUND_REMOVE);
+                } else {
+                    stopForeground(true);
+                }
+                isForeground = false;
             }
         }
     }

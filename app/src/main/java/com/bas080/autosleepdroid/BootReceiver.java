@@ -16,7 +16,9 @@ public class BootReceiver extends BroadcastReceiver {
         EventLogger.log(context, "Boot completed");
 
         Intent serviceIntent = new Intent(context, SleepTimerService.class);
-        if (Build.VERSION.SDK_INT >= 26) {
+        android.content.SharedPreferences prefs = context.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE);
+        boolean showNotification = prefs.getBoolean("show_notification", false);
+        if (Build.VERSION.SDK_INT >= 26 && showNotification) {
             context.startForegroundService(serviceIntent);
         } else {
             context.startService(serviceIntent);
