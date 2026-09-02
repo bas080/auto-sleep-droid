@@ -14,7 +14,7 @@ As specified in Issue #61 and user design updates:
 - **Export**: Serializes configuration into a JSON string and launches a system share action (`Intent.ACTION_SEND`) allowing the user to copy or send settings.
 - **Import**: Presents an instructional dialog prompting the user to paste or enter an application configuration string and updates application settings.
 - **Data Format**: A standardized, structured JSON string format.
-- **UI Location**: Placed on `MainActivity` rendered in the header's scrollable list of action links alongside Releases, GitHub, Issues, and Donate.
+- **UI Location**: Placed on `MainActivity` rendered in the scrollable list of action links at the bottom of the form under a "Links" header alongside Manual, Logs, Feedback, and Donate.
 
 ---
 
@@ -72,10 +72,10 @@ The export string must be a valid JSON object adhering to schema version `1`:
 
 ### Placement on `MainActivity`
 
-The Import/Export control section is located on `MainActivity` (`activity_main.xml`), integrated into the header's horizontal scrollable link list alongside existing action links (`Releases`, `GitHub`, `Issues`, `Donate`).
+The Import/Export control section is located on `MainActivity` (`activity_main.xml`), integrated into the horizontal scrollable link list at the bottom of the form under a "Links" header alongside existing action links (`Manual`, `Logs`, `Feedback`, `Donate`).
 
 ### Layout Components
-- **Header Link Bar Integration**: Borderless button action links (`btn_export` for "Export" and `btn_import` for "Import") added to the horizontal scrollable header bar inside `activity_main.xml`.
+- **Link Bar Integration**: Borderless button action links (`btn_export` for "Export" and `btn_import` for "Import") added to the horizontal scrollable link bar inside `activity_main.xml`.
 
 ---
 
