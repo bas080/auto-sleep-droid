@@ -9,7 +9,7 @@
 - **Minimum Sleep Duration**: The user-configured minimum sleep safeguard duration in hours (default 7.5 hours) ensuring that the wake-up alarm is set no earlier than `timerStartTime + sleepTimerDuration + minimumSleepDuration`.
 
 ## Product goal
-Provide an Android sleep timer app configured directly from a single main UI screen, with simplified notification shade actions and a dedicated event log screen for debugging.
+Provide an Android sleep timer app configured directly from a single main UI screen with inline event logs, simplified notification shade actions, and zero intrusive UI dialogs.
 
 ## System states
 - Off: The timer is manually disabled. Media continues playing normally, and the current volume remains entirely unchanged.
@@ -18,26 +18,16 @@ Provide an Android sleep timer app configured directly from a single main UI scr
 - Fading: The timer reaches zero, initiating a 30-second volume fade along a curve that starts steep and flattens out. Completing this fade pauses media, restores pre-fade volume, and returns the app back to the Waiting state.
 
 ## Notification states and content
-Notification text is kept compact and concise when collapsed, displaying detailed contextual information only when expanded:
+All notification content is concise and directly visible in the notification body without hiding text in expanded views:
 
-- Off:
-  - Collapsed Text: "Timer off"
-  - Expanded Text: "Sleep timer is off"
-  - Buttons: "Turn On"
-- Waiting: 
-  - Collapsed Text: "Waiting for playback"
-  - Expanded Text: "Waiting for media playback • Alarm at 6:15 AM" (Alarm detail shown only when wake-up alarm is enabled).
-  - Buttons: "Disable"
-- Active: 
-  - Collapsed Text: "Fades out at 11:15 PM"
-  - Expanded Text: "Fades out at 11:15 PM • Alarm at 6:15 AM" (Alarm detail shown only when wake-up alarm is enabled).
-  - Buttons: "Disable"
-- Fading: 
-  - Collapsed Text: "Fading volume"
-  - Expanded Text: "Fading volume down to pause media"
-  - Buttons: "Disable"
+- Off: "Timer off (20m)" • Button: "Turn On"
+- Waiting: "Waiting for playback (20m) • Alarm at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
+- Active: "Fades out at 11:15 PM (20m) • Alarm at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
+- Fading: "Fading volume" • Button: "Disable"
 
-If the "Show notification" setting is disabled by the user, the ongoing sleep timer notification is hidden when the timer is Off.
+Only the action button lives in the expanded shade. All information text is directly visible in the main notification view.
+If the "Show notification" setting is disabled by the user (disabled by default), the ongoing sleep timer notification is hidden.
+Toggling "Show notification" to ON prompts the user for notification permission if not already granted.
 
 ## User interface
 - Main Application Screen (`MainActivity`):
@@ -46,10 +36,8 @@ If the "Show notification" setting is disabled by the user, the ongoing sleep ti
     - Sleep timer duration input (supporting natural duration strings like `20m`, `1h 15m`).
     - Show notification switch to toggle ongoing notification shade visibility.
     - Target wake-up goal enable switch, target wake-up time picker, and minimum sleep duration input.
-  - Action links in the top header: Manual, Logs, Releases, Issues, Donate, Export, Import, and GitHub.
-  - Tapping "Logs" opens the dedicated Event Logs screen (`LogActivity`).
-- Dedicated Event Logs Screen (`LogActivity`):
-  - Displays a scrollable, line-by-line list of timestamped events for debugging and system activity tracking.
+  - Action links in the top header: Manual, Feedback, Donate, Export, and Import.
+  - Event logs section embedded directly at the bottom of `MainActivity` displaying real-time system activity logs.
 - Notification Shade Controls:
   - The notification features a single simple toggle action button: "Disable" when enabled, or "Turn On" when disabled.
   - Tapping/clicking the notification body opens `MainActivity`.
@@ -106,11 +94,11 @@ If the "Show notification" setting is disabled by the user, the ongoing sleep ti
   - **Target Goal Time** (e.g., `06:30 AM`).
   - **Minimum Sleep Duration** (default `7.5 hours`).
 - **Event Logging**:
-  - Every calculation and alarm update is logged line-by-line in the debug event log on `LogActivity`.
+  - Every calculation and alarm update is logged line-by-line in the debug event log on `MainActivity`.
 
 ## Acceptance criteria
-- The main activity presents a single-screen configuration UI for all timer, goal, and notification settings.
-- Tapping "Logs" in the header opens `LogActivity` displaying real-time timestamped event logs.
+- The main activity presents a single-screen configuration UI for all timer, goal, notification, and event log settings.
+- Real-time timestamped event logs are displayed directly on `MainActivity`.
 - The complete timer workflow is configurable from `MainActivity` and toggleable from the notification bar, system volume buttons, and phone flip gesture.
 - The notification action button contains a single action: "Disable" when enabled or "Turn On" when disabled.
 - The "Show notification" setting toggles ongoing notification shade notification visibility when timer is Off.

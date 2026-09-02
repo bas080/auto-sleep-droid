@@ -257,6 +257,7 @@ public class SleepTimerServiceTest {
         // Initially active with 20 minutes
         preferences.edit()
                 .putBoolean("active", true)
+                .putBoolean("show_notification", true)
                 .putInt("duration_minutes", 20)
                 .commit();
 
@@ -273,6 +274,7 @@ public class SleepTimerServiceTest {
         // Update preferences to inactive with 45 minutes duration and goal enabled
         preferences.edit()
                 .putBoolean("active", false)
+                .putBoolean("show_notification", true)
                 .putInt("duration_minutes", 45)
                 .putBoolean("wake_up_goal_enabled", true)
                 .putInt("wake_up_goal_hour", 7)
@@ -309,8 +311,8 @@ public class SleepTimerServiceTest {
 
     @Test
     public void testNotificationActionTogglesWhenEnabledAndDisabled() {
-        // When timer is off/disabled: action 0 toggles timer on
-        preferences.edit().putBoolean("active", false).commit();
+        // When timer is off/disabled and show_notification is true: action 0 toggles timer on
+        preferences.edit().putBoolean("active", false).putBoolean("show_notification", true).commit();
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 

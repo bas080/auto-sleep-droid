@@ -49,14 +49,14 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testLogsButtonClickLaunchesLogActivity() {
+    public void testInlineEventLogs() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
-        MainActivity activity = controller.create().get();
-        activity.findViewById(R.id.btn_logs).performClick();
+        MainActivity activity = controller.create().resume().get();
 
-        Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
-        assertNotNull(intent);
-        assertEquals(LogActivity.class.getName(), intent.getComponent().getClassName());
+        EventLogger.log(activity, EventLogger.LEVEL_HIGH, "Test event log entry");
+        TextView eventLogText = activity.findViewById(R.id.event_log_text);
+        assertNotNull(eventLogText);
+        assertTrue(eventLogText.getText().toString().contains("Test event log entry"));
     }
 
     @Test
@@ -76,34 +76,14 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testReleasesLinkClick() {
+    public void testFeedbackLinkClick() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();
-        activity.findViewById(R.id.btn_releases).performClick();
+        android.widget.Button btnIssues = activity.findViewById(R.id.btn_issues);
+        assertNotNull(btnIssues);
+        assertEquals(activity.getString(R.string.link_feedback), btnIssues.getText().toString());
 
-        Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
-        assertNotNull(intent);
-        assertEquals(Intent.ACTION_VIEW, intent.getAction());
-        assertEquals("https://github.com/bas080/auto-sleep-droid/releases", intent.getDataString());
-    }
-
-    @Test
-    public void testGitHubLinkClick() {
-        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
-        MainActivity activity = controller.create().get();
-        activity.findViewById(R.id.btn_github).performClick();
-
-        Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
-        assertNotNull(intent);
-        assertEquals(Intent.ACTION_VIEW, intent.getAction());
-        assertEquals("https://github.com/bas080/auto-sleep-droid", intent.getDataString());
-    }
-
-    @Test
-    public void testIssuesLinkClick() {
-        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
-        MainActivity activity = controller.create().get();
-        activity.findViewById(R.id.btn_issues).performClick();
+        btnIssues.performClick();
 
         Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
         assertNotNull(intent);
@@ -215,16 +195,38 @@ public class MainActivityTest {
         assertNotNull(switchShowNotif);
         assertNotNull(switchGoal);
 
+        assertFalse(switchShowNotif.isChecked());
+
         switchEnable.setChecked(false);
         inputDuration.setText("45m");
-        switchShowNotif.setChecked(false);
+        switchShowNotif.setChecked(true);
         switchGoal.setChecked(true);
 
         android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
         assertFalse(prefs.getBoolean("active", true));
         assertEquals(45, prefs.getInt("duration_minutes", -1));
-        assertFalse(prefs.getBoolean("show_notification", true));
+        assertTrue(prefs.getBoolean("show_notification", false));
         assertTrue(prefs.getBoolean("wake_up_goal_enabled", false));
+    }
+
+    @Test
+    public void testShowNotificationToggleRequestsPermissionWhenNotGranted() {
+        Application application = ApplicationProvider.getApplicationContext();
+        Shadows.shadowOf(application).denyPermissions(Manifest.permission.POST_NOTIFICATIONS);
+
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.Switch switchShowNotif = activity.findViewById(R.id.switch_show_notification);
+        assertNotNull(switchShowNotif);
+        assertFalse(switchShowNotif.isChecked());
+
+        switchShowNotif.setChecked(true);
+
+        org.robolectric.shadows.ShadowActivity shadowActivity = Shadows.shadowOf(activity);
+        org.robolectric.shadows.ShadowActivity.PermissionsRequest request = shadowActivity.getLastRequestedPermission();
+        assertNotNull(request);
+        assertEquals(Manifest.permission.POST_NOTIFICATIONS, request.requestedPermissions[0]);
     }
 
     @Test

@@ -4,7 +4,7 @@
 
 This document describes the implementation that currently exists in the repository. Use it as the code-oriented source of truth when modifying the app.
 
-The app is an Android sleep timer app configured directly from a single main UI screen (`MainActivity`), with simplified notification shade actions and a dedicated event log screen (`LogActivity`).
+The app is an Android sleep timer app configured directly from a single main UI screen (`MainActivity`), with inline event logs and simplified notification shade actions.
 
 ## Project structure
 
@@ -18,12 +18,10 @@ The app is an Android sleep timer app configured directly from a single main UI 
 │       │   ├── BootReceiver.java
 │       │   ├── EventLogger.java
 │       │   ├── GoalSettingsDialogActivity.java
-│       │   ├── LogActivity.java
 │       │   ├── MainActivity.java
 │       │   └── SleepTimerService.java
 │       └── res/
 │           ├── layout/
-│           │   ├── activity_log.xml
 │           │   └── activity_main.xml
 │           ├── values/
 │           │   ├── strings.xml
@@ -58,10 +56,10 @@ This is the main application component. It is a foreground service with the `med
 Responsibilities:
 
 - Create the low-importance ongoing notification (`setOngoing(true)`) representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`.
-- Display compact/concise text when collapsed (`setContentText`) and detailed contextual information when expanded (`Notification.BigTextStyle.bigText`).
+- Display concise, directly visible text in the main notification body (`setContentText`). No content is hidden behind expanded shade views.
 - Set content intent targeting `MainActivity` so tapping the notification opens `MainActivity`.
 - Expose a single notification action: "Disable" when enabled, or "Turn On" when disabled.
-- Respect `show_notification` preference (default `true`); when `show_notification` is `false` and timer state is `Off`, remove the ongoing service notification via `stopForeground(STOP_FOREGROUND_REMOVE)` or `manager.cancel(NOTIFICATION_ID)`.
+- Respect `show_notification` preference (default `false`); when `show_notification` is `false` and timer state is `Off`, remove the ongoing service notification via `stopForeground(STOP_FOREGROUND_REMOVE)` or `manager.cancel(NOTIFICATION_ID)`.
 - Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), show notification setting (`show_notification`), and wake-up goal settings in `SharedPreferences`.
 - Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
 - Listen for media playback state changes using `AudioManager.AudioPlaybackCallback` (API 26+) dynamically only during `Waiting` state instead of periodic polling.
@@ -97,16 +95,10 @@ Main Configuration Controls & Link Header:
   - Target wake-up goal enable Switch (`wake_up_goal_enabled` preference).
   - Target wake-up TimePicker (`wake_up_goal_hour` and `wake_up_goal_minute` preferences).
   - Minimum sleep duration EditText (`min_sleep_duration_minutes` preference).
-- Header action link list: Manual, Logs, Releases, Issues, Donate, Export, Import, and GitHub.
-- Tapping "Logs" launches `LogActivity`.
+- Header action link list: Manual, Feedback, Donate, Export, and Import.
+- Inline Event Logs section: Monospace `TextView` inside a `ScrollView` embedded directly at the bottom of `MainActivity` listening to `EventLogger` updates on resume.
 - Export Settings Action: Serializes current preferences into a Schema Version 1 JSON string, launches system share action (`ACTION_SEND`), and logs to `EventLogger`.
 - Import Settings Action: Prompts user with instructional `AlertDialog`, validates syntax and boundaries, applies valid values, sends `ACTION_REDRAW_NOTIFICATION` to `SleepTimerService`, refreshes UI controls, and logs to `EventLogger`.
-
-### `LogActivity`
-
-File: `app/src/main/java/com/bas080/autosleepdroid/LogActivity.java`
-
-Dedicated activity for displaying event logs. Listens to `EventLogger` updates on start/resume and renders real-time timestamped event log lines in a monospace `TextView` inside a `ScrollView`.
 
 ### `EventLogger`
 

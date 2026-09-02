@@ -57,10 +57,7 @@
     <string name="toast_alarm_snoozed">Alarma pospuesta 9m</string>
     <string name="version_label">Versión %1$s</string>
     <string name="link_manual">Manual</string>
-    <string name="link_logs">Registros</string>
-    <string name="link_releases">Lanzamientos</string>
-    <string name="link_github">GitHub</string>
-    <string name="link_issues">Problemas</string>
+    <string name="link_feedback">Comentarios</string>
     <string name="link_donate">Donar</string>
     <string name="link_export">Exportar</string>
     <string name="link_import">Importar</string>
@@ -82,4 +79,6 @@
     <string name="desc_min_sleep">Garantiza una duración mínima de sueño aunque te duermas tarde</string>
     <string name="label_show_notification">Mostrar notificación</string>
     <string name="desc_show_notification">Muestra una notificación de estado permanente en la barra de notificaciones</string>
+    <string name="label_event_logs">Registros de eventos</string>
+    <string name="desc_event_logs">Actividad del sistema y temporizador en tiempo real</string>
 </resources>

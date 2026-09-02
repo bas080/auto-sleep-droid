@@ -55,25 +55,11 @@
                     android:text="@string/link_manual" />
 
                 <Button
-                    android:id="@+id/btn_logs"
-                    style="?android:attr/borderlessButtonStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/link_logs" />
-
-                <Button
-                    android:id="@+id/btn_releases"
-                    style="?android:attr/borderlessButtonStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/link_releases" />
-
-                <Button
                     android:id="@+id/btn_issues"
                     style="?android:attr/borderlessButtonStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/link_issues" />
+                    android:text="@string/link_feedback" />
 
                 <Button
                     android:id="@+id/btn_donate"
@@ -95,13 +81,6 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/link_import" />
-
-                <Button
-                    android:id="@+id/btn_github"
-                    style="?android:attr/borderlessButtonStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/link_github" />
             </LinearLayout>
         </HorizontalScrollView>
     </LinearLayout>
@@ -305,6 +284,44 @@
                     android:layout_height="wrap_content"
                     android:inputType="text"
                     android:singleLine="true" />
+            </LinearLayout>
+
+            <!-- Event Logs Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingTop="16dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_event_logs"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/desc_event_logs"
+                    android:textSize="12sp"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:paddingBottom="8dp" />
+
+                <ScrollView
+                    android:id="@+id/event_scroll_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:padding="8dp">
+
+                    <TextView
+                        android:id="@+id/event_log_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:textSize="12sp" />
+                </ScrollView>
             </LinearLayout>
 
         </LinearLayout>

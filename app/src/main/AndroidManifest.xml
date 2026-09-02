@@ -26,11 +26,6 @@
         </activity>
 
         <activity
-            android:name=".LogActivity"
-            android:label="@string/title_activity_log"
-            android:exported="false" />
-
-        <activity
             android:name=".GoalSettingsDialogActivity"
             android:theme="@style/GoalDialogTheme"
             android:taskAffinity=""
