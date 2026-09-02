@@ -25,14 +25,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".GoalSettingsDialogActivity"
-            android:theme="@style/GoalDialogTheme"
-            android:taskAffinity=""
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:exported="false" />
-
         <service
             android:name=".SleepTimerService"
             android:exported="false"

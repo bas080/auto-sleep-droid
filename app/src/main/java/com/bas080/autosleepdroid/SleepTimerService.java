@@ -938,13 +938,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private PendingIntent goalIntent() {
-        Intent intent = new Intent(this, GoalSettingsDialogActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        return PendingIntent.getActivity(this, 10, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
     private String formatTargetTime() {
         long endsAt = stateMachine.getTimerEndsAt();
         if (endsAt <= 0L) {
