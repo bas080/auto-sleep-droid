@@ -326,7 +326,7 @@ public class MainActivityTest {
         assertEquals("20m", inputDuration.getText().toString());
 
         // Change text to invalid input
-        inputDuration.setText("abc");
+        inputDuration.setText("1h 20x");
 
         // Trigger focus loss
         if (inputDuration.getOnFocusChangeListener() != null) {
