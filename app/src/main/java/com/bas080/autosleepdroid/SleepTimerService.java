@@ -119,14 +119,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         EventLogger.log(this, "SleepTimerService state initialized (enabled: " + savedEnabled + ", duration: " + savedDuration + "m)");
 
         startForeground(NOTIFICATION_ID, buildNotification());
-        boolean showNotification = preferences != null && preferences.getBoolean("show_notification", false);
-        if (!savedEnabled && !showNotification) {
-            if (android.os.Build.VERSION.SDK_INT >= 24) {
-                stopForeground(STOP_FOREGROUND_REMOVE);
-            } else {
-                stopForeground(true);
-            }
-        }
+        showOrHideNotification();
 
         boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
         if (goalEnabled) {
@@ -368,36 +361,27 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onStateChanged(SleepTimerStateMachine.State newState) {
         cancelTimerCallbacks();
-        boolean showNotification = preferences != null && preferences.getBoolean("show_notification", false);
         if (newState == SleepTimerStateMachine.State.OFF) {
             unregisterAudioPlaybackCallback();
             onCancelAlarm();
             dismissAutoSleepAlarm();
             updateListenersRegistration();
-            if (showNotification) {
-                startForeground(NOTIFICATION_ID, buildNotification());
-            } else {
-                if (android.os.Build.VERSION.SDK_INT >= 24) {
-                    stopForeground(STOP_FOREGROUND_REMOVE);
-                } else {
-                    stopForeground(true);
-                }
-            }
+            showOrHideNotification();
         } else if (newState == SleepTimerStateMachine.State.WAITING) {
             registerAudioPlaybackCallback();
             onCancelAlarm();
             updateListenersRegistration();
-            startForeground(NOTIFICATION_ID, buildNotification());
+            showOrHideNotification();
         } else if (newState == SleepTimerStateMachine.State.FADING) {
             unregisterAudioPlaybackCallback();
             updateListenersRegistration();
-            startForeground(NOTIFICATION_ID, buildNotification());
+            showOrHideNotification();
             startFadeRunnable();
         } else if (newState == SleepTimerStateMachine.State.ACTIVE) {
             unregisterAudioPlaybackCallback();
             updateListenersRegistration();
             checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
-            startForeground(NOTIFICATION_ID, buildNotification());
+            showOrHideNotification();
             scheduleExpiry();
         }
     }
@@ -909,10 +893,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         updateNotification();
     }
 
-    private void updateNotification() {
+    private void showOrHideNotification() {
         boolean showNotification = preferences != null && preferences.getBoolean("show_notification", false);
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (!showNotification && stateMachine != null && !stateMachine.isEnabled()) {
+        if (showNotification) {
+            startForeground(NOTIFICATION_ID, buildNotification());
+        } else {
             if (manager != null) {
                 manager.cancel(NOTIFICATION_ID);
             }
@@ -921,11 +907,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             } else {
                 stopForeground(true);
             }
-            return;
         }
-        if (manager != null) {
-            manager.notify(NOTIFICATION_ID, buildNotification());
-        }
+    }
+
+    private void updateNotification() {
+        showOrHideNotification();
     }
 
     private PendingIntent durationIntent() {

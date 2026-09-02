@@ -26,7 +26,7 @@ All notification content is concise and directly visible in the notification bod
 - Fading: "Fading volume" • Button: "Disable"
 
 Only the action button lives in the expanded shade. All information text is directly visible in the main notification view.
-If the "Show notification" setting is disabled by the user (disabled by default), the ongoing sleep timer notification is hidden.
+If the "Show notification" setting is disabled by the user (disabled by default), the ongoing sleep timer notification is hidden in all timer states (Off, Waiting, Active, Fading).
 Toggling "Show notification" to ON prompts the user for notification permission if not already granted.
 
 ## User interface
@@ -101,7 +101,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - Real-time timestamped event logs are displayed directly on `MainActivity`.
 - The complete timer workflow is configurable from `MainActivity` and toggleable from the notification bar, system volume buttons, and phone flip gesture.
 - The notification action button contains a single action: "Disable" when enabled or "Turn On" when disabled.
-- The "Show notification" setting toggles ongoing notification shade notification visibility when timer is Off.
+- The "Show notification" setting toggles ongoing notification shade notification visibility across all timer states.
 - Volume-up and volume-down both reset an active timer while preserving their normal volume behavior.
 - Expiration pauses active media after a 30-second fade-out, restores pre-fade volume after pausing media, and successfully reverts to the Waiting state.
 - Disabling the timer does not pause media or change the current volume.

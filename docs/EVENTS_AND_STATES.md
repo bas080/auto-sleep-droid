@@ -23,7 +23,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 * **Notification Presentation**:
   * Collapsed Text: `"Timer off"`
   * Expanded Text: `"Sleep timer is off"`
-  - Action Button: `"Turn On"` (if `show_notification` is `true`; notification is hidden if `show_notification` is `false`).
+  - Action Button: `"Turn On"` (if `show_notification` is `true`; notification is hidden across all states if `show_notification` is `false`).
 * **State Invariants**: `enabled = false`, `timerEndsAt = 0`.
 
 ### 2. `WAITING`
