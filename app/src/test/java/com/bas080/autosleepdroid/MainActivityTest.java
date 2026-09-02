@@ -377,4 +377,48 @@ public class MainActivityTest {
         }
         assertTrue("Expected ACTION_REDRAW_NOTIFICATION intent when MainActivity is resumed", foundRedrawIntent);
     }
+
+    @Test
+    public void testInputsDisabledWhenSleepTimerIsDisabled() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
+        android.widget.EditText inputDuration = activity.findViewById(R.id.input_duration);
+        android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
+        android.widget.Button btnTargetTime = activity.findViewById(R.id.btn_target_time);
+        android.widget.EditText inputMinSleep = activity.findViewById(R.id.input_min_sleep);
+
+        // Turn off sleep timer
+        switchEnable.setChecked(false);
+
+        assertFalse(inputDuration.isEnabled());
+        assertFalse(switchGoal.isEnabled());
+        assertFalse(btnTargetTime.isEnabled());
+        assertFalse(inputMinSleep.isEnabled());
+    }
+
+    @Test
+    public void testGoalContainerVisibleAndGoalInputsDisabledWhenGoalIsDisabled() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
+        android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
+        android.view.View goalContainer = activity.findViewById(R.id.goal_container);
+        android.widget.Button btnTargetTime = activity.findViewById(R.id.btn_target_time);
+        android.widget.EditText inputMinSleep = activity.findViewById(R.id.input_min_sleep);
+
+        // Ensure timer is enabled, but goal is disabled
+        switchEnable.setChecked(true);
+        switchGoal.setChecked(false);
+
+        // goal_container must remain visible (no layout shift)
+        assertEquals(android.view.View.VISIBLE, goalContainer.getVisibility());
+        android.widget.EditText inputDuration = activity.findViewById(R.id.input_duration);
+        assertTrue(inputDuration.isEnabled());
+        assertTrue(switchGoal.isEnabled());
+        assertFalse(btnTargetTime.isEnabled());
+        assertFalse(inputMinSleep.isEnabled());
+    }
 }
