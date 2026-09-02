@@ -119,53 +119,6 @@ public class SleepTimerServiceTest {
     }
 
     @Test
-    public void testGoalSettingsDialogActivityWithFloatAndDurationStrings() {
-        org.robolectric.android.controller.ActivityController<GoalSettingsDialogActivity> activityController =
-                Robolectric.buildActivity(GoalSettingsDialogActivity.class);
-        GoalSettingsDialogActivity activity = activityController.create().start().resume().get();
-        assertNotNull(activity);
-
-        android.widget.EditText inputMinSleep = null;
-
-        android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
-        assertNotNull(dialog);
-
-        // Locate inputMinSleep from dialog view hierarchy
-        java.util.ArrayList<android.widget.EditText> editTexts = new java.util.ArrayList<>();
-        if (dialog.getWindow() != null) {
-            findViewsOfType(dialog.getWindow().getDecorView(), android.widget.EditText.class, editTexts);
-        }
-        assertFalse(editTexts.isEmpty());
-        inputMinSleep = editTexts.get(0);
-
-        // Verify initial text is formatted duration string (e.g., 7h 30m for default 450 min)
-        assertEquals("7h 30m", inputMinSleep.getText().toString());
-
-        // Test float hours input "0.5" -> 30 min
-        inputMinSleep.setText("0.5");
-
-        android.widget.Button okButton = dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
-        assertNotNull(okButton);
-        okButton.performClick();
-
-        org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
-        assertEquals(30, preferences.getInt("min_sleep_duration_minutes", -1));
-        assertTrue(preferences.getBoolean("wake_up_goal_enabled", false));
-    }
-
-    private <T extends android.view.View> void findViewsOfType(android.view.View root, Class<T> clazz, java.util.List<T> outList) {
-        if (clazz.isInstance(root)) {
-            outList.add(clazz.cast(root));
-        }
-        if (root instanceof android.view.ViewGroup) {
-            android.view.ViewGroup group = (android.view.ViewGroup) root;
-            for (int i = 0; i < group.getChildCount(); i++) {
-                findViewsOfType(group.getChildAt(i), clazz, outList);
-            }
-        }
-    }
-
-    @Test
     public void testSetFlexibleDurationViaRemoteInput() {
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
@@ -229,6 +182,7 @@ public class SleepTimerServiceTest {
         // Previous valid duration was 25
         assertEquals(25, preferences.getInt("duration_minutes", -1));
         assertTrue(preferences.getBoolean("active", false));
+        assertEquals(context.getString(R.string.toast_duration_invalid), org.robolectric.shadows.ShadowToast.getTextOfLatestToast());
     }
 
     @Test

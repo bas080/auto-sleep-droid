@@ -286,14 +286,14 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         int duration = parseDurationMinutes(reply != null ? reply.toString() : null);
 
-        boolean musicActive = audioManager != null && audioManager.isMusicActive();
-        stateMachine.handleDurationReply(duration, musicActive, System.currentTimeMillis(), true);
-        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Duration set to " + stateMachine.getConfiguredDurationMinutes() + "m (input: '" + reply + "')");
-
-        if (duration != -1) {
+        if (duration > 0) {
+            boolean musicActive = audioManager != null && audioManager.isMusicActive();
+            stateMachine.handleDurationReply(duration, musicActive, System.currentTimeMillis(), true);
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Duration set to " + stateMachine.getConfiguredDurationMinutes() + "m (input: '" + reply + "')");
             String formattedStr = formatDurationString(stateMachine.getConfiguredDurationMinutes());
             android.widget.Toast.makeText(this, getString(R.string.toast_duration_set, formattedStr), android.widget.Toast.LENGTH_SHORT).show();
         } else {
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Invalid duration input: '" + reply + "'");
             android.widget.Toast.makeText(this, R.string.toast_duration_invalid, android.widget.Toast.LENGTH_SHORT).show();
         }
     }
@@ -935,13 +935,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private PendingIntent turnOnIntent() {
         Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_TURN_ON);
         return PendingIntent.getService(this, 7, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    private PendingIntent goalIntent() {
-        Intent intent = new Intent(this, GoalSettingsDialogActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        return PendingIntent.getActivity(this, 10, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
