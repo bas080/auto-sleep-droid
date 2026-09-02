@@ -9,7 +9,7 @@
 - **Minimum Sleep Duration**: The user-configured minimum sleep safeguard duration in hours (default 7.5 hours) ensuring that the wake-up alarm is set no earlier than `timerStartTime + sleepTimerDuration + minimumSleepDuration`.
 
 ## Product goal
-Provide an Android sleep timer controlled via notification shade controls. The main UI displays a live event log (one line per event) for debugging.
+Provide an Android sleep timer app configured directly from a single main UI screen, with simplified notification shade actions and a dedicated event log screen for debugging.
 
 ## System states
 - Off: The timer is manually disabled. Media continues playing normally, and the current volume remains entirely unchanged.
@@ -23,38 +23,44 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - Off:
   - Collapsed Text: "Timer off"
   - Expanded Text: "Sleep timer is off"
-  - Buttons: "Set Timer" (Inline reply to change duration) and "Set Goal" (Opens Wake-Up Goal settings dialog).
+  - Buttons: "Turn On"
 - Waiting: 
   - Collapsed Text: "Waiting for playback"
   - Expanded Text: "Waiting for media playback • Alarm at 6:15 AM" (Alarm detail shown only when wake-up alarm is enabled).
-  - Buttons: "Set Timer" (Inline reply to change duration) and "Set Goal" / "Goal HH:MM" (Opens Wake-Up Goal settings dialog).
+  - Buttons: "Disable"
 - Active: 
   - Collapsed Text: "Fades out at 11:15 PM"
   - Expanded Text: "Fades out at 11:15 PM • Alarm at 6:15 AM" (Alarm detail shown only when wake-up alarm is enabled).
-  - Buttons: "Set Timer" (Inline reply to change duration) and "Set Goal" / "Goal HH:MM" (Opens Wake-Up Goal settings dialog).
+  - Buttons: "Disable"
 - Fading: 
   - Collapsed Text: "Fading volume"
   - Expanded Text: "Fading volume down to pause media"
-  - Buttons: "Set Timer" (Inline reply to change duration) and "Set Goal" / "Goal HH:MM" (Opens Wake-Up Goal settings dialog).
+  - Buttons: "Disable"
+
+If the "Show notification" setting is disabled by the user, the ongoing sleep timer notification is hidden when the timer is Off.
 
 ## User interface
 - Main Application Screen (`MainActivity`):
-  - A scrollable, line-by-line list of timestamped events fills the main UI for debugging purposes.
-  - Action links for "Export" and "Import" are rendered on the main UI in the header action link list alongside Releases, GitHub, Issues, and Donate.
+  - Provides a complete single-screen configuration UI for all settings:
+    - Sleep timer enable/disable switch.
+    - Sleep timer duration input (supporting natural duration strings like `20m`, `1h 15m`).
+    - Show notification switch to toggle ongoing notification shade visibility.
+    - Target wake-up goal enable switch, target wake-up time picker, and minimum sleep duration input.
+  - Action links in the top header: Manual, Logs, Releases, Issues, Donate, Export, Import, and GitHub.
+  - Tapping "Logs" opens the dedicated Event Logs screen (`LogActivity`).
+- Dedicated Event Logs Screen (`LogActivity`):
+  - Displays a scrollable, line-by-line list of timestamped events for debugging and system activity tracking.
 - Notification Shade Controls:
-  - Use notification buttons for sleep-timer controls ("Set Timer" inline reply to change duration, "Turn Off" action button when enabled, "Turn On" action button when Off, and "Set Goal" / "Goal HH:MM" action button to configure target wake-up goal).
-  - Tapping/clicking the notification body opens MainActivity.
-  - Keep the notification ongoing across all states (including when Off) so the user cannot swipe it away or accidentally dismiss it.
-  - Enter sleep timer duration through a minimal inline notification reply using Android's native text input mechanism.
+  - The notification features a single simple toggle action button: "Disable" when enabled, or "Turn On" when disabled.
+  - Tapping/clicking the notification body opens `MainActivity`.
 
 ## Timer configuration
-- The user can turn the sleep timer on or off using notification controls.
-- The duration is entered in minutes when configured, supporting natural duration input strings (e.g., plain integers default to minutes like `30`, hours `1h`, hours and minutes `2h15m`, while seconds specifiers like `2h10m5s` or `15m30s` ignore seconds).
+- The user can turn the sleep timer on or off and configure all options from the main screen UI or toggle state from the notification.
+- The duration is entered in minutes, supporting natural duration input strings (e.g., plain integers default to minutes like `30`, hours `1h`, hours and minutes `2h15m`, while seconds specifiers like `2h10m5s` or `15m30s` ignore seconds).
 - Minimum duration: 1 minute.
 - Maximum duration: 24 hours.
 - Default duration: 20 minutes when the user has not configured a duration.
 - Store the original configured duration while the timer is active.
-- Prefill or suggest the default or last configured duration in the inline notification reply.
 - **Invalid inputs:** If the user enters an invalid or malformed duration string (e.g. `10x10h4m`, `10m10`, `abc`, or out of range values), fall back safely to the already configured time or the default duration.
 - Use a playback listener API while in the Waiting state to detect when audio playback starts automatically.
 - When in the Waiting state, communicate that the timer is waiting for playback rather than stopped.
@@ -68,8 +74,8 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - If a phone flip gesture occurs during fade-out: cancel the fade-out, restore the volume to pre-fade level, and reset the timer.
 - If volume-up or volume-down is pressed during fade-out: cancel the fade-out, restore the volume to pre-fade level, and reset the timer.
 - When the timer expires: fade to zero over 30 seconds (starting fast and slowing down along a curve), pause all active media apps, restore the pre-fade volume after pausing media, and return to the Waiting state.
-- When the timer is turned off: leave the current volume unchanged, display the Off notification, and allow media to continue playing.
-- Provide haptic feedback (a short, faint vibration) to confirm user actions (setting duration reply, turning off, volume button resets, and flip gestures).
+- When the timer is turned off: leave the current volume unchanged, display the Off notification (if notification display is enabled), and allow media to continue playing.
+- Provide haptic feedback (a short, faint vibration) to confirm user actions (turning off/on, volume button resets, and flip gestures).
 
 ## Reboot behavior & Alarm persistence
 - Persist whether the timer was running (Waiting, Active, Fading) versus explicitly **Off**, along with the target expiration timestamp.
@@ -79,7 +85,7 @@ Notification text is kept compact and concise when collapsed, displaying detaile
 - If the app was explicitly in the **Off** state prior to reboot, keep it in the **Off** state.
 
 ## Import & Export Settings
-- **Purpose**: Enable users to back up, restore, or transfer app configuration (sleep timer duration, timer state, Smart Wake-Up Goal preferences, and minimum sleep safeguard) across devices.
+- **Purpose**: Enable users to back up, restore, or transfer app configuration (sleep timer duration, timer state, show notification preference, Smart Wake-Up Goal preferences, and minimum sleep safeguard) across devices.
 - **Export Settings**: Tapping "Export" serializes current settings into a standardized configuration string, launches Android's native system share action (`ACTION_SEND`) allowing the user to copy or send settings, and logs the action to the event log.
 - **Import Settings**: Tapping "Import" opens an instructional dialog guiding the user on pasting or editing a configuration string (pre-filling valid clipboard content automatically). Applying a valid configuration updates application settings, refreshes ongoing notifications and scheduled alarms, displays a Toast confirmation message, and logs the event.
 - **Invalid Input Safeguard**: If an imported string is invalid, malformed, or contains out-of-range parameters, existing settings remain completely unchanged, an error Toast message is shown, and the failure is logged to the event log.
@@ -95,30 +101,29 @@ Notification text is kept compact and concise when collapsed, displaying detaile
      - **Volume Button to Dismiss**: Pressing a hardware volume button while the wake-up alarm is ringing or snoozed dismisses the alarm and removes the notification.
      - **Notification Persistence**: Snoozing the alarm (via flip or notification action) stops the alarm sound but keeps the notification open in the notification shade so the user can dismiss the alarm when desired.
      - **Dismiss**: Tapping the Dismiss button on the wake-up alarm notification dismisses the alarm and removes the notification.
-- **Disabled by Default**: The feature is off by default until configured via the "Set Goal" notification action button. Tapping "Alarm HH:MM" in the notification turns it off and removes the alarm.
+- **Disabled by Default**: The feature is off by default until enabled in MainActivity.
 - **User Inputs**:
   - **Target Goal Time** (e.g., `06:30 AM`).
   - **Minimum Sleep Duration** (default `7.5 hours`).
-- **Goal Settings Dialog (`GoalSettingsDialogActivity`)**:
-  - Accessed via the notification action button ("Set Goal" / "Goal HH:MM"), presenting a modal overlay containing a target goal time picker, minimum sleep duration safeguard input, prefilled with configured preferences or defaults, and "OK" and "Cancel" buttons.
 - **Event Logging**:
-  - Every calculation and alarm update is logged line-by-line in the debug event log.
+  - Every calculation and alarm update is logged line-by-line in the debug event log on `LogActivity`.
 
 ## Acceptance criteria
-- The main activity prints a list of events, one per line, for debugging.
-- The complete timer workflow is possible from the notification bar, system volume buttons, and phone flip gesture.
+- The main activity presents a single-screen configuration UI for all timer, goal, and notification settings.
+- Tapping "Logs" in the header opens `LogActivity` displaying real-time timestamped event logs.
+- The complete timer workflow is configurable from `MainActivity` and toggleable from the notification bar, system volume buttons, and phone flip gesture.
+- The notification action button contains a single action: "Disable" when enabled or "Turn On" when disabled.
+- The "Show notification" setting toggles ongoing notification shade notification visibility when timer is Off.
 - Volume-up and volume-down both reset an active timer while preserving their normal volume behavior.
 - Expiration pauses active media after a 30-second fade-out, restores pre-fade volume after pausing media, and successfully reverts to the Waiting state.
 - Disabling the timer does not pause media or change the current volume.
-- Invalid inline reply inputs gracefully default to the last valid or default duration.
+- Invalid duration inputs gracefully default to the last valid or default duration.
 - Post-reboot behavior respects the last saved state (preserving Off status or returning running timers to Waiting).
-- Toggling the timer on/off and managing the wake-up goal are performed via notification action clicks. When the timer is enabled, tapping the duration action ("Sleep <duration>") turns the timer off; when disabled, tapping it opens inline duration edit. When a wake-up goal is set, tapping the goal action ("Alarm HH:MM") disables/clears the goal; when disabled, tapping it opens the goal settings dialog.
-- The Smart Wake-Up Goal feature is disabled by default until explicitly configured by the user.
-- The notification shade provides a "Set Goal" / "Goal HH:MM" action button that opens a dialog overlay (`GoalSettingsDialogActivity`) to configure, display, stop, or enable the target wake-up goal and minimum sleep duration.
+- The Smart Wake-Up Goal feature is disabled by default until explicitly enabled by the user in `MainActivity`.
 - Notifications remain minimal and compact when collapsed, expanding to show full details (fade target and scheduled wake-up alarm time).
 - The wake-up alarm is daily recurring, automatically scheduling the next alarm for the same target goal time when the current alarm rings.
 - Starting the sleep timer schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
-- Disabling the timer or tapping the goal notification action ("Alarm HH:MM") cancels the scheduled `"Auto Sleep"` alarm in the background without launching external Clock app UI activities.
+- Disabling the timer cancels the scheduled `"Auto Sleep"` alarm in the background without launching external Clock app UI activities.
 - Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
 - The main screen includes "Export" and "Import" action links rendered in the header link list.
 - Tapping "Export" serializes configuration settings and launches a system share action (`ACTION_SEND`).

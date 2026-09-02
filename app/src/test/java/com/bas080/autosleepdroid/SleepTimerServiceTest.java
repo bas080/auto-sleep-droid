@@ -309,7 +309,7 @@ public class SleepTimerServiceTest {
 
     @Test
     public void testNotificationActionTogglesWhenEnabledAndDisabled() {
-        // When timer is off/disabled: action 0 (duration) opens RemoteInput to set duration
+        // When timer is off/disabled: action 0 toggles timer on
         preferences.edit().putBoolean("active", false).commit();
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
@@ -319,20 +319,21 @@ public class SleepTimerServiceTest {
         ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
         android.app.Notification notificationOff = shadowNotificationManager.getNotification(1001);
         assertNotNull(notificationOff);
-        assertEquals(2, notificationOff.actions.length);
-        assertEquals(SleepTimerService.ACTION_SET_DURATION, Shadows.shadowOf(notificationOff.actions[0].actionIntent).getSavedIntent().getAction());
+        assertEquals(1, notificationOff.actions.length);
+        assertEquals(SleepTimerService.ACTION_TURN_ON, Shadows.shadowOf(notificationOff.actions[0].actionIntent).getSavedIntent().getAction());
 
-        // When timer is active/enabled: action 0 (duration) toggles timer off
+        // When timer is active/enabled: action 0 toggles timer off
         preferences.edit().putBoolean("active", true).commit();
         service.onStartCommand(new Intent(context, SleepTimerService.class).setAction(SleepTimerService.ACTION_TURN_ON), 0, 1);
         android.app.Notification notificationOn = shadowNotificationManager.getNotification(1001);
         assertNotNull(notificationOn);
+        assertEquals(1, notificationOn.actions.length);
         assertEquals(SleepTimerService.ACTION_TURN_OFF, Shadows.shadowOf(notificationOn.actions[0].actionIntent).getSavedIntent().getAction());
         assertEquals("Disable", notificationOn.actions[0].title.toString());
     }
 
     @Test
-    public void testNotificationGoalActionClearsGoalWhenGoalEnabled() {
+    public void testClearGoalIntentClearsGoal() {
         preferences.edit()
                 .putBoolean("wake_up_goal_enabled", true)
                 .putInt("wake_up_goal_hour", 6)
@@ -342,17 +343,26 @@ public class SleepTimerServiceTest {
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
+        // Triggering CLEAR_GOAL action clears preference
+        service.onStartCommand(new Intent(context, SleepTimerService.class).setAction(SleepTimerService.ACTION_CLEAR_GOAL), 0, 1);
+        assertFalse(preferences.getBoolean("wake_up_goal_enabled", true));
+    }
+
+    @Test
+    public void testShowNotificationPreferenceHidesNotificationWhenOff() {
+        preferences.edit()
+                .putBoolean("active", false)
+                .putBoolean("show_notification", false)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
         NotificationManager notificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
         android.app.Notification notification = shadowNotificationManager.getNotification(1001);
-        assertNotNull(notification);
-        assertEquals(2, notification.actions.length);
-        assertEquals(SleepTimerService.ACTION_CLEAR_GOAL, Shadows.shadowOf(notification.actions[1].actionIntent).getSavedIntent().getAction());
-
-        // Triggering CLEAR_GOAL action clears preference
-        service.onStartCommand(new Intent(context, SleepTimerService.class).setAction(SleepTimerService.ACTION_CLEAR_GOAL), 0, 1);
-        assertFalse(preferences.getBoolean("wake_up_goal_enabled", true));
+        assertEquals(null, notification);
     }
 
     @Test

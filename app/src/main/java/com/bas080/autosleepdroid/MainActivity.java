@@ -13,34 +13,58 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ScrollView;
+import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.List;
-
-public class MainActivity extends Activity implements EventLogger.Listener {
+public class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 100;
-    private ScrollView scrollView;
-    private TextView eventLogText;
+
+    private Switch switchEnableTimer;
+    private EditText inputDuration;
+    private Switch switchShowNotification;
+    private Switch switchEnableGoal;
+    private View goalContainer;
+    private TimePicker timePickerGoal;
+    private EditText inputMinSleep;
+
+    private boolean isUpdatingUi = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        scrollView = findViewById(R.id.event_scroll_view);
-        eventLogText = findViewById(R.id.event_log_text);
-
+        bindViews();
         setupHeaderAndLinks();
+        setupConfigControls();
 
         startOrRequestNotificationPermission();
         requestExactAlarmPermissionIfNeeded();
+    }
+
+    private void bindViews() {
+        switchEnableTimer = findViewById(R.id.switch_enable_timer);
+        inputDuration = findViewById(R.id.input_duration);
+        switchShowNotification = findViewById(R.id.switch_show_notification);
+        switchEnableGoal = findViewById(R.id.switch_enable_goal);
+        goalContainer = findViewById(R.id.goal_container);
+        timePickerGoal = findViewById(R.id.time_picker_goal);
+        inputMinSleep = findViewById(R.id.input_min_sleep);
+
+        if (timePickerGoal != null) {
+            timePickerGoal.setIs24HourView(false);
+        }
     }
 
     private void setupHeaderAndLinks() {
@@ -52,6 +76,14 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         Button btnManual = findViewById(R.id.btn_manual);
         if (btnManual != null) {
             btnManual.setOnClickListener(v -> showManualDialog());
+        }
+
+        Button btnLogs = findViewById(R.id.btn_logs);
+        if (btnLogs != null) {
+            btnLogs.setOnClickListener(v -> {
+                Intent intent = new Intent(this, LogActivity.class);
+                startActivity(intent);
+            });
         }
 
         setupLinkButton(R.id.btn_releases, "https://github.com/bas080/auto-sleep-droid/releases");
@@ -70,6 +102,168 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
     }
 
+    private void setupConfigControls() {
+        if (switchEnableTimer != null) {
+            switchEnableTimer.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isUpdatingUi) return;
+                SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+                prefs.edit().putBoolean("active", isChecked).apply();
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Timer enabled from UI" : "Timer disabled from UI");
+                redrawNotification();
+            });
+        }
+
+        if (inputDuration != null) {
+            inputDuration.setOnFocusChangeListener((v, hasFocus) -> {
+                if (!hasFocus && !isUpdatingUi) {
+                    saveDurationFromInput();
+                }
+            });
+            inputDuration.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (!isUpdatingUi) {
+                        saveDurationFromInput();
+                    }
+                }
+            });
+        }
+
+        if (switchShowNotification != null) {
+            switchShowNotification.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isUpdatingUi) return;
+                SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+                prefs.edit().putBoolean("show_notification", isChecked).apply();
+                EventLogger.log(this, EventLogger.LEVEL_NORMAL, "Show notification setting set to: " + isChecked);
+                redrawNotification();
+            });
+        }
+
+        if (switchEnableGoal != null) {
+            switchEnableGoal.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isUpdatingUi) return;
+                SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+                prefs.edit()
+                        .putBoolean("wake_up_goal_enabled", isChecked)
+                        .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                        .apply();
+                if (goalContainer != null) {
+                    goalContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+                }
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Wake-up goal enabled" : "Wake-up goal disabled");
+                redrawNotification();
+            });
+        }
+
+        if (timePickerGoal != null) {
+            timePickerGoal.setOnTimeChangedListener((view, hourOfDay, minute) -> {
+                if (isUpdatingUi) return;
+                SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+                prefs.edit()
+                        .putInt("wake_up_goal_hour", hourOfDay)
+                        .putInt("wake_up_goal_minute", minute)
+                        .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                        .apply();
+                redrawNotification();
+            });
+        }
+
+        if (inputMinSleep != null) {
+            inputMinSleep.setOnFocusChangeListener((v, hasFocus) -> {
+                if (!hasFocus && !isUpdatingUi) {
+                    saveMinSleepFromInput();
+                }
+            });
+            inputMinSleep.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (!isUpdatingUi) {
+                        saveMinSleepFromInput();
+                    }
+                }
+            });
+        }
+    }
+
+    private void saveDurationFromInput() {
+        if (inputDuration == null) return;
+        String text = inputDuration.getText().toString().trim();
+        int minutes = DurationUtils.parseDurationMinutes(text);
+        if (minutes > 0) {
+            SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+            if (prefs.getInt("duration_minutes", -1) != minutes) {
+                prefs.edit().putInt("duration_minutes", minutes).apply();
+                redrawNotification();
+            }
+        }
+    }
+
+    private void saveMinSleepFromInput() {
+        if (inputMinSleep == null) return;
+        String text = inputMinSleep.getText().toString().trim();
+        int minMinutes = DurationUtils.parseDurationMinutes(text, DurationUtils.DefaultUnit.HOURS);
+        if (minMinutes > 0) {
+            SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+            if (prefs.getInt("min_sleep_duration_minutes", -1) != minMinutes) {
+                prefs.edit()
+                        .putInt("min_sleep_duration_minutes", minMinutes)
+                        .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                        .apply();
+                redrawNotification();
+            }
+        }
+    }
+
+    private void loadPreferencesIntoUi() {
+        isUpdatingUi = true;
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+
+        boolean active = prefs.getBoolean("active", true);
+        int durationMinutes = prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+        boolean showNotification = prefs.getBoolean("show_notification", true);
+        boolean goalEnabled = prefs.getBoolean("wake_up_goal_enabled", false);
+        int goalHour = prefs.getInt("wake_up_goal_hour", 6);
+        int goalMin = prefs.getInt("wake_up_goal_minute", 30);
+        int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
+
+        if (switchEnableTimer != null) {
+            switchEnableTimer.setChecked(active);
+        }
+        if (inputDuration != null && !inputDuration.hasFocus()) {
+            inputDuration.setText(DurationUtils.formatDurationString(durationMinutes));
+        }
+        if (switchShowNotification != null) {
+            switchShowNotification.setChecked(showNotification);
+        }
+        if (switchEnableGoal != null) {
+            switchEnableGoal.setChecked(goalEnabled);
+        }
+        if (goalContainer != null) {
+            goalContainer.setVisibility(goalEnabled ? View.VISIBLE : View.GONE);
+        }
+        if (timePickerGoal != null) {
+            if (Build.VERSION.SDK_INT >= 23) {
+                timePickerGoal.setHour(goalHour);
+                timePickerGoal.setMinute(goalMin);
+            } else {
+                timePickerGoal.setCurrentHour(goalHour);
+                timePickerGoal.setCurrentMinute(goalMin);
+            }
+        }
+        if (inputMinSleep != null && !inputMinSleep.hasFocus()) {
+            inputMinSleep.setText(DurationUtils.formatDurationString(minSleepMin));
+        }
+        isUpdatingUi = false;
+    }
+
     private void exportSettings() {
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
         try {
@@ -77,6 +271,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             json.put("version", 1);
             json.put("duration_minutes", prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES));
             json.put("active", prefs.getBoolean("active", true));
+            json.put("show_notification", prefs.getBoolean("show_notification", true));
             json.put("wake_up_goal_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
             json.put("wake_up_goal_hour", prefs.getInt("wake_up_goal_hour", 6));
             json.put("wake_up_goal_minute", prefs.getInt("wake_up_goal_minute", 30));
@@ -147,6 +342,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             }
 
             boolean active = json.optBoolean("active", false);
+            boolean showNotification = json.optBoolean("show_notification", true);
             boolean wakeUpGoalEnabled = json.getBoolean("wake_up_goal_enabled");
             int wakeUpGoalHour = json.getInt("wake_up_goal_hour");
             if (wakeUpGoalHour < 0 || wakeUpGoalHour > 23) {
@@ -167,6 +363,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             prefs.edit()
                     .putInt("duration_minutes", durationMinutes)
                     .putBoolean("active", active)
+                    .putBoolean("show_notification", showNotification)
                     .putBoolean("wake_up_goal_enabled", wakeUpGoalEnabled)
                     .putInt("wake_up_goal_hour", wakeUpGoalHour)
                     .putInt("wake_up_goal_minute", wakeUpGoalMinute)
@@ -177,6 +374,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             Toast.makeText(this, R.string.toast_import_success, Toast.LENGTH_SHORT).show();
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Imported settings from string");
 
+            loadPreferencesIntoUi();
             redrawNotification();
         } catch (JSONException e) {
             Toast.makeText(this, R.string.toast_import_invalid, Toast.LENGTH_SHORT).show();
@@ -257,8 +455,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     @Override
     protected void onResume() {
         super.onResume();
-        EventLogger.setListener(this);
-        refreshEventLog();
+        loadPreferencesIntoUi();
         redrawNotification();
     }
 
@@ -270,12 +467,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         } else {
             startService(serviceIntent);
         }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        EventLogger.setListener(null);
     }
 
     private void startOrRequestNotificationPermission() {
@@ -307,33 +498,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             startForegroundService(serviceIntent);
         } else {
             startService(serviceIntent);
-        }
-    }
-
-    private void refreshEventLog() {
-        List<String> events = EventLogger.getEvents(this);
-        android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder();
-        for (String event : events) {
-            ssb.append(EventLogger.formatColoredEvent(this, event)).append("\n");
-        }
-        if (eventLogText != null) {
-            eventLogText.setText(ssb);
-            scrollToBottom();
-        }
-    }
-
-    @Override
-    public void onEventLogged(String event) {
-        if (eventLogText != null) {
-            eventLogText.append(EventLogger.formatColoredEvent(this, event));
-            eventLogText.append("\n");
-            scrollToBottom();
-        }
-    }
-
-    private void scrollToBottom() {
-        if (scrollView != null) {
-            scrollView.post(() -> scrollView.fullScroll(ScrollView.FOCUS_DOWN));
         }
     }
 }
