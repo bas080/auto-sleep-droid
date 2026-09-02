@@ -249,41 +249,29 @@ public class MainActivityTest {
 
         android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
         android.widget.EditText inputDuration = activity.findViewById(R.id.input_duration);
-        android.widget.Switch switchShowNotif = activity.findViewById(R.id.switch_show_notification);
         android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
 
         assertNotNull(switchEnable);
         assertNotNull(inputDuration);
-        assertNotNull(switchShowNotif);
         assertNotNull(switchGoal);
-
-        assertFalse(switchShowNotif.isChecked());
 
         switchEnable.setChecked(false);
         inputDuration.setText("45m");
-        switchShowNotif.setChecked(true);
         switchGoal.setChecked(true);
 
         android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
         assertFalse(prefs.getBoolean("active", true));
         assertEquals(45, prefs.getInt("duration_minutes", -1));
-        assertTrue(prefs.getBoolean("show_notification", false));
         assertTrue(prefs.getBoolean("wake_up_goal_enabled", false));
     }
 
     @Test
-    public void testShowNotificationToggleRequestsPermissionWhenNotGranted() {
+    public void testStartupRequestsNotificationPermissionWhenNotGranted() {
         Application application = ApplicationProvider.getApplicationContext();
         Shadows.shadowOf(application).denyPermissions(Manifest.permission.POST_NOTIFICATIONS);
 
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
-
-        android.widget.Switch switchShowNotif = activity.findViewById(R.id.switch_show_notification);
-        assertNotNull(switchShowNotif);
-        assertFalse(switchShowNotif.isChecked());
-
-        switchShowNotif.setChecked(true);
 
         org.robolectric.shadows.ShadowActivity shadowActivity = Shadows.shadowOf(activity);
         org.robolectric.shadows.ShadowActivity.PermissionsRequest request = shadowActivity.getLastRequestedPermission();

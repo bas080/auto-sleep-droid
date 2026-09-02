@@ -40,7 +40,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private Switch switchEnableTimer;
     private EditText inputDuration;
-    private Switch switchShowNotification;
     private Switch switchEnableGoal;
     private View goalContainer;
     private Button btnTargetTime;
@@ -59,8 +58,20 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setupHeaderAndLinks();
         setupConfigControls();
 
+        requestNotificationPermissionOnStartupIfNeeded();
         startTimerService();
         requestExactAlarmPermissionIfNeeded();
+    }
+
+    private void requestNotificationPermissionOnStartupIfNeeded() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                EventLogger.log(this, EventLogger.LEVEL_LOW, "Requesting notification permission on app startup");
+                requestPermissions(
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                        NOTIFICATION_PERMISSION_REQUEST);
+            }
+        }
     }
 
     private void bindViews() {
@@ -71,7 +82,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         switchEnableTimer = findViewById(R.id.switch_enable_timer);
         inputDuration = findViewById(R.id.input_duration);
-        switchShowNotification = findViewById(R.id.switch_show_notification);
         switchEnableGoal = findViewById(R.id.switch_enable_goal);
         goalContainer = findViewById(R.id.goal_container);
         btnTargetTime = findViewById(R.id.btn_target_time);
@@ -223,31 +233,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     if (!isUpdatingUi) {
                         saveDurationFromInputOnTextChanged();
                     }
-                }
-            });
-        }
-
-        if (switchShowNotification != null) {
-            switchShowNotification.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isUpdatingUi) return;
-                SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-                if (isChecked) {
-                    if (Build.VERSION.SDK_INT >= 33
-                            && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-                            != PackageManager.PERMISSION_GRANTED) {
-                        EventLogger.log(this, EventLogger.LEVEL_LOW, "Requesting notification permission for Show notification toggle");
-                        requestPermissions(
-                                new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                                NOTIFICATION_PERMISSION_REQUEST);
-                        return;
-                    }
-                    prefs.edit().putBoolean("show_notification", true).apply();
-                    EventLogger.log(this, EventLogger.LEVEL_NORMAL, "Show notification setting set to: true");
-                    redrawNotification();
-                } else {
-                    prefs.edit().putBoolean("show_notification", false).apply();
-                    EventLogger.log(this, EventLogger.LEVEL_NORMAL, "Show notification setting set to: false");
-                    redrawNotification();
                 }
             });
         }
@@ -405,7 +390,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         boolean active = prefs.getBoolean("active", true);
         int durationMinutes = prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
-        boolean showNotification = prefs.getBoolean("show_notification", false);
         boolean goalEnabled = prefs.getBoolean("wake_up_goal_enabled", false);
         int goalHour = prefs.getInt("wake_up_goal_hour", 6);
         int goalMin = prefs.getInt("wake_up_goal_minute", 30);
@@ -416,9 +400,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
         if (inputDuration != null && !inputDuration.hasFocus()) {
             inputDuration.setText(DurationUtils.formatDurationString(durationMinutes));
-        }
-        if (switchShowNotification != null) {
-            switchShowNotification.setChecked(showNotification);
         }
         if (switchEnableGoal != null) {
             switchEnableGoal.setChecked(goalEnabled);
@@ -440,7 +421,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             json.put("version", 1);
             json.put("duration_minutes", prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES));
             json.put("active", prefs.getBoolean("active", true));
-            json.put("show_notification", prefs.getBoolean("show_notification", false));
             json.put("wake_up_goal_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
             json.put("wake_up_goal_hour", prefs.getInt("wake_up_goal_hour", 6));
             json.put("wake_up_goal_minute", prefs.getInt("wake_up_goal_minute", 30));
@@ -511,7 +491,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             }
 
             boolean active = json.optBoolean("active", false);
-            boolean showNotification = json.optBoolean("show_notification", false);
             boolean wakeUpGoalEnabled = json.getBoolean("wake_up_goal_enabled");
             int wakeUpGoalHour = json.getInt("wake_up_goal_hour");
             if (wakeUpGoalHour < 0 || wakeUpGoalHour > 23) {
@@ -532,7 +511,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             prefs.edit()
                     .putInt("duration_minutes", durationMinutes)
                     .putBoolean("active", active)
-                    .putBoolean("show_notification", showNotification)
                     .putBoolean("wake_up_goal_enabled", wakeUpGoalEnabled)
                     .putInt("wake_up_goal_hour", wakeUpGoalHour)
                     .putInt("wake_up_goal_minute", wakeUpGoalMinute)
@@ -628,9 +606,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private void redrawNotification() {
         Intent serviceIntent = new Intent(this, SleepTimerService.class);
         serviceIntent.setAction(SleepTimerService.ACTION_REDRAW_NOTIFICATION);
-        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-        boolean showNotification = prefs.getBoolean("show_notification", false);
-        if (Build.VERSION.SDK_INT >= 26 && showNotification) {
+        if (Build.VERSION.SDK_INT >= 26) {
             startForegroundService(serviceIntent);
         } else {
             startService(serviceIntent);
@@ -643,13 +619,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             EventLogger.log(this, EventLogger.LEVEL_LOW, "Notification permission granted: " + granted);
-            SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-            prefs.edit().putBoolean("show_notification", granted).apply();
-            isUpdatingUi = true;
-            if (switchShowNotification != null) {
-                switchShowNotification.setChecked(granted);
-            }
-            isUpdatingUi = false;
             if (granted) {
                 startTimerService();
             }
@@ -659,9 +628,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private void startTimerService() {
         Intent serviceIntent = new Intent(this, SleepTimerService.class);
-        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-        boolean showNotification = prefs.getBoolean("show_notification", false);
-        if (Build.VERSION.SDK_INT >= 26 && showNotification) {
+        if (Build.VERSION.SDK_INT >= 26) {
             startForegroundService(serviceIntent);
         } else {
             startService(serviceIntent);
