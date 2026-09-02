@@ -36,7 +36,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
     - Sleep timer duration input (supporting natural duration strings like `20m`, `1h 15m`).
     - Show notification switch to toggle ongoing notification shade visibility.
     - Target wake-up goal enable switch, target wake-up time picker, and minimum sleep duration input.
-  - Links section under the sleep and wake inputs: Manual, Logs, Feedback, Donate, Export, and Import.
+  - Action links in the top header: Manual, Logs, Feedback, Donate, Export, and Import.
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
   - The notification features a single simple toggle action button: "Disable" when enabled, or "Enable" when disabled.
@@ -112,6 +112,6 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - Starting the sleep timer schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
 - Disabling the timer cancels the scheduled `"Auto Sleep"` alarm in the background without launching external Clock app UI activities.
 - Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
-- The main screen includes "Export" and "Import" action links rendered in the Links section.
+- The main screen includes "Export" and "Import" action links rendered in the header link list.
 - Tapping "Export" serializes configuration settings and launches a system share action (`ACTION_SEND`).
 - Tapping "Import" presents an instructional dialog for pasting configuration strings, updating preferences and notifications upon valid input, or preserving existing preferences when given invalid input.
