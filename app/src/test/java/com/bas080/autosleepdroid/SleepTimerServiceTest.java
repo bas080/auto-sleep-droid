@@ -277,6 +277,7 @@ public class SleepTimerServiceTest {
         assertNotNull(notificationOff);
         assertEquals(1, notificationOff.actions.length);
         assertEquals(SleepTimerService.ACTION_TURN_ON, Shadows.shadowOf(notificationOff.actions[0].actionIntent).getSavedIntent().getAction());
+        assertEquals("Enable", notificationOff.actions[0].title.toString());
 
         // When timer is active/enabled: action 0 toggles timer off
         preferences.edit().putBoolean("active", true).commit();
@@ -392,7 +393,12 @@ public class SleepTimerServiceTest {
         typeField.setInt(accelerometer, android.hardware.Sensor.TYPE_ACCELEROMETER);
         faceUpEvent.sensor = accelerometer;
 
+        java.lang.reflect.Field lastTimeField = SleepTimerService.class.getDeclaredField("lastSensorEventTimeMs");
+        lastTimeField.setAccessible(true);
+
         service.onSensorChanged(faceUpEvent);
+
+        lastTimeField.setLong(service, 0L);
 
         android.hardware.SensorEvent faceDownEvent = constructor.newInstance(3);
         faceDownEvent.values[0] = 0f;
@@ -462,6 +468,7 @@ public class SleepTimerServiceTest {
 
     @Test
     public void testWakeUpAlarmSnoozeKeepsNotificationOpen() {
+        preferences.edit().putBoolean("show_notification", true).commit();
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
@@ -474,8 +481,9 @@ public class SleepTimerServiceTest {
                 .setAction(SleepTimerService.ACTION_WAKEUP_ALARM_EXPIRY);
         service.onStartCommand(triggerIntent, 0, 1);
 
-        android.app.Notification wakeUpNotification = shadowNotificationManager.getNotification(1002);
+        android.app.Notification wakeUpNotification = shadowNotificationManager.getNotification(1001);
         assertNotNull(wakeUpNotification);
+        assertEquals(context.getString(R.string.wakeup_alarm_title), wakeUpNotification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE));
 
         // Snooze wake-up alarm
         Intent snoozeIntent = new Intent(context, SleepTimerService.class)
@@ -483,21 +491,23 @@ public class SleepTimerServiceTest {
         service.onStartCommand(snoozeIntent, 0, 1);
 
         // Notification should STILL be present after snooze
-        android.app.Notification snoozedNotification = shadowNotificationManager.getNotification(1002);
+        android.app.Notification snoozedNotification = shadowNotificationManager.getNotification(1001);
         assertNotNull("Wake-up alarm notification must remain open when snoozed", snoozedNotification);
+        assertEquals(context.getString(R.string.toast_alarm_snoozed), snoozedNotification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT));
 
         // Dismiss wake-up alarm
         Intent dismissIntent = new Intent(context, SleepTimerService.class)
                 .setAction(SleepTimerService.ACTION_DISMISS_WAKEUP_ALARM);
         service.onStartCommand(dismissIntent, 0, 1);
 
-        // Notification should be cancelled after dismiss
-        android.app.Notification dismissedNotification = shadowNotificationManager.getNotification(1002);
-        assertEquals(null, dismissedNotification);
+        android.app.Notification dismissedNotification = shadowNotificationManager.getNotification(1001);
+        assertNotNull(dismissedNotification);
+        assertFalse(context.getString(R.string.wakeup_alarm_title).equals(dismissedNotification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)));
     }
 
     @Test
     public void testWakeUpAlarmFlipSnoozeKeepsNotificationOpen() throws Exception {
+        preferences.edit().putBoolean("show_notification", true).commit();
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
@@ -510,16 +520,17 @@ public class SleepTimerServiceTest {
                 .setAction(SleepTimerService.ACTION_WAKEUP_ALARM_EXPIRY);
         service.onStartCommand(triggerIntent, 0, 1);
 
-        assertNotNull(shadowNotificationManager.getNotification(1002));
+        assertNotNull(shadowNotificationManager.getNotification(1001));
 
-        // Simulate flip gesture via onSensorChanged
+        // Set initial orientation to FACE_UP
+        java.lang.reflect.Field orientationField = SleepTimerService.class.getDeclaredField("lastOrientation");
+        orientationField.setAccessible(true);
+        orientationField.setInt(service, 1); // ORIENTATION_FACE_UP
+
+        // Simulate flip gesture via onSensorChanged (face-down event)
         java.lang.reflect.Constructor<android.hardware.SensorEvent> constructor =
                 android.hardware.SensorEvent.class.getDeclaredConstructor(int.class);
         constructor.setAccessible(true);
-        android.hardware.SensorEvent faceUpEvent = constructor.newInstance(3);
-        faceUpEvent.values[0] = 0f;
-        faceUpEvent.values[1] = 0f;
-        faceUpEvent.values[2] = 9.8f;
 
         java.lang.reflect.Constructor<android.hardware.Sensor> sensorConstructor =
                 android.hardware.Sensor.class.getDeclaredConstructor();
@@ -528,9 +539,6 @@ public class SleepTimerServiceTest {
         java.lang.reflect.Field typeField = android.hardware.Sensor.class.getDeclaredField("mType");
         typeField.setAccessible(true);
         typeField.setInt(accelerometer, android.hardware.Sensor.TYPE_ACCELEROMETER);
-        faceUpEvent.sensor = accelerometer;
-
-        service.onSensorChanged(faceUpEvent);
 
         android.hardware.SensorEvent faceDownEvent = constructor.newInstance(3);
         faceDownEvent.values[0] = 0f;
@@ -543,12 +551,14 @@ public class SleepTimerServiceTest {
         org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
         // Notification should STILL be present after snooze via flip
-        android.app.Notification snoozedNotification = shadowNotificationManager.getNotification(1002);
+        android.app.Notification snoozedNotification = shadowNotificationManager.getNotification(1001);
         assertNotNull("Wake-up alarm notification must remain open when snoozed via flip", snoozedNotification);
+        assertEquals(context.getString(R.string.toast_alarm_snoozed), snoozedNotification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT));
     }
 
     @Test
     public void testVolumeKeyDismissesRingingWakeUpAlarm() {
+        preferences.edit().putBoolean("show_notification", true).commit();
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
@@ -561,19 +571,21 @@ public class SleepTimerServiceTest {
                 .setAction(SleepTimerService.ACTION_WAKEUP_ALARM_EXPIRY);
         service.onStartCommand(triggerIntent, 0, 1);
 
-        assertNotNull(shadowNotificationManager.getNotification(1002));
+        assertNotNull(shadowNotificationManager.getNotification(1001));
 
         // Send volume change broadcast while ringing
         context.sendBroadcast(new Intent("android.media.VOLUME_CHANGED_ACTION"));
         org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
-        // Notification should be cancelled after volume button click dismiss
-        android.app.Notification dismissedNotification = shadowNotificationManager.getNotification(1002);
-        assertEquals(null, dismissedNotification);
+        // Notification should be reverted from alarm state
+        android.app.Notification dismissedNotification = shadowNotificationManager.getNotification(1001);
+        assertNotNull(dismissedNotification);
+        assertFalse(context.getString(R.string.wakeup_alarm_title).equals(dismissedNotification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)));
     }
 
     @Test
     public void testVolumeKeyDismissesSnoozedWakeUpAlarm() {
+        preferences.edit().putBoolean("show_notification", true).commit();
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
@@ -591,7 +603,7 @@ public class SleepTimerServiceTest {
                 .setAction(SleepTimerService.ACTION_SNOOZE_WAKEUP_ALARM);
         service.onStartCommand(snoozeIntent, 0, 1);
 
-        assertNotNull(shadowNotificationManager.getNotification(1002));
+        assertNotNull(shadowNotificationManager.getNotification(1001));
 
         // Trigger volume button change broadcast while snoozed
         try {
@@ -604,9 +616,39 @@ public class SleepTimerServiceTest {
             throw new RuntimeException(e);
         }
 
-        // Notification should be cancelled after volume button click dismiss
-        android.app.Notification dismissedNotification = shadowNotificationManager.getNotification(1002);
-        assertEquals(null, dismissedNotification);
+        // Notification should be reverted from alarm state
+        android.app.Notification dismissedNotification = shadowNotificationManager.getNotification(1001);
+        assertNotNull(dismissedNotification);
+        assertFalse(context.getString(R.string.wakeup_alarm_title).equals(dismissedNotification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)));
+    }
+
+    @Test
+    public void testDisablingSleepTimerDismissesActiveAndFutureAlarms() {
+        preferences.edit()
+                .putBoolean("active", true)
+                .putBoolean("show_notification", true)
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        // Trigger wake-up alarm
+        Intent triggerIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_WAKEUP_ALARM_EXPIRY);
+        service.onStartCommand(triggerIntent, 0, 1);
+
+        assertTrue(preferences.contains(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS));
+
+        // Disable sleep timer via TURN_OFF action
+        Intent turnOffIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_TURN_OFF);
+        service.onStartCommand(turnOffIntent, 0, 1);
+
+        assertFalse(preferences.getBoolean("active", true));
+        assertFalse(preferences.contains(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS));
     }
 
     @Test

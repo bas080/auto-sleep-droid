@@ -23,7 +23,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 * **Notification Presentation**:
   * Collapsed Text: `"Timer off"`
   * Expanded Text: `"Sleep timer is off"`
-  - Action Button: `"Turn On"` (if `show_notification` is `true`; notification is hidden across all states if `show_notification` is `false`).
+  - Action Button: `"Enable"` (if `show_notification` is `true`; notification is hidden across all states if `show_notification` is `false`).
 * **State Invariants**: `enabled = false`, `timerEndsAt = 0`.
 
 ### 2. `WAITING`
@@ -131,7 +131,7 @@ Events in Auto Sleep Droid originate from user interactions, hardware sensors, s
 
 ### User Input Events
 
-* **`TURN_ON`**: User toggles timer switch in `MainActivity` or taps `"Turn On"` in notification.
+* **`TURN_ON`**: User toggles timer switch in `MainActivity` or taps `"Enable"` in notification.
 * **`TURN_OFF`**: User toggles timer switch in `MainActivity` or taps `"Disable"` in notification.
 * **`SET_DURATION`**: User configures sleep timer duration in `MainActivity`.
 * **`SET_WAKE_UP_GOAL`**: User configures target wake-up goal time and minimum sleep duration safeguard in `MainActivity`.
@@ -171,7 +171,7 @@ The table below maps each `(Current State, Event)` pair to its resulting `Next S
 | **OFF** | `PLAYBACK_STARTED` | `OFF` | No transition (timer disabled) |
 | **OFF** | `VOLUME_CHANGED` / `PHONE_FLIPPED` | `OFF` | Ignored (listeners unregistered) |
 | **WAITING** | `PLAYBACK_STARTED` | `ACTIVE` | Calculates `timerEndsAt`, schedules alarm, updates notification |
-| **WAITING** | `TURN_OFF` | `OFF` | Vibrates, cancels alarms/goal alarms, persists state (`active=false`), updates notification |
+| **WAITING** | `TURN_OFF` | `OFF` | Vibrates, stops active alarm sound, cancels snoozed/scheduled wake-up alarms, persists state (`active=false`), updates notification |
 | **WAITING** | `SET_DURATION` (Music Active) | `ACTIVE` | Validates input, vibrates, sets duration, calculates `timerEndsAt`, schedules alarm, persists state, updates notification |
 | **WAITING** | `SET_DURATION` (Music Inactive) | `WAITING` | Validates input, vibrates, sets duration, persists state, updates notification |
 | **WAITING** | `VOLUME_CHANGED` / `PHONE_FLIPPED` | `WAITING` | Ignored (listeners unregistered) |
@@ -180,7 +180,7 @@ The table below maps each `(Current State, Event)` pair to its resulting `Next S
 | **ACTIVE** | `PHONE_FLIPPED` | `ACTIVE` | Vibrates, reschedules timer countdown to configured duration, updates notification |
 | **ACTIVE** | `SET_DURATION` | `ACTIVE` | Validates input, vibrates, sets new duration, reschedules timer countdown, updates notification |
 | **ACTIVE** | `TIMER_EXPIRED` | `FADING` | Captures `volumeBeforeFade`, registers sensor & volume listeners, starts 30s fade runnable, updates notification |
-| **ACTIVE** | `TURN_OFF` | `OFF` | Vibrates, cancels timer & wake-up alarms, persists state (`active=false`), updates notification |
+| **ACTIVE** | `TURN_OFF` | `OFF` | Vibrates, stops active alarm sound, cancels timer, snoozed, & wake-up alarms, persists state (`active=false`), updates notification |
 | **FADING** | `VOLUME_CHANGED` | `ACTIVE` | Vibrates, cancels fade, restores pre-fade volume, reschedules timer countdown, updates notification |
 | **FADING** | `PHONE_FLIPPED` | `ACTIVE` | Vibrates, cancels fade, restores pre-fade volume, reschedules timer countdown, updates notification |
 | **FADING** | `FADE_STEP` (step < 30) | `FADING` | Calculates next step volume along ease-out curve, applies stream volume (with `suppressVolumeReset=true`) |
