@@ -170,6 +170,7 @@
                         android:id="@+id/input_duration"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:hint="@string/hint_duration"
                         android:inputType="text"
                         android:singleLine="true" />
                 </LinearLayout>
@@ -294,6 +295,7 @@
                         android:id="@+id/input_min_sleep"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:hint="@string/hint_min_sleep"
                         android:inputType="text"
                         android:singleLine="true" />
                 </LinearLayout>
