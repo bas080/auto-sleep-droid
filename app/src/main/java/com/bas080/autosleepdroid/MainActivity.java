@@ -39,14 +39,17 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private View logsOverlayContainer;
 
     private Switch switchEnableTimer;
-    private EditText inputDuration;
+    private EditText inputDurationHours;
+    private EditText inputDurationMinutes;
     private Switch switchEnableGoal;
     private View goalContainer;
     private Button btnTargetTime;
-    private EditText inputMinSleep;
+    private EditText inputMinSleepHours;
+    private EditText inputMinSleepMinutes;
     private ScrollView eventScrollView;
     private TextView eventLogText;
 
+    private final android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private boolean isUpdatingUi = false;
 
     @Override
@@ -81,11 +84,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         logsOverlayContainer = findViewById(R.id.logs_overlay_container);
 
         switchEnableTimer = findViewById(R.id.switch_enable_timer);
-        inputDuration = findViewById(R.id.input_duration);
+        inputDurationHours = findViewById(R.id.input_duration_hours);
+        inputDurationMinutes = findViewById(R.id.input_duration_minutes);
         switchEnableGoal = findViewById(R.id.switch_enable_goal);
         goalContainer = findViewById(R.id.goal_container);
         btnTargetTime = findViewById(R.id.btn_target_time);
-        inputMinSleep = findViewById(R.id.input_min_sleep);
+        inputMinSleepHours = findViewById(R.id.input_min_sleep_hours);
+        inputMinSleepMinutes = findViewById(R.id.input_min_sleep_minutes);
         eventScrollView = findViewById(R.id.event_scroll_view);
         eventLogText = findViewById(R.id.event_log_text);
     }
@@ -219,24 +224,22 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             });
         }
 
-        if (inputDuration != null) {
-            inputDuration.setOnFocusChangeListener((v, hasFocus) -> {
-                if (!hasFocus && !isUpdatingUi) {
-                    saveDurationFromInputOnFocusChange();
+        View.OnFocusChangeListener durationFocusListener = (v, hasFocus) -> {
+            mainHandler.post(() -> {
+                if (isUpdatingUi) return;
+                boolean hoursFocused = inputDurationHours != null && inputDurationHours.hasFocus();
+                boolean minutesFocused = inputDurationMinutes != null && inputDurationMinutes.hasFocus();
+                if (!hoursFocused && !minutesFocused) {
+                    saveDurationFromInputsOnFocusChange();
                 }
             });
-            inputDuration.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {}
-                @Override
-                public void afterTextChanged(Editable s) {
-                    if (!isUpdatingUi) {
-                        saveDurationFromInputOnTextChanged();
-                    }
-                }
-            });
+        };
+
+        if (inputDurationHours != null) {
+            inputDurationHours.setOnFocusChangeListener(durationFocusListener);
+        }
+        if (inputDurationMinutes != null) {
+            inputDurationMinutes.setOnFocusChangeListener(durationFocusListener);
         }
 
         if (switchEnableGoal != null) {
@@ -258,30 +261,31 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             btnTargetTime.setOnClickListener(v -> showTargetTimeDialog());
         }
 
-        if (inputMinSleep != null) {
-            inputMinSleep.setOnFocusChangeListener((v, hasFocus) -> {
-                if (!hasFocus && !isUpdatingUi) {
-                    saveMinSleepFromInputOnFocusChange();
+        View.OnFocusChangeListener minSleepFocusListener = (v, hasFocus) -> {
+            mainHandler.post(() -> {
+                if (isUpdatingUi) return;
+                boolean hoursFocused = inputMinSleepHours != null && inputMinSleepHours.hasFocus();
+                boolean minutesFocused = inputMinSleepMinutes != null && inputMinSleepMinutes.hasFocus();
+                if (!hoursFocused && !minutesFocused) {
+                    saveMinSleepFromInputsOnFocusChange();
                 }
             });
-            inputMinSleep.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {}
-                @Override
-                public void afterTextChanged(Editable s) {
-                    if (!isUpdatingUi) {
-                        saveMinSleepFromInputOnTextChanged();
-                    }
-                }
-            });
+        };
+
+        if (inputMinSleepHours != null) {
+            inputMinSleepHours.setOnFocusChangeListener(minSleepFocusListener);
+        }
+        if (inputMinSleepMinutes != null) {
+            inputMinSleepMinutes.setOnFocusChangeListener(minSleepFocusListener);
         }
     }
 
     private void updateInputEnabledStates(boolean active, boolean goalEnabled) {
-        if (inputDuration != null) {
-            inputDuration.setEnabled(active);
+        if (inputDurationHours != null) {
+            inputDurationHours.setEnabled(active);
+        }
+        if (inputDurationMinutes != null) {
+            inputDurationMinutes.setEnabled(active);
         }
         if (switchEnableGoal != null) {
             switchEnableGoal.setEnabled(active);
@@ -291,8 +295,11 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (btnTargetTime != null) {
             btnTargetTime.setEnabled(goalInputsEnabled);
         }
-        if (inputMinSleep != null) {
-            inputMinSleep.setEnabled(goalInputsEnabled);
+        if (inputMinSleepHours != null) {
+            inputMinSleepHours.setEnabled(goalInputsEnabled);
+        }
+        if (inputMinSleepMinutes != null) {
+            inputMinSleepMinutes.setEnabled(goalInputsEnabled);
         }
         if (goalContainer != null) {
             goalContainer.setVisibility(View.VISIBLE);
@@ -333,23 +340,37 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         return timeFormat.format(cal.getTime());
     }
 
-    private void saveDurationFromInputOnTextChanged() {
-        if (inputDuration == null) return;
-        String text = inputDuration.getText().toString().trim();
-        int minutes = DurationUtils.parseDurationMinutes(text);
-        if (minutes > 0) {
-            SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-            if (prefs.getInt("duration_minutes", -1) != minutes) {
-                prefs.edit().putInt("duration_minutes", minutes).apply();
-                redrawNotification();
-            }
+    private int parseTotalMinutes(EditText inputHours, EditText inputMinutes) {
+        if (inputHours == null || inputMinutes == null) return -1;
+        String hStr = inputHours.getText().toString().trim();
+        String mStr = inputMinutes.getText().toString().trim();
+        if (hStr.isEmpty() && mStr.isEmpty()) return -1;
+        int h = 0;
+        int m = 0;
+        try {
+            if (!hStr.isEmpty()) h = Integer.parseInt(hStr);
+            if (!mStr.isEmpty()) m = Integer.parseInt(mStr);
+        } catch (NumberFormatException e) {
+            return -1;
         }
+        if (h < 0 || m < 0) return -1;
+        long total = h * 60L + m;
+        if (total <= 0 || total > 1440) {
+            return -1;
+        }
+        return (int) total;
     }
 
-    private void saveDurationFromInputOnFocusChange() {
-        if (inputDuration == null) return;
-        String text = inputDuration.getText().toString().trim();
-        int minutes = DurationUtils.parseDurationMinutes(text);
+    private void populateDurationInputs(int totalMinutes, EditText inputHours, EditText inputMinutes) {
+        if (inputHours == null || inputMinutes == null) return;
+        int h = totalMinutes / 60;
+        int m = totalMinutes % 60;
+        inputHours.setText(h > 0 ? String.valueOf(h) : "");
+        inputMinutes.setText(m > 0 || h == 0 ? String.valueOf(m) : "");
+    }
+
+    private void saveDurationFromInputsOnFocusChange() {
+        int minutes = parseTotalMinutes(inputDurationHours, inputDurationMinutes);
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
         int savedMinutes = prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
 
@@ -358,34 +379,19 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 prefs.edit().putInt("duration_minutes", minutes).apply();
                 redrawNotification();
             }
+            isUpdatingUi = true;
+            populateDurationInputs(minutes, inputDurationHours, inputDurationMinutes);
+            isUpdatingUi = false;
         } else {
             Toast.makeText(this, R.string.toast_duration_invalid, Toast.LENGTH_SHORT).show();
             isUpdatingUi = true;
-            inputDuration.setText(DurationUtils.formatDurationString(savedMinutes));
+            populateDurationInputs(savedMinutes, inputDurationHours, inputDurationMinutes);
             isUpdatingUi = false;
         }
     }
 
-    private void saveMinSleepFromInputOnTextChanged() {
-        if (inputMinSleep == null) return;
-        String text = inputMinSleep.getText().toString().trim();
-        int minMinutes = DurationUtils.parseDurationMinutes(text, DurationUtils.DefaultUnit.HOURS);
-        if (minMinutes > 0) {
-            SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-            if (prefs.getInt("min_sleep_duration_minutes", -1) != minMinutes) {
-                prefs.edit()
-                        .putInt("min_sleep_duration_minutes", minMinutes)
-                        .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
-                        .apply();
-                redrawNotification();
-            }
-        }
-    }
-
-    private void saveMinSleepFromInputOnFocusChange() {
-        if (inputMinSleep == null) return;
-        String text = inputMinSleep.getText().toString().trim();
-        int minMinutes = DurationUtils.parseDurationMinutes(text, DurationUtils.DefaultUnit.HOURS);
+    private void saveMinSleepFromInputsOnFocusChange() {
+        int minMinutes = parseTotalMinutes(inputMinSleepHours, inputMinSleepMinutes);
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
         int savedMinMinutes = prefs.getInt("min_sleep_duration_minutes", 450);
 
@@ -397,10 +403,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                         .apply();
                 redrawNotification();
             }
+            isUpdatingUi = true;
+            populateDurationInputs(minMinutes, inputMinSleepHours, inputMinSleepMinutes);
+            isUpdatingUi = false;
         } else {
             Toast.makeText(this, R.string.toast_duration_invalid, Toast.LENGTH_SHORT).show();
             isUpdatingUi = true;
-            inputMinSleep.setText(DurationUtils.formatDurationString(savedMinMinutes));
+            populateDurationInputs(savedMinMinutes, inputMinSleepHours, inputMinSleepMinutes);
             isUpdatingUi = false;
         }
     }
@@ -419,15 +428,19 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (switchEnableTimer != null) {
             switchEnableTimer.setChecked(active);
         }
-        if (inputDuration != null && !inputDuration.hasFocus()) {
-            inputDuration.setText(DurationUtils.formatDurationString(durationMinutes));
+        boolean durationFocused = (inputDurationHours != null && inputDurationHours.hasFocus())
+                || (inputDurationMinutes != null && inputDurationMinutes.hasFocus());
+        if (!durationFocused) {
+            populateDurationInputs(durationMinutes, inputDurationHours, inputDurationMinutes);
         }
         if (switchEnableGoal != null) {
             switchEnableGoal.setChecked(goalEnabled);
         }
         updateTargetTimeButtonText(goalHour, goalMin);
-        if (inputMinSleep != null && !inputMinSleep.hasFocus()) {
-            inputMinSleep.setText(DurationUtils.formatDurationString(minSleepMin));
+        boolean minSleepFocused = (inputMinSleepHours != null && inputMinSleepHours.hasFocus())
+                || (inputMinSleepMinutes != null && inputMinSleepMinutes.hasFocus());
+        if (!minSleepFocused) {
+            populateDurationInputs(minSleepMin, inputMinSleepHours, inputMinSleepMinutes);
         }
         updateInputEnabledStates(active, goalEnabled);
         isUpdatingUi = false;
