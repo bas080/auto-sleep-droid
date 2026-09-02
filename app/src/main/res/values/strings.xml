@@ -55,6 +55,7 @@
     <string name="toast_goal_stopped">Goal stopped</string>
     <string name="toast_alarm_dismissed">Alarm dismissed</string>
     <string name="toast_alarm_snoozed">Alarm snoozed 9m</string>
+    <string name="label_links">Links</string>
     <string name="version_label">Version %1$s</string>
     <string name="btn_back">Back</string>
     <string name="link_manual">Manual</string>
