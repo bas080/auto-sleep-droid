@@ -215,59 +215,83 @@
                     android:paddingTop="16dp"
                     android:paddingBottom="4dp" />
 
-                <HorizontalScrollView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:scrollbars="none">
+                    android:orientation="vertical">
 
-                    <LinearLayout
-                        android:layout_width="wrap_content"
+                    <Button
+                        android:id="@+id/btn_manual"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:gravity="start|center_vertical"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:textAllCaps="false"
+                        android:textStyle="normal"
+                        android:text="@string/link_manual" />
 
-                        <Button
-                            android:id="@+id/btn_manual"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/link_manual" />
+                    <Button
+                        android:id="@+id/btn_logs"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start|center_vertical"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:textAllCaps="false"
+                        android:textStyle="normal"
+                        android:text="@string/link_logs" />
 
-                        <Button
-                            android:id="@+id/btn_logs"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/link_logs" />
+                    <Button
+                        android:id="@+id/btn_issues"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start|center_vertical"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:textAllCaps="false"
+                        android:textStyle="normal"
+                        android:text="@string/link_feedback" />
 
-                        <Button
-                            android:id="@+id/btn_issues"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/link_feedback" />
+                    <Button
+                        android:id="@+id/btn_donate"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start|center_vertical"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:textAllCaps="false"
+                        android:textStyle="normal"
+                        android:text="@string/link_donate" />
 
-                        <Button
-                            android:id="@+id/btn_donate"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/link_donate" />
+                    <Button
+                        android:id="@+id/btn_export"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start|center_vertical"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:textAllCaps="false"
+                        android:textStyle="normal"
+                        android:text="@string/link_export" />
 
-                        <Button
-                            android:id="@+id/btn_export"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/link_export" />
-
-                        <Button
-                            android:id="@+id/btn_import"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/link_import" />
-                    </LinearLayout>
-                </HorizontalScrollView>
+                    <Button
+                        android:id="@+id/btn_import"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start|center_vertical"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:textAllCaps="false"
+                        android:textStyle="normal"
+                        android:text="@string/link_import" />
+                </LinearLayout>
 
             </LinearLayout>
         </ScrollView>

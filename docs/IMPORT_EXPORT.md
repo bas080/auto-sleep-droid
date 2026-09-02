@@ -72,10 +72,10 @@ The export string must be a valid JSON object adhering to schema version `1`:
 
 ### Placement on `MainActivity`
 
-The Import/Export control section is located on `MainActivity` (`activity_main.xml`), integrated into the horizontal scrollable link list at the bottom of the form under a "Links" header alongside existing action links (`Manual`, `Logs`, `Feedback`, `Donate`).
+The Import/Export control section is located on `MainActivity` (`activity_main.xml`), integrated into the vertical link list at the bottom of the form under a "Links" header alongside existing action links (`Manual`, `Logs`, `Feedback`, `Donate`).
 
 ### Layout Components
-- **Link Bar Integration**: Borderless button action links (`btn_export` for "Export" and `btn_import` for "Import") added to the horizontal scrollable link bar inside `activity_main.xml`.
+- **Link Section Integration**: Borderless button action links (`btn_export` for "Export" and `btn_import` for "Import") added to the vertical link list inside `activity_main.xml`.
 
 ---
 
