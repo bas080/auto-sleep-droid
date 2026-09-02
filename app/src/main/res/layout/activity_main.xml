@@ -215,59 +215,162 @@
                     android:paddingTop="16dp"
                     android:paddingBottom="4dp" />
 
-                <HorizontalScrollView
+                <com.bas080.autosleepdroid.FlowLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:scrollbars="none">
+                    android:layout_height="wrap_content">
 
-                    <LinearLayout
+                    <Button
+                        android:id="@+id/btn_manual"
+                        style="?android:attr/borderlessButtonStyle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:fontFamily="sans-serif-light"
+                        android:textAllCaps="false"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorLink"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:text="@string/link_manual" />
 
-                        <Button
-                            android:id="@+id/btn_manual"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/link_manual" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="·"
+                        android:fontFamily="sans-serif-light"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:paddingStart="2dp"
+                        android:paddingEnd="2dp" />
 
-                        <Button
-                            android:id="@+id/btn_logs"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/link_logs" />
+                    <Button
+                        android:id="@+id/btn_logs"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-light"
+                        android:textAllCaps="false"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorLink"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:text="@string/link_logs" />
 
-                        <Button
-                            android:id="@+id/btn_issues"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/link_feedback" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="·"
+                        android:fontFamily="sans-serif-light"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:paddingStart="2dp"
+                        android:paddingEnd="2dp" />
 
-                        <Button
-                            android:id="@+id/btn_donate"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/link_donate" />
+                    <Button
+                        android:id="@+id/btn_issues"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-light"
+                        android:textAllCaps="false"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorLink"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:text="@string/link_feedback" />
 
-                        <Button
-                            android:id="@+id/btn_export"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/link_export" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="·"
+                        android:fontFamily="sans-serif-light"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:paddingStart="2dp"
+                        android:paddingEnd="2dp" />
 
-                        <Button
-                            android:id="@+id/btn_import"
-                            style="?android:attr/borderlessButtonStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/link_import" />
-                    </LinearLayout>
-                </HorizontalScrollView>
+                    <Button
+                        android:id="@+id/btn_donate"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-light"
+                        android:textAllCaps="false"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorLink"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:text="@string/link_donate" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="·"
+                        android:fontFamily="sans-serif-light"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:paddingStart="2dp"
+                        android:paddingEnd="2dp" />
+
+                    <Button
+                        android:id="@+id/btn_export"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-light"
+                        android:textAllCaps="false"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorLink"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:text="@string/link_export" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="·"
+                        android:fontFamily="sans-serif-light"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:paddingStart="2dp"
+                        android:paddingEnd="2dp" />
+
+                    <Button
+                        android:id="@+id/btn_import"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-light"
+                        android:textAllCaps="false"
+                        android:textSize="14sp"
+                        android:textColor="?android:attr/textColorLink"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:text="@string/link_import" />
+                </com.bas080.autosleepdroid.FlowLayout>
 
             </LinearLayout>
         </ScrollView>

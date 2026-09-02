@@ -212,6 +212,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 if (isUpdatingUi) return;
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
                 prefs.edit().putBoolean("active", isChecked).apply();
+                boolean goalEnabled = prefs.getBoolean("wake_up_goal_enabled", false);
+                updateInputEnabledStates(isChecked, goalEnabled);
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Timer enabled from UI" : "Timer disabled from UI");
                 redrawNotification();
             });
@@ -245,9 +247,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                         .putBoolean("wake_up_goal_enabled", isChecked)
                         .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
                         .apply();
-                if (goalContainer != null) {
-                    goalContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-                }
+                boolean timerActive = prefs.getBoolean("active", true);
+                updateInputEnabledStates(timerActive, isChecked);
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Wake-up goal enabled" : "Wake-up goal disabled");
                 redrawNotification();
             });
@@ -275,6 +276,26 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     }
                 }
             });
+        }
+    }
+
+    private void updateInputEnabledStates(boolean active, boolean goalEnabled) {
+        if (inputDuration != null) {
+            inputDuration.setEnabled(active);
+        }
+        if (switchEnableGoal != null) {
+            switchEnableGoal.setEnabled(active);
+        }
+
+        boolean goalInputsEnabled = active && goalEnabled;
+        if (btnTargetTime != null) {
+            btnTargetTime.setEnabled(goalInputsEnabled);
+        }
+        if (inputMinSleep != null) {
+            inputMinSleep.setEnabled(goalInputsEnabled);
+        }
+        if (goalContainer != null) {
+            goalContainer.setVisibility(View.VISIBLE);
         }
     }
 
@@ -404,13 +425,11 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (switchEnableGoal != null) {
             switchEnableGoal.setChecked(goalEnabled);
         }
-        if (goalContainer != null) {
-            goalContainer.setVisibility(goalEnabled ? View.VISIBLE : View.GONE);
-        }
         updateTargetTimeButtonText(goalHour, goalMin);
         if (inputMinSleep != null && !inputMinSleep.hasFocus()) {
             inputMinSleep.setText(DurationUtils.formatDurationString(minSleepMin));
         }
+        updateInputEnabledStates(active, goalEnabled);
         isUpdatingUi = false;
     }
 
