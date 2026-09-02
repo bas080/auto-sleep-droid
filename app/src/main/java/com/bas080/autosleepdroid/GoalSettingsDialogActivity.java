@@ -88,7 +88,9 @@ public class GoalSettingsDialogActivity extends Activity {
             String text = inputMinSleep.getText().toString().trim();
             int minMinutes = DurationUtils.parseDurationMinutes(text, DurationUtils.DefaultUnit.HOURS);
             if (minMinutes <= 0) {
-                minMinutes = 450;
+                android.widget.Toast.makeText(this, R.string.toast_duration_invalid, android.widget.Toast.LENGTH_SHORT).show();
+                finish();
+                return;
             }
             int goalHour = Build.VERSION.SDK_INT >= 23 ? timePicker.getHour() : timePicker.getCurrentHour();
             int goalMin = Build.VERSION.SDK_INT >= 23 ? timePicker.getMinute() : timePicker.getCurrentMinute();

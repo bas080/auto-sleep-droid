@@ -213,7 +213,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (inputDuration != null) {
             inputDuration.setOnFocusChangeListener((v, hasFocus) -> {
                 if (!hasFocus && !isUpdatingUi) {
-                    saveDurationFromInput();
+                    saveDurationFromInputOnFocusChange();
                 }
             });
             inputDuration.addTextChangedListener(new TextWatcher() {
@@ -224,7 +224,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 @Override
                 public void afterTextChanged(Editable s) {
                     if (!isUpdatingUi) {
-                        saveDurationFromInput();
+                        saveDurationFromInputOnTextChanged();
                     }
                 }
             });
@@ -287,7 +287,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (inputMinSleep != null) {
             inputMinSleep.setOnFocusChangeListener((v, hasFocus) -> {
                 if (!hasFocus && !isUpdatingUi) {
-                    saveMinSleepFromInput();
+                    saveMinSleepFromInputOnFocusChange();
                 }
             });
             inputMinSleep.addTextChangedListener(new TextWatcher() {
@@ -298,14 +298,14 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 @Override
                 public void afterTextChanged(Editable s) {
                     if (!isUpdatingUi) {
-                        saveMinSleepFromInput();
+                        saveMinSleepFromInputOnTextChanged();
                     }
                 }
             });
         }
     }
 
-    private void saveDurationFromInput() {
+    private void saveDurationFromInputOnTextChanged() {
         if (inputDuration == null) return;
         String text = inputDuration.getText().toString().trim();
         int minutes = DurationUtils.parseDurationMinutes(text);
@@ -318,7 +318,27 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
     }
 
-    private void saveMinSleepFromInput() {
+    private void saveDurationFromInputOnFocusChange() {
+        if (inputDuration == null) return;
+        String text = inputDuration.getText().toString().trim();
+        int minutes = DurationUtils.parseDurationMinutes(text);
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        int savedMinutes = prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+
+        if (minutes > 0) {
+            if (savedMinutes != minutes) {
+                prefs.edit().putInt("duration_minutes", minutes).apply();
+                redrawNotification();
+            }
+        } else {
+            Toast.makeText(this, R.string.toast_duration_invalid, Toast.LENGTH_SHORT).show();
+            isUpdatingUi = true;
+            inputDuration.setText(DurationUtils.formatDurationString(savedMinutes));
+            isUpdatingUi = false;
+        }
+    }
+
+    private void saveMinSleepFromInputOnTextChanged() {
         if (inputMinSleep == null) return;
         String text = inputMinSleep.getText().toString().trim();
         int minMinutes = DurationUtils.parseDurationMinutes(text, DurationUtils.DefaultUnit.HOURS);
@@ -331,6 +351,29 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                         .apply();
                 redrawNotification();
             }
+        }
+    }
+
+    private void saveMinSleepFromInputOnFocusChange() {
+        if (inputMinSleep == null) return;
+        String text = inputMinSleep.getText().toString().trim();
+        int minMinutes = DurationUtils.parseDurationMinutes(text, DurationUtils.DefaultUnit.HOURS);
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        int savedMinMinutes = prefs.getInt("min_sleep_duration_minutes", 450);
+
+        if (minMinutes > 0) {
+            if (savedMinMinutes != minMinutes) {
+                prefs.edit()
+                        .putInt("min_sleep_duration_minutes", minMinutes)
+                        .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                        .apply();
+                redrawNotification();
+            }
+        } else {
+            Toast.makeText(this, R.string.toast_duration_invalid, Toast.LENGTH_SHORT).show();
+            isUpdatingUi = true;
+            inputMinSleep.setText(DurationUtils.formatDurationString(savedMinMinutes));
+            isUpdatingUi = false;
         }
     }
 

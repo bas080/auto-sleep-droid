@@ -229,6 +229,7 @@ public class SleepTimerServiceTest {
         // Previous valid duration was 25
         assertEquals(25, preferences.getInt("duration_minutes", -1));
         assertTrue(preferences.getBoolean("active", false));
+        assertEquals(context.getString(R.string.toast_duration_invalid), org.robolectric.shadows.ShadowToast.getTextOfLatestToast());
     }
 
     @Test

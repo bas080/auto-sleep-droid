@@ -286,6 +286,56 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testInvalidDurationInputOnFocusLossShowsToastAndRevertsText() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.EditText inputDuration = activity.findViewById(R.id.input_duration);
+        assertNotNull(inputDuration);
+
+        // Initially 20m
+        assertEquals("20m", inputDuration.getText().toString());
+
+        // Change text to invalid input
+        inputDuration.setText("abc");
+
+        // Trigger focus loss
+        if (inputDuration.getOnFocusChangeListener() != null) {
+            inputDuration.getOnFocusChangeListener().onFocusChange(inputDuration, false);
+        }
+
+        android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
+        assertEquals(20, prefs.getInt("duration_minutes", 20));
+        assertEquals("20m", inputDuration.getText().toString());
+        assertEquals(activity.getString(R.string.toast_duration_invalid), org.robolectric.shadows.ShadowToast.getTextOfLatestToast());
+    }
+
+    @Test
+    public void testInvalidMinSleepInputOnFocusLossShowsToastAndRevertsText() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.EditText inputMinSleep = activity.findViewById(R.id.input_min_sleep);
+        assertNotNull(inputMinSleep);
+
+        // Initially 7h 30m
+        assertEquals("7h 30m", inputMinSleep.getText().toString());
+
+        // Change text to invalid input
+        inputMinSleep.setText("0");
+
+        // Trigger focus loss
+        if (inputMinSleep.getOnFocusChangeListener() != null) {
+            inputMinSleep.getOnFocusChangeListener().onFocusChange(inputMinSleep, false);
+        }
+
+        android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
+        assertEquals(450, prefs.getInt("min_sleep_duration_minutes", 450));
+        assertEquals("7h 30m", inputMinSleep.getText().toString());
+        assertEquals(activity.getString(R.string.toast_duration_invalid), org.robolectric.shadows.ShadowToast.getTextOfLatestToast());
+    }
+
+    @Test
     public void testOnResumeStartsRedrawServiceIntent() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         controller.create();
