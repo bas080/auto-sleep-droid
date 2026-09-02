@@ -9,7 +9,7 @@
 - **Minimum Sleep Duration**: The user-configured minimum sleep safeguard duration in hours (default 7.5 hours) ensuring that the wake-up alarm is set no earlier than `timerStartTime + sleepTimerDuration + minimumSleepDuration`.
 
 ## Product goal
-Provide an Android sleep timer app configured directly from a single main UI screen with inline event logs, simplified notification shade actions, and zero intrusive UI dialogs.
+Provide an Android sleep timer app configured directly from a single main UI screen with full-screen Manual and Event Logs views, simplified notification shade actions, and zero intrusive UI dialogs.
 
 ## System states
 - Off: The timer is manually disabled. Media continues playing normally, and the current volume remains entirely unchanged.
@@ -36,8 +36,8 @@ Toggling "Show notification" to ON prompts the user for notification permission 
     - Sleep timer duration input (supporting natural duration strings like `20m`, `1h 15m`).
     - Show notification switch to toggle ongoing notification shade visibility.
     - Target wake-up goal enable switch, target wake-up time picker, and minimum sleep duration input.
-  - Action links in the top header: Manual, Feedback, Donate, Export, and Import.
-  - Event logs section embedded directly at the bottom of `MainActivity` displaying real-time system activity logs.
+  - Action links in the top header: Manual, Logs, Feedback, Donate, Export, and Import.
+  - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
   - The notification features a single simple toggle action button: "Disable" when enabled, or "Turn On" when disabled.
   - Tapping/clicking the notification body opens `MainActivity`.

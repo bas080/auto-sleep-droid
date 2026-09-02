@@ -56,7 +56,9 @@
     <string name="toast_alarm_dismissed">Alarm dismissed</string>
     <string name="toast_alarm_snoozed">Alarm snoozed 9m</string>
     <string name="version_label">Version %1$s</string>
+    <string name="btn_back">Back</string>
     <string name="link_manual">Manual</string>
+    <string name="link_logs">Logs</string>
     <string name="link_feedback">Feedback</string>
     <string name="link_donate">Donate</string>
     <string name="link_export">Export</string>

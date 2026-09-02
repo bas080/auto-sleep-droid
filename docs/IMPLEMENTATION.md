@@ -4,7 +4,7 @@
 
 This document describes the implementation that currently exists in the repository. Use it as the code-oriented source of truth when modifying the app.
 
-The app is an Android sleep timer app configured directly from a single main UI screen (`MainActivity`), with inline event logs and simplified notification shade actions.
+The app is an Android sleep timer app configured directly from a single main UI screen (`MainActivity`), with full-screen Manual and Event Logs views and simplified notification shade actions.
 
 ## Project structure
 
@@ -95,8 +95,8 @@ Main Configuration Controls & Link Header:
   - Target wake-up goal enable Switch (`wake_up_goal_enabled` preference).
   - Target wake-up TimePicker (`wake_up_goal_hour` and `wake_up_goal_minute` preferences).
   - Minimum sleep duration EditText (`min_sleep_duration_minutes` preference).
-- Header action link list: Manual, Feedback, Donate, Export, and Import.
-- Inline Event Logs section: Monospace `TextView` inside a `ScrollView` embedded directly at the bottom of `MainActivity` listening to `EventLogger` updates on resume.
+- Header action link list: Manual, Logs, Feedback, Donate, Export, and Import.
+- Full-screen Manual & Event Logs Views: Overlay `RelativeLayout` views in `activity_main.xml` with a Back button pinned to the bottom-right corner (`alignParentBottom="true"`, `alignParentEnd="true"`), displaying formatted HTML manual text or real-time monospace event logs and closing upon Back button tap or hardware back button press.
 - Export Settings Action: Serializes current preferences into a Schema Version 1 JSON string, launches system share action (`ACTION_SEND`), and logs to `EventLogger`.
 - Import Settings Action: Prompts user with instructional `AlertDialog`, validates syntax and boundaries, applies valid values, sends `ACTION_REDRAW_NOTIFICATION` to `SleepTimerService`, refreshes UI controls, and logs to `EventLogger`.
 
