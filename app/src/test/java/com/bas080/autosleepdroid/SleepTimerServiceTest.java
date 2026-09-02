@@ -46,10 +46,9 @@ public class SleepTimerServiceTest {
     }
 
     @Test
-    public void testServiceCreationWhenShowNotificationDisabledDoesNotCallStartForeground() {
+    public void testServiceCreationAlwaysPostsForegroundNotification() {
         preferences.edit()
                 .putBoolean("active", true)
-                .putBoolean("show_notification", false)
                 .commit();
 
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
@@ -59,7 +58,7 @@ public class SleepTimerServiceTest {
         NotificationManager notificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
-        assertEquals("No ongoing notification should be posted when show_notification is false", null, shadowNotificationManager.getNotification(1001));
+        assertNotNull("Ongoing notification should always be posted", shadowNotificationManager.getNotification(1001));
     }
 
     @Test
@@ -322,63 +321,6 @@ public class SleepTimerServiceTest {
         assertFalse(preferences.getBoolean("wake_up_goal_enabled", true));
     }
 
-    @Test
-    public void testShowNotificationPreferenceHidesNotificationWhenOff() {
-        preferences.edit()
-                .putBoolean("active", false)
-                .putBoolean("show_notification", false)
-                .commit();
-
-        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
-        SleepTimerService service = controller.create().get();
-
-        NotificationManager notificationManager =
-                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
-        android.app.Notification notification = shadowNotificationManager.getNotification(1001);
-        assertEquals(null, notification);
-    }
-
-    @Test
-    public void testShowNotificationDisabledHidesNotificationInActiveAndWaitingStates() {
-        // When show_notification is false, active state should NOT show notification
-        preferences.edit()
-                .putBoolean("active", true)
-                .putBoolean("show_notification", false)
-                .putInt("duration_minutes", 20)
-                .commit();
-
-        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
-        SleepTimerService service = controller.create().get();
-
-        NotificationManager notificationManager =
-                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
-
-        android.app.Notification activeNotification = shadowNotificationManager.getNotification(1001);
-        assertEquals("Notification must be hidden in active state when show_notification is false", null, activeNotification);
-
-        // Turn timer off and then turn back on when show_notification is false
-        service.onStartCommand(new Intent(context, SleepTimerService.class).setAction(SleepTimerService.ACTION_TURN_OFF), 0, 1);
-        assertEquals(null, shadowNotificationManager.getNotification(1001));
-
-        service.onStartCommand(new Intent(context, SleepTimerService.class).setAction(SleepTimerService.ACTION_TURN_ON), 0, 1);
-        assertEquals("Notification must remain hidden after TURN_ON when show_notification is false", null, shadowNotificationManager.getNotification(1001));
-
-        // Dynamically enable show_notification via redraw intent
-        preferences.edit().putBoolean("show_notification", true).commit();
-        service.onStartCommand(new Intent(context, SleepTimerService.class).setAction(SleepTimerService.ACTION_REDRAW_NOTIFICATION), 0, 1);
-
-        android.app.Notification visibleNotification = shadowNotificationManager.getNotification(1001);
-        assertNotNull("Notification must become visible when show_notification is toggled to true", visibleNotification);
-
-        // Dynamically disable show_notification via redraw intent
-        preferences.edit().putBoolean("show_notification", false).commit();
-        service.onStartCommand(new Intent(context, SleepTimerService.class).setAction(SleepTimerService.ACTION_REDRAW_NOTIFICATION), 0, 1);
-
-        android.app.Notification hiddenNotification = shadowNotificationManager.getNotification(1001);
-        assertEquals("Notification must be removed when show_notification is toggled to false", null, hiddenNotification);
-    }
 
     @Test
     public void testPhoneFlipSensorEventDetection() throws Exception {

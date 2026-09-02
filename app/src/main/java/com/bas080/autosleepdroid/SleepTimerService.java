@@ -860,24 +860,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void showOrHideNotification() {
-        boolean showNotification = preferences != null && preferences.getBoolean("show_notification", false);
-        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (showNotification || isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) {
-            startForeground(NOTIFICATION_ID, buildNotification());
-            isForeground = true;
-        } else {
-            if (manager != null) {
-                manager.cancel(NOTIFICATION_ID);
-            }
-            if (isForeground) {
-                if (android.os.Build.VERSION.SDK_INT >= 24) {
-                    stopForeground(STOP_FOREGROUND_REMOVE);
-                } else {
-                    stopForeground(true);
-                }
-                isForeground = false;
-            }
-        }
+        startForeground(NOTIFICATION_ID, buildNotification());
+        isForeground = true;
     }
 
     private void updateNotification() {
