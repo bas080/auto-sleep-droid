@@ -28,6 +28,7 @@ public class DurationUtilsTest {
         assertEquals(18, DurationUtils.parseDurationMinutes("0.3h"));
         assertEquals(18, DurationUtils.parseDurationMinutes("0,3h"));
         assertEquals(90, DurationUtils.parseDurationMinutes("1.5h"));
+        assertEquals(-1, DurationUtils.parseDurationMinutes("1h 20x"));
         assertEquals(-1, DurationUtils.parseDurationMinutes("10x10h4m"));
         assertEquals(-1, DurationUtils.parseDurationMinutes("10m10"));
         assertEquals(-1, DurationUtils.parseDurationMinutes("10h20h"));
