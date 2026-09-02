@@ -119,6 +119,14 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         EventLogger.log(this, "SleepTimerService state initialized (enabled: " + savedEnabled + ", duration: " + savedDuration + "m)");
 
         startForeground(NOTIFICATION_ID, buildNotification());
+        boolean showNotification = preferences == null || preferences.getBoolean("show_notification", true);
+        if (!savedEnabled && !showNotification) {
+            if (android.os.Build.VERSION.SDK_INT >= 24) {
+                stopForeground(STOP_FOREGROUND_REMOVE);
+            } else {
+                stopForeground(true);
+            }
+        }
 
         boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
         if (goalEnabled) {
@@ -360,12 +368,21 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onStateChanged(SleepTimerStateMachine.State newState) {
         cancelTimerCallbacks();
+        boolean showNotification = preferences == null || preferences.getBoolean("show_notification", true);
         if (newState == SleepTimerStateMachine.State.OFF) {
             unregisterAudioPlaybackCallback();
             onCancelAlarm();
             dismissAutoSleepAlarm();
             updateListenersRegistration();
-            startForeground(NOTIFICATION_ID, buildNotification());
+            if (showNotification) {
+                startForeground(NOTIFICATION_ID, buildNotification());
+            } else {
+                if (android.os.Build.VERSION.SDK_INT >= 24) {
+                    stopForeground(STOP_FOREGROUND_REMOVE);
+                } else {
+                    stopForeground(true);
+                }
+            }
         } else if (newState == SleepTimerStateMachine.State.WAITING) {
             registerAudioPlaybackCallback();
             onCancelAlarm();
@@ -856,55 +873,21 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 .setOnlyAlertOnce(true)
                 .setShowWhen(false);
 
-        String actionTitle = getString(R.string.action_sleep_duration, formattedDurationStr);
-
-        Notification.Action setTimerAction;
+        Notification.Action toggleAction;
         if (stateMachine.isEnabled()) {
-            setTimerAction = new Notification.Action.Builder(
+            toggleAction = new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
                     getString(R.string.action_timer_off),
                     turnOffIntent())
                     .build();
         } else {
-            String durationStr = String.valueOf(stateMachine.getConfiguredDurationMinutes());
-            builder.getExtras().putString(Notification.EXTRA_REMOTE_INPUT_DRAFT, durationStr);
-
-            RemoteInput remoteInput = new RemoteInput.Builder(REMOTE_INPUT_KEY)
-                    .setLabel(getString(R.string.set_timer_input_label, durationStr))
-                    .build();
-            remoteInput.getExtras().putInt("android.intent.extra.inputType", InputType.TYPE_CLASS_NUMBER);
-            remoteInput.getExtras().putInt("inputType", InputType.TYPE_CLASS_NUMBER);
-
-            setTimerAction = new Notification.Action.Builder(
+            toggleAction = new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_input_add),
-                    getString(R.string.action_set_timer),
-                    durationIntent())
-                    .addRemoteInput(remoteInput)
+                    getString(R.string.action_turn_on),
+                    turnOnIntent())
                     .build();
         }
-        builder.addAction(setTimerAction);
-
-        boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
-        Notification.Action goalAction;
-        if (goalEnabled && preferences != null) {
-            int goalHour = preferences.getInt("wake_up_goal_hour", 6);
-            int goalMin = preferences.getInt("wake_up_goal_minute", 30);
-            String formattedGoalTime = formatTime(goalHour, goalMin);
-            String clearGoalTitle = getString(R.string.action_clear_time, formattedGoalTime);
-            goalAction = new Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    clearGoalTitle,
-                    clearGoalIntent())
-                    .build();
-        } else {
-            String goalTitle = getString(R.string.action_set_alarm);
-            goalAction = new Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_menu_my_calendar),
-                    goalTitle,
-                    goalIntent())
-                    .build();
-        }
-        builder.addAction(goalAction);
+        builder.addAction(toggleAction);
 
         return builder.build();
     }
@@ -933,7 +916,19 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void updateNotification() {
+        boolean showNotification = preferences == null || preferences.getBoolean("show_notification", true);
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (!showNotification && stateMachine != null && !stateMachine.isEnabled()) {
+            if (manager != null) {
+                manager.cancel(NOTIFICATION_ID);
+            }
+            if (android.os.Build.VERSION.SDK_INT >= 24) {
+                stopForeground(STOP_FOREGROUND_REMOVE);
+            } else {
+                stopForeground(true);
+            }
+            return;
+        }
         if (manager != null) {
             manager.notify(NOTIFICATION_ID, buildNotification());
         }

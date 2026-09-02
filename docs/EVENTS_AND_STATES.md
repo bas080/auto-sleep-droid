@@ -23,7 +23,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 * **Notification Presentation**:
   * Collapsed Text: `"Timer off"`
   * Expanded Text: `"Sleep timer is off"`
-  - Action Buttons: `"Set Timer"` (inline reply input) and `"Set Goal"`.
+  - Action Button: `"Turn On"` (if `show_notification` is `true`; notification is hidden if `show_notification` is `false`).
 * **State Invariants**: `enabled = false`, `timerEndsAt = 0`.
 
 ### 2. `WAITING`
@@ -37,7 +37,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 * **Notification Presentation**:
   * Collapsed Text: `"Waiting for playback"`
   * Expanded Text: `"Waiting for media playback"` (appends `" • Alarm at <alarm_time>"` when Smart Wake-Up Goal alarm is set).
-  - Action Buttons: `"Set Timer"` (inline reply input) and `"Set Goal"` / `"Goal HH:MM"`.
+  - Action Button: `"Disable"`.
 * **State Invariants**: `enabled = true`, `timerEndsAt = 0`.
 
 ### 3. `ACTIVE`
@@ -52,7 +52,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 * **Notification Presentation**:
   * Collapsed Text: `"Fades out at <target_time>"` (e.g., `"Fades out at 11:15 PM"`)
   * Expanded Text: `"Fades out at <target_time>"` (appends `" • Alarm at <alarm_time>"` when Smart Wake-Up Goal alarm is set).
-  - Action Buttons: `"Set Timer"` (inline reply input) and `"Set Goal"` / `"Goal HH:MM"`.
+  - Action Button: `"Disable"`.
 * **State Invariants**: `enabled = true`, `timerEndsAt > 0`.
 
 ### 4. `FADING`
@@ -66,7 +66,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
 * **Notification Presentation**:
   * Collapsed Text: `"Fading volume"`
   * Expanded Text: `"Fading volume down to pause media"`
-  - Action Buttons: `"Set Timer"` (inline reply input) and `"Set Goal"` / `"Goal HH:MM"`.
+  - Action Button: `"Disable"`.
 * **State Invariants**: `enabled = true`.
 
 ---
@@ -91,7 +91,7 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
 |                                    | Alarm Expiry, or      | or Wake-Up Alarm       | Destruction                               |
 |                                    | Alarm Snoozed         | Snoozed                |                                           |
 +------------------------------------+-----------------------+------------------------+------------------------------------------+
-| Live Event Log UI Listener         | MainActivity onResume | UI Foreground          | MainActivity onPause                     |
+| Live Event Log UI Listener         | LogActivity onResume  | UI Foreground          | LogActivity onPause                      |
 | (EventLogger.Listener)             |                       |                        |                                          |
 +------------------------------------+-----------------------+------------------------+------------------------------------------+
 ```
@@ -118,10 +118,10 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
    * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing or snoozed), when wake-up alarm is dismissed in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked.
 
 4. **Event Logger Listener (`EventLogger.Listener`)**:
-   * **Registration Point**: Registered in `MainActivity.onResume()`.
-   * **Active Lifetime**: Active only while `MainActivity` is in the foreground.
-   * **Purpose**: Delivers live log lines directly to the main UI scrollable log view.
-   * **Removal Point**: Removed (`EventLogger.setListener(null)`) in `MainActivity.onPause()` to prevent UI leaks when app is backgrounded.
+   * **Registration Point**: Registered in `LogActivity.onResume()`.
+   * **Active Lifetime**: Active only while `LogActivity` is in the foreground.
+   * **Purpose**: Delivers live log lines directly to the dedicated event log UI.
+   * **Removal Point**: Removed (`EventLogger.setListener(null)`) in `LogActivity.onPause()` to prevent UI leaks when activity is backgrounded.
 
 ---
 
@@ -131,11 +131,11 @@ Events in Auto Sleep Droid originate from user interactions, hardware sensors, s
 
 ### User Input Events
 
-* **`TURN_ON`**: User taps notification action when timer is off (when in `OFF` state).
-* **`TURN_OFF`**: User taps `"Sleep <duration>"` in notification when timer is enabled (when in `WAITING`, `ACTIVE`, or `FADING` state).
-* **`SET_DURATION`**: User submits a duration via the inline `"Set Timer"` notification reply (`RemoteInput`).
+* **`TURN_ON`**: User toggles timer switch in `MainActivity` or taps `"Turn On"` in notification.
+* **`TURN_OFF`**: User toggles timer switch in `MainActivity` or taps `"Disable"` in notification.
+* **`SET_DURATION`**: User configures sleep timer duration in `MainActivity`.
 * **`SET_WAKE_UP_GOAL`**: User configures target wake-up goal time and minimum sleep duration safeguard in `MainActivity`.
-* **`CLEAR_GOAL`**: User clears wake-up goal in `MainActivity` or taps clear action.
+* **`TOGGLE_SHOW_NOTIFICATION`**: User toggles ongoing notification visibility in `MainActivity`.
 
 ### System & Sensor Events
 
@@ -210,7 +210,7 @@ All system state changes and input triggers are logged to `EventLogger` with a t
 | Fade-Out Started | `Fade-out started` |
 | Pre-Fade Vol Restored | `Restored pre-fade volume to <vol>` |
 | Media Paused | `Timer expired: pausing media` |
-| Wake-Up Goal Alarm Set | `Wake-Up Goal Alarm 'Auto Sleep' set in Clock app for <formatted_time>` |
+| Wake-Up Goal Alarm Set | `Wake-Up Goal Alarm 'Auto Sleep' scheduled for <formatted_time>` |
 | Wake-Up Alarm Triggered | `Auto Sleep wake-up alarm triggered` |
 | Wake-Up Alarm Snoozed via Flip | `Wake-Up Goal alarm snoozed via flip gesture` |
 | Wake-Up Alarm Snoozed | `Wake-Up Goal alarm snoozed for 9m` |

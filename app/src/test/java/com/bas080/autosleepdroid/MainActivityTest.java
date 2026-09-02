@@ -49,6 +49,17 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testLogsButtonClickLaunchesLogActivity() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().get();
+        activity.findViewById(R.id.btn_logs).performClick();
+
+        Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(intent);
+        assertEquals(LogActivity.class.getName(), intent.getComponent().getClassName());
+    }
+
+    @Test
     public void testManualLinkClickShowsDialog() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();
@@ -178,7 +189,7 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testResumeRemainsOpenAndLogsEvents() {
+    public void testResumeRemainsOpen() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();
 
@@ -186,21 +197,34 @@ public class MainActivityTest {
         controller.resume();
 
         assertFalse(activity.isFinishing());
-
-        TextView textView = activity.findViewById(R.id.event_log_text);
-        assertNotNull(textView);
+        assertNotNull(activity.findViewById(R.id.switch_enable_timer));
     }
 
     @Test
-    public void testEventLoggerUpdatesUI() {
+    public void testConfigControlsUpdatesSharedPreferences() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
 
-        EventLogger.log(activity, "Test event message");
+        android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
+        android.widget.EditText inputDuration = activity.findViewById(R.id.input_duration);
+        android.widget.Switch switchShowNotif = activity.findViewById(R.id.switch_show_notification);
+        android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
 
-        TextView textView = activity.findViewById(R.id.event_log_text);
-        assertNotNull(textView);
-        assertTrue(textView.getText().toString().contains("Test event message"));
+        assertNotNull(switchEnable);
+        assertNotNull(inputDuration);
+        assertNotNull(switchShowNotif);
+        assertNotNull(switchGoal);
+
+        switchEnable.setChecked(false);
+        inputDuration.setText("45m");
+        switchShowNotif.setChecked(false);
+        switchGoal.setChecked(true);
+
+        android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
+        assertFalse(prefs.getBoolean("active", true));
+        assertEquals(45, prefs.getInt("duration_minutes", -1));
+        assertFalse(prefs.getBoolean("show_notification", true));
+        assertTrue(prefs.getBoolean("wake_up_goal_enabled", false));
     }
 
     @Test

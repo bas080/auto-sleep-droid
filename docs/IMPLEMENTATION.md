@@ -4,7 +4,7 @@
 
 This document describes the implementation that currently exists in the repository. Use it as the code-oriented source of truth when modifying the app.
 
-The app is an Android sleep timer controlled from the notification shade. The main activity UI displays a real-time event log for debugging.
+The app is an Android sleep timer app configured directly from a single main UI screen (`MainActivity`), with simplified notification shade actions and a dedicated event log screen (`LogActivity`).
 
 ## Project structure
 
@@ -18,10 +18,12 @@ The app is an Android sleep timer controlled from the notification shade. The ma
 │       │   ├── BootReceiver.java
 │       │   ├── EventLogger.java
 │       │   ├── GoalSettingsDialogActivity.java
+│       │   ├── LogActivity.java
 │       │   ├── MainActivity.java
 │       │   └── SleepTimerService.java
 │       └── res/
 │           ├── layout/
+│           │   ├── activity_log.xml
 │           │   └── activity_main.xml
 │           ├── values/
 │           │   ├── strings.xml
@@ -58,18 +60,18 @@ Responsibilities:
 - Create the low-importance ongoing notification (`setOngoing(true)`) representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`.
 - Display compact/concise text when collapsed (`setContentText`) and detailed contextual information when expanded (`Notification.BigTextStyle.bigText`).
 - Set content intent targeting `MainActivity` so tapping the notification opens `MainActivity`.
-- Expose notification actions for `Sleep <duration>` (toggles timer off when enabled, opens `RemoteInput` when disabled) and `Set Goal` / `Alarm HH:MM` (disables goal when set, launches `GoalSettingsDialogActivity` when disabled).
-- Parse and validate the inline notification reply using `parseDurationMinutes` to support natural duration inputs (`30`, `1h`, `2h15m`, ignoring seconds specifiers like `2h10m5s`), gracefully defaulting to the previously configured duration or 20-minute default on malformed/invalid input.
-- Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), and wake-up goal settings in `SharedPreferences`.
+- Expose a single notification action: "Disable" when enabled, or "Turn On" when disabled.
+- Respect `show_notification` preference (default `true`); when `show_notification` is `false` and timer state is `Off`, remove the ongoing service notification via `stopForeground(STOP_FOREGROUND_REMOVE)` or `manager.cancel(NOTIFICATION_ID)`.
+- Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), show notification setting (`show_notification`), and wake-up goal settings in `SharedPreferences`.
 - Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
 - Listen for media playback state changes using `AudioManager.AudioPlaybackCallback` (API 26+) dynamically only during `Waiting` state instead of periodic polling.
 - Register accelerometer sensor listener on a dedicated background `HandlerThread` (with 300ms temporal throttling) and `VOLUME_CHANGED_ACTION` broadcast receiver dynamically during `Active` and `Fading` states, or while the wake-up alarm is ringing.
 - Transition from `Waiting` to `Active` when playback callback detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused (after a short 500ms delay), and revert to the `Waiting` state.
-- Upon sleep timer start/reschedule or when the current alarm rings, schedule/update the daily recurring `"Auto Sleep"` wake-up alarm via `AlarmManager.setAlarmClock` if Smart Wake-Up Goal is enabled in the background. When triggered (`ACTION_WAKEUP_ALARM_EXPIRY`), `SleepTimerService` automatically schedules the next day's alarm for the same goal time, ensures `STREAM_ALARM` is set to an audible baseline level, plays the default system alarm tone using `RingtoneManager` with a 3-minute gentle volume crescendo (ramping volume along a quadratic $progress^2$ exponential curve matching human psychoacoustic loudness perception and sleep cycle arousal transitions within the scientifically optimal 2–5 minute window for startle-free awakening and sleep inertia reduction), and posts a high-priority notification with "Dismiss" and "Snooze" (9 minutes) action buttons. Flipping the phone while the wake-up alarm is ringing or tapping Snooze snoozes the alarm for 9 minutes using a separate pending intent request code (106) without overwriting the next day's daily recurring alarm (request code 101) while keeping the notification open in the notification shade, allowing users to dismiss the alarm when desired via the "Dismiss" action button or hardware volume button press.
+- Upon sleep timer start/reschedule or when the current alarm rings, schedule/update the daily recurring `"Auto Sleep"` wake-up alarm via `AlarmManager.setAlarmClock` if Smart Wake-Up Goal is enabled in the background. When triggered (`ACTION_WAKEUP_ALARM_EXPIRY`), `SleepTimerService` automatically schedules the next day's alarm for the same goal time, ensures `STREAM_ALARM` is set to an audible baseline level, plays the default system alarm tone using `RingtoneManager` with a 3-minute gentle volume crescendo, and posts a high-priority notification with "Dismiss" and "Snooze" (9 minutes) action buttons.
 - Cancel/dismiss the `"Auto Sleep"` wake-up alarm via `AlarmManager.cancel` on stop or smart alarm cancel in the background.
-- Trigger a short, faint haptic feedback pulse (`Vibrator`) upon duration replies, turning off, volume button resets, and flip gestures.
+- Trigger a short, faint haptic feedback pulse (`Vibrator`) upon turning off/on, volume button resets, and flip gestures.
 - Log lifecycle and state events to `EventLogger`.
 
 Important constants:
@@ -80,31 +82,31 @@ Important constants:
 - Maximum duration: `1440` minutes (24 hours)
 - Fade duration: `30_000` milliseconds
 
-### `GoalSettingsDialogActivity`
-
-File: `app/src/main/java/com/bas080/autosleepdroid/GoalSettingsDialogActivity.java`
-
-A dialog-themed activity (`@android:style/Theme.Material.Light.Dialog`) launched from Action Slot 3 in the notification shade ("Set Goal" / "Goal HH:MM").
-
-Responsibilities:
-
-- Displays a modal dialog overlay over the foreground app with a `TimePicker` widget for setting target goal time and an `EditText` for configuring minimum sleep duration safeguard in hours (default 7.5h / 450 minutes).
-- Includes "OK" and "Cancel" buttons.
-- On "OK": saves `wake_up_goal_enabled = true`, `wake_up_goal_hour`, `wake_up_goal_minute`, and `min_sleep_duration_minutes` into `SharedPreferences`, sends `ACTION_REDRAW_NOTIFICATION` intent to `SleepTimerService`, logs the event to `EventLogger`, and calls `finish()`.
-- On "Cancel": calls `finish()` without modifying settings.
-
 ### `MainActivity`
 
 File: `app/src/main/java/com/bas080/autosleepdroid/MainActivity.java`
 
-The launcher activity starts `SleepTimerService`, requests `POST_NOTIFICATIONS` on Android 13+, prompts for exact alarm permissions on Android 12+, and displays the live event log UI (`activity_main.xml`).
+The launcher activity starts `SleepTimerService`, requests `POST_NOTIFICATIONS` on Android 13+, prompts for exact alarm permissions on Android 12+, and presents the main configuration UI (`activity_main.xml`).
 
-Main Event Log & Import/Export Controls:
+Main Configuration Controls & Link Header:
 
-- A scrollable `ScrollView` with monospace `TextView` listening to `EventLogger` for live log updates, scrolling automatically to the newest line.
-- Main UI action links ("Export" and "Import") rendered in the header's scrollable action link list alongside Releases, GitHub, Issues, and Donate.
-- Export Settings Action: Serializes current preferences from `sleep_timer` `SharedPreferences` into a Schema Version 1 JSON string (`JSONObject`), launches Android system share action (`Intent.ACTION_SEND` / `Intent.createChooser` with `text/plain` MIME type and `Intent.EXTRA_TEXT`), and logs the export event to `EventLogger`.
-- Import Settings Action: Prompts the user with an instructional `AlertDialog` titled "Import Settings" containing clear instructions and an `EditText` (auto-pasting clipboard string if valid JSON), validates JSON syntax and numeric ranges (`duration_minutes` 1–1440, `wake_up_goal_hour` 0–23, `wake_up_goal_minute` 0–59, `min_sleep_duration_minutes` 1–1440), writes valid values to `SharedPreferences`, sends `ACTION_REDRAW_NOTIFICATION` intent to `SleepTimerService` to recalculate alarms and update notifications, displays a Toast confirmation ("Settings imported successfully"), and logs the event to `EventLogger`. Invalid inputs leave existing preferences unchanged and present an error Toast ("Invalid settings format").
+- Single-screen configuration UI:
+  - Sleep timer enable/disable Switch (`active` preference).
+  - Sleep timer duration EditText (`duration_minutes` preference, parsed via `DurationUtils`).
+  - Show notification Switch (`show_notification` preference).
+  - Target wake-up goal enable Switch (`wake_up_goal_enabled` preference).
+  - Target wake-up TimePicker (`wake_up_goal_hour` and `wake_up_goal_minute` preferences).
+  - Minimum sleep duration EditText (`min_sleep_duration_minutes` preference).
+- Header action link list: Manual, Logs, Releases, Issues, Donate, Export, Import, and GitHub.
+- Tapping "Logs" launches `LogActivity`.
+- Export Settings Action: Serializes current preferences into a Schema Version 1 JSON string, launches system share action (`ACTION_SEND`), and logs to `EventLogger`.
+- Import Settings Action: Prompts user with instructional `AlertDialog`, validates syntax and boundaries, applies valid values, sends `ACTION_REDRAW_NOTIFICATION` to `SleepTimerService`, refreshes UI controls, and logs to `EventLogger`.
+
+### `LogActivity`
+
+File: `app/src/main/java/com/bas080/autosleepdroid/LogActivity.java`
+
+Dedicated activity for displaying event logs. Listens to `EventLogger` updates on start/resume and renders real-time timestamped event log lines in a monospace `TextView` inside a `ScrollView`.
 
 ### `EventLogger`
 
@@ -126,6 +128,7 @@ Timer and Wake-Up Goal state is stored in the `sleep_timer` `SharedPreferences` 
 |---|---|---|
 | `active` | boolean | Whether the timer is enabled (`Waiting`/`Active`/`Fading`) vs explicitly `Off` |
 | `duration_minutes` | integer | The configured duration used for every reset |
+| `show_notification` | boolean | Whether ongoing sleep timer notification is visible when timer is Off |
 | `timer_ends_at` | long | Wall-clock timestamp (millis) when active timer expires |
 | `wake_up_goal_enabled` | boolean | Whether Smart Wake-Up Goal is enabled |
 | `wake_up_goal_hour` | integer | Target goal hour of day (0-23) |
@@ -137,112 +140,6 @@ Event log history is stored in the `event_logger` `SharedPreferences` file:
 | Key | Type | Meaning |
 |---|---|---|
 | `logs` | string | Newline-separated event log entries (capped at 500 lines) |
-
-The remaining countdown is not persisted. On reboot or service recreation, an enabled timer restores to the `Waiting` state (or starts counting down if media is currently playing) using the stored configured duration.
-
-When `duration_minutes` is absent, `SleepTimerService` uses the 20-minute default. A valid user reply replaces and persists this value.
-
-In-memory state in `SleepTimerService`:
-
-- `enabled`: timer is enabled (`Waiting`, `Active`, or `Fading`) vs `Off`.
-- `active`: timer countdown is currently running (`Active` state).
-- `fading`: expiry fade is in progress (`Fading` state).
-- `timerEndsAt`: wall-clock timestamp used for the current countdown.
-- `configuredDurationMinutes`: reset duration.
-- `volumeBeforeFade`: music stream volume captured at fade start.
-- `suppressVolumeReset`: prevents app-generated volume writes from restarting the timer.
-- `fadeStep`: current fade step (30 steps across 30 seconds).
-- `restoreVolumeRunnable`: delayed runnable executing 500ms after pause to restore pre-fade volume.
-- `lastObservedVolume`: music volume from the previous input poll.
-- `lastObservedMediaActive`: playback state from the previous input poll.
-- `isWakeUpAlarmRinging`: tracks whether the wake-up alarm is currently ringing.
-- `isWakeUpAlarmSnoozed`: tracks whether the wake-up alarm is currently snoozed.
-
-## Runtime flows
-
-### Initial launch
-
-1. Android launches `MainActivity`.
-2. `MainActivity` displays the live event log UI.
-3. The activity requests notification permission (`POST_NOTIFICATIONS`) on Android 13+ if needed.
-4. Once notification permission is granted (or immediately on Android < 33), the activity starts `SleepTimerService` as a foreground service.
-
-### Set Timer action
-
-1. The user taps `Set Timer` in the notification (available in `Off`, `Waiting`, `Active`, and `Fading` states).
-2. Android displays the inline `RemoteInput` reply with a numeric keyboard layout (`InputType.TYPE_CLASS_NUMBER`).
-3. The service reads the reply under key `duration_minutes`.
-4. If valid (integer 1 through 1440), the duration is persisted and `enabled` is set to true.
-5. If invalid or empty, the duration falls back safely to the previously configured duration or the 20-minute default, and `enabled` is set to true.
-6. If media is currently active, the timer transitions to `Active` and starts counting down; otherwise, it enters `Waiting`.
-7. `EventLogger` logs the configuration action.
-
-### Set Goal / Goal HH:MM action
-
-1. The user taps `Set Goal` or `Goal HH:MM` in Action Slot 3 of the notification shade.
-2. Android launches `GoalSettingsDialogActivity` as a compact modal dialog overlay over the foreground app.
-3. The user configures target goal time and minimum sleep duration safeguard, then taps "OK" (or "Stop").
-4. `GoalSettingsDialogActivity` saves settings to `SharedPreferences`, logs the event, sends an intent to `SleepTimerService` to recalculate alarms and redraw the notification, and finishes.
-
-### Turn Off action
-
-1. The user taps `Turn Off` in the notification (available in `Waiting`, `Active`, and `Fading` states).
-2. Any active countdown or fade callbacks are cancelled.
-3. `enabled` is set to false and persisted in `SharedPreferences`.
-4. Dismisses any scheduled `"Auto Sleep"` alarm via `AlarmManager.cancel` in the background.
-5. Current volume and media playback remain unchanged.
-6. The notification updates to the `Off` state ("Timer off").
-7. `EventLogger` logs the turn off action.
-
-### Volume reset, Gesture flip & Media playback start
-
-1. Android changes music stream volume normally, a phone flip gesture is detected, or playback starts.
-2. Event listeners (`AudioPlaybackCallback`, `VOLUME_CHANGED_ACTION` receiver, accelerometer sensor) notify `SleepTimerStateMachine` immediately of events.
-3. If enabled and active, a volume change or phone flip gesture resets the countdown to `configuredDurationMinutes`.
-4. If enabled and waiting, active media playback (`isMusicActive()`) transitions the timer to `Active`.
-5. If in `Fading` state, a volume change or phone flip gesture cancels fade, restores pre-fade volume, and resets the timer to `Active`.
-6. Changes in volume, flip gesture detection, or media playback state are logged to `EventLogger`.
-
-### Expiry & Smart Wake-Up Goal Alarm Creation
-
-1. The expiry callback calls `beginFadeOut()`.
-2. The service captures current music stream volume as `volumeBeforeFade`.
-3. Thirty fade steps run at 1-second intervals using an ease-out quadratic curve.
-4. User volume changes during fade cancel the fade and restart the timer.
-5. After the final step, media is paused by requesting transient audio focus (`pauseMediaViaAudioFocus()`), pre-fade volume is restored after a short delay (500ms) to allow media to pause silently, and the timer returns to `Waiting`.
-6. Expiry and fade steps are logged to `EventLogger`.
-
-### Reboot
-
-1. Android sends `BOOT_COMPLETED`.
-2. `BootReceiver` logs the boot event and starts `SleepTimerService`.
-3. The service loads `active` (`enabled`) and `duration_minutes` from preferences.
-4. If `enabled` was true, the timer restores to `Waiting` state (or `Active` if media is playing).
-5. If explicitly `Off`, the timer remains `Off`.
-
-### Import & Export Settings
-
-1. User taps **Export** in `MainActivity`.
-2. `MainActivity` reads configuration from `SharedPreferences`, serializes values into JSON Schema Version 1 (`version`, `duration_minutes`, `active`, `wake_up_goal_enabled`, `wake_up_goal_hour`, `wake_up_goal_minute`, `min_sleep_duration_minutes`), and launches Android's native system share sheet via `Intent.ACTION_SEND` with MIME type `text/plain`.
-3. Logs the action to `EventLogger`.
-4. User taps **Import** in `MainActivity`.
-5. An instructional `AlertDialog` input prompt appears with explanatory instructions (pre-filled with valid clipboard JSON if present).
-6. User confirms import; `MainActivity` validates JSON syntax, schema version, and numeric boundaries.
-7. Upon successful validation, preferences are written to `SharedPreferences`, an `ACTION_REDRAW_NOTIFICATION` intent is sent to `SleepTimerService` to reload state and redraw the notification shade, a success Toast is shown, and the action is logged to `EventLogger`.
-8. Upon invalid JSON or out-of-range parameters, preferences are left untouched, an error Toast is displayed, and a warning is logged to `EventLogger`.
-
-## Android manifest and permissions
-
-Declared in `app/src/main/AndroidManifest.xml`:
-
-- `FOREGROUND_SERVICE`: permits foreground-service operation.
-- `FOREGROUND_SERVICE_MEDIA_PLAYBACK`: required for the media playback foreground-service type on newer Android versions.
-- `MODIFY_AUDIO_SETTINGS`: permits changing the music stream volume.
-- `VIBRATE`: permits triggering haptic feedback vibration pulses.
-- `SCHEDULE_EXACT_ALARM`: permits scheduling exact alarms with `AlarmManager`.
-- `com.android.alarm.permission.SET_ALARM`: permits setting system clock alarms via `AlarmClock` intents.
-- `POST_NOTIFICATIONS`: required for notification delivery on Android 13+.
-- `RECEIVE_BOOT_COMPLETED`: permits reboot restoration.
 
 ## Build and release
 
@@ -258,20 +155,4 @@ Local debug build:
 ./gradlew assembleDebug
 ```
 
-CI workflows (`.github/workflows/android-release.yml`) automatically run `./gradlew test` prior to building debug/release APK artifacts, utilizing Gradle dependency caching for fast workflow execution.
-
-Install on a connected device or emulator:
-
-```sh
-./gradlew installDebug
-```
-
 The APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
-
-## Change guidance for AI agents
-
-- Preserve the event log UI in `MainActivity` and `EventLogger`.
-- Keep `configuredDurationMinutes` as the source for timer resets after volume changes and reboot.
-- Do not treat app-generated fade/restore volume writes as user volume changes; keep `suppressVolumeReset` around those writes.
-- Update `docs/SPEC.md` when product behavior changes and update this file when architecture or runtime behavior changes.
-- Run `./gradlew assembleDebug` after Java, manifest, or Gradle changes.

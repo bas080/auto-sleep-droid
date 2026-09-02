@@ -57,6 +57,7 @@
     <string name="toast_alarm_snoozed">Alarm snoozed 9m</string>
     <string name="version_label">Version %1$s</string>
     <string name="link_manual">Manual</string>
+    <string name="link_logs">Logs</string>
     <string name="link_releases">Releases</string>
     <string name="link_github">GitHub</string>
     <string name="link_issues">Issues</string>
@@ -68,4 +69,17 @@
     <string name="dialog_import_action">Import</string>
     <string name="toast_import_success">Settings imported successfully</string>
     <string name="toast_import_invalid">Invalid settings format</string>
+    <string name="title_activity_log">Event Logs</string>
+    <string name="label_enable_timer">Sleep timer</string>
+    <string name="desc_enable_timer">Turn the sleep timer on or off</string>
+    <string name="label_duration">Timer duration</string>
+    <string name="desc_duration">Sleep timer countdown duration before audio volume fades out</string>
+    <string name="label_wake_up_goal">Target wake-up goal</string>
+    <string name="desc_wake_up_goal">Automatically schedule daily wake-up alarms with sleep duration safeguards</string>
+    <string name="label_target_time">Target wake-up time</string>
+    <string name="desc_target_time">Desired daily wake-up clock time</string>
+    <string name="label_min_sleep">Minimum sleep duration</string>
+    <string name="desc_min_sleep">Guarantees minimum sleep duration even if you go to sleep late</string>
+    <string name="label_show_notification">Show notification</string>
+    <string name="desc_show_notification">Show an ongoing status notification in the notification shade</string>
 </resources>
