@@ -94,7 +94,7 @@ Main Configuration Controls & Link Header:
   - Target wake-up goal enable Switch (`wake_up_goal_enabled` preference).
   - Target wake-up TimePicker (`wake_up_goal_hour` and `wake_up_goal_minute` preferences).
   - Minimum sleep duration EditText (`min_sleep_duration_minutes` preference).
-- Header action link list: Manual, Logs, Feedback, Donate, Export, and Import.
+- Links section list under sleep and wake inputs: Manual, Logs, Feedback, Donate, Export, and Import.
 - Full-screen Manual & Event Logs Views: Overlay `RelativeLayout` views in `activity_main.xml` with a Back button pinned to the bottom-right corner (`alignParentBottom="true"`, `alignParentEnd="true"`), displaying formatted HTML manual text or real-time monospace event logs and closing upon Back button tap or hardware back button press.
 - Export Settings Action: Serializes current preferences into a Schema Version 1 JSON string, launches system share action (`ACTION_SEND`), and logs to `EventLogger`.
 - Import Settings Action: Prompts user with instructional `AlertDialog`, validates syntax and boundaries, applies valid values, sends `ACTION_REDRAW_NOTIFICATION` to `SleepTimerService`, refreshes UI controls, and logs to `EventLogger`.
