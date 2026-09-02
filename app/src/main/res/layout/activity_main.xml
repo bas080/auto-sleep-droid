@@ -267,12 +267,12 @@
                         android:textSize="12sp"
                         android:textColor="?android:attr/textColorSecondary" />
 
-                    <TimePicker
-                        android:id="@+id/time_picker_goal"
-                        style="@style/SpinnerTimePickerStyle"
-                        android:layout_width="wrap_content"
+                    <Button
+                        android:id="@+id/btn_target_time"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal" />
+                        android:layout_marginTop="4dp"
+                        android:layout_marginBottom="4dp" />
 
                     <TextView
                         android:layout_width="wrap_content"

@@ -45,9 +45,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = "wakeup_last_scheduled_ms";
 
     private static final String CHANNEL_ID = "sleep_timer";
-    private static final String WAKEUP_CHANNEL_ID = "wakeup_alarm";
     private static final int NOTIFICATION_ID = 1001;
-    private static final int WAKEUP_NOTIFICATION_ID = 1002;
     private static final long SNOOZE_DURATION_MS = 9 * 60_000L;
     private static final String PREFERENCES = "sleep_timer";
     private static final String KEY_ENABLED = "active";
@@ -233,16 +231,16 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 isWakeUpAlarmSnoozed = false;
                 updateListenersRegistration();
                 playWakeUpAlarmSound();
-                showWakeUpAlarmNotification();
+                updateNotification();
                 checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
             } else if (ACTION_DISMISS_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed");
                 stopWakeUpAlarmSound();
-                cancelWakeUpAlarmNotification();
                 cancelSnoozeAlarm();
                 isWakeUpAlarmRinging = false;
                 isWakeUpAlarmSnoozed = false;
                 updateListenersRegistration();
+                updateNotification();
                 android.widget.Toast.makeText(this, R.string.toast_alarm_dismissed, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_SNOOZE_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed for 9m");
@@ -251,6 +249,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 isWakeUpAlarmRinging = false;
                 isWakeUpAlarmSnoozed = true;
                 updateListenersRegistration();
+                updateNotification();
                 android.widget.Toast.makeText(this, R.string.toast_alarm_snoozed, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_CLEAR_GOAL.equals(intent.getAction())) {
                 if (preferences != null) {
@@ -363,6 +362,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         cancelTimerCallbacks();
         if (newState == SleepTimerStateMachine.State.OFF) {
             unregisterAudioPlaybackCallback();
+            stopWakeUpAlarmSound();
+            cancelSnoozeAlarm();
+            isWakeUpAlarmRinging = false;
+            isWakeUpAlarmSnoozed = false;
             onCancelAlarm();
             dismissAutoSleepAlarm();
             updateListenersRegistration();
@@ -692,50 +695,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
     }
 
-    private void showWakeUpAlarmNotification() {
-        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (manager == null) {
-            return;
-        }
-
-        Intent dismissIntent = new Intent(this, SleepTimerService.class).setAction(ACTION_DISMISS_WAKEUP_ALARM);
-        PendingIntent dismissPendingIntent = PendingIntent.getService(this, 103, dismissIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        Intent snoozeIntent = new Intent(this, SleepTimerService.class).setAction(ACTION_SNOOZE_WAKEUP_ALARM);
-        PendingIntent snoozePendingIntent = PendingIntent.getService(this, 104, snoozeIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        Intent fullScreenIntent = new Intent(this, MainActivity.class);
-        PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(this, 105, fullScreenIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        Notification.Builder builder = new Notification.Builder(this, WAKEUP_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_zzz)
-                .setContentTitle(getString(R.string.wakeup_alarm_title))
-                .setContentText(getString(R.string.wakeup_alarm_text))
-                .setCategory(Notification.CATEGORY_ALARM)
-                .setPriority(Notification.PRIORITY_HIGH)
-                .setFullScreenIntent(fullScreenPendingIntent, true)
-                .setOngoing(true)
-                .addAction(new Notification.Action.Builder(
-                        Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                        getString(R.string.action_dismiss_alarm),
-                        dismissPendingIntent).build())
-                .addAction(new Notification.Action.Builder(
-                        Icon.createWithResource(this, android.R.drawable.ic_popup_reminder),
-                        getString(R.string.action_snooze_alarm),
-                        snoozePendingIntent).build());
-
-        manager.notify(WAKEUP_NOTIFICATION_ID, builder.build());
-    }
-
-    private void cancelWakeUpAlarmNotification() {
-        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (manager != null) {
-            manager.cancel(WAKEUP_NOTIFICATION_ID);
-        }
-    }
 
     private void snoozeWakeUpAlarm() {
         if (alarmManager == null) {
@@ -771,17 +730,18 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         isWakeUpAlarmSnoozed = true;
         onTriggerVibration();
         updateListenersRegistration();
+        updateNotification();
     }
 
     private void dismissWakeUpAlarmViaVolumeKey() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed via volume button");
         stopWakeUpAlarmSound();
-        cancelWakeUpAlarmNotification();
         cancelSnoozeAlarm();
         isWakeUpAlarmRinging = false;
         isWakeUpAlarmSnoozed = false;
         onTriggerVibration();
         updateListenersRegistration();
+        updateNotification();
         android.widget.Toast.makeText(this, R.string.toast_alarm_dismissed, android.widget.Toast.LENGTH_SHORT).show();
     }
 
@@ -807,7 +767,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         String contentText;
         String formattedDurationStr = formatDurationString(stateMachine.getConfiguredDurationMinutes());
 
-        if (!stateMachine.isEnabled()) {
+        if (isWakeUpAlarmRinging) {
+            title = getString(R.string.wakeup_alarm_title);
+            contentText = getString(R.string.wakeup_alarm_text);
+        } else if (isWakeUpAlarmSnoozed) {
+            title = getString(R.string.wakeup_alarm_title);
+            contentText = getString(R.string.toast_alarm_snoozed);
+        } else if (!stateMachine.isEnabled()) {
             title = getString(R.string.timer_off);
             contentText = getString(R.string.timer_off_collapsed, formattedDurationStr);
         } else if (stateMachine.isFading()) {
@@ -896,7 +862,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private void showOrHideNotification() {
         boolean showNotification = preferences != null && preferences.getBoolean("show_notification", false);
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (showNotification) {
+        if (showNotification || isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) {
             startForeground(NOTIFICATION_ID, buildNotification());
         } else {
             if (manager != null) {
@@ -967,11 +933,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             channel.setDescription(getString(R.string.notification_channel_description));
             manager.createNotificationChannel(channel);
 
-            NotificationChannel wakeupChannel = new NotificationChannel(
-                    WAKEUP_CHANNEL_ID, getString(R.string.wakeup_alarm_title), NotificationManager.IMPORTANCE_HIGH);
-            wakeupChannel.setDescription(getString(R.string.wakeup_alarm_text));
-            wakeupChannel.setSound(null, null);
-            manager.createNotificationChannel(wakeupChannel);
         }
     }
 
@@ -1015,7 +976,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public void onDestroy() {
         EventLogger.log(this, EventLogger.LEVEL_LOW, "SleepTimerService destroyed");
         stopWakeUpAlarmSound();
-        cancelWakeUpAlarmNotification();
         isWakeUpAlarmRinging = false;
         isWakeUpAlarmSnoozed = false;
         unregisterSensorListener();
