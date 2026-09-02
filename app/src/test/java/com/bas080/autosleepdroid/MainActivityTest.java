@@ -57,6 +57,7 @@ public class MainActivityTest {
         TextView eventLogText = activity.findViewById(R.id.event_log_text);
         assertNotNull(eventLogText);
         assertTrue(eventLogText.getText().toString().contains("Test event log entry"));
+        assertTrue("Expected event_log_text to be selectable", eventLogText.isTextSelectable());
     }
 
     @Test

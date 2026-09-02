@@ -46,6 +46,23 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testServiceCreationWhenShowNotificationDisabledDoesNotCallStartForeground() {
+        preferences.edit()
+                .putBoolean("active", true)
+                .putBoolean("show_notification", false)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+        assertNotNull(service);
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+        assertEquals("No ongoing notification should be posted when show_notification is false", null, shadowNotificationManager.getNotification(1001));
+    }
+
+    @Test
     public void testTurnOnActionPersistsState() {
         preferences.edit()
                 .putBoolean("active", false)
