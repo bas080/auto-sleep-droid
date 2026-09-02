@@ -74,8 +74,8 @@
     <string name="desc_enable_timer">Turn the sleep timer on or off</string>
     <string name="label_hours">Hours</string>
     <string name="label_minutes">Minutes</string>
-    <string name="unit_hours">h</string>
-    <string name="unit_minutes">m</string>
+    <string name="unit_hours">hours</string>
+    <string name="unit_minutes">mins</string>
     <string name="label_duration">Timer duration</string>
     <string name="desc_duration">Sleep timer countdown duration before audio volume fades out</string>
     <string name="label_wake_up_goal">Target wake-up goal</string>
