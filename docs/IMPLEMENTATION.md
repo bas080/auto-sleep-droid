@@ -59,7 +59,7 @@ Responsibilities:
 - Display concise, directly visible text in the main notification body (`setContentText`). No content is hidden behind expanded shade views.
 - Set content intent targeting `MainActivity` so tapping the notification opens `MainActivity`.
 - Expose a single notification action: "Disable" when enabled, or "Turn On" when disabled.
-- Respect `show_notification` preference (default `false`); when `show_notification` is `false` and timer state is `Off`, remove the ongoing service notification via `stopForeground(STOP_FOREGROUND_REMOVE)` or `manager.cancel(NOTIFICATION_ID)`.
+- Respect `show_notification` preference (default `false`); when `show_notification` is `false`, remove the ongoing service notification via `stopForeground(STOP_FOREGROUND_REMOVE)` and `manager.cancel(NOTIFICATION_ID)` across all timer states (`Off`, `Waiting`, `Active`, `Fading`).
 - Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), show notification setting (`show_notification`), and wake-up goal settings in `SharedPreferences`.
 - Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
 - Listen for media playback state changes using `AudioManager.AudioPlaybackCallback` (API 26+) dynamically only during `Waiting` state instead of periodic polling.
@@ -120,7 +120,7 @@ Timer and Wake-Up Goal state is stored in the `sleep_timer` `SharedPreferences` 
 |---|---|---|
 | `active` | boolean | Whether the timer is enabled (`Waiting`/`Active`/`Fading`) vs explicitly `Off` |
 | `duration_minutes` | integer | The configured duration used for every reset |
-| `show_notification` | boolean | Whether ongoing sleep timer notification is visible when timer is Off |
+| `show_notification` | boolean | Whether ongoing sleep timer notification is visible across timer states |
 | `timer_ends_at` | long | Wall-clock timestamp (millis) when active timer expires |
 | `wake_up_goal_enabled` | boolean | Whether Smart Wake-Up Goal is enabled |
 | `wake_up_goal_hour` | integer | Target goal hour of day (0-23) |
