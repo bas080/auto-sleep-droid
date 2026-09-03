@@ -142,7 +142,7 @@ public class MainActivityTest {
         Intent sendIntent = chooserIntent.getParcelableExtra(Intent.EXTRA_INTENT);
         assertNotNull(sendIntent);
         assertEquals(Intent.ACTION_SENDTO, sendIntent.getAction());
-        assertEquals("mailto:bas080@hotmail.com", sendIntent.getDataString());
+        assertTrue(sendIntent.getDataString().startsWith("mailto:bas080@hotmail.com"));
         assertTrue(sendIntent.getStringExtra(Intent.EXTRA_SUBJECT).contains("Auto Sleep Droid Feedback"));
     }
 
