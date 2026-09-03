@@ -124,6 +124,35 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testPendingCrashReportPromptsUserDialogAndLaunchesFeedbackIntent() {
+        Application application = ApplicationProvider.getApplicationContext();
+        android.content.SharedPreferences prefs = application.getSharedPreferences("crash_reports", android.content.Context.MODE_PRIVATE);
+        prefs.edit().putString("pending_crash_report", "CRASH: java.lang.NullPointerException at test.DummyClass").commit();
+
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        AlertDialog crashDialog = ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull("Crash report dialog should be shown on launch if pending crash report exists", crashDialog);
+
+        android.widget.Button sendBtn = crashDialog.getButton(DialogInterface.BUTTON_POSITIVE);
+        assertNotNull(sendBtn);
+        sendBtn.performClick();
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+
+        Intent chooserIntent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(chooserIntent);
+        assertEquals(Intent.ACTION_CHOOSER, chooserIntent.getAction());
+
+        Intent sendIntent = chooserIntent.getParcelableExtra(Intent.EXTRA_INTENT);
+        assertNotNull(sendIntent);
+        assertEquals(Intent.ACTION_SENDTO, sendIntent.getAction());
+        assertTrue(sendIntent.getStringExtra(Intent.EXTRA_TEXT).contains("NullPointerException"));
+
+        assertFalse("Pending crash report should be cleared after prompting user", prefs.contains("pending_crash_report"));
+    }
+
+    @Test
     public void testLinksDialogFeedbackLaunchesIntent() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();

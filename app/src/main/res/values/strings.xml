@@ -80,6 +80,9 @@
     <string name="toast_import_success">Settings imported successfully</string>
     <string name="toast_import_invalid">Invalid settings format</string>
     <string name="title_activity_log">Event Logs</string>
+    <string name="dialog_crash_title">App Crash Report</string>
+    <string name="dialog_crash_message">Auto Sleep Droid closed unexpectedly last time. Would you like to send a crash report to help us fix the issue?</string>
+    <string name="btn_send_report">Send Report</string>
     <string name="label_enable_timer">Sleep timer</string>
     <string name="desc_enable_timer">Turn the sleep timer and wake alarm on or off (nap alarm unaffected)</string>
     <string name="label_hours">Hours</string>

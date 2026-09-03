@@ -72,6 +72,22 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         requestNotificationPermissionOnStartupIfNeeded();
         startTimerService();
         requestExactAlarmPermissionIfNeeded();
+        checkAndPromptCrashReport();
+    }
+
+    private void checkAndPromptCrashReport() {
+        SharedPreferences prefs = getSharedPreferences("crash_reports", MODE_PRIVATE);
+        String pendingReport = prefs.getString("pending_crash_report", null);
+        if (pendingReport != null) {
+            prefs.edit().remove("pending_crash_report").apply();
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle(R.string.dialog_crash_title);
+            builder.setMessage(R.string.dialog_crash_message);
+            builder.setPositiveButton(R.string.btn_send_report, (dialog, which) -> sendFeedbackEmail(pendingReport));
+            builder.setNegativeButton(R.string.dialog_cancel, (dialog, which) -> dialog.dismiss());
+            builder.show();
+        }
     }
 
     private void requestNotificationPermissionOnStartupIfNeeded() {
@@ -168,10 +184,20 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void sendFeedbackEmail() {
+        sendFeedbackEmail(null);
+    }
+
+    private void sendFeedbackEmail(String crashReport) {
         String subject = "Auto Sleep Droid Feedback (v" + BuildConfig.VERSION_NAME + ")";
-        String bodyTemplate = "\n\n---\nApp Version: " + BuildConfig.VERSION_NAME +
-                "\nAndroid Version: " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")" +
-                "\nDevice: " + Build.MANUFACTURER + " " + Build.MODEL;
+        StringBuilder bodyBuilder = new StringBuilder();
+        if (crashReport != null && !crashReport.isEmpty()) {
+            bodyBuilder.append("Crash Report:\n").append(crashReport).append("\n\n");
+        }
+        bodyBuilder.append("---\nApp Version: ").append(BuildConfig.VERSION_NAME)
+                .append("\nAndroid Version: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")")
+                .append("\nDevice: ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL);
+
+        String bodyTemplate = bodyBuilder.toString();
 
         Uri mailtoUri = Uri.parse("mailto:bas080@hotmail.com" +
                 "?subject=" + Uri.encode(subject) +
