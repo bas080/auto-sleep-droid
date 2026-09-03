@@ -55,6 +55,12 @@
     <string name="toast_goal_stopped">Objetivo de despertar detenido</string>
     <string name="toast_alarm_dismissed">Alarma descartada</string>
     <string name="toast_alarm_snoozed">Alarma pospuesta 9m</string>
+    <string name="action_nap">Siesta</string>
+    <string name="action_cancel_nap">Cancelar siesta</string>
+    <string name="dialog_nap_title">Iniciar siesta</string>
+    <string name="dialog_nap_explanation">Establecer duración de la siesta para la alarma de despertar</string>
+    <string name="toast_nap_started">Alarma de siesta programada para %1$s</string>
+    <string name="toast_nap_cancelled">Alarma de siesta cancelada</string>
     <string name="label_links">Enlaces</string>
     <string name="version_label">Versión %1$s</string>
     <string name="btn_back">Volver</string>

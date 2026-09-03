@@ -25,6 +25,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".NapDialogActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.DeviceDefault.Dialog" />
+
         <service
             android:name=".SleepTimerService"
             android:exported="false"

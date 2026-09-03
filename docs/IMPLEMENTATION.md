@@ -57,7 +57,7 @@ Responsibilities:
 - Create the low-importance ongoing notification (`setOngoing(true)`) representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`.
 - Display concise, directly visible text in the main notification body (`setContentText`). No content is hidden behind expanded shade views.
 - Set content intent targeting `MainActivity` so tapping the notification opens `MainActivity`.
-- Expose a single notification action: "Disable" when enabled, or "Enable" when disabled.
+- Expose notification shade action buttons: toggle ("Disable" when enabled, or "Enable" when disabled) and "Nap" / "Cancel Nap" to quickly set or cancel nap timers.
 - Respect `show_notification` preference (default `false`); when `show_notification` is `false`, remove the ongoing service notification via `stopForeground(STOP_FOREGROUND_REMOVE)` and `manager.cancel(NOTIFICATION_ID)` across all timer states (`Off`, `Waiting`, `Active`, `Fading`).
 - Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), show notification setting (`show_notification`), and wake-up goal settings in `SharedPreferences`.
 - Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
@@ -67,6 +67,7 @@ Responsibilities:
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused (after a short 500ms delay), and revert to the `Waiting` state.
 - Upon sleep timer start/reschedule or when the current alarm rings, schedule/update the daily recurring `"Auto Sleep"` wake-up alarm via `AlarmManager.setAlarmClock` if Smart Wake-Up Goal is enabled in the background. When triggered (`ACTION_WAKEUP_ALARM_EXPIRY`), `SleepTimerService` automatically schedules the next day's alarm for the same goal time, ensures `STREAM_ALARM` is set to an audible baseline level, plays the default system alarm tone using `RingtoneManager` with a 3-minute gentle volume crescendo, and updates the ongoing status notification to display the alarm status.
+- Support nap timer alarm scheduling (`ACTION_START_NAP`, `ACTION_CANCEL_NAP`, `ACTION_NAP_EXPIRY`). When the sleep timer is reset or rescheduled, active nap alarms are pushed forward by the same reset increment.
 - Cancel/dismiss the `"Auto Sleep"` wake-up alarm via `AlarmManager.cancel` on stop or smart alarm cancel in the background.
 - Trigger a short, faint haptic feedback pulse (`Vibrator`) upon turning off/on, volume button resets, and flip gestures.
 - Log lifecycle and state events to `EventLogger`.
@@ -78,6 +79,16 @@ Important constants:
 - Minimum duration: `1` minute
 - Maximum duration: `1440` minutes (24 hours)
 - Fade duration: `30_000` milliseconds
+
+### `NapDialogActivity`
+
+File: `app/src/main/java/com/bas080/autosleepdroid/NapDialogActivity.java`
+
+A dialog-themed activity launched from the status notification's "Nap" action when no nap is active:
+
+- Displays hour and minute numeric `EditText` fields prefilled with the previously used nap duration from `SharedPreferences` (`nap_duration_minutes`, default 20).
+- Provides "Cancel" and "Nap" buttons.
+- Confirming "Nap" persists the nap duration in `SharedPreferences` and sends `ACTION_START_NAP` with `EXTRA_NAP_DURATION_MINUTES` to `SleepTimerService`.
 
 ### `MainActivity`
 
@@ -125,6 +136,8 @@ Timer and Wake-Up Goal state is stored in the `sleep_timer` `SharedPreferences` 
 | `wake_up_goal_hour` | integer | Target goal hour of day (0-23) |
 | `wake_up_goal_minute` | integer | Target goal minute (0-59) |
 | `min_sleep_duration_minutes` | integer | Safeguard minimum sleep duration in minutes (default 450 = 7.5h) |
+| `nap_duration_minutes` | integer | Previously used nap duration in minutes (default 20) |
+| `nap_alarm_ends_at` | long | Wall-clock timestamp (millis) when active nap alarm triggers |
 
 Event log history is stored in the `event_logger` `SharedPreferences` file:
 
