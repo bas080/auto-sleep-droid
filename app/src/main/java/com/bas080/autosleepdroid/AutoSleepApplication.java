@@ -14,6 +14,9 @@ public class AutoSleepApplication extends Application {
             try {
                 String logMsg = "CRASH on thread '" + thread.getName() + "': " + Log.getStackTraceString(throwable);
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, logMsg);
+
+                android.content.SharedPreferences prefs = getSharedPreferences("crash_reports", MODE_PRIVATE);
+                prefs.edit().putString("pending_crash_report", logMsg).commit();
             } catch (Throwable ignored) {
             }
             if (defaultHandler != null) {
