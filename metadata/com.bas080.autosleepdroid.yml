@@ -9,5 +9,16 @@ AutoName: Auto Sleep Droid
 RepoType: git
 Repo: https://github.com/bas080/auto-sleep-droid.git
 
+Builds:
+  - versionCode: 29
+    versionName: '0.0.16'
+    commit: v0.0.16
+    subdir: app
+    gradle:
+      - yes
+
+CurrentVersion: '0.0.16'
+CurrentVersionCode: 29
+
 AutoUpdateMode: Version v%v
 UpdateCheckMode: Tags
