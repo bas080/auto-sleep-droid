@@ -547,6 +547,7 @@ public class MainActivityTest {
 
         android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
         View inputDuration = activity.findViewById(R.id.input_duration);
+        View rowEnableGoal = activity.findViewById(R.id.row_enable_goal);
         android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
         View btnTargetTime = activity.findViewById(R.id.btn_target_time);
         View inputMinSleep = activity.findViewById(R.id.input_min_sleep);
@@ -556,6 +557,7 @@ public class MainActivityTest {
         assertFalse(inputDuration.isEnabled());
         assertEquals(0.38f, inputDuration.getAlpha(), 0.01f);
         assertFalse(switchGoal.isEnabled());
+        assertEquals(0.38f, rowEnableGoal.getAlpha(), 0.01f);
         assertFalse(btnTargetTime.isEnabled());
         assertEquals(0.38f, btnTargetTime.getAlpha(), 0.01f);
         assertFalse(inputMinSleep.isEnabled());
@@ -564,6 +566,7 @@ public class MainActivityTest {
         switchEnable.setChecked(true);
         assertTrue(inputDuration.isEnabled());
         assertEquals(1.0f, inputDuration.getAlpha(), 0.01f);
+        assertEquals(1.0f, rowEnableGoal.getAlpha(), 0.01f);
     }
 
     @Test
