@@ -248,23 +248,19 @@ public class MainActivityTest {
         MainActivity activity = controller.create().resume().get();
 
         android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
-        android.widget.EditText inputDurationHours = activity.findViewById(R.id.input_duration_hours);
-        android.widget.EditText inputDurationMinutes = activity.findViewById(R.id.input_duration_minutes);
+        DurationInputView inputDuration = activity.findViewById(R.id.input_duration);
         android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
 
         assertNotNull(switchEnable);
-        assertNotNull(inputDurationHours);
-        assertNotNull(inputDurationMinutes);
+        assertNotNull(inputDuration);
         assertNotNull(switchGoal);
 
         switchEnable.setChecked(false);
-        inputDurationHours.setText("0");
-        inputDurationMinutes.setText("45");
-
-        inputDurationHours.clearFocus();
-        inputDurationMinutes.clearFocus();
-        if (inputDurationHours.getOnFocusChangeListener() != null) {
-            inputDurationHours.getOnFocusChangeListener().onFocusChange(inputDurationHours, false);
+        inputDuration.setTotalMinutes(45);
+        inputDuration.getHoursInput().clearFocus();
+        inputDuration.getMinutesInput().clearFocus();
+        if (inputDuration.getHoursInput().getOnFocusChangeListener() != null) {
+            inputDuration.getHoursInput().getOnFocusChangeListener().onFocusChange(inputDuration.getHoursInput(), false);
         }
         org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
@@ -319,30 +315,28 @@ public class MainActivityTest {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
 
-        android.widget.EditText inputDurationHours = activity.findViewById(R.id.input_duration_hours);
-        android.widget.EditText inputDurationMinutes = activity.findViewById(R.id.input_duration_minutes);
-        assertNotNull(inputDurationHours);
-        assertNotNull(inputDurationMinutes);
+        DurationInputView inputDuration = activity.findViewById(R.id.input_duration);
+        assertNotNull(inputDuration);
 
         // Initially 20m -> 0h 20m
-        assertEquals("", inputDurationHours.getText().toString());
-        assertEquals("20", inputDurationMinutes.getText().toString());
+        assertEquals("", inputDuration.getHoursInput().getText().toString());
+        assertEquals("20", inputDuration.getMinutesInput().getText().toString());
 
         // Set invalid state (both empty or 0)
-        inputDurationHours.setText("");
-        inputDurationMinutes.setText("");
+        inputDuration.getHoursInput().setText("");
+        inputDuration.getMinutesInput().setText("");
 
-        inputDurationHours.clearFocus();
-        inputDurationMinutes.clearFocus();
-        if (inputDurationHours.getOnFocusChangeListener() != null) {
-            inputDurationHours.getOnFocusChangeListener().onFocusChange(inputDurationHours, false);
+        inputDuration.getHoursInput().clearFocus();
+        inputDuration.getMinutesInput().clearFocus();
+        if (inputDuration.getHoursInput().getOnFocusChangeListener() != null) {
+            inputDuration.getHoursInput().getOnFocusChangeListener().onFocusChange(inputDuration.getHoursInput(), false);
         }
         org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
         android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
         assertEquals(20, prefs.getInt("duration_minutes", 20));
-        assertEquals("", inputDurationHours.getText().toString());
-        assertEquals("20", inputDurationMinutes.getText().toString());
+        assertEquals("", inputDuration.getHoursInput().getText().toString());
+        assertEquals("20", inputDuration.getMinutesInput().getText().toString());
         assertEquals(activity.getString(R.string.toast_duration_invalid), org.robolectric.shadows.ShadowToast.getTextOfLatestToast());
     }
 
@@ -351,24 +345,24 @@ public class MainActivityTest {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
 
-        android.widget.EditText inputDurationHours = activity.findViewById(R.id.input_duration_hours);
-        android.widget.EditText inputDurationMinutes = activity.findViewById(R.id.input_duration_minutes);
+        DurationInputView inputDuration = activity.findViewById(R.id.input_duration);
+        assertNotNull(inputDuration);
 
         // Set 0 hours and 0 minutes
-        inputDurationHours.setText("0");
-        inputDurationMinutes.setText("0");
+        inputDuration.getHoursInput().setText("0");
+        inputDuration.getMinutesInput().setText("0");
 
-        inputDurationHours.clearFocus();
-        inputDurationMinutes.clearFocus();
-        if (inputDurationHours.getOnFocusChangeListener() != null) {
-            inputDurationHours.getOnFocusChangeListener().onFocusChange(inputDurationHours, false);
+        inputDuration.getHoursInput().clearFocus();
+        inputDuration.getMinutesInput().clearFocus();
+        if (inputDuration.getHoursInput().getOnFocusChangeListener() != null) {
+            inputDuration.getHoursInput().getOnFocusChangeListener().onFocusChange(inputDuration.getHoursInput(), false);
         }
         org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
         android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
         assertEquals(20, prefs.getInt("duration_minutes", 20));
-        assertEquals("", inputDurationHours.getText().toString());
-        assertEquals("20", inputDurationMinutes.getText().toString());
+        assertEquals("", inputDuration.getHoursInput().getText().toString());
+        assertEquals("20", inputDuration.getMinutesInput().getText().toString());
         assertEquals(activity.getString(R.string.toast_duration_invalid), org.robolectric.shadows.ShadowToast.getTextOfLatestToast());
     }
 
@@ -377,30 +371,28 @@ public class MainActivityTest {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
 
-        android.widget.EditText inputMinSleepHours = activity.findViewById(R.id.input_min_sleep_hours);
-        android.widget.EditText inputMinSleepMinutes = activity.findViewById(R.id.input_min_sleep_minutes);
-        assertNotNull(inputMinSleepHours);
-        assertNotNull(inputMinSleepMinutes);
+        DurationInputView inputMinSleep = activity.findViewById(R.id.input_min_sleep);
+        assertNotNull(inputMinSleep);
 
         // Initially 450m -> 7h 30m
-        assertEquals("7", inputMinSleepHours.getText().toString());
-        assertEquals("30", inputMinSleepMinutes.getText().toString());
+        assertEquals("7", inputMinSleep.getHoursInput().getText().toString());
+        assertEquals("30", inputMinSleep.getMinutesInput().getText().toString());
 
         // Set invalid state (both 0)
-        inputMinSleepHours.setText("0");
-        inputMinSleepMinutes.setText("0");
+        inputMinSleep.getHoursInput().setText("0");
+        inputMinSleep.getMinutesInput().setText("0");
 
-        inputMinSleepHours.clearFocus();
-        inputMinSleepMinutes.clearFocus();
-        if (inputMinSleepHours.getOnFocusChangeListener() != null) {
-            inputMinSleepHours.getOnFocusChangeListener().onFocusChange(inputMinSleepHours, false);
+        inputMinSleep.getHoursInput().clearFocus();
+        inputMinSleep.getMinutesInput().clearFocus();
+        if (inputMinSleep.getHoursInput().getOnFocusChangeListener() != null) {
+            inputMinSleep.getHoursInput().getOnFocusChangeListener().onFocusChange(inputMinSleep.getHoursInput(), false);
         }
         org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
         android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
         assertEquals(450, prefs.getInt("min_sleep_duration_minutes", 450));
-        assertEquals("7", inputMinSleepHours.getText().toString());
-        assertEquals("30", inputMinSleepMinutes.getText().toString());
+        assertEquals("7", inputMinSleep.getHoursInput().getText().toString());
+        assertEquals("30", inputMinSleep.getMinutesInput().getText().toString());
         assertEquals(activity.getString(R.string.toast_duration_invalid), org.robolectric.shadows.ShadowToast.getTextOfLatestToast());
     }
 
@@ -409,29 +401,29 @@ public class MainActivityTest {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
 
-        android.widget.EditText inputDurationHours = activity.findViewById(R.id.input_duration_hours);
-        android.widget.EditText inputDurationMinutes = activity.findViewById(R.id.input_duration_minutes);
+        DurationInputView inputDuration = activity.findViewById(R.id.input_duration);
+        assertNotNull(inputDuration);
 
-        inputDurationHours.requestFocus();
-        assertTrue(inputDurationHours.hasFocus());
+        inputDuration.getHoursInput().requestFocus();
+        assertTrue(inputDuration.getHoursInput().hasFocus());
 
-        inputDurationHours.setText("1");
+        inputDuration.getHoursInput().setText("1");
         // Focus should remain on inputDurationHours and not jump or drop
-        assertTrue(inputDurationHours.hasFocus());
+        assertTrue(inputDuration.getHoursInput().hasFocus());
 
-        inputDurationMinutes.requestFocus();
-        assertTrue(inputDurationMinutes.hasFocus());
+        inputDuration.getMinutesInput().requestFocus();
+        assertTrue(inputDuration.getMinutesInput().hasFocus());
 
-        inputDurationMinutes.setText("30");
-        assertTrue(inputDurationMinutes.hasFocus());
+        inputDuration.getMinutesInput().setText("30");
+        assertTrue(inputDuration.getMinutesInput().hasFocus());
 
-        inputDurationHours.clearFocus();
-        inputDurationMinutes.clearFocus();
-        if (inputDurationHours.getOnFocusChangeListener() != null) {
-            inputDurationHours.getOnFocusChangeListener().onFocusChange(inputDurationHours, false);
+        inputDuration.getHoursInput().clearFocus();
+        inputDuration.getMinutesInput().clearFocus();
+        if (inputDuration.getHoursInput().getOnFocusChangeListener() != null) {
+            inputDuration.getHoursInput().getOnFocusChangeListener().onFocusChange(inputDuration.getHoursInput(), false);
         }
-        if (inputDurationMinutes.getOnFocusChangeListener() != null) {
-            inputDurationMinutes.getOnFocusChangeListener().onFocusChange(inputDurationMinutes, false);
+        if (inputDuration.getMinutesInput().getOnFocusChangeListener() != null) {
+            inputDuration.getMinutesInput().getOnFocusChangeListener().onFocusChange(inputDuration.getMinutesInput(), false);
         }
         org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
@@ -470,22 +462,22 @@ public class MainActivityTest {
         MainActivity activity = controller.create().resume().get();
 
         android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
-        android.widget.EditText inputDurationHours = activity.findViewById(R.id.input_duration_hours);
-        android.widget.EditText inputDurationMinutes = activity.findViewById(R.id.input_duration_minutes);
+        DurationInputView inputDuration = activity.findViewById(R.id.input_duration);
         android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
         android.widget.Button btnTargetTime = activity.findViewById(R.id.btn_target_time);
-        android.widget.EditText inputMinSleepHours = activity.findViewById(R.id.input_min_sleep_hours);
-        android.widget.EditText inputMinSleepMinutes = activity.findViewById(R.id.input_min_sleep_minutes);
+        DurationInputView inputMinSleep = activity.findViewById(R.id.input_min_sleep);
 
         // Turn off sleep timer
         switchEnable.setChecked(false);
 
-        assertFalse(inputDurationHours.isEnabled());
-        assertFalse(inputDurationMinutes.isEnabled());
+        assertFalse(inputDuration.isEnabled());
+        assertFalse(inputDuration.getHoursInput().isEnabled());
+        assertFalse(inputDuration.getMinutesInput().isEnabled());
         assertFalse(switchGoal.isEnabled());
         assertFalse(btnTargetTime.isEnabled());
-        assertFalse(inputMinSleepHours.isEnabled());
-        assertFalse(inputMinSleepMinutes.isEnabled());
+        assertFalse(inputMinSleep.isEnabled());
+        assertFalse(inputMinSleep.getHoursInput().isEnabled());
+        assertFalse(inputMinSleep.getMinutesInput().isEnabled());
     }
 
     @Test
@@ -497,8 +489,7 @@ public class MainActivityTest {
         android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
         android.view.View goalContainer = activity.findViewById(R.id.goal_container);
         android.widget.Button btnTargetTime = activity.findViewById(R.id.btn_target_time);
-        android.widget.EditText inputMinSleepHours = activity.findViewById(R.id.input_min_sleep_hours);
-        android.widget.EditText inputMinSleepMinutes = activity.findViewById(R.id.input_min_sleep_minutes);
+        DurationInputView inputMinSleep = activity.findViewById(R.id.input_min_sleep);
 
         // Ensure timer is enabled, but goal is disabled
         switchEnable.setChecked(true);
@@ -506,13 +497,14 @@ public class MainActivityTest {
 
         // goal_container must remain visible (no layout shift)
         assertEquals(android.view.View.VISIBLE, goalContainer.getVisibility());
-        android.widget.EditText inputDurationHours = activity.findViewById(R.id.input_duration_hours);
-        android.widget.EditText inputDurationMinutes = activity.findViewById(R.id.input_duration_minutes);
-        assertTrue(inputDurationHours.isEnabled());
-        assertTrue(inputDurationMinutes.isEnabled());
+        DurationInputView inputDuration = activity.findViewById(R.id.input_duration);
+        assertTrue(inputDuration.isEnabled());
+        assertTrue(inputDuration.getHoursInput().isEnabled());
+        assertTrue(inputDuration.getMinutesInput().isEnabled());
         assertTrue(switchGoal.isEnabled());
         assertFalse(btnTargetTime.isEnabled());
-        assertFalse(inputMinSleepHours.isEnabled());
-        assertFalse(inputMinSleepMinutes.isEnabled());
+        assertFalse(inputMinSleep.isEnabled());
+        assertFalse(inputMinSleep.getHoursInput().isEnabled());
+        assertFalse(inputMinSleep.getMinutesInput().isEnabled());
     }
 }

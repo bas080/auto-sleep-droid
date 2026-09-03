@@ -1,7 +1,6 @@
 package com.bas080.autosleepdroid;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.widget.Button;
 import android.widget.EditText;
@@ -39,8 +38,11 @@ public class NapDialogActivityTest {
         ActivityController<NapDialogActivity> controller = Robolectric.buildActivity(NapDialogActivity.class);
         NapDialogActivity activity = controller.create().get();
 
-        EditText inputHours = activity.findViewById(R.id.input_nap_hours);
-        EditText inputMinutes = activity.findViewById(R.id.input_nap_minutes);
+        DurationInputView inputNapDuration = activity.findViewById(R.id.input_nap_duration);
+        assertNotNull(inputNapDuration);
+
+        EditText inputHours = inputNapDuration.getHoursInput();
+        EditText inputMinutes = inputNapDuration.getMinutesInput();
 
         assertNotNull(inputHours);
         assertNotNull(inputMinutes);
@@ -53,8 +55,11 @@ public class NapDialogActivityTest {
         ActivityController<NapDialogActivity> controller = Robolectric.buildActivity(NapDialogActivity.class);
         NapDialogActivity activity = controller.create().get();
 
-        EditText inputHours = activity.findViewById(R.id.input_nap_hours);
-        EditText inputMinutes = activity.findViewById(R.id.input_nap_minutes);
+        DurationInputView inputNapDuration = activity.findViewById(R.id.input_nap_duration);
+        assertNotNull(inputNapDuration);
+
+        EditText inputHours = inputNapDuration.getHoursInput();
+        EditText inputMinutes = inputNapDuration.getMinutesInput();
         Button btnStart = activity.findViewById(R.id.btn_nap_start);
 
         inputHours.setText("1");
