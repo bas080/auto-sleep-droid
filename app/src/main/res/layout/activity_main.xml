@@ -50,11 +50,17 @@
 
                 <!-- Nap Section -->
                 <LinearLayout
+                    android:id="@+id/btn_nap"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:minHeight="64dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:paddingBottom="8dp">
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground">
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -77,10 +83,11 @@
                             android:textColor="?android:attr/textColorSecondary" />
                     </LinearLayout>
 
-                    <Button
-                        android:id="@+id/btn_nap"
+                    <TextView
+                        android:id="@+id/text_nap_status"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:textSize="16sp"
                         android:text="@string/action_nap" />
                 </LinearLayout>
 
@@ -88,8 +95,11 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:minHeight="64dp"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp">
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -120,38 +130,51 @@
 
                 <!-- Timer Duration -->
                 <LinearLayout
+                    android:id="@+id/input_duration"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="12dp">
+                    android:minHeight="64dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_duration"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/desc_duration"
+                            android:textSize="12sp"
+                            android:textColor="?android:attr/textColorSecondary" />
+                    </LinearLayout>
 
                     <TextView
+                        android:id="@+id/text_duration_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/label_duration"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/desc_duration"
-                        android:textSize="12sp"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:paddingBottom="4dp" />
-
-                    <com.bas080.autosleepdroid.DurationInputView
-                        android:id="@+id/input_duration"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
+                        android:textSize="16sp" />
                 </LinearLayout>
-
 
                 <!-- Wake-Up Goal Section -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:minHeight="64dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:paddingTop="8dp"
@@ -190,48 +213,87 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/label_target_time"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:paddingTop="4dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/desc_target_time"
-                        android:textSize="12sp"
-                        android:textColor="?android:attr/textColorSecondary" />
-
-                    <Button
+                    <LinearLayout
                         android:id="@+id/btn_target_time"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:layout_marginBottom="4dp" />
+                        android:minHeight="64dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?android:attr/selectableItemBackground">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/label_min_sleep"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:paddingTop="8dp" />
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/desc_min_sleep"
-                        android:textSize="12sp"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:paddingBottom="4dp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_target_time"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
 
-                    <com.bas080.autosleepdroid.DurationInputView
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/desc_target_time"
+                                android:textSize="12sp"
+                                android:textColor="?android:attr/textColorSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/text_target_time_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="16sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
                         android:id="@+id/input_min_sleep"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:minHeight="64dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?android:attr/selectableItemBackground">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_min_sleep"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/desc_min_sleep"
+                                android:textSize="12sp"
+                                android:textColor="?android:attr/textColorSecondary" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/text_min_sleep_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="16sp" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <!-- Links Section -->
