@@ -1,6 +1,6 @@
-Auto Sleep Droid es un temporizador de apagado simple para Android.
+Apaga tu teléfono cuando te duermes y te despierta cuando estás listo.
 
-Duérmete libre de preocupaciones escuchando tus pódcasts, listas de reproducción de YouTube, audiolibros o música favoritos sin despertarte horas después con reproducción automática inesperada.
+Escucha tus pódcasts, audiolibros, música o videos favoritos sin reproducir audio toda la noche ni despertarte con reproducción automática.
 
 Características:
 - Controlado directamente desde la pantalla principal o la barra de notificaciones.

@@ -1,6 +1,6 @@
-Auto Sleep Droid is a simple Android sleep timer for media playback.
+Puts your phone to sleep when you fall asleep, wakes you up when you're ready.
 
-Fall asleep peacefully to your favorite podcasts, YouTube playlists, audiobooks, or music without waking up hours later to blaring audio or unexpected autoplay videos.
+Listen to your favorite podcasts, audiobooks, music, or videos without playing audio all night or waking up to autoplay.
 
 Features:
 - Controlled directly from the main screen or notification shade.
