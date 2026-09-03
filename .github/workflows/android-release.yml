@@ -59,11 +59,33 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Build debug APK
+      - name: Decode Keystore
+        if: secrets.KEYSTORE_BASE64 != ''
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
+
+      - name: Build release APK
+        if: secrets.KEYSTORE_BASE64 != ''
+        env:
+          KEYSTORE_FILE: /tmp/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
+
+      - name: Build fallback debug APK
+        if: secrets.KEYSTORE_BASE64 == ''
         run: ./gradlew assembleDebug
 
       - name: Prepare latest APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk auto-sleep-droid-latest.apk
+        run: |
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            cp app/build/outputs/apk/release/app-release.apk auto-sleep-droid-latest.apk
+          else
+            cp app/build/outputs/apk/debug/app-debug.apk auto-sleep-droid-latest.apk
+          fi
 
       - name: Upload latest APK artifact
         uses: actions/upload-artifact@v4
@@ -115,13 +137,35 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Build debug APK
+      - name: Decode Keystore
+        if: secrets.KEYSTORE_BASE64 != ''
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
+
+      - name: Build release APK
+        if: secrets.KEYSTORE_BASE64 != ''
+        env:
+          KEYSTORE_FILE: /tmp/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
+
+      - name: Build fallback debug APK
+        if: secrets.KEYSTORE_BASE64 == ''
         run: ./gradlew assembleDebug
 
       - name: Prepare versioned APK
         env:
           VERSION_TAG: ${{ github.ref_name }}
-        run: cp app/build/outputs/apk/debug/app-debug.apk "auto-sleep-droid-${VERSION_TAG}.apk"
+        run: |
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            cp app/build/outputs/apk/release/app-release.apk "auto-sleep-droid-${VERSION_TAG}.apk"
+          else
+            cp app/build/outputs/apk/debug/app-debug.apk "auto-sleep-droid-${VERSION_TAG}.apk"
+          fi
 
       - name: Create GitHub release
         env:
