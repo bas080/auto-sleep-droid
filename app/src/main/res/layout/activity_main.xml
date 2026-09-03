@@ -9,7 +9,10 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
+        android:paddingStart="0dp"
+        android:paddingEnd="0dp">
 
         <LinearLayout
             android:id="@+id/header_container"
@@ -17,6 +20,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
             android:paddingBottom="8dp">
 
             <TextView
@@ -56,6 +61,8 @@
                     android:minHeight="64dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp"
                     android:clickable="true"
@@ -106,6 +113,8 @@
                     android:minHeight="64dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
 
@@ -144,6 +153,8 @@
                     android:minHeight="64dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp"
                     android:clickable="true"
@@ -193,6 +204,8 @@
                     android:minHeight="64dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
 
@@ -236,6 +249,8 @@
                         android:minHeight="64dp"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
                         android:paddingTop="8dp"
                         android:paddingBottom="8dp"
                         android:clickable="true"
@@ -285,6 +300,8 @@
                         android:minHeight="64dp"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
                         android:paddingTop="8dp"
                         android:paddingBottom="8dp"
                         android:clickable="true"
@@ -329,172 +346,48 @@
                 </LinearLayout>
 
                 <!-- Links Section -->
-                <TextView
-                    android:id="@+id/label_links_header"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/label_links"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="4dp" />
-
-                <com.bas080.autosleepdroid.FlowLayout
+                <LinearLayout
+                    android:id="@+id/btn_links"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:minHeight="64dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground">
 
-                    <Button
-                        android:id="@+id/btn_manual"
-                        style="?android:attr/borderlessButtonStyle"
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-light"
-                        android:textAllCaps="false"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorLink"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="4dp"
-                        android:paddingTop="2dp"
-                        android:paddingBottom="2dp"
-                        android:text="@string/link_manual" />
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:clickable="false"
+                        android:focusable="false">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="·"
-                        android:fontFamily="sans-serif-light"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:paddingStart="2dp"
-                        android:paddingEnd="2dp" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_links"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:clickable="false"
+                            android:focusable="false" />
 
-                    <Button
-                        android:id="@+id/btn_logs"
-                        style="?android:attr/borderlessButtonStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-light"
-                        android:textAllCaps="false"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorLink"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="4dp"
-                        android:paddingTop="2dp"
-                        android:paddingBottom="2dp"
-                        android:text="@string/link_logs" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="·"
-                        android:fontFamily="sans-serif-light"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:paddingStart="2dp"
-                        android:paddingEnd="2dp" />
-
-                    <Button
-                        android:id="@+id/btn_issues"
-                        style="?android:attr/borderlessButtonStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-light"
-                        android:textAllCaps="false"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorLink"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="4dp"
-                        android:paddingTop="2dp"
-                        android:paddingBottom="2dp"
-                        android:text="@string/link_feedback" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="·"
-                        android:fontFamily="sans-serif-light"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:paddingStart="2dp"
-                        android:paddingEnd="2dp" />
-
-                    <Button
-                        android:id="@+id/btn_donate"
-                        style="?android:attr/borderlessButtonStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-light"
-                        android:textAllCaps="false"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorLink"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="4dp"
-                        android:paddingTop="2dp"
-                        android:paddingBottom="2dp"
-                        android:text="@string/link_donate" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="·"
-                        android:fontFamily="sans-serif-light"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:paddingStart="2dp"
-                        android:paddingEnd="2dp" />
-
-                    <Button
-                        android:id="@+id/btn_export"
-                        style="?android:attr/borderlessButtonStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-light"
-                        android:textAllCaps="false"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorLink"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="4dp"
-                        android:paddingTop="2dp"
-                        android:paddingBottom="2dp"
-                        android:text="@string/link_export" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="·"
-                        android:fontFamily="sans-serif-light"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:paddingStart="2dp"
-                        android:paddingEnd="2dp" />
-
-                    <Button
-                        android:id="@+id/btn_import"
-                        style="?android:attr/borderlessButtonStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-light"
-                        android:textAllCaps="false"
-                        android:textSize="14sp"
-                        android:textColor="?android:attr/textColorLink"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="4dp"
-                        android:paddingEnd="4dp"
-                        android:paddingTop="2dp"
-                        android:paddingBottom="2dp"
-                        android:text="@string/link_import" />
-                </com.bas080.autosleepdroid.FlowLayout>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/desc_links"
+                            android:textSize="12sp"
+                            android:textColor="?android:attr/textColorSecondary"
+                            android:clickable="false"
+                            android:focusable="false" />
+                    </LinearLayout>
+                </LinearLayout>
 
             </LinearLayout>
         </ScrollView>

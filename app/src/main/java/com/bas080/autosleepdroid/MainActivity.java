@@ -48,6 +48,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView textMinSleepValue;
     private View btnNap;
     private TextView textNapStatus;
+    private View btnLinks;
     private ScrollView eventScrollView;
     private TextView eventLogText;
 
@@ -100,6 +101,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         textMinSleepValue = findViewById(R.id.text_min_sleep_value);
         btnNap = findViewById(R.id.btn_nap);
         textNapStatus = findViewById(R.id.text_nap_status);
+        btnLinks = findViewById(R.id.btn_links);
         eventScrollView = findViewById(R.id.event_scroll_view);
         eventLogText = findViewById(R.id.event_log_text);
     }
@@ -108,16 +110,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         TextView versionText = findViewById(R.id.app_version_text);
         if (versionText != null) {
             versionText.setText(getString(R.string.version_label, BuildConfig.VERSION_NAME));
-        }
-
-        Button btnManual = findViewById(R.id.btn_manual);
-        if (btnManual != null) {
-            btnManual.setOnClickListener(v -> showManualScreen());
-        }
-
-        Button btnLogs = findViewById(R.id.btn_logs);
-        if (btnLogs != null) {
-            btnLogs.setOnClickListener(v -> showLogsScreen());
         }
 
         Button btnManualBack = findViewById(R.id.btn_manual_back);
@@ -130,18 +122,47 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             btnLogsBack.setOnClickListener(v -> hideOverlays());
         }
 
-        setupLinkButton(R.id.btn_issues, "https://github.com/bas080/auto-sleep-droid/issues");
-        setupLinkButton(R.id.btn_donate, "https://liberapay.com/bas080");
-
-        Button btnExport = findViewById(R.id.btn_export);
-        if (btnExport != null) {
-            btnExport.setOnClickListener(v -> exportSettings());
+        if (btnLinks != null) {
+            btnLinks.setOnClickListener(v -> showLinksDialog());
         }
+    }
 
-        Button btnImport = findViewById(R.id.btn_import);
-        if (btnImport != null) {
-            btnImport.setOnClickListener(v -> showImportDialog());
-        }
+    private void showLinksDialog() {
+        CharSequence[] options = new CharSequence[]{
+                getString(R.string.link_manual),
+                getString(R.string.link_logs),
+                getString(R.string.link_feedback),
+                getString(R.string.link_donate),
+                getString(R.string.link_export),
+                getString(R.string.link_import)
+        };
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.label_links);
+        builder.setItems(options, (dialog, which) -> {
+            switch (which) {
+                case 0:
+                    showManualScreen();
+                    break;
+                case 1:
+                    showLogsScreen();
+                    break;
+                case 2:
+                    openUrl("https://github.com/bas080/auto-sleep-droid/issues");
+                    break;
+                case 3:
+                    openUrl("https://liberapay.com/bas080");
+                    break;
+                case 4:
+                    exportSettings();
+                    break;
+                case 5:
+                    showImportDialog();
+                    break;
+            }
+        });
+        builder.setNegativeButton(R.string.dialog_cancel, (dialog, which) -> dialog.dismiss());
+        builder.show();
     }
 
     private void showManualScreen() {
@@ -328,6 +349,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         view.setEnabled(enabled);
         view.setClickable(enabled);
         view.setFocusable(enabled);
+        view.setAlpha(enabled ? 1.0f : 0.38f);
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {
@@ -553,13 +575,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         } catch (JSONException e) {
             Toast.makeText(this, R.string.toast_import_invalid, Toast.LENGTH_SHORT).show();
             EventLogger.log(this, "Failed to import settings: invalid format (" + e.getMessage() + ")");
-        }
-    }
-
-    private void setupLinkButton(int buttonId, String url) {
-        Button btn = findViewById(buttonId);
-        if (btn != null) {
-            btn.setOnClickListener(v -> openUrl(url));
         }
     }
 
