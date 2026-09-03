@@ -40,6 +40,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private Switch switchEnableTimer;
     private View inputDuration;
     private TextView textDurationValue;
+    private View rowEnableGoal;
     private Switch switchEnableGoal;
     private View goalContainer;
     private View btnTargetTime;
@@ -93,6 +94,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         switchEnableTimer = findViewById(R.id.switch_enable_timer);
         inputDuration = findViewById(R.id.input_duration);
         textDurationValue = findViewById(R.id.text_duration_value);
+        rowEnableGoal = findViewById(R.id.row_enable_goal);
         switchEnableGoal = findViewById(R.id.switch_enable_goal);
         goalContainer = findViewById(R.id.goal_container);
         btnTargetTime = findViewById(R.id.btn_target_time);
@@ -331,9 +333,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private void updateInputEnabledStates(boolean active, boolean goalEnabled) {
         setRowEnabled(inputDuration, active);
-        if (switchEnableGoal != null) {
-            switchEnableGoal.setEnabled(active);
-        }
+        setRowEnabled(rowEnableGoal, active);
 
         boolean goalInputsEnabled = active && goalEnabled;
         setRowEnabled(btnTargetTime, goalInputsEnabled);
@@ -361,8 +361,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private void setChildViewsEnabled(View view, boolean enabled) {
         if (view == null) return;
         view.setEnabled(enabled);
-        view.setClickable(false);
-        view.setFocusable(false);
+        if (view instanceof Switch) {
+            view.setClickable(enabled);
+            view.setFocusable(enabled);
+        } else {
+            view.setClickable(false);
+            view.setFocusable(false);
+        }
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {
