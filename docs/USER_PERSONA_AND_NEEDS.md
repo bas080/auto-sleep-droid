@@ -37,7 +37,7 @@ Built-in sleep timers inside media apps suffer from two major flaws:
 * **Bedtime Routine**: Goes to bed at varying times depending on family schedule, but must wake up early for work.
 * **Goal**: Get at least 7.5 hours of overnight sleep each night and ensure an alarm wakes her up in time for work.
 * **Pain Point**: "When I go to bed late, if I set a fixed 6:30 AM alarm, I won't get enough sleep. But if I set a timer for 8 hours, I might oversleep my meeting."
-* **Auto Sleep Droid Solution**: Uses the **Smart Wake-Up Goal** feature. Auto Sleep Droid calculates `Math.max(desiredWakeTime, bedtime + timerDuration + minSleepSafeguard)` and schedules a system wake-up alarm automatically. *(Note: Daytime power naps are out of scope; users can use their built-in Clock, Alarm, or Countdown app for short naps).*
+* **Auto Sleep Droid Solution**: Uses the **Smart Wake-Up Goal** feature. Auto Sleep Droid calculates `Math.max(desiredWakeTime, bedtime + timerDuration + minSleepSafeguard)` and schedules a system wake-up alarm automatically.
 
 ### Persona C: Morgan — "The Low-Friction Minimalist"
 * **Demographics**: 42 years old, Teacher.
@@ -79,7 +79,7 @@ Users expect bedtime tools to be unobtrusive. Heads-up banners, loud notificatio
 When a user feels the volume fading down while still awake, their reasoning is tactile: "I don't want to open my eyes or look at light." Flipping the phone over on the nightstand cancels the fade, restores pre-fade volume, and resets the countdown without visual engagement.
 
 ### 4. "Protect my minimum sleep (Nighttime or Nightshift)"
-When configuring a wake-up goal (e.g. `6:30 AM` for day workers or `4:30 PM` for nightshift workers), the user reasons: "I want to wake up at my target time, but if I fall asleep late, I need my minimum sleep safeguard enforced." The app automatically enforces `min_sleep_duration_minutes` so the alarm dynamically shifts regardless of whether sleep occurs at night or during the day. (Daytime power naps are intentionally unsupported; users can use their device's built-in Alarm or Countdown timer app for short naps).
+When configuring a wake-up goal (e.g. `6:30 AM` for day workers or `4:30 PM` for nightshift workers), the user reasons: "I want to wake up at my target time, but if I fall asleep late, I need my minimum sleep safeguard enforced." The app automatically enforces `min_sleep_duration_minutes` so the alarm dynamically shifts regardless of whether sleep occurs at night or during the day.
 
 ---
 
@@ -117,14 +117,13 @@ When configuring a wake-up goal (e.g. `6:30 AM` for day workers or `4:30 PM` for
 
 ---
 
-## 6. Feature Scope & Out-of-Scope Clarification
+## 6. Feature Scope & Key Features
 
 - **Supported Use Cases**:
   - Sleep timer for media playback auto-pause.
-  - Flip gesture timer extension.
+  - Flip gesture timer extension and volume button resets/dismissals.
+  - Quick Nap Alarm accessible directly from the main screen and notification shade.
   - Smart Wake-Up Goal for overnight and nightshift sleep schedule safeguards.
-- **Explicitly Out of Scope**:
-  - **Daytime Power Naps**: Auto Sleep Droid will **not** implement a dedicated daytime power nap feature. Users can use their device's built-in Clock, Alarm, or Countdown timer app for short daytime naps.
 
 ---
 

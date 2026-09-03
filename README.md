@@ -4,32 +4,33 @@ Auto Sleep Droid is a low-friction Android sleep management app for media playba
 
 ## Overview
 
-- **Single-screen control:** Configure sleep timer duration, notification settings, and Smart Wake-Up Goal options directly from the main screen with clear descriptions explaining each setting.
+- **Single-screen control:** Configure sleep timer duration, notification settings, Nap alarms, and Smart Wake-Up Goal options directly from the main screen with clear descriptions explaining each setting.
+- **Quick Nap Alarm:** Easily set a quick nap alarm duration or cancel an active nap directly from the main screen or notification shade. Resetting the sleep timer automatically pushes active nap alarms forward by the same duration increment.
 - **Never be startled awake:** Fall asleep peacefully to podcasts, YouTube playlists, audiobooks, or music without waking up hours later to blaring audio or autoplay videos.
 - **Universal compatibility:** Controls playback via standard Android system media controls, making it compatible with YouTube, Spotify, podcast players, browsers, and most audio or video apps.
 - **Gentle volume fade:** Volume slowly fades down before pausing playback so you aren't jolted awake by abrupt silence.
 - **Screen-free resets & alarm controls:** Simply press a physical volume button or flip your phone over while in bed to reset the sleep timer, snooze the wake-up alarm (flip), or dismiss the alarm (volume button) without looking at a bright screen.
 - **Smart Wake-Up Goal:** Set your target wake-up time and minimum required sleep duration. The app automatically calculates and schedules your wake-up alarm whenever you start your sleep timer, ensuring you always get enough rest.
-- **Dedicated Event Logs:** View real-time timestamped system event logs on a dedicated Logs screen for debugging and activity tracking.
+- **Import & Export Configuration:** Easily back up, restore, or transfer settings using standardized configuration JSON strings.
+- **Dedicated Event Logs & Manual:** View real-time timestamped system event logs or full-screen user documentation directly within full-screen overlay views.
 
 ## How It Works
 
-1. **Configure from the main screen:** Open Auto Sleep Droid to turn on the timer, enter your desired sleep duration, toggle notifications, or enable Smart Wake-Up Goal.
+1. **Configure from the main screen:** Open Auto Sleep Droid to turn on the timer, enter your desired sleep duration, launch quick nap alarms, toggle notifications, or enable Smart Wake-Up Goal.
 2. **Automatic detection:** Sits passively until you start playing media, then automatically begins counting down.
-3. **Notification controls:** Control ongoing timer state with a simple single-tap **Disable** or **Turn On** action in the notification shade.
+3. **Notification controls:** Control ongoing timer state with **Disable** / **Enable** actions or launch/cancel naps with **Nap** / **Cancel Nap** directly in the notification shade.
 4. **Fade & pause:** At expiry, volume fades down over 30 seconds, media playback pauses via system media controls, and original volume is restored.
-5. **Smart wake-up alarm:** If enabled, the app automatically calculates and sets your wake-up alarm for your target time (or later if you went to bed late) to protect your minimum sleep duration. Flip or tap **Snooze** to snooze for 9 minutes (keeping the notification open in the shade), or press a volume button / tap **Dismiss** to dismiss the alarm.
-
-> **Note on Naps:** The sleep timer does not have specific use cases for naps—just use your device's alarm or timer app. However, if you decide to listen to something when going for a nap, Auto Sleep Droid will still fade out your audio.
+5. **Smart wake-up alarm:** If enabled, the app automatically calculates and sets your daily wake-up alarm for your target time (or later if you went to bed late) to protect your minimum sleep duration. Flip or tap **Snooze** to snooze for 9 minutes (keeping the notification open in the shade), or press a volume button / tap **Dismiss** to dismiss the alarm.
 
 ## Usage Instructions
 
 1. Launch Auto Sleep Droid and grant notification access when prompted.
 2. Configure your sleep timer duration (from 1 minute up to 24 hours), show notification preference, and wake-up goal settings on the main screen. Each input and toggle includes a clear description explaining its effect.
 3. Start playing your podcast, music, or video app. The timer automatically begins counting down.
-4. If you're still awake, press your phone's volume buttons or flip your phone over at any time to reset the timer to full duration.
-5. Tap **"Disable"** or **"Turn On"** in the notification shade to toggle the timer on or off at any time.
-6. Tap **"Logs"** in the header action link list to view live timestamped system logs on a dedicated screen.
+4. If you're still awake, press your phone's volume buttons or flip your phone over at any time to reset the timer to full duration. Resetting the sleep timer also pushes any active nap alarm forward by the same duration increment.
+5. Tap **"Nap"** on the main screen or notification shade to launch a quick nap alarm dialog, or **"Cancel Nap"** to cancel an active nap.
+6. Tap **"Disable"** or **"Enable"** in the notification shade to toggle the sleep timer at any time.
+7. Access action links at the bottom of the main screen (**Manual**, **Logs**, **Feedback**, **Donate**, **Export**, and **Import**) arranged inline with middle dots.
 
 ### Smart Wake-Up Goal ("Auto Sleep")
 
