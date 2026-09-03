@@ -105,46 +105,10 @@
                         android:textColor="?android:attr/textColorSecondary"
                         android:paddingBottom="4dp" />
 
-                    <LinearLayout
+                    <com.bas080.autosleepdroid.DurationInputView
+                        android:id="@+id/input_duration"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <EditText
-                            android:id="@+id/input_duration_hours"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:hint="0"
-                            android:inputType="number"
-                            android:singleLine="true" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/unit_hours"
-                            android:textSize="16sp"
-                            android:paddingStart="4dp"
-                            android:paddingEnd="16dp" />
-
-                        <EditText
-                            android:id="@+id/input_duration_minutes"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:hint="0"
-                            android:inputType="number"
-                            android:singleLine="true" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/unit_minutes"
-                            android:textSize="16sp"
-                            android:paddingStart="4dp"
-                            android:paddingEnd="4dp" />
-                    </LinearLayout>
+                        android:layout_height="wrap_content" />
                 </LinearLayout>
 
 
@@ -228,46 +192,10 @@
                         android:textColor="?android:attr/textColorSecondary"
                         android:paddingBottom="4dp" />
 
-                    <LinearLayout
+                    <com.bas080.autosleepdroid.DurationInputView
+                        android:id="@+id/input_min_sleep"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <EditText
-                            android:id="@+id/input_min_sleep_hours"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:hint="0"
-                            android:inputType="number"
-                            android:singleLine="true" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/unit_hours"
-                            android:textSize="16sp"
-                            android:paddingStart="4dp"
-                            android:paddingEnd="16dp" />
-
-                        <EditText
-                            android:id="@+id/input_min_sleep_minutes"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:hint="0"
-                            android:inputType="number"
-                            android:singleLine="true" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/unit_minutes"
-                            android:textSize="16sp"
-                            android:paddingStart="4dp"
-                            android:paddingEnd="4dp" />
-                    </LinearLayout>
+                        android:layout_height="wrap_content" />
                 </LinearLayout>
 
                 <!-- Links Section -->

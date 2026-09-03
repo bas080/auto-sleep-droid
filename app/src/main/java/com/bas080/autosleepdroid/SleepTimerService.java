@@ -246,6 +246,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed");
                 stopWakeUpAlarmSound();
                 cancelSnoozeAlarm();
+                cancelNapAlarm(false);
                 isWakeUpAlarmRinging = false;
                 isWakeUpAlarmSnoozed = false;
                 updateListenersRegistration();
@@ -829,6 +830,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed via volume button");
         stopWakeUpAlarmSound();
         cancelSnoozeAlarm();
+        cancelNapAlarm(false);
         isWakeUpAlarmRinging = false;
         isWakeUpAlarmSnoozed = false;
         onTriggerVibration();
