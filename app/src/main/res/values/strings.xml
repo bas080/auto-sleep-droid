@@ -7,12 +7,12 @@
     <string name="timer_off">Sleep timer is off</string>
     <string name="waiting_collapsed">Waiting for playback (%1$s)</string>
     <string name="waiting_expanded">Waiting for media playback (%1$s)</string>
-    <string name="waiting_expanded_alarm">Waiting for media playback (%1$s) • Alarm at %2$s</string>
+    <string name="waiting_expanded_alarm">Waiting for media playback (%1$s) • Wake at %2$s</string>
     <string name="waiting_title">Waiting for playback</string>
     <string name="waiting_text">Waiting for media playback</string>
     <string name="active_collapsed">Fades out at %1$s (%2$s)</string>
     <string name="active_expanded">Fades out at %1$s (%2$s)</string>
-    <string name="active_expanded_alarm">Fades out at %1$s (%2$s) • Alarm at %3$s</string>
+    <string name="active_expanded_alarm">Fades out at %1$s (%2$s) • Wake at %3$s</string>
     <string name="active_title">Timer running</string>
     <string name="active_text">Fades out at %1$s</string>
     <string name="fading_collapsed">Fading volume</string>

@@ -860,6 +860,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         String contentText;
         String formattedDurationStr = formatDurationString(stateMachine.getConfiguredDurationMinutes());
 
+        long now = System.currentTimeMillis();
+        Calendar scheduledAlarm = calculateScheduledAlarm(this, now, stateMachine.getTimerEndsAt());
+        boolean showWakeAlarm = scheduledAlarm != null &&
+                (scheduledAlarm.getTimeInMillis() - now) >= (long) (stateMachine.getConfiguredDurationMinutes() * 1.5 * 60_000L);
+
         if (isWakeUpAlarmRinging) {
             title = getString(R.string.wakeup_alarm_title);
             contentText = getString(R.string.wakeup_alarm_text);
@@ -876,9 +881,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             String targetTimeStr = formatTargetTime();
             title = getString(R.string.active_title);
 
-            Calendar scheduledAlarm = calculateScheduledAlarm(this, System.currentTimeMillis(), stateMachine.getTimerEndsAt());
-
-            if (scheduledAlarm != null) {
+            if (showWakeAlarm) {
                 String formattedAlarmTime = formatTime(scheduledAlarm.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE));
                 contentText = getString(R.string.active_expanded_alarm, targetTimeStr, formattedDurationStr, formattedAlarmTime);
             } else {
@@ -886,8 +889,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             }
         } else {
             title = getString(R.string.waiting_title);
-            Calendar scheduledAlarm = calculateScheduledAlarm(this, System.currentTimeMillis(), stateMachine.getTimerEndsAt());
-            if (scheduledAlarm != null) {
+            if (showWakeAlarm) {
                 String formattedAlarmTime = formatTime(scheduledAlarm.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE));
                 contentText = getString(R.string.waiting_expanded_alarm, formattedDurationStr, formattedAlarmTime);
             } else {
