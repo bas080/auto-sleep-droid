@@ -55,6 +55,12 @@
     <string name="toast_goal_stopped">Goal stopped</string>
     <string name="toast_alarm_dismissed">Alarm dismissed</string>
     <string name="toast_alarm_snoozed">Alarm snoozed 9m</string>
+    <string name="action_nap">Nap</string>
+    <string name="action_cancel_nap">Cancel Nap</string>
+    <string name="dialog_nap_title">Start Nap</string>
+    <string name="dialog_nap_explanation">Set nap duration for wake alarm</string>
+    <string name="toast_nap_started">Nap alarm set for %1$s</string>
+    <string name="toast_nap_cancelled">Nap alarm cancelled</string>
     <string name="label_links">Links</string>
     <string name="version_label">Version %1$s</string>
     <string name="btn_back">Back</string>

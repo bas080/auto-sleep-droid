@@ -40,9 +40,15 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public static final String ACTION_SNOOZE_WAKEUP_ALARM = "com.bas080.autosleepdroid.SNOOZE_WAKEUP_ALARM";
     public static final String ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION";
     public static final String ACTION_CLEAR_GOAL = "com.bas080.autosleepdroid.CLEAR_GOAL";
+    public static final String ACTION_START_NAP = "com.bas080.autosleepdroid.START_NAP";
+    public static final String ACTION_CANCEL_NAP = "com.bas080.autosleepdroid.CANCEL_NAP";
+    public static final String ACTION_NAP_EXPIRY = "com.bas080.autosleepdroid.NAP_EXPIRY";
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
+    public static final String EXTRA_NAP_DURATION_MINUTES = "extra_nap_duration_minutes";
     public static final String ALARM_SEARCH_NAME = "Auto Sleep";
     public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = "wakeup_last_scheduled_ms";
+    public static final String KEY_NAP_DURATION_MINUTES = "nap_duration_minutes";
+    public static final String KEY_NAP_ALARM_ENDS_AT = "nap_alarm_ends_at";
 
     private static final String CHANNEL_ID = "sleep_timer";
     private static final int NOTIFICATION_ID = 1001;
@@ -85,6 +91,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private boolean isWakeUpAlarmRinging = false;
     private boolean isWakeUpAlarmSnoozed = false;
     private boolean isForeground = false;
+    private long napAlarmEndsAt = 0L;
+    private long lastTimerEndsAt = 0L;
 
     private SleepTimerStateMachine stateMachine;
 
@@ -112,6 +120,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         boolean savedEnabled = preferences.getBoolean(KEY_ENABLED, true);
         int savedDuration = preferences.getInt(KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
         long savedEndsAt = preferences.getLong(KEY_TIMER_ENDS_AT, 0L);
+        napAlarmEndsAt = preferences.getLong(KEY_NAP_ALARM_ENDS_AT, 0L);
         int currentVolume = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
         boolean musicActive = audioManager != null && audioManager.isMusicActive();
 
@@ -263,6 +272,19 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Smart Wake-Up Goal cleared");
                 android.widget.Toast.makeText(this, R.string.toast_goal_stopped, android.widget.Toast.LENGTH_SHORT).show();
                 updateNotification();
+            } else if (ACTION_START_NAP.equals(intent.getAction())) {
+                int duration = intent.getIntExtra(EXTRA_NAP_DURATION_MINUTES, preferences.getInt(KEY_NAP_DURATION_MINUTES, 20));
+                startNapAlarm(duration);
+            } else if (ACTION_CANCEL_NAP.equals(intent.getAction())) {
+                cancelNapAlarm(true);
+            } else if (ACTION_NAP_EXPIRY.equals(intent.getAction())) {
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm triggered");
+                cancelNapAlarm(false);
+                isWakeUpAlarmRinging = true;
+                isWakeUpAlarmSnoozed = false;
+                updateListenersRegistration();
+                playWakeUpAlarmSound();
+                updateNotification();
             } else if (ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())) {
                 reloadSettingsAndUpdate();
             }
@@ -364,6 +386,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             unregisterAudioPlaybackCallback();
             stopWakeUpAlarmSound();
             cancelSnoozeAlarm();
+            cancelNapAlarm(false);
             isWakeUpAlarmRinging = false;
             isWakeUpAlarmSnoozed = false;
             onCancelAlarm();
@@ -592,8 +615,77 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     @Override
     public void onTimerRescheduled() {
+        long newTimerEndsAt = stateMachine.getTimerEndsAt();
+        if (lastTimerEndsAt > 0L && newTimerEndsAt > lastTimerEndsAt && isNapActive()) {
+            long deltaMs = newTimerEndsAt - lastTimerEndsAt;
+            napAlarmEndsAt += deltaMs;
+            if (preferences != null) {
+                preferences.edit().putLong(KEY_NAP_ALARM_ENDS_AT, napAlarmEndsAt).apply();
+            }
+            scheduleNapAlarm(napAlarmEndsAt);
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Pushed nap alarm forward by " + (deltaMs / 60_000L) + "m");
+        }
+        lastTimerEndsAt = newTimerEndsAt;
         scheduleExpiry();
         checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
+    }
+
+    private boolean isNapActive() {
+        return napAlarmEndsAt > System.currentTimeMillis();
+    }
+
+    private void startNapAlarm(int durationMinutes) {
+        long now = System.currentTimeMillis();
+        napAlarmEndsAt = now + durationMinutes * 60_000L;
+        if (preferences != null) {
+            preferences.edit()
+                    .putInt(KEY_NAP_DURATION_MINUTES, durationMinutes)
+                    .putLong(KEY_NAP_ALARM_ENDS_AT, napAlarmEndsAt)
+                    .apply();
+        }
+        scheduleNapAlarm(napAlarmEndsAt);
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm started for " + formatDurationString(durationMinutes));
+        android.widget.Toast.makeText(this, getString(R.string.toast_nap_started, formatDurationString(durationMinutes)), android.widget.Toast.LENGTH_SHORT).show();
+        updateNotification();
+    }
+
+    private void scheduleNapAlarm(long triggerAtMs) {
+        if (alarmManager == null) return;
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_NAP_EXPIRY);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 107, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Intent showIntent = new Intent(this, MainActivity.class);
+        PendingIntent showPendingIntent = PendingIntent.getActivity(this, 102, showIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(triggerAtMs, showPendingIntent);
+        try {
+            alarmManager.setAlarmClock(clockInfo, pendingIntent);
+        } catch (Exception e) {
+            EventLogger.log(this, "Failed to schedule nap alarm: " + e.getMessage());
+        }
+    }
+
+    private void cancelNapAlarm(boolean showToast) {
+        if (alarmManager != null) {
+            Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_NAP_EXPIRY);
+            PendingIntent pendingIntent = PendingIntent.getService(this, 107, intent,
+                    PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
+            if (pendingIntent != null) {
+                alarmManager.cancel(pendingIntent);
+                pendingIntent.cancel();
+            }
+        }
+        napAlarmEndsAt = 0L;
+        if (preferences != null) {
+            preferences.edit().remove(KEY_NAP_ALARM_ENDS_AT).apply();
+        }
+        if (showToast) {
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm cancelled");
+            android.widget.Toast.makeText(this, R.string.toast_nap_cancelled, android.widget.Toast.LENGTH_SHORT).show();
+            updateNotification();
+        }
     }
 
     private void ensureAudibleAlarmStreamVolume() {
@@ -833,6 +925,22 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
         builder.addAction(toggleAction);
 
+        Notification.Action napAction;
+        if (isNapActive()) {
+            napAction = new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                    getString(R.string.action_cancel_nap),
+                    cancelNapIntent())
+                    .build();
+        } else {
+            napAction = new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
+                    getString(R.string.action_nap),
+                    startNapIntent())
+                    .build();
+        }
+        builder.addAction(napAction);
+
         return builder.build();
     }
 
@@ -889,6 +997,19 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private PendingIntent turnOnIntent() {
         Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_TURN_ON);
         return PendingIntent.getService(this, 7, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private PendingIntent startNapIntent() {
+        Intent intent = new Intent(this, NapDialogActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        return PendingIntent.getActivity(this, 12, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private PendingIntent cancelNapIntent() {
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_CANCEL_NAP);
+        return PendingIntent.getService(this, 13, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
