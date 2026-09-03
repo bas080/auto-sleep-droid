@@ -64,6 +64,7 @@
     <string name="label_nap">Alarma de siesta</string>
     <string name="desc_nap">Inicia una alarma de siesta rápida</string>
     <string name="label_links">Enlaces</string>
+    <string name="desc_links">Manual, registros, comentarios, donación, exportar e importar</string>
     <string name="version_label">Versión %1$s</string>
     <string name="btn_back">Volver</string>
     <string name="link_manual">Manual</string>

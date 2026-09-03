@@ -70,18 +70,21 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testManualLinkClickShowsFullScreenView() {
+    public void testLinksDialogManualShowsFullScreenView() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();
-        android.widget.Button btnManual = activity.findViewById(R.id.btn_manual);
-        assertNotNull(btnManual);
+        View btnLinks = activity.findViewById(R.id.btn_links);
+        assertNotNull(btnLinks);
 
         View manualOverlay = activity.findViewById(R.id.manual_overlay_container);
         View mainContent = activity.findViewById(R.id.main_content_container);
         assertEquals(View.GONE, manualOverlay.getVisibility());
         assertEquals(View.VISIBLE, mainContent.getVisibility());
 
-        btnManual.performClick();
+        btnLinks.performClick();
+        AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(dialog);
+        Shadows.shadowOf(dialog).clickOnItem(0);
 
         assertEquals(View.VISIBLE, manualOverlay.getVisibility());
         assertEquals(View.GONE, mainContent.getVisibility());
@@ -95,18 +98,21 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testLogsLinkClickShowsFullScreenView() {
+    public void testLinksDialogLogsShowsFullScreenView() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();
-        android.widget.Button btnLogs = activity.findViewById(R.id.btn_logs);
-        assertNotNull(btnLogs);
+        View btnLinks = activity.findViewById(R.id.btn_links);
+        assertNotNull(btnLinks);
 
         View logsOverlay = activity.findViewById(R.id.logs_overlay_container);
         View mainContent = activity.findViewById(R.id.main_content_container);
         assertEquals(View.GONE, logsOverlay.getVisibility());
         assertEquals(View.VISIBLE, mainContent.getVisibility());
 
-        btnLogs.performClick();
+        btnLinks.performClick();
+        AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(dialog);
+        Shadows.shadowOf(dialog).clickOnItem(1);
 
         assertEquals(View.VISIBLE, logsOverlay.getVisibility());
         assertEquals(View.GONE, mainContent.getVisibility());
@@ -118,14 +124,16 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testFeedbackLinkClick() {
+    public void testLinksDialogFeedbackLaunchesIntent() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();
-        android.widget.Button btnIssues = activity.findViewById(R.id.btn_issues);
-        assertNotNull(btnIssues);
-        assertEquals(activity.getString(R.string.link_feedback), btnIssues.getText().toString());
+        View btnLinks = activity.findViewById(R.id.btn_links);
+        assertNotNull(btnLinks);
 
-        btnIssues.performClick();
+        btnLinks.performClick();
+        AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(dialog);
+        Shadows.shadowOf(dialog).clickOnItem(2);
 
         Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
         assertNotNull(intent);
@@ -134,10 +142,16 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testDonateLinkClick() {
+    public void testLinksDialogDonateLaunchesIntent() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();
-        activity.findViewById(R.id.btn_donate).performClick();
+        View btnLinks = activity.findViewById(R.id.btn_links);
+        assertNotNull(btnLinks);
+
+        btnLinks.performClick();
+        AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(dialog);
+        Shadows.shadowOf(dialog).clickOnItem(3);
 
         Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
         assertNotNull(intent);
@@ -146,10 +160,16 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testExportButtonClickLaunchesShareIntent() {
+    public void testLinksDialogExportLaunchesShareIntent() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();
-        activity.findViewById(R.id.btn_export).performClick();
+        View btnLinks = activity.findViewById(R.id.btn_links);
+        assertNotNull(btnLinks);
+
+        btnLinks.performClick();
+        AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(dialog);
+        Shadows.shadowOf(dialog).clickOnItem(4);
 
         Intent chooserIntent = Shadows.shadowOf(activity).getNextStartedActivity();
         assertNotNull(chooserIntent);
@@ -162,18 +182,24 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testImportButtonClickShowsDialogAndImportsValidJSON() {
+    public void testLinksDialogImportShowsImportDialogAndImportsJSON() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();
-        activity.findViewById(R.id.btn_import).performClick();
+        View btnLinks = activity.findViewById(R.id.btn_links);
+        assertNotNull(btnLinks);
 
-        AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
-        assertNotNull(dialog);
+        btnLinks.performClick();
+        AlertDialog linksDialog = ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(linksDialog);
+        Shadows.shadowOf(linksDialog).clickOnItem(5);
+
+        AlertDialog importDialog = ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(importDialog);
 
         android.widget.EditText editText = null;
-        if (dialog.getWindow() != null) {
+        if (importDialog.getWindow() != null) {
             List<android.widget.EditText> list = new ArrayList<>();
-            findViewsOfType(dialog.getWindow().getDecorView(), android.widget.EditText.class, list);
+            findViewsOfType(importDialog.getWindow().getDecorView(), android.widget.EditText.class, list);
             if (!list.isEmpty()) {
                 editText = list.get(0);
             }
@@ -183,7 +209,7 @@ public class MainActivityTest {
         String json = "{\"version\":1,\"duration_minutes\":45,\"active\":true,\"wake_up_goal_enabled\":true,\"wake_up_goal_hour\":7,\"wake_up_goal_minute\":15,\"min_sleep_duration_minutes\":480}";
         editText.setText(json);
 
-        android.widget.Button importBtn = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+        android.widget.Button importBtn = importDialog.getButton(DialogInterface.BUTTON_POSITIVE);
         assertNotNull(importBtn);
         importBtn.performClick();
 
@@ -515,7 +541,7 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testInputsDisabledWhenSleepTimerIsDisabled() {
+    public void testInputsDisabledWhenSleepTimerIsDisabledHasReducedAlpha() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
 
@@ -525,13 +551,19 @@ public class MainActivityTest {
         View btnTargetTime = activity.findViewById(R.id.btn_target_time);
         View inputMinSleep = activity.findViewById(R.id.input_min_sleep);
 
-        // Turn off sleep timer
         switchEnable.setChecked(false);
 
         assertFalse(inputDuration.isEnabled());
+        assertEquals(0.38f, inputDuration.getAlpha(), 0.01f);
         assertFalse(switchGoal.isEnabled());
         assertFalse(btnTargetTime.isEnabled());
+        assertEquals(0.38f, btnTargetTime.getAlpha(), 0.01f);
         assertFalse(inputMinSleep.isEnabled());
+        assertEquals(0.38f, inputMinSleep.getAlpha(), 0.01f);
+
+        switchEnable.setChecked(true);
+        assertTrue(inputDuration.isEnabled());
+        assertEquals(1.0f, inputDuration.getAlpha(), 0.01f);
     }
 
     @Test
@@ -545,7 +577,6 @@ public class MainActivityTest {
         View btnTargetTime = activity.findViewById(R.id.btn_target_time);
         View inputMinSleep = activity.findViewById(R.id.input_min_sleep);
 
-        // Ensure timer is enabled, but goal is disabled
         switchEnable.setChecked(true);
         switchGoal.setChecked(false);
 
@@ -554,7 +585,9 @@ public class MainActivityTest {
         assertTrue(inputDuration.isEnabled());
         assertTrue(switchGoal.isEnabled());
         assertFalse(btnTargetTime.isEnabled());
+        assertEquals(0.38f, btnTargetTime.getAlpha(), 0.01f);
         assertFalse(inputMinSleep.isEnabled());
+        assertEquals(0.38f, inputMinSleep.getAlpha(), 0.01f);
     }
 
     @Test
@@ -565,7 +598,7 @@ public class MainActivityTest {
         android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
         switchGoal.setChecked(true);
 
-        int[] rowIds = new int[]{R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep};
+        int[] rowIds = new int[]{R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_links};
         for (int rowId : rowIds) {
             View parentRow = activity.findViewById(rowId);
             assertNotNull("Row should exist", parentRow);

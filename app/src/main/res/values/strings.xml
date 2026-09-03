@@ -64,6 +64,7 @@
     <string name="label_nap">Nap alarm</string>
     <string name="desc_nap">Start a quick nap wake alarm</string>
     <string name="label_links">Links</string>
+    <string name="desc_links">Manual, event logs, feedback, donation, export, and import</string>
     <string name="version_label">Version %1$s</string>
     <string name="btn_back">Back</string>
     <string name="link_manual">Manual</string>
