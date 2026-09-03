@@ -135,10 +135,15 @@ public class MainActivityTest {
         assertNotNull(dialog);
         Shadows.shadowOf(dialog).clickOnItem(2);
 
-        Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
-        assertNotNull(intent);
-        assertEquals(Intent.ACTION_VIEW, intent.getAction());
-        assertEquals("https://github.com/bas080/auto-sleep-droid/issues", intent.getDataString());
+        Intent chooserIntent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(chooserIntent);
+        assertEquals(Intent.ACTION_CHOOSER, chooserIntent.getAction());
+
+        Intent sendIntent = chooserIntent.getParcelableExtra(Intent.EXTRA_INTENT);
+        assertNotNull(sendIntent);
+        assertEquals(Intent.ACTION_SENDTO, sendIntent.getAction());
+        assertEquals("mailto:bas080@hotmail.com", sendIntent.getDataString());
+        assertTrue(sendIntent.getStringExtra(Intent.EXTRA_SUBJECT).contains("Auto Sleep Droid Feedback"));
     }
 
     @Test
