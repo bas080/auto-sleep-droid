@@ -280,8 +280,7 @@ public class SleepTimerServiceTest {
     }
 
     @Test
-    public void testNotificationActionTogglesWhenEnabledAndDisabled() {
-        // When timer is off/disabled and show_notification is true: action 0 toggles timer on
+    public void testNotificationActionDisplaysNapAndCancelNap() {
         preferences.edit().putBoolean("active", false).putBoolean("show_notification", true).commit();
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
@@ -291,20 +290,8 @@ public class SleepTimerServiceTest {
         ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
         android.app.Notification notificationOff = shadowNotificationManager.getNotification(1001);
         assertNotNull(notificationOff);
-        assertEquals(2, notificationOff.actions.length);
-        assertEquals(SleepTimerService.ACTION_TURN_ON, Shadows.shadowOf(notificationOff.actions[0].actionIntent).getSavedIntent().getAction());
-        assertEquals("Enable", notificationOff.actions[0].title.toString());
-        assertEquals("Nap", notificationOff.actions[1].title.toString());
-
-        // When timer is active/enabled: action 0 toggles timer off
-        preferences.edit().putBoolean("active", true).commit();
-        service.onStartCommand(new Intent(context, SleepTimerService.class).setAction(SleepTimerService.ACTION_TURN_ON), 0, 1);
-        android.app.Notification notificationOn = shadowNotificationManager.getNotification(1001);
-        assertNotNull(notificationOn);
-        assertEquals(2, notificationOn.actions.length);
-        assertEquals(SleepTimerService.ACTION_TURN_OFF, Shadows.shadowOf(notificationOn.actions[0].actionIntent).getSavedIntent().getAction());
-        assertEquals("Disable", notificationOn.actions[0].title.toString());
-        assertEquals("Nap", notificationOn.actions[1].title.toString());
+        assertEquals(1, notificationOff.actions.length);
+        assertEquals("Nap", notificationOff.actions[0].title.toString());
     }
 
     @Test
@@ -326,8 +313,8 @@ public class SleepTimerServiceTest {
         ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
         android.app.Notification notificationNapActive = shadowNotificationManager.getNotification(1001);
         assertNotNull(notificationNapActive);
-        assertEquals(2, notificationNapActive.actions.length);
-        assertEquals("Cancel Nap", notificationNapActive.actions[1].title.toString());
+        assertEquals(1, notificationNapActive.actions.length);
+        assertEquals("Cancel Nap", notificationNapActive.actions[0].title.toString());
 
         Intent cancelNapIntent = new Intent(context, SleepTimerService.class)
                 .setAction(SleepTimerService.ACTION_CANCEL_NAP);
@@ -337,7 +324,7 @@ public class SleepTimerServiceTest {
 
         android.app.Notification notificationNapCancelled = shadowNotificationManager.getNotification(1001);
         assertNotNull(notificationNapCancelled);
-        assertEquals("Nap", notificationNapCancelled.actions[1].title.toString());
+        assertEquals("Nap", notificationNapCancelled.actions[0].title.toString());
     }
 
     @Test

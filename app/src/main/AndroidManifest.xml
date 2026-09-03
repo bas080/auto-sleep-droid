@@ -28,6 +28,8 @@
         <activity
             android:name=".NapDialogActivity"
             android:exported="false"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
             android:theme="@android:style/Theme.DeviceDefault.Dialog" />
 
         <service

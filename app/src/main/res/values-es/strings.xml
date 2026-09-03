@@ -61,6 +61,8 @@
     <string name="dialog_nap_explanation">Establecer duración de la siesta para la alarma de despertar</string>
     <string name="toast_nap_started">Alarma de siesta programada para %1$s</string>
     <string name="toast_nap_cancelled">Alarma de siesta cancelada</string>
+    <string name="label_nap">Alarma de siesta</string>
+    <string name="desc_nap">Inicia una alarma de siesta rápida</string>
     <string name="label_links">Enlaces</string>
     <string name="version_label">Versión %1$s</string>
     <string name="btn_back">Volver</string>
@@ -77,7 +79,7 @@
     <string name="toast_import_invalid">Formato de ajustes no válido</string>
     <string name="title_activity_log">Registros de eventos</string>
     <string name="label_enable_timer">Temporizador de apagado</string>
-    <string name="desc_enable_timer">Activa o desactiva el temporizador de apagado</string>
+    <string name="desc_enable_timer">Activa o desactiva el temporizador de apagado y la alarma de despertar (sin afectar la alarma de siesta)</string>
     <string name="label_hours">Horas</string>
     <string name="label_minutes">Minutos</string>
     <string name="unit_hours">horas</string>

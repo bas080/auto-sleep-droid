@@ -42,6 +42,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private View goalContainer;
     private Button btnTargetTime;
     private DurationInputView inputMinSleep;
+    private Button btnNap;
     private ScrollView eventScrollView;
     private TextView eventLogText;
 
@@ -85,6 +86,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         goalContainer = findViewById(R.id.goal_container);
         btnTargetTime = findViewById(R.id.btn_target_time);
         inputMinSleep = findViewById(R.id.input_min_sleep);
+        btnNap = findViewById(R.id.btn_nap);
         eventScrollView = findViewById(R.id.event_scroll_view);
         eventLogText = findViewById(R.id.event_log_text);
     }
@@ -363,6 +365,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         int goalHour = prefs.getInt("wake_up_goal_hour", 6);
         int goalMin = prefs.getInt("wake_up_goal_minute", 30);
         int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
+        long napEndsAt = prefs.getLong("nap_alarm_ends_at", 0L);
+        boolean isNapActive = napEndsAt > System.currentTimeMillis();
 
         if (switchEnableTimer != null) {
             switchEnableTimer.setChecked(active);
@@ -377,8 +381,36 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (inputMinSleep != null && !inputMinSleep.hasInputFocus()) {
             inputMinSleep.setTotalMinutes(minSleepMin);
         }
+        if (btnNap != null) {
+            if (isNapActive) {
+                btnNap.setText(R.string.action_cancel_nap);
+                btnNap.setOnClickListener(v -> cancelNap());
+            } else {
+                btnNap.setText(R.string.action_nap);
+                btnNap.setOnClickListener(v -> openNapDialog());
+            }
+        }
         updateInputEnabledStates(active, goalEnabled);
         isUpdatingUi = false;
+    }
+
+    private void openNapDialog() {
+        Intent intent = new Intent(this, NapDialogActivity.class);
+        startActivity(intent);
+    }
+
+    private void cancelNap() {
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        prefs.edit().remove("nap_alarm_ends_at").apply();
+
+        Intent serviceIntent = new Intent(this, SleepTimerService.class);
+        serviceIntent.setAction(SleepTimerService.ACTION_CANCEL_NAP);
+        if (Build.VERSION.SDK_INT >= 26) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+        loadPreferencesIntoUi();
     }
 
     private void exportSettings() {
