@@ -33,9 +33,9 @@ if [ -f "$KEYSTORE_FILE" ]; then
     rm -f "$KEYSTORE_FILE" "$KEYSTORE_BASE64_FILE"
 fi
 
-# Generate secure random passwords
+# Generate secure random password (PKCS12 keystores require storepass and keypass to match)
 KEYSTORE_PASSWORD=$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9')
-KEY_PASSWORD=$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9')
+KEY_PASSWORD="$KEYSTORE_PASSWORD"
 
 echo "Generating Android release keystore ($KEYSTORE_FILE)..."
 keytool -genkeypair -v \
