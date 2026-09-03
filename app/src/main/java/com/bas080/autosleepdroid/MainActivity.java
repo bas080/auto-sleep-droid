@@ -168,13 +168,17 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void sendFeedbackEmail() {
-        Intent intent = new Intent(Intent.ACTION_SENDTO);
-        intent.setData(Uri.parse("mailto:bas080@hotmail.com"));
-        intent.putExtra(Intent.EXTRA_SUBJECT, "Auto Sleep Droid Feedback (v" + BuildConfig.VERSION_NAME + ")");
-
+        String subject = "Auto Sleep Droid Feedback (v" + BuildConfig.VERSION_NAME + ")";
         String bodyTemplate = "\n\n---\nApp Version: " + BuildConfig.VERSION_NAME +
                 "\nAndroid Version: " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")" +
                 "\nDevice: " + Build.MANUFACTURER + " " + Build.MODEL;
+
+        Uri mailtoUri = Uri.parse("mailto:bas080@hotmail.com" +
+                "?subject=" + Uri.encode(subject) +
+                "&body=" + Uri.encode(bodyTemplate));
+
+        Intent intent = new Intent(Intent.ACTION_SENDTO, mailtoUri);
+        intent.putExtra(Intent.EXTRA_SUBJECT, subject);
         intent.putExtra(Intent.EXTRA_TEXT, bodyTemplate);
 
         try {
