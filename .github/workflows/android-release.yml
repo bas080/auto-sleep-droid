@@ -59,25 +59,19 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Decode Keystore
-        if: secrets.KEYSTORE_BASE64 != ''
+      - name: Build APK
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
-
-      - name: Build release APK
-        if: secrets.KEYSTORE_BASE64 != ''
-        env:
-          KEYSTORE_FILE: /tmp/release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
-
-      - name: Build fallback debug APK
-        if: secrets.KEYSTORE_BASE64 == ''
-        run: ./gradlew assembleDebug
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
+            KEYSTORE_FILE=/tmp/release.jks ./gradlew assembleRelease
+          else
+            ./gradlew assembleDebug
+          fi
 
       - name: Prepare latest APK
         run: |
@@ -137,25 +131,19 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Decode Keystore
-        if: secrets.KEYSTORE_BASE64 != ''
+      - name: Build APK
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
-
-      - name: Build release APK
-        if: secrets.KEYSTORE_BASE64 != ''
-        env:
-          KEYSTORE_FILE: /tmp/release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
-
-      - name: Build fallback debug APK
-        if: secrets.KEYSTORE_BASE64 == ''
-        run: ./gradlew assembleDebug
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
+            KEYSTORE_FILE=/tmp/release.jks ./gradlew assembleRelease
+          else
+            ./gradlew assembleDebug
+          fi
 
       - name: Prepare versioned APK
         env:
