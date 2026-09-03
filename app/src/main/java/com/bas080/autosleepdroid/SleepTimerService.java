@@ -387,7 +387,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             unregisterAudioPlaybackCallback();
             stopWakeUpAlarmSound();
             cancelSnoozeAlarm();
-            cancelNapAlarm(false);
             isWakeUpAlarmRinging = false;
             isWakeUpAlarmSnoozed = false;
             onCancelAlarm();
@@ -894,6 +893,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             } else {
                 contentText = getString(R.string.waiting_collapsed, formattedDurationStr);
             }
+        }
+
+        if (!isWakeUpAlarmRinging && !isWakeUpAlarmSnoozed && isNapActive()) {
+            java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(this);
+            String formattedNapTime = timeFormat.format(new Date(napAlarmEndsAt));
+            contentText += getString(R.string.notification_nap_suffix, formattedNapTime);
         }
 
         Intent contentIntent = new Intent(this, MainActivity.class);

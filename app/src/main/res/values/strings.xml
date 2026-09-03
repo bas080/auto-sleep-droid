@@ -57,6 +57,7 @@
     <string name="toast_alarm_snoozed">Alarm snoozed 9m</string>
     <string name="action_nap">Nap</string>
     <string name="action_cancel_nap">Cancel Nap</string>
+    <string name="notification_nap_suffix"> • Nap at %1$s</string>
     <string name="dialog_nap_title">Start Nap</string>
     <string name="dialog_nap_explanation">Set nap duration for wake alarm</string>
     <string name="toast_nap_started">Nap alarm set for %1$s</string>

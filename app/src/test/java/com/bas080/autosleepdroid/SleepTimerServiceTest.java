@@ -315,6 +315,8 @@ public class SleepTimerServiceTest {
         assertNotNull(notificationNapActive);
         assertEquals(1, notificationNapActive.actions.length);
         assertEquals("Cancel Nap", notificationNapActive.actions[0].title.toString());
+        String activeContentText = notificationNapActive.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString();
+        assertTrue("Notification content text must communicate active nap state", activeContentText.contains("Nap at"));
 
         Intent cancelNapIntent = new Intent(context, SleepTimerService.class)
                 .setAction(SleepTimerService.ACTION_CANCEL_NAP);
@@ -325,6 +327,29 @@ public class SleepTimerServiceTest {
         android.app.Notification notificationNapCancelled = shadowNotificationManager.getNotification(1001);
         assertNotNull(notificationNapCancelled);
         assertEquals("Nap", notificationNapCancelled.actions[0].title.toString());
+        String cancelledContentText = notificationNapCancelled.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString();
+        assertFalse("Notification content text must not contain nap state after cancel", cancelledContentText.contains("Nap at"));
+    }
+
+    @Test
+    public void testTogglingTimerOffKeepsNapAlarmRunning() {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        Intent startNapIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_START_NAP)
+                .putExtra(SleepTimerService.EXTRA_NAP_DURATION_MINUTES, 20);
+        service.onStartCommand(startNapIntent, 0, 1);
+
+        assertTrue("Nap alarm must be active in preferences", preferences.contains("nap_alarm_ends_at"));
+
+        // Toggle/turn off the sleep timer
+        Intent turnOffIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_TURN_OFF);
+        service.onStartCommand(turnOffIntent, 0, 1);
+
+        assertFalse(preferences.getBoolean("active", true));
+        assertTrue("Toggling sleep timer off must keep active nap alarm running", preferences.contains("nap_alarm_ends_at"));
     }
 
     @Test
