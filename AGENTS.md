@@ -24,6 +24,9 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 
 - Run unit tests: `./gradlew test`
 - Build debug APK: `./gradlew assembleDebug`
+- Build release APK (unsigned): `./gradlew assembleRelease`
+- Lint F-Droid metadata: `fdroid lint com.bas080.autosleepdroid`
+- Test F-Droid build: `fdroid build --stop --test com.bas080.autosleepdroid`
 - Clean build outputs: `./gradlew clean`
 
 ## Key Codebase Conventions
@@ -35,7 +38,7 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 - **Localization:** Maintain default English resources in `app/src/main/res/values/strings.xml` and Spanish translations in `app/src/main/res/values-es/strings.xml`.
 - **Test-Driven Development (TDD):** When attempting a fix, follow a TDD approach where possible: write a test that fails first, and then implement the fix to make that test pass.
 - **Unit Tests:** Do not add unit tests or test dependencies unless explicitly instructed by the user.
-- **Reproducible Builds:** Keep `dependenciesInfo` (`includeInApk = false`, `includeInBundle = false`) disabled in `app/build.gradle` for F-Droid compliance.
+- **Reproducible & F-Droid Builds:** Keep `dependenciesInfo` (`includeInApk = false`, `includeInBundle = false`) disabled in `app/build.gradle` for F-Droid compliance. Whenever making changes affecting build configurations, Gradle plugins, or metadata, verify that unsigned release builds (`./gradlew assembleRelease` or `fdroid build --stop --test com.bas080.autosleepdroid`) assemble cleanly without keystore environment variables and run `fdroid lint com.bas080.autosleepdroid` to ensure F-Droid build compatibility.
 - **Releases:** Follow `scripts/release.sh <version>` for bumping versions and tagging. GitHub Actions (`.github/workflows/android-release.yml`) builds and publishes releases automatically. Point to GitHub Releases in Fastlane description metadata rather than per-version changelogs.
 - **Commit Messages:** Do not use prefixes such as `ci:`, `feat:`, `fix:`, or `chore:`. Write plain, clear titles written for normal human readers (e.g. `Add dark mode support` instead of `feat: add dark mode support`).
 - **User Manual Asset:** The user manual is bundled in `app/src/main/assets/manual.html` and must be kept in sync whenever changes affecting user-visible behavior or features occur.
