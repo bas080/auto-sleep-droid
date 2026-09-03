@@ -432,6 +432,45 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testNapButtonDisplaysNapWhenInactiveAndLaunchesDialog() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.Button btnNap = activity.findViewById(R.id.btn_nap);
+        assertNotNull(btnNap);
+        assertEquals(activity.getString(R.string.action_nap), btnNap.getText().toString());
+
+        btnNap.performClick();
+
+        Intent startedActivity = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(startedActivity);
+        assertEquals(NapDialogActivity.class.getName(), startedActivity.getComponent().getClassName());
+    }
+
+    @Test
+    public void testNapButtonDisplaysCancelNapWhenActiveAndSendsCancelIntent() {
+        android.content.SharedPreferences prefs = ApplicationProvider.getApplicationContext().getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
+        prefs.edit().putLong("nap_alarm_ends_at", System.currentTimeMillis() + 600000L).commit();
+
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        Application app = ApplicationProvider.getApplicationContext();
+        ShadowApplication shadowApp = Shadows.shadowOf(app);
+        while (shadowApp.getNextStartedService() != null) {}
+
+        android.widget.Button btnNap = activity.findViewById(R.id.btn_nap);
+        assertNotNull(btnNap);
+        assertEquals(activity.getString(R.string.action_cancel_nap), btnNap.getText().toString());
+
+        btnNap.performClick();
+
+        Intent serviceIntent = shadowApp.getNextStartedService();
+        assertNotNull(serviceIntent);
+        assertEquals(SleepTimerService.ACTION_CANCEL_NAP, serviceIntent.getAction());
+    }
+
+    @Test
     public void testOnResumeStartsRedrawServiceIntent() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         controller.create();

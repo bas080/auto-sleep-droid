@@ -911,22 +911,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 .setOnlyAlertOnce(true)
                 .setShowWhen(false);
 
-        Notification.Action toggleAction;
-        if (stateMachine.isEnabled()) {
-            toggleAction = new Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    getString(R.string.action_timer_off),
-                    turnOffIntent())
-                    .build();
-        } else {
-            toggleAction = new Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_input_add),
-                    getString(R.string.action_turn_on),
-                    turnOnIntent())
-                    .build();
-        }
-        builder.addAction(toggleAction);
-
         Notification.Action napAction;
         if (isNapActive()) {
             napAction = new Notification.Action.Builder(
