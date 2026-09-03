@@ -1,6 +1,6 @@
 # Auto Sleep Droid
 
-Auto Sleep Droid is a low-friction Android sleep management app for media playback that combines a gentle fade-and-pause sleep timer with an adaptive Smart Wake-Up Goal safeguard.
+Auto Sleep Droid puts your phone to sleep when you fall asleep, and wakes you up when you're ready. It is a low-friction Android sleep timer and wake-up safeguard for media playback.
 
 ## Overview
 
