@@ -16,6 +16,7 @@ Builds:
     subdir: app
     gradle:
       - yes
+    output: build/outputs/apk/release/app-release-unsigned.apk
 
 CurrentVersion: '0.0.16'
 CurrentVersionCode: 29
