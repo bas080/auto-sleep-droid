@@ -96,20 +96,11 @@
                             android:focusable="false" />
                     </LinearLayout>
 
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="24dp"
-                        android:layout_marginStart="12dp"
-                        android:layout_marginEnd="12dp"
-                        android:background="?android:attr/textColorSecondary"
-                        android:alpha="0.2"
-                        android:clickable="false"
-                        android:focusable="false" />
-
                     <TextView
                         android:id="@+id/text_nap_status"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
                         android:textSize="16sp"
                         android:clickable="false"
                         android:focusable="false" />
@@ -148,20 +139,11 @@
                             android:textColor="?android:attr/textColorSecondary" />
                     </LinearLayout>
 
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="24dp"
-                        android:layout_marginStart="12dp"
-                        android:layout_marginEnd="12dp"
-                        android:background="?android:attr/textColorSecondary"
-                        android:alpha="0.2"
-                        android:clickable="false"
-                        android:focusable="false" />
-
                     <Switch
                         android:id="@+id/switch_enable_timer"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp" />
                 </LinearLayout>
 
                 <!-- Timer Duration -->
@@ -207,20 +189,11 @@
                             android:focusable="false" />
                     </LinearLayout>
 
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="24dp"
-                        android:layout_marginStart="12dp"
-                        android:layout_marginEnd="12dp"
-                        android:background="?android:attr/textColorSecondary"
-                        android:alpha="0.2"
-                        android:clickable="false"
-                        android:focusable="false" />
-
                     <TextView
                         android:id="@+id/text_duration_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
                         android:textSize="16sp"
                         android:clickable="false"
                         android:focusable="false" />
@@ -260,20 +233,11 @@
                             android:textColor="?android:attr/textColorSecondary" />
                     </LinearLayout>
 
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="24dp"
-                        android:layout_marginStart="12dp"
-                        android:layout_marginEnd="12dp"
-                        android:background="?android:attr/textColorSecondary"
-                        android:alpha="0.2"
-                        android:clickable="false"
-                        android:focusable="false" />
-
                     <Switch
                         android:id="@+id/switch_enable_goal"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -324,20 +288,11 @@
                                 android:focusable="false" />
                         </LinearLayout>
 
-                        <View
-                            android:layout_width="1dp"
-                            android:layout_height="24dp"
-                            android:layout_marginStart="12dp"
-                            android:layout_marginEnd="12dp"
-                            android:background="?android:attr/textColorSecondary"
-                            android:alpha="0.2"
-                            android:clickable="false"
-                            android:focusable="false" />
-
                         <TextView
                             android:id="@+id/text_target_time_value"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
                             android:textSize="16sp"
                             android:clickable="false"
                             android:focusable="false" />
@@ -385,20 +340,11 @@
                                 android:focusable="false" />
                         </LinearLayout>
 
-                        <View
-                            android:layout_width="1dp"
-                            android:layout_height="24dp"
-                            android:layout_marginStart="12dp"
-                            android:layout_marginEnd="12dp"
-                            android:background="?android:attr/textColorSecondary"
-                            android:alpha="0.2"
-                            android:clickable="false"
-                            android:focusable="false" />
-
                         <TextView
                             android:id="@+id/text_min_sleep_value"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
                             android:textSize="16sp"
                             android:clickable="false"
                             android:focusable="false" />

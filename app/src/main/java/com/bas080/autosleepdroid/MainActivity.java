@@ -150,7 +150,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     showLogsScreen();
                     break;
                 case 2:
-                    openUrl("https://github.com/bas080/auto-sleep-droid/issues");
+                    sendFeedbackEmail();
                     break;
                 case 3:
                     openUrl("https://liberapay.com/bas080");
@@ -165,6 +165,24 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         });
         builder.setNegativeButton(R.string.dialog_cancel, (dialog, which) -> dialog.dismiss());
         builder.show();
+    }
+
+    private void sendFeedbackEmail() {
+        Intent intent = new Intent(Intent.ACTION_SENDTO);
+        intent.setData(Uri.parse("mailto:bas080@hotmail.com"));
+        intent.putExtra(Intent.EXTRA_SUBJECT, "Auto Sleep Droid Feedback (v" + BuildConfig.VERSION_NAME + ")");
+
+        String bodyTemplate = "\n\n---\nApp Version: " + BuildConfig.VERSION_NAME +
+                "\nAndroid Version: " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")" +
+                "\nDevice: " + Build.MANUFACTURER + " " + Build.MODEL;
+        intent.putExtra(Intent.EXTRA_TEXT, bodyTemplate);
+
+        try {
+            startActivity(Intent.createChooser(intent, getString(R.string.link_feedback)));
+        } catch (Exception e) {
+            EventLogger.log(this, "Failed to launch email client: " + e.getMessage());
+            Toast.makeText(this, "No email app found", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void showManualScreen() {
