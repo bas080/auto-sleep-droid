@@ -482,7 +482,7 @@ public class MainActivityTest {
         TextView textNapStatus = activity.findViewById(R.id.text_nap_status);
         assertNotNull(btnNap);
         assertNotNull(textNapStatus);
-        assertEquals(activity.getString(R.string.action_nap), textNapStatus.getText().toString());
+        assertEquals("20m", textNapStatus.getText().toString());
 
         btnNap.performClick();
 

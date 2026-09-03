@@ -420,6 +420,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         int goalHour = prefs.getInt("wake_up_goal_hour", 6);
         int goalMin = prefs.getInt("wake_up_goal_minute", 30);
         int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
+        int napDurationMinutes = prefs.getInt(SleepTimerService.KEY_NAP_DURATION_MINUTES, 20);
         long napEndsAt = prefs.getLong("nap_alarm_ends_at", 0L);
         boolean isNapActive = napEndsAt > System.currentTimeMillis();
 
@@ -441,7 +442,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 textNapStatus.setText(R.string.action_cancel_nap);
                 btnNap.setOnClickListener(v -> cancelNap());
             } else {
-                textNapStatus.setText(R.string.action_nap);
+                textNapStatus.setText(DurationUtils.formatDurationString(napDurationMinutes));
                 btnNap.setOnClickListener(v -> openNapDialog());
             }
         }
