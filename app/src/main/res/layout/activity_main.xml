@@ -66,21 +66,27 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:clickable="false"
+                        android:focusable="false">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/label_nap"
                             android:textSize="16sp"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"
+                            android:clickable="false"
+                            android:focusable="false" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/desc_nap"
                             android:textSize="12sp"
-                            android:textColor="?android:attr/textColorSecondary" />
+                            android:textColor="?android:attr/textColorSecondary"
+                            android:clickable="false"
+                            android:focusable="false" />
                     </LinearLayout>
 
                     <TextView
@@ -88,7 +94,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textSize="16sp"
-                        android:text="@string/action_nap" />
+                        android:text="@string/action_nap"
+                        android:clickable="false"
+                        android:focusable="false" />
                 </LinearLayout>
 
                 <!-- Enable Sleep Timer -->
@@ -146,28 +154,36 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:clickable="false"
+                        android:focusable="false">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/label_duration"
                             android:textSize="16sp"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"
+                            android:clickable="false"
+                            android:focusable="false" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/desc_duration"
                             android:textSize="12sp"
-                            android:textColor="?android:attr/textColorSecondary" />
+                            android:textColor="?android:attr/textColorSecondary"
+                            android:clickable="false"
+                            android:focusable="false" />
                     </LinearLayout>
 
                     <TextView
                         android:id="@+id/text_duration_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textSize="16sp" />
+                        android:textSize="16sp"
+                        android:clickable="false"
+                        android:focusable="false" />
                 </LinearLayout>
 
                 <!-- Wake-Up Goal Section -->
@@ -230,28 +246,36 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:orientation="vertical">
+                            android:orientation="vertical"
+                            android:clickable="false"
+                            android:focusable="false">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/label_target_time"
                                 android:textSize="16sp"
-                                android:textStyle="bold" />
+                                android:textStyle="bold"
+                                android:clickable="false"
+                                android:focusable="false" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/desc_target_time"
                                 android:textSize="12sp"
-                                android:textColor="?android:attr/textColorSecondary" />
+                                android:textColor="?android:attr/textColorSecondary"
+                                android:clickable="false"
+                                android:focusable="false" />
                         </LinearLayout>
 
                         <TextView
                             android:id="@+id/text_target_time_value"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textSize="16sp" />
+                            android:textSize="16sp"
+                            android:clickable="false"
+                            android:focusable="false" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -271,28 +295,36 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:orientation="vertical">
+                            android:orientation="vertical"
+                            android:clickable="false"
+                            android:focusable="false">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/label_min_sleep"
                                 android:textSize="16sp"
-                                android:textStyle="bold" />
+                                android:textStyle="bold"
+                                android:clickable="false"
+                                android:focusable="false" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/desc_min_sleep"
                                 android:textSize="12sp"
-                                android:textColor="?android:attr/textColorSecondary" />
+                                android:textColor="?android:attr/textColorSecondary"
+                                android:clickable="false"
+                                android:focusable="false" />
                         </LinearLayout>
 
                         <TextView
                             android:id="@+id/text_min_sleep_value"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textSize="16sp" />
+                            android:textSize="16sp"
+                            android:clickable="false"
+                            android:focusable="false" />
                     </LinearLayout>
                 </LinearLayout>
 

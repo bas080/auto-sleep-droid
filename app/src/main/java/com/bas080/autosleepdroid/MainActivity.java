@@ -327,10 +327,24 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (view == null) return;
         view.setEnabled(enabled);
         view.setClickable(enabled);
+        view.setFocusable(enabled);
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {
-                setRowEnabled(group.getChildAt(i), enabled);
+                setChildViewsEnabled(group.getChildAt(i), enabled);
+            }
+        }
+    }
+
+    private void setChildViewsEnabled(View view, boolean enabled) {
+        if (view == null) return;
+        view.setEnabled(enabled);
+        view.setClickable(false);
+        view.setFocusable(false);
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                setChildViewsEnabled(group.getChildAt(i), enabled);
             }
         }
     }

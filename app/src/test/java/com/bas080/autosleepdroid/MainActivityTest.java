@@ -556,4 +556,32 @@ public class MainActivityTest {
         assertFalse(btnTargetTime.isEnabled());
         assertFalse(inputMinSleep.isEnabled());
     }
+
+    @Test
+    public void testButtonRowChildViewsAreNotClickableAndParentIsClickable() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
+        switchGoal.setChecked(true);
+
+        int[] rowIds = new int[]{R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep};
+        for (int rowId : rowIds) {
+            View parentRow = activity.findViewById(rowId);
+            assertNotNull("Row should exist", parentRow);
+            assertTrue("Parent row should be clickable when enabled", parentRow.isClickable());
+
+            if (parentRow instanceof android.view.ViewGroup) {
+                android.view.ViewGroup group = (android.view.ViewGroup) parentRow;
+                List<View> childList = new ArrayList<>();
+                findViewsOfType(group, View.class, childList);
+                for (View child : childList) {
+                    if (child != parentRow) {
+                        assertFalse("Child view inside button row should not be clickable: " + child, child.isClickable());
+                        assertFalse("Child view inside button row should not be focusable: " + child, child.isFocusable());
+                    }
+                }
+            }
+        }
+    }
 }
