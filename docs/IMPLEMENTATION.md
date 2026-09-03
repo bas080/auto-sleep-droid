@@ -99,13 +99,14 @@ The launcher activity starts `SleepTimerService`, requests `POST_NOTIFICATIONS` 
 Main Configuration Controls & Action Links:
 
 - Single-screen configuration UI:
+  - Nap alarm section at top (`btn_nap` button launching `NapDialogActivity` or canceling active nap).
   - Sleep timer enable/disable Switch (`active` preference).
-  - Sleep timer duration EditText (`duration_minutes` preference, parsed via `DurationUtils`).
+  - Sleep timer duration input using custom `DurationInputView` (`input_duration`, saving `duration_minutes` preference).
   - Show notification Switch (`show_notification` preference).
   - Target wake-up goal enable Switch (`wake_up_goal_enabled` preference).
-  - Target wake-up TimePicker (`wake_up_goal_hour` and `wake_up_goal_minute` preferences).
-  - Minimum sleep duration EditText (`min_sleep_duration_minutes` preference).
-- Links header & action link list at the bottom of the form: Manual, Logs, Feedback, Donate, Export, and Import.
+  - Target wake-up goal time Button (`btn_target_time`, displaying formatted system time and opening `TimePickerDialog` on click).
+  - Minimum sleep duration input using custom `DurationInputView` (`input_min_sleep`, saving `min_sleep_duration_minutes` preference).
+- Links header & action link list at the bottom of the form: Manual, Logs, Feedback, Donate, Export, and Import rendered inside custom `FlowLayout` wrapping inline with light font weight (`sans-serif-light`) separated by middle dots (`·`).
 - Full-screen Manual & Event Logs Views: Overlay `RelativeLayout` views in `activity_main.xml` with a Back button pinned to the bottom-right corner (`alignParentBottom="true"`, `alignParentEnd="true"`), displaying formatted HTML manual text or real-time monospace event logs and closing upon Back button tap or hardware back button press.
 - Export Settings Action: Serializes current preferences into a Schema Version 1 JSON string, launches system share action (`ACTION_SEND`), and logs to `EventLogger`.
 - Import Settings Action: Prompts user with instructional `AlertDialog`, validates syntax and boundaries, applies valid values, sends `ACTION_REDRAW_NOTIFICATION` to `SleepTimerService`, refreshes UI controls, and logs to `EventLogger`.

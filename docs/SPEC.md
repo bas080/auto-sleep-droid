@@ -32,14 +32,15 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 ## User interface
 - Main Application Screen (`MainActivity`):
   - Provides a complete single-screen configuration UI for all settings:
+    - Nap alarm section at top featuring a Nap button ("Nap" or "Cancel Nap" when active).
     - Sleep timer enable/disable switch.
-    - Sleep timer duration input (supporting natural duration strings like `20m`, `1h 15m`).
+    - Sleep timer duration input using side-by-side numeric fields for hours and minutes with conventional unit labels ("hours" and "mins").
     - Show notification switch to toggle ongoing notification shade visibility.
-    - Target wake-up goal enable switch, target wake-up time picker, and minimum sleep duration input.
-  - Action links at the bottom of the form under a "Links" header: Manual, Logs, Feedback, Donate, Export, and Import.
+    - Target wake-up goal enable switch, target wake-up time picker button, and minimum sleep duration input.
+  - Action links at the bottom of the form under a "Links" header: Manual, Logs, Feedback, Donate, Export, and Import arranged in a FlowLayout inline wrapping layout separated by middle dots.
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
-  - The notification features toggle actions ("Disable" when enabled, or "Enable" when disabled) and a "Nap" action button.
+  - The notification features toggle actions ("Disable" when enabled, or "Enable" when disabled) and a "Nap" / "Cancel Nap" action button.
   - Tapping "Nap" when no nap is active opens a duration dialog prefilled with the previously used nap duration. Starting a nap schedules a nap wake alarm. Tapping "Cancel Nap" while a nap is active cancels the nap alarm.
   - Tapping/clicking the notification body opens `MainActivity`.
 
@@ -97,13 +98,13 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - Every calculation and alarm update is logged line-by-line in the debug event log on `MainActivity`.
 
 ## Nap Timer
-- **Purpose**: A minimal, quick way to start or cancel a nap directly from the status notification shade without introducing a separate main UI nap workflow.
-- **Notification Actions**:
-  - If no nap is active: Tapping **Nap** in the notification shade opens a duration picker dialog prefilled with the previously used nap duration (default 20 minutes). Confirming "Nap" starts the nap alarm timer.
-  - If a nap is active: Tapping **Cancel Nap** cancels the active nap alarm.
+- **Purpose**: A minimal, quick way to start or cancel a nap directly from the main screen or status notification shade.
+- **UI & Notification Actions**:
+  - Main Screen (`MainActivity`): Features a dedicated Nap section with a Nap button (`btn_nap`). Tapping **Nap** launches `NapDialogActivity` prefilled with previously used nap duration; if active, tapping **Cancel Nap** cancels the active nap alarm.
+  - Notification Shade: Features a **Nap** / **Cancel Nap** action button. Tapping **Nap** launches `NapDialogActivity` without pulling `MainActivity` to the foreground; tapping **Cancel Nap** cancels the nap alarm.
 - **Nap Alarm & Reset Behavior**:
   - Uses existing wake alarm behavior (alarm tone with 3-minute volume crescendo, flip gesture snooze, volume button dismiss).
-  - When the sleep timer is reset (via flip gesture, volume button press, or duration reply), an active nap alarm is pushed forward by the same reset increment.
+  - When the sleep timer is reset (via flip gesture, volume button press, or duration update), an active nap alarm is pushed forward by the same reset increment.
 
 ## Acceptance criteria
 - The main activity presents a single-screen configuration UI for all timer, goal, notification, and event log settings.

@@ -136,6 +136,8 @@ Events in Auto Sleep Droid originate from user interactions, hardware sensors, s
 * **`SET_DURATION`**: User configures sleep timer duration in `MainActivity`.
 * **`SET_WAKE_UP_GOAL`**: User configures target wake-up goal time and minimum sleep duration safeguard in `MainActivity`.
 * **`TOGGLE_SHOW_NOTIFICATION`**: User toggles ongoing notification visibility in `MainActivity`.
+* **`START_NAP`**: User taps `"Nap"` on `MainActivity` or in notification shade and confirms nap duration dialog (`ACTION_START_NAP`).
+* **`CANCEL_NAP`**: User taps `"Cancel Nap"` on `MainActivity` or in notification shade (`ACTION_CANCEL_NAP`).
 
 ### System & Sensor Events
 
@@ -210,6 +212,10 @@ All system state changes and input triggers are logged to `EventLogger` with a t
 | Fade-Out Started | `Fade-out started` |
 | Pre-Fade Vol Restored | `Restored pre-fade volume to <vol>` |
 | Media Paused | `Timer expired: pausing media` |
+| Nap Alarm Started | `Nap alarm started for <duration>` |
+| Nap Alarm Triggered | `Nap alarm triggered` |
+| Nap Alarm Cancelled | `Nap alarm cancelled` |
+| Nap Alarm Pushed Forward | `Pushed nap alarm forward by <X>m` |
 | Wake-Up Goal Alarm Set | `Wake-Up Goal Alarm 'Auto Sleep' scheduled for <formatted_time>` |
 | Wake-Up Alarm Triggered | `Auto Sleep wake-up alarm triggered` |
 | Wake-Up Alarm Snoozed via Flip | `Wake-Up Goal alarm snoozed via flip gesture` |
