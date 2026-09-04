@@ -51,6 +51,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private View goalContainer;
     private View btnTargetTime;
     private TextView textTargetTimeValue;
+    private View btnCurrentWakeTime;
+    private TextView textCurrentWakeTimeValue;
     private View inputMinSleep;
     private TextView textMinSleepValue;
     private View btnNap;
@@ -127,6 +129,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         goalContainer = findViewById(R.id.goal_container);
         btnTargetTime = findViewById(R.id.btn_target_time);
         textTargetTimeValue = findViewById(R.id.text_target_time_value);
+        btnCurrentWakeTime = findViewById(R.id.btn_current_wake_time);
+        textCurrentWakeTimeValue = findViewById(R.id.text_current_wake_time_value);
         inputMinSleep = findViewById(R.id.input_min_sleep);
         textMinSleepValue = findViewById(R.id.text_min_sleep_value);
         btnNap = findViewById(R.id.btn_nap);
@@ -396,6 +400,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             btnTargetTime.setOnClickListener(v -> showTargetTimeDialog());
         }
 
+        if (btnCurrentWakeTime != null) {
+            btnCurrentWakeTime.setOnClickListener(v -> showCurrentWakeTimeDialog());
+        }
+
         if (inputMinSleep != null) {
             inputMinSleep.setOnClickListener(v -> showDurationDialog(
                     R.string.label_min_sleep,
@@ -418,12 +426,12 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         setRowEnabled(inputDuration, active);
         setRowEnabled(rowAutoTimer, true);
-        setRowEnabled(rowEnableGoal, active);
+        setRowEnabled(rowEnableGoal, true);
 
-        boolean goalInputsEnabled = active && goalEnabled;
-        setRowEnabled(headerAlarm, goalInputsEnabled);
-        setRowEnabled(btnTargetTime, goalInputsEnabled);
-        setRowEnabled(inputMinSleep, goalInputsEnabled);
+        setRowEnabled(headerAlarm, goalEnabled);
+        setRowEnabled(btnTargetTime, goalEnabled);
+        setRowEnabled(btnCurrentWakeTime, goalEnabled);
+        setRowEnabled(inputMinSleep, goalEnabled);
 
         if (goalContainer != null) {
             goalContainer.setVisibility(View.VISIBLE);
@@ -506,9 +514,37 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         timePickerDialog.show();
     }
 
+    private void showCurrentWakeTimeDialog() {
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        int goalHour = prefs.getInt("wake_up_goal_hour", 6);
+        int goalMin = prefs.getInt("wake_up_goal_minute", 30);
+        int currentHour = prefs.getInt("current_wake_hour", goalHour);
+        int currentMin = prefs.getInt("current_wake_minute", goalMin);
+        boolean is24Hour = android.text.format.DateFormat.is24HourFormat(this);
+
+        TimePickerDialog timePickerDialog = new TimePickerDialog(this,
+                (view, hourOfDay, minute) -> {
+                    SharedPreferences prefs1 = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+                    prefs1.edit()
+                            .putInt("current_wake_hour", hourOfDay)
+                            .putInt("current_wake_minute", minute)
+                            .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                            .apply();
+                    updateCurrentWakeTimeButtonText(hourOfDay, minute);
+                    redrawNotification();
+                }, currentHour, currentMin, is24Hour);
+        timePickerDialog.show();
+    }
+
     private void updateTargetTimeButtonText(int hour, int minute) {
         if (textTargetTimeValue != null) {
             textTargetTimeValue.setText(formatTime(hour, minute));
+        }
+    }
+
+    private void updateCurrentWakeTimeButtonText(int hour, int minute) {
+        if (textCurrentWakeTimeValue != null) {
+            textCurrentWakeTimeValue.setText(formatTime(hour, minute));
         }
     }
 
@@ -530,6 +566,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         boolean goalEnabled = prefs.getBoolean("wake_up_goal_enabled", false);
         int goalHour = prefs.getInt("wake_up_goal_hour", 6);
         int goalMin = prefs.getInt("wake_up_goal_minute", 30);
+        int currentHour = prefs.getInt("current_wake_hour", goalHour);
+        int currentMin = prefs.getInt("current_wake_minute", goalMin);
         int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
         int napDurationMinutes = prefs.getInt(SleepTimerService.KEY_NAP_DURATION_MINUTES, 20);
         long napEndsAt = prefs.getLong("nap_alarm_ends_at", 0L);
@@ -548,6 +586,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             switchEnableGoal.setChecked(goalEnabled);
         }
         updateTargetTimeButtonText(goalHour, goalMin);
+        updateCurrentWakeTimeButtonText(currentHour, currentMin);
         if (textMinSleepValue != null) {
             textMinSleepValue.setText(DurationUtils.formatDurationString(minSleepMin));
         }

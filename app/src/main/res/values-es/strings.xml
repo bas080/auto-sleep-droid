@@ -87,7 +87,9 @@
     <string name="dialog_crash_message">Auto Sleep Droid se cerró inesperadamente la última vez. ¿Deseas enviar un informe de error para ayudarnos a solucionarlo?</string>
     <string name="btn_send_report">Enviar informe</string>
     <string name="label_enable_timer">Temporizador de apagado</string>
-    <string name="desc_enable_timer">Activa o desactiva el temporizador de apagado y la alarma de despertar (sin afectar la alarma de siesta)</string>
+    <string name="desc_enable_timer">Activa o desactiva el temporizador de apagado (sin afectar alarmas de despertar ni de siesta)</string>
+    <string name="label_current_wake_time">Hora de despertar actual</string>
+    <string name="desc_current_wake_time">Próxima alarma de despertar programada; se ajusta automáticamente al reiniciarse el temporizador</string>
     <string name="label_hours">Horas</string>
     <string name="label_minutes">Minutos</string>
     <string name="unit_hours">horas</string>

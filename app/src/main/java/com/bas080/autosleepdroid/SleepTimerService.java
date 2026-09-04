@@ -293,6 +293,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 stateMachine.handleAlarmExpiry(currentVol);
             } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep wake-up alarm triggered");
+                updateNextWakeUpTimeOnDismissOrExpiry();
                 if (isWakeAlarmEnabled()) {
                     isWakeUpAlarmRinging = true;
                     isWakeUpAlarmSnoozed = false;
@@ -451,7 +452,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             isWakeUpAlarmRinging = false;
             isWakeUpAlarmSnoozed = false;
             onCancelAlarm();
-            dismissAutoSleepAlarm();
             updateListenersRegistration();
             showOrHideNotification();
         } else if (newState == SleepTimerStateMachine.State.WAITING) {
@@ -548,27 +548,52 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         int goalHour = prefs.getInt("wake_up_goal_hour", 6);
         int goalMin = prefs.getInt("wake_up_goal_minute", 30);
+        int currentHour = prefs.getInt("current_wake_hour", goalHour);
+        int currentMin = prefs.getInt("current_wake_minute", goalMin);
         int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
 
-        Calendar calGoal = Calendar.getInstance();
-        calGoal.setTimeInMillis(now);
-        calGoal.set(Calendar.HOUR_OF_DAY, goalHour);
-        calGoal.set(Calendar.MINUTE, goalMin);
-        calGoal.set(Calendar.SECOND, 0);
-        calGoal.set(Calendar.MILLISECOND, 0);
+        Calendar calCurrent = Calendar.getInstance();
+        calCurrent.setTimeInMillis(now);
+        calCurrent.set(Calendar.HOUR_OF_DAY, currentHour);
+        calCurrent.set(Calendar.MINUTE, currentMin);
+        calCurrent.set(Calendar.SECOND, 0);
+        calCurrent.set(Calendar.MILLISECOND, 0);
 
-        if (calGoal.getTimeInMillis() <= now) {
-            calGoal.add(Calendar.DAY_OF_YEAR, 1);
+        if (calCurrent.getTimeInMillis() <= now) {
+            calCurrent.add(Calendar.DAY_OF_YEAR, 1);
         }
 
-        long targetGoalMillis = calGoal.getTimeInMillis();
+        long scheduledAlarmMillis = calCurrent.getTimeInMillis();
 
-        long minWakeTimeMillis = (timerEndsAt > 0L ? timerEndsAt : now) + minSleepMin * 60_000L;
-        long scheduledAlarmMillis = Math.max(targetGoalMillis, minWakeTimeMillis);
+        long minWakeTimeMillis = now + minSleepMin * 60_000L;
+        if (minWakeTimeMillis > scheduledAlarmMillis) {
+            scheduledAlarmMillis = minWakeTimeMillis;
+        }
 
         Calendar calAlarm = Calendar.getInstance();
         calAlarm.setTimeInMillis(scheduledAlarmMillis);
         return calAlarm;
+    }
+
+    private void updateNextWakeUpTimeOnDismissOrExpiry() {
+        if (preferences == null) return;
+        int goalHour = preferences.getInt("wake_up_goal_hour", 6);
+        int goalMin = preferences.getInt("wake_up_goal_minute", 30);
+        int currentHour = preferences.getInt("current_wake_hour", goalHour);
+        int currentMin = preferences.getInt("current_wake_minute", goalMin);
+
+        int currentTotalMins = currentHour * 60 + currentMin;
+        int goalTotalMins = goalHour * 60 + goalMin;
+
+        int nextTotalMins = Math.max(goalTotalMins, currentTotalMins - 15);
+        int nextHour = (nextTotalMins / 60) % 24;
+        int nextMin = nextTotalMins % 60;
+
+        preferences.edit()
+                .putInt("current_wake_hour", nextHour)
+                .putInt("current_wake_minute", nextMin)
+                .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
+                .apply();
     }
 
 
@@ -700,6 +725,41 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
         lastTimerEndsAt = newTimerEndsAt;
         scheduleExpiry();
+
+        if (isWakeAlarmEnabled() && preferences != null) {
+            int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
+            long now = System.currentTimeMillis();
+            long requiredWakeTime = now + minSleepMin * 60_000L;
+
+            int goalHour = preferences.getInt("wake_up_goal_hour", 6);
+            int goalMin = preferences.getInt("wake_up_goal_minute", 30);
+            int currentHour = preferences.getInt("current_wake_hour", goalHour);
+            int currentMin = preferences.getInt("current_wake_minute", goalMin);
+
+            Calendar calCurrent = Calendar.getInstance();
+            calCurrent.setTimeInMillis(now);
+            calCurrent.set(Calendar.HOUR_OF_DAY, currentHour);
+            calCurrent.set(Calendar.MINUTE, currentMin);
+            calCurrent.set(Calendar.SECOND, 0);
+            calCurrent.set(Calendar.MILLISECOND, 0);
+            if (calCurrent.getTimeInMillis() <= now) {
+                calCurrent.add(Calendar.DAY_OF_YEAR, 1);
+            }
+
+            if (requiredWakeTime > calCurrent.getTimeInMillis()) {
+                Calendar calRequired = Calendar.getInstance();
+                calRequired.setTimeInMillis(requiredWakeTime);
+                int pushedHour = calRequired.get(Calendar.HOUR_OF_DAY);
+                int pushedMin = calRequired.get(Calendar.MINUTE);
+                preferences.edit()
+                        .putInt("current_wake_hour", pushedHour)
+                        .putInt("current_wake_minute", pushedMin)
+                        .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
+                        .apply();
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Pushed wake alarm forward to " + formatTime(pushedHour, pushedMin) + " due to min sleep safeguard");
+            }
+        }
+
         checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
     }
 

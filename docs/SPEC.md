@@ -90,18 +90,26 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - **Invalid Input Safeguard**: If an imported string is invalid, malformed, or contains out-of-range parameters, existing settings remain completely unchanged, an error Toast message is shown, and the failure is logged to the event log.
 
 ## Smart Target Wake-Up Goal ("Auto Sleep")
-- **Purpose**: Automatically set your daily wake-up alarm to your target wake-up goal time while ensuring you always get enough sleep.
+- **Purpose**: Automatically manage your daily wake-up alarm based on your target wake-up goal time and current wake-up time while ensuring you always get enough sleep, operating independently of whether the sleep timer is turned on.
 - **How It Works**:
-  1. **Daily Recurring Alarm**: When configured and enabled, the wake-up alarm is set daily. When the current wake-up alarm rings, the next wake-up alarm for the following day at the same target goal time is automatically set.
-  2. **Alarm Calculation at Timer Start**: When the sleep timer starts or is reset, the wake-up alarm is set to the maximum of target goal time and timer start time plus sleep timer duration plus minimum sleep duration safeguard. Upon expiration, the app gradually increases the default system alarm tone volume over 3 minutes along a gentle psychoacoustic crescendo curve and updates the ongoing status notification to display the ringing alarm status.
-  3. **Single Alarm Creation**: The app maintains only one wake-up alarm named `"Auto Sleep"`.
-  4. **Wake-Up Alarm Gestures & Persistence**:
+  1. **Independent Operation with Sleep Timer Adjustments**: The wake alarm operates independently of whether the sleep timer is turned on or off. Disabling or turning off the sleep timer does not cancel or disable scheduled wake alarms, and the Alarm section in `MainActivity` remains accessible whenever the wake-up goal feature is enabled. However, user interactions with the sleep timer (starting, resetting, or updating duration) can adjust the current wake alarm forward if necessary to enforce the minimum sleep safeguard.
+  2. **Daily Recurring Alarm & Current Wake-Up Time**:
+     - **Current Wake-Up Time**: Represents the exact clock time when the upcoming wake alarm will ring. Users can view and manually adjust the current wake-up time directly via a dedicated picker row on `MainActivity`.
+     - When configured and enabled, the wake alarm is set daily. When the current wake alarm is dismissed or triggered, the next wake-up alarm for the following day is set to `currentWakeUpTime - 15 minutes` (or target goal time if `currentWakeUpTime - 15m` is earlier than target goal time).
+  3. **Minimum Sleep Safeguard & Push-Forward Behavior**:
+     - Any user interactions with the sleep timer (starting or resetting the timer, or updating timer duration) calculate `requiredWakeUpTime = timerStartTime + minimumSleepDuration` (simply adding minimum sleep duration to timer start time, without including sleep timer countdown duration).
+     - If `requiredWakeUpTime` is later than `currentWakeUpTime`, `currentWakeUpTime` is automatically pushed forward to `requiredWakeUpTime` to respect the minimum sleep safeguard.
+  4. **Alarm Trigger & Audio**:
+     - Upon expiration, the app gradually increases the default system alarm tone volume over 3 minutes along a gentle psychoacoustic crescendo curve and updates the ongoing status notification to display the ringing alarm status.
+  5. **Single Alarm Creation**: The app maintains only one wake-up alarm named `"Auto Sleep"`.
+  6. **Wake-Up Alarm Gestures & Persistence**:
      - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes and updates the notification text.
-     - **Volume Button to Dismiss**: Pressing a hardware volume button while the wake-up alarm is ringing or snoozed dismisses the alarm and reverts the notification back to standard timer status.
-     - **Disabling Sleep Timer**: Turning off or disabling the sleep timer stops any currently ringing or snoozed alarm and dismisses future scheduled alarms.
-- **Disabled by Default**: The feature is off by default until enabled in MainActivity.
+     - **Volume Button to Dismiss**: Pressing a hardware volume button while the wake-up alarm is ringing or snoozed dismisses the alarm and reverts the notification back to standard status.
+     - **Sleep Timer Toggle Independence**: Turning off or disabling the sleep timer does not affect scheduled wake alarms.
+- **Disabled by Default**: The feature is off by default until enabled in `MainActivity`.
 - **User Inputs**:
   - **Target Goal Time** (e.g., `06:30 AM`).
+  - **Current Wake-Up Time** (e.g., `06:30 AM`, editable clock time for next alarm).
   - **Minimum Sleep Duration** (default `7.5 hours`).
 - **Event Logging**:
   - Every calculation and alarm update is logged line-by-line in the debug event log on `MainActivity`.
@@ -130,7 +138,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - Notifications remain minimal and compact when collapsed, expanding to show full details (fade target and scheduled wake-up alarm time).
 - The wake-up alarm is daily recurring, automatically scheduling the next alarm for the same target goal time when the current alarm rings.
 - Starting the sleep timer schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
-- Disabling the timer cancels the scheduled `"Auto Sleep"` alarm in the background without launching external Clock app UI activities.
+- Disabling the timer does not cancel scheduled wake alarms, allowing the wake alarm to operate independently of the sleep timer.
 - Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
 - The main screen includes "Export" and "Import" action links rendered in the bottom action link list.
 - Tapping "Export" serializes configuration settings and launches a system share action (`ACTION_SEND`).

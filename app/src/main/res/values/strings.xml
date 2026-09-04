@@ -87,7 +87,9 @@
     <string name="dialog_crash_message">Auto Sleep Droid closed unexpectedly last time. Would you like to send a crash report to help us fix the issue?</string>
     <string name="btn_send_report">Send Report</string>
     <string name="label_enable_timer">Sleep timer</string>
-    <string name="desc_enable_timer">Turn the sleep timer and wake alarm on or off (nap alarm unaffected)</string>
+    <string name="desc_enable_timer">Turn the sleep timer on or off (wake and nap alarms unaffected)</string>
+    <string name="label_current_wake_time">Current wake-up time</string>
+    <string name="desc_current_wake_time">Next scheduled wake alarm time; adjusts automatically when sleep timer resets</string>
     <string name="label_hours">Hours</string>
     <string name="label_minutes">Minutes</string>
     <string name="unit_hours">hours</string>
