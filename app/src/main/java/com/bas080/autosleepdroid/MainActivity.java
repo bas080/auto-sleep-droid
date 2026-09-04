@@ -431,16 +431,16 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private void updateInputEnabledStates(boolean active, boolean goalEnabled) {
         setRowEnabled(headerNap, true);
         setRowEnabled(headerTimer, true);
+        setRowEnabled(headerAlarm, true);
+        setRowEnabled(headerAbout, true);
 
         setRowEnabled(inputDuration, true);
         setRowEnabled(rowAutoTimer, true);
         setRowEnabled(rowEnableGoal, true);
 
-        setRowEnabled(headerAlarm, goalEnabled);
         setRowEnabled(btnTargetTime, goalEnabled);
         setRowEnabled(btnCurrentWakeTime, goalEnabled);
         setRowEnabled(inputMinSleep, goalEnabled);
-        setRowEnabled(headerAbout, true);
         setRowEnabled(btnVersion, true);
 
         if (goalContainer != null) {

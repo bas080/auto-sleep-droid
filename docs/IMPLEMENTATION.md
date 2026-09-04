@@ -84,10 +84,9 @@ Important constants:
 
 File: `app/src/main/java/com/bas080/autosleepdroid/NapDialogActivity.java`
 
-A dialog-themed activity launched from the status notification's "Nap" action when no nap is active:
+A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) launched from `MainActivity` or the status notification's "Nap" action when no nap is active:
 
-- Displays hour and minute numeric `EditText` fields prefilled with the previously used nap duration from `SharedPreferences` (`nap_duration_minutes`, default 20).
-- Provides "Cancel" and "Nap" buttons.
+- Constructs an `AlertDialog` using `AlertDialog.Builder` containing `DurationInputView` prefilled with previously used nap duration (`nap_duration_minutes`, default 20) and standard positive ("Nap") / negative ("Cancel") buttons, matching the exact dialog styling of all other app dialogs.
 - Confirming "Nap" persists the nap duration in `SharedPreferences` and sends `ACTION_START_NAP` with `EXTRA_NAP_DURATION_MINUTES` to `SleepTimerService`.
 
 ### `MainActivity`
@@ -99,11 +98,12 @@ The launcher activity starts `SleepTimerService`, requests `POST_NOTIFICATIONS` 
 Main Configuration Controls & Action Links:
 
 - Single-screen configuration UI:
+  - Section headings (`headerNap`, `headerTimer`, `headerAlarm`, `headerAbout`) remain enabled (`true`) with full opacity (`1.0f`) at all times.
   - Nap alarm section at top (`btn_nap` button launching `NapDialogActivity` or canceling active nap).
   - Sleep timer enable/disable Switch (`active` preference).
-  - Sleep timer duration input using custom `DurationInputView` (`input_duration`, saving `duration_minutes` preference).
-- Auto sleep timer (DND) toggle Switch (`auto_timer_enabled` preference).
-  - Target wake-up goal enable Switch (`wake_up_goal_enabled` preference).
+  - Sleep timer duration input using custom `DurationInputView` (`input_duration`, saving `duration_minutes` preference, displaying formatted duration value on `text_duration_value`). Timer duration controls remain enabled when the sleep timer switch is OFF.
+  - Auto sleep timer (DND) toggle Switch (`auto_timer_enabled` preference).
+  - Wake-up alarm enable Switch (`wake_up_goal_enabled` preference, labeled "Wake-up alarm").
   - Target wake-up goal time Button (`btn_target_time`, displaying formatted system time and opening `TimePickerDialog` on click).
   - Minimum sleep duration input using custom `DurationInputView` (`input_min_sleep`, saving `min_sleep_duration_minutes` preference).
 - Links header & action link list at the bottom of the form: Manual, Logs, Feedback, Donate, Export, and Import rendered inside custom `FlowLayout` wrapping inline with light font weight (`sans-serif-light`) separated by middle dots (`·`).

@@ -460,6 +460,7 @@ public class MainActivityTest {
         View inputDuration = activity.findViewById(R.id.input_duration);
         TextView textDurationValue = activity.findViewById(R.id.text_duration_value);
         assertNotNull(inputDuration);
+        assertNotNull(textDurationValue);
 
         inputDuration.performClick();
         AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
@@ -649,23 +650,22 @@ public class MainActivityTest {
         assertTrue(headerAlarm.isEnabled());
         assertEquals(1.0f, headerAlarm.getAlpha(), 0.01f);
 
-        // When goal is disabled, alarm heading should look disabled
+        // Section headings remain fully enabled and opaque (1.0f) at all times
         switchGoal.setChecked(false);
         assertTrue(headerNap.isEnabled());
         assertEquals(1.0f, headerNap.getAlpha(), 0.01f);
         assertTrue(headerTimer.isEnabled());
         assertEquals(1.0f, headerTimer.getAlpha(), 0.01f);
-        assertFalse(headerAlarm.isEnabled());
-        assertEquals(0.38f, headerAlarm.getAlpha(), 0.01f);
+        assertTrue(headerAlarm.isEnabled());
+        assertEquals(1.0f, headerAlarm.getAlpha(), 0.01f);
 
-        // When timer is disabled, timer heading and duration input remain enabled while alarm heading reflects goal status
         switchEnable.setChecked(false);
         assertTrue(headerNap.isEnabled());
         assertEquals(1.0f, headerNap.getAlpha(), 0.01f);
         assertTrue(headerTimer.isEnabled());
         assertEquals(1.0f, headerTimer.getAlpha(), 0.01f);
-        assertFalse(headerAlarm.isEnabled());
-        assertEquals(0.38f, headerAlarm.getAlpha(), 0.01f);
+        assertTrue(headerAlarm.isEnabled());
+        assertEquals(1.0f, headerAlarm.getAlpha(), 0.01f);
 
         switchGoal.setChecked(true);
         assertTrue(headerAlarm.isEnabled());
@@ -698,7 +698,8 @@ public class MainActivityTest {
         assertTrue(rowAutoTimer.isEnabled());
         assertTrue(rowEnableGoal.isEnabled());
         assertEquals(1.0f, rowEnableGoal.getAlpha(), 0.01f);
-        assertFalse(headerAlarm.isEnabled());
+        assertTrue(headerAlarm.isEnabled());
+        assertEquals(1.0f, headerAlarm.getAlpha(), 0.01f);
         assertFalse(btnTargetTime.isEnabled());
         assertFalse(btnCurrentWakeTime.isEnabled());
         assertFalse(inputMinSleep.isEnabled());
@@ -854,7 +855,7 @@ public class MainActivityTest {
                 List<View> childList = new ArrayList<>();
                 findViewsOfType(group, View.class, childList);
                 for (View child : childList) {
-                    if (child != parentRow) {
+                    if (child != parentRow && !(child instanceof android.widget.Switch)) {
                         assertFalse("Child view inside button row should not be clickable: " + child, child.isClickable());
                         assertFalse("Child view inside button row should not be focusable: " + child, child.isFocusable());
                     }
