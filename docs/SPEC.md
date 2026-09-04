@@ -34,10 +34,10 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - Provides a complete single-screen configuration UI for all settings:
     - Nap alarm section at top featuring a Nap button ("Nap" or "Cancel Nap" when active).
     - Sleep timer enable/disable switch.
-    - Sleep timer duration input using side-by-side numeric fields for hours and minutes with conventional unit labels ("hours" and "mins").
-    - Auto sleep timer (DND) enable/disable switch.
-    - Show notification switch to toggle ongoing notification shade visibility.
-    - Target wake-up goal enable switch, target wake-up time picker button, and minimum sleep duration input.
+    - Sleep timer duration input using side-by-side numeric fields for hours and minutes with unit labels ("hours" and "mins"). Timer duration controls remain enabled when the sleep timer switch is OFF.
+    - Auto sleep timer (DND) enable/disable switch (optional automation; manual toggle always available).
+    - Wake-up alarm enable switch ("Wake-up alarm"), target wake-up time picker button, and minimum sleep duration input.
+    - Section headings (Nap, Timer, Alarm, About) remain fully visible and opaque at all times.
   - Action links at the bottom of the form under a "Links" header: Manual, Logs, Feedback, Donate, Export, and Import arranged in a FlowLayout inline wrapping layout separated by middle dots.
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
@@ -69,9 +69,10 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - Provide haptic feedback (a short, faint vibration) to confirm user actions (turning off/on, volume button resets, and flip gestures).
 
 ## Auto Sleep Timer (Do Not Disturb)
-- **Purpose**: Automatically turn on the sleep timer when Android's Do Not Disturb mode is activated and turn it off when DND is deactivated.
+- **Purpose**: Optionally turn on the sleep timer when Android's Do Not Disturb mode is activated and turn it off when DND is deactivated.
 - **Behavior**:
   - Tapping the row opens Android Do Not Disturb settings.
+  - Optional automation feature; manual sleep timer toggling remains available at all times regardless of whether this setting is enabled.
   - When `auto_timer_enabled` is true, Auto Sleep Droid listens for DND filter change events (`NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED`).
   - When DND becomes active (interruption filter is not `INTERRUPTION_FILTER_ALL`), the sleep timer is automatically turned ON.
   - When DND becomes inactive (interruption filter returns to `INTERRUPTION_FILTER_ALL`), the sleep timer is automatically turned OFF.
@@ -118,6 +119,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - **Purpose**: A minimal, quick way to start or cancel a nap directly from the main screen or status notification shade.
 - **UI & Notification Actions**:
   - Main Screen (`MainActivity`): Features a dedicated Nap section with a Nap button (`btn_nap`). Tapping **Nap** launches `NapDialogActivity` prefilled with previously used nap duration; if active, tapping **Cancel Nap** cancels the active nap alarm.
+  - Nap Dialog: Presented using standard system alert dialog styling with DurationInputView and standard positive ("Nap") / negative ("Cancel") buttons, styled consistently with all other dialogs.
   - Notification Shade: Features a **Nap** / **Cancel Nap** action button. Tapping **Nap** launches `NapDialogActivity` without pulling `MainActivity` to the foreground; tapping **Cancel Nap** cancels the nap alarm.
 - **Nap Alarm & Reset Behavior**:
   - Uses existing wake alarm behavior (alarm tone with 3-minute volume crescendo, flip gesture snooze, volume button dismiss).

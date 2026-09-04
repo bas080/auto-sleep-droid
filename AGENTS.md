@@ -32,7 +32,7 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 ## Key Codebase Conventions
 
 - **UX Design Decisions:** Consult `docs/USER_PERSONA_AND_NEEDS.md` whenever making UX design decisions to ensure alignment with target user personas, mental models, zero-gaze nighttime interaction principles, and user needs.
-- **Documentation Boundaries:** `docs/SPEC.md` must focus purely on product requirements, acceptance criteria, and user-visible behavior without technical implementation details (such as Android API names, classes, or code constructs). Technical implementation details belong exclusively in `docs/IMPLEMENTATION.md`.
+- **Documentation Boundaries:** `docs/SPEC.md` is central to designing the app and any changes to the spec or product behavior require updating `docs/SPEC.md`. `docs/SPEC.md` must focus purely on product requirements, acceptance criteria, and user-visible behavior without technical implementation details (such as Android API names, classes, or code constructs). Technical implementation details and things implicit in the code should be documented in `docs/IMPLEMENTATION.md` so future agents can clearly understand how the code works; favor writing in `docs/IMPLEMENTATION.md` over writing code docs or inline comments.
 - **No Text Codeblock Diagrams:** Do not render ASCII or text-art codeblock diagrams in documentation files. Text diagrams are not computer parseable and are less desired.
 - **UI & Notification Strings:** Do not include trailing punctuation, colons, or ellipses in UI and notification string resource values (`strings.xml`).
 - **Localization:** Maintain default English resources in `app/src/main/res/values/strings.xml` and Spanish translations in `app/src/main/res/values-es/strings.xml`.
