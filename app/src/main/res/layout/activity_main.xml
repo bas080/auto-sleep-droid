@@ -54,6 +54,19 @@
                 android:paddingTop="8dp">
 
                 <!-- Nap Section -->
+                <TextView
+                    android:id="@+id/header_nap"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="4dp"
+                    android:text="@string/heading_nap"
+                    android:textColor="?android:attr/colorAccent"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
                 <LinearLayout
                     android:id="@+id/btn_nap"
                     android:layout_width="match_parent"
@@ -106,55 +119,19 @@
                         android:focusable="false" />
                 </LinearLayout>
 
-                <!-- Auto Sleep Timer Toggle Row -->
-                <LinearLayout
-                    android:id="@+id/row_auto_timer"
+                <!-- Timer Section -->
+                <TextView
+                    android:id="@+id/header_timer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="64dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:clickable="false"
-                        android:focusable="false">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_auto_timer"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:clickable="false"
-                            android:focusable="false" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/desc_auto_timer"
-                            android:textSize="12sp"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:clickable="false"
-                            android:focusable="false" />
-                    </LinearLayout>
-
-                    <Switch
-                        android:id="@+id/switch_auto_timer"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp" />
-                </LinearLayout>
+                    android:paddingTop="16dp"
+                    android:paddingBottom="4dp"
+                    android:text="@string/heading_timer"
+                    android:textColor="?android:attr/colorAccent"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
                 <!-- Enable Sleep Timer -->
                 <LinearLayout
@@ -248,6 +225,70 @@
                         android:clickable="false"
                         android:focusable="false" />
                 </LinearLayout>
+
+                <!-- Auto Sleep Timer Toggle Row -->
+                <LinearLayout
+                    android:id="@+id/row_auto_timer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="64dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:clickable="false"
+                        android:focusable="false">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_auto_timer"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:clickable="false"
+                            android:focusable="false" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/desc_auto_timer"
+                            android:textSize="12sp"
+                            android:textColor="?android:attr/textColorSecondary"
+                            android:clickable="false"
+                            android:focusable="false" />
+                    </LinearLayout>
+
+                    <Switch
+                        android:id="@+id/switch_auto_timer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp" />
+                </LinearLayout>
+
+                <!-- Alarm Section -->
+                <TextView
+                    android:id="@+id/header_alarm"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="4dp"
+                    android:text="@string/heading_alarm"
+                    android:textColor="?android:attr/colorAccent"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
                 <!-- Wake-Up Goal Section -->
                 <LinearLayout

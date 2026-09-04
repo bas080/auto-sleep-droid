@@ -62,6 +62,9 @@
     <string name="dialog_nap_explanation">Set nap duration for wake alarm</string>
     <string name="toast_nap_started">Nap alarm set for %1$s</string>
     <string name="toast_nap_cancelled">Nap alarm cancelled</string>
+    <string name="heading_nap">Nap</string>
+    <string name="heading_timer">Timer</string>
+    <string name="heading_alarm">Alarm</string>
     <string name="label_nap">Nap alarm</string>
     <string name="desc_nap">Start a quick nap wake alarm</string>
     <string name="label_links">Links</string>

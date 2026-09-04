@@ -62,6 +62,9 @@
     <string name="dialog_nap_explanation">Establecer duración de la siesta para la alarma de despertar</string>
     <string name="toast_nap_started">Alarma de siesta programada para %1$s</string>
     <string name="toast_nap_cancelled">Alarma de siesta cancelada</string>
+    <string name="heading_nap">Siesta</string>
+    <string name="heading_timer">Temporizador</string>
+    <string name="heading_alarm">Alarma</string>
     <string name="label_nap">Alarma de siesta</string>
     <string name="desc_nap">Inicia una alarma de siesta rápida</string>
     <string name="label_links">Enlaces</string>
