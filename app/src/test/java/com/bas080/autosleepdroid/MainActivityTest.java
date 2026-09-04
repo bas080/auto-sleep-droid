@@ -577,11 +577,63 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testSectionHeadingsExistAndReflectEnabledStates() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        TextView headerNap = activity.findViewById(R.id.header_nap);
+        TextView headerTimer = activity.findViewById(R.id.header_timer);
+        TextView headerAlarm = activity.findViewById(R.id.header_alarm);
+
+        assertNotNull(headerNap);
+        assertNotNull(headerTimer);
+        assertNotNull(headerAlarm);
+
+        assertEquals(activity.getString(R.string.heading_nap), headerNap.getText().toString());
+        assertEquals(activity.getString(R.string.heading_timer), headerTimer.getText().toString());
+        assertEquals(activity.getString(R.string.heading_alarm), headerAlarm.getText().toString());
+
+        android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
+        android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
+
+        // When both timer and goal are enabled
+        switchEnable.setChecked(true);
+        switchGoal.setChecked(true);
+
+        assertTrue(headerNap.isEnabled());
+        assertEquals(1.0f, headerNap.getAlpha(), 0.01f);
+        assertTrue(headerTimer.isEnabled());
+        assertEquals(1.0f, headerTimer.getAlpha(), 0.01f);
+        assertTrue(headerAlarm.isEnabled());
+        assertEquals(1.0f, headerAlarm.getAlpha(), 0.01f);
+
+        // When goal is disabled, alarm heading should look disabled
+        switchGoal.setChecked(false);
+        assertTrue(headerNap.isEnabled());
+        assertEquals(1.0f, headerNap.getAlpha(), 0.01f);
+        assertTrue(headerTimer.isEnabled());
+        assertEquals(1.0f, headerTimer.getAlpha(), 0.01f);
+        assertFalse(headerAlarm.isEnabled());
+        assertEquals(0.38f, headerAlarm.getAlpha(), 0.01f);
+
+        // When timer is disabled, timer and alarm headings should look disabled
+        switchEnable.setChecked(false);
+        assertTrue(headerNap.isEnabled());
+        assertEquals(1.0f, headerNap.getAlpha(), 0.01f);
+        assertFalse(headerTimer.isEnabled());
+        assertEquals(0.38f, headerTimer.getAlpha(), 0.01f);
+        assertFalse(headerAlarm.isEnabled());
+        assertEquals(0.38f, headerAlarm.getAlpha(), 0.01f);
+    }
+
+    @Test
     public void testInputsDisabledWhenSleepTimerIsDisabledHasReducedAlpha() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
 
         android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
+        View headerTimer = activity.findViewById(R.id.header_timer);
+        View headerAlarm = activity.findViewById(R.id.header_alarm);
         View inputDuration = activity.findViewById(R.id.input_duration);
         View rowAutoTimer = activity.findViewById(R.id.row_auto_timer);
         View rowEnableGoal = activity.findViewById(R.id.row_enable_goal);
@@ -591,6 +643,10 @@ public class MainActivityTest {
 
         switchEnable.setChecked(false);
 
+        assertFalse(headerTimer.isEnabled());
+        assertEquals(0.38f, headerTimer.getAlpha(), 0.01f);
+        assertFalse(headerAlarm.isEnabled());
+        assertEquals(0.38f, headerAlarm.getAlpha(), 0.01f);
         assertFalse(inputDuration.isEnabled());
         assertEquals(0.38f, inputDuration.getAlpha(), 0.01f);
         assertTrue(rowAutoTimer.isEnabled());
@@ -602,6 +658,8 @@ public class MainActivityTest {
         assertEquals(0.38f, inputMinSleep.getAlpha(), 0.01f);
 
         switchEnable.setChecked(true);
+        assertTrue(headerTimer.isEnabled());
+        assertEquals(1.0f, headerTimer.getAlpha(), 0.01f);
         assertTrue(inputDuration.isEnabled());
         assertEquals(1.0f, inputDuration.getAlpha(), 0.01f);
         assertEquals(1.0f, rowEnableGoal.getAlpha(), 0.01f);

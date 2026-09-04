@@ -37,6 +37,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView manualTextContent;
     private View logsOverlayContainer;
 
+    private View headerNap;
+    private View headerTimer;
+    private View headerAlarm;
+
     private Switch switchEnableTimer;
     private View inputDuration;
     private TextView textDurationValue;
@@ -108,6 +112,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         manualOverlayContainer = findViewById(R.id.manual_overlay_container);
         manualTextContent = findViewById(R.id.manual_text_content);
         logsOverlayContainer = findViewById(R.id.logs_overlay_container);
+
+        headerNap = findViewById(R.id.header_nap);
+        headerTimer = findViewById(R.id.header_timer);
+        headerAlarm = findViewById(R.id.header_alarm);
 
         switchEnableTimer = findViewById(R.id.switch_enable_timer);
         inputDuration = findViewById(R.id.input_duration);
@@ -405,11 +413,15 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void updateInputEnabledStates(boolean active, boolean goalEnabled) {
+        setRowEnabled(headerNap, true);
+        setRowEnabled(headerTimer, active);
+
         setRowEnabled(inputDuration, active);
         setRowEnabled(rowAutoTimer, true);
         setRowEnabled(rowEnableGoal, active);
 
         boolean goalInputsEnabled = active && goalEnabled;
+        setRowEnabled(headerAlarm, goalInputsEnabled);
         setRowEnabled(btnTargetTime, goalInputsEnabled);
         setRowEnabled(inputMinSleep, goalInputsEnabled);
 
