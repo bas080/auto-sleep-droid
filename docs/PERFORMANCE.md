@@ -34,6 +34,10 @@ This document provides a technical evaluation of the performance characteristics
 - **Mechanism**: Enabled Gradle build caching (`org.gradle.caching=true`) and parallel execution (`org.gradle.parallel=true`) in `gradle.properties`, along with `cache: 'gradle'` in GitHub Actions workflows (`.github/workflows/android-release.yml`).
 - **Performance Impact**: Significantly reduces clean and incremental build execution times and speeds up CI unit test runs across workflow executions.
 
+### 1.8 Shared Themed Dialog Context & Direct SharedPreferences Synchronization
+- **Mechanism**: Dialog views (such as `NapDialogActivity`) construct `AlertDialog.Builder` and `DurationInputView` with a shared `ContextThemeWrapper(this, R.style.AppTheme)`, eliminating XML layout reinflations and custom dialog layouts. Additionally, wake-up alarm calculations directly persist pushed wake times to `SharedPreferences` in `SleepTimerService` and filter alarm string formatting behind `isWakeAlarmEnabled()`.
+- **Performance Impact**: Reduces view hierarchy complexity and layout passes during dialog display, avoids unnecessary SystemUI notification string formatting and redraws when alarms are disabled, and eliminates multi-process IPC roundtrips between activity and service for scheduled alarm time synchronization.
+
 ---
 
 ## 2. Critical Performance Analysis & Current Bottlenecks
