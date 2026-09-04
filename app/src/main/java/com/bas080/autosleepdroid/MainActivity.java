@@ -633,6 +633,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             json.put("wake_up_goal_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
             json.put("wake_up_goal_hour", prefs.getInt("wake_up_goal_hour", 6));
             json.put("wake_up_goal_minute", prefs.getInt("wake_up_goal_minute", 30));
+            int goalHour = prefs.getInt("wake_up_goal_hour", 6);
+            int goalMin = prefs.getInt("wake_up_goal_minute", 30);
+            json.put("current_wake_hour", prefs.getInt("current_wake_hour", goalHour));
+            json.put("current_wake_minute", prefs.getInt("current_wake_minute", goalMin));
             json.put("min_sleep_duration_minutes", prefs.getInt("min_sleep_duration_minutes", 450));
 
             String exportStr = json.toString();
@@ -712,6 +716,16 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 throw new JSONException("wake_up_goal_minute out of range");
             }
 
+            int currentWakeHour = json.optInt("current_wake_hour", wakeUpGoalHour);
+            if (currentWakeHour < 0 || currentWakeHour > 23) {
+                throw new JSONException("current_wake_hour out of range");
+            }
+
+            int currentWakeMinute = json.optInt("current_wake_minute", wakeUpGoalMinute);
+            if (currentWakeMinute < 0 || currentWakeMinute > 59) {
+                throw new JSONException("current_wake_minute out of range");
+            }
+
             int minSleepMinutes = json.getInt("min_sleep_duration_minutes");
             if (minSleepMinutes < 1 || minSleepMinutes > 1440) {
                 throw new JSONException("min_sleep_duration_minutes out of range");
@@ -725,6 +739,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     .putBoolean("wake_up_goal_enabled", wakeUpGoalEnabled)
                     .putInt("wake_up_goal_hour", wakeUpGoalHour)
                     .putInt("wake_up_goal_minute", wakeUpGoalMinute)
+                    .putInt("current_wake_hour", currentWakeHour)
+                    .putInt("current_wake_minute", currentWakeMinute)
                     .putInt("min_sleep_duration_minutes", minSleepMinutes)
                     .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
                     .apply();

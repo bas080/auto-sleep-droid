@@ -640,7 +640,7 @@ public class MainActivityTest {
         assertFalse(headerAlarm.isEnabled());
         assertEquals(0.38f, headerAlarm.getAlpha(), 0.01f);
 
-        // When timer is disabled, timer and alarm headings should look disabled
+        // When timer is disabled, timer heading should look disabled while alarm heading reflects goal status
         switchEnable.setChecked(false);
         assertTrue(headerNap.isEnabled());
         assertEquals(1.0f, headerNap.getAlpha(), 0.01f);
@@ -648,6 +648,10 @@ public class MainActivityTest {
         assertEquals(0.38f, headerTimer.getAlpha(), 0.01f);
         assertFalse(headerAlarm.isEnabled());
         assertEquals(0.38f, headerAlarm.getAlpha(), 0.01f);
+
+        switchGoal.setChecked(true);
+        assertTrue(headerAlarm.isEnabled());
+        assertEquals(1.0f, headerAlarm.getAlpha(), 0.01f);
     }
 
     @Test
@@ -663,30 +667,61 @@ public class MainActivityTest {
         View rowEnableGoal = activity.findViewById(R.id.row_enable_goal);
         android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
         View btnTargetTime = activity.findViewById(R.id.btn_target_time);
+        View btnCurrentWakeTime = activity.findViewById(R.id.btn_current_wake_time);
         View inputMinSleep = activity.findViewById(R.id.input_min_sleep);
 
+        switchGoal.setChecked(false);
         switchEnable.setChecked(false);
 
         assertFalse(headerTimer.isEnabled());
         assertEquals(0.38f, headerTimer.getAlpha(), 0.01f);
-        assertFalse(headerAlarm.isEnabled());
-        assertEquals(0.38f, headerAlarm.getAlpha(), 0.01f);
         assertFalse(inputDuration.isEnabled());
         assertEquals(0.38f, inputDuration.getAlpha(), 0.01f);
         assertTrue(rowAutoTimer.isEnabled());
-        assertFalse(switchGoal.isEnabled());
-        assertEquals(0.38f, rowEnableGoal.getAlpha(), 0.01f);
-        assertFalse(btnTargetTime.isEnabled());
-        assertEquals(0.38f, btnTargetTime.getAlpha(), 0.01f);
-        assertFalse(inputMinSleep.isEnabled());
-        assertEquals(0.38f, inputMinSleep.getAlpha(), 0.01f);
-
-        switchEnable.setChecked(true);
-        assertTrue(headerTimer.isEnabled());
-        assertEquals(1.0f, headerTimer.getAlpha(), 0.01f);
-        assertTrue(inputDuration.isEnabled());
-        assertEquals(1.0f, inputDuration.getAlpha(), 0.01f);
+        assertTrue(rowEnableGoal.isEnabled());
         assertEquals(1.0f, rowEnableGoal.getAlpha(), 0.01f);
+        assertFalse(headerAlarm.isEnabled());
+        assertFalse(btnTargetTime.isEnabled());
+        assertFalse(btnCurrentWakeTime.isEnabled());
+        assertFalse(inputMinSleep.isEnabled());
+
+        // Enabling wake goal makes alarm section inputs active independently of timer
+        switchGoal.setChecked(true);
+        assertTrue(headerAlarm.isEnabled());
+        assertEquals(1.0f, headerAlarm.getAlpha(), 0.01f);
+        assertTrue(btnTargetTime.isEnabled());
+        assertTrue(btnCurrentWakeTime.isEnabled());
+        assertTrue(inputMinSleep.isEnabled());
+    }
+
+    @Test
+    public void testCurrentWakeTimeButtonClickOpensDialogAndSavesTime() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        View btnCurrentWakeTime = activity.findViewById(R.id.btn_current_wake_time);
+        TextView textCurrentWakeTimeValue = activity.findViewById(R.id.text_current_wake_time_value);
+        assertNotNull(btnCurrentWakeTime);
+        assertNotNull(textCurrentWakeTimeValue);
+
+        btnCurrentWakeTime.performClick();
+
+        android.app.Dialog dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog();
+        assertNotNull(dialog);
+        assertTrue(dialog instanceof android.app.TimePickerDialog);
+
+        android.app.TimePickerDialog timePickerDialog = (android.app.TimePickerDialog) dialog;
+        timePickerDialog.updateTime(8, 15);
+
+        android.widget.Button okButton = timePickerDialog.getButton(DialogInterface.BUTTON_POSITIVE);
+        assertNotNull(okButton);
+        okButton.performClick();
+
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+
+        android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
+        assertEquals(8, prefs.getInt("current_wake_hour", -1));
+        assertEquals(15, prefs.getInt("current_wake_minute", -1));
     }
 
     @Test

@@ -705,7 +705,7 @@ public class SleepTimerServiceTest {
     }
 
     @Test
-    public void testDisablingSleepTimerDismissesActiveAndFutureAlarms() {
+    public void testDisablingSleepTimerPreservesScheduledWakeAlarm() {
         preferences.edit()
                 .putBoolean("active", true)
                 .putBoolean("show_notification", true)
@@ -730,7 +730,32 @@ public class SleepTimerServiceTest {
         service.onStartCommand(turnOffIntent, 0, 1);
 
         assertFalse(preferences.getBoolean("active", true));
-        assertFalse(preferences.contains(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS));
+        // Disabling sleep timer must NOT cancel scheduled wake alarms
+        assertTrue(preferences.contains(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS));
+    }
+
+    @Test
+    public void testDismissingWakeUpAlarmStepsBackCurrentWakeTimeBy15Minutes() {
+        preferences.edit()
+                .putBoolean("active", false)
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 7)
+                .putInt("current_wake_minute", 30)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        // Dismiss wake-up alarm
+        Intent dismissIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_DISMISS_WAKEUP_ALARM);
+        service.onStartCommand(dismissIntent, 0, 1);
+
+        // 7:30 - 15m = 7:15
+        assertEquals("expected hour 7 but was " + preferences.getInt("current_wake_hour", -1), 7, preferences.getInt("current_wake_hour", -1));
+        assertEquals("expected min 15 but was " + preferences.getInt("current_wake_minute", -1), 15, preferences.getInt("current_wake_minute", -1));
     }
 
     @Test

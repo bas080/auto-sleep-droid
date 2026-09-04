@@ -306,12 +306,14 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
             } else if (ACTION_DISMISS_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed");
+                updateNextWakeUpTimeOnDismissOrExpiry();
                 stopWakeUpAlarmSound();
                 cancelSnoozeAlarm();
                 cancelNapAlarm(false);
                 isWakeUpAlarmRinging = false;
                 isWakeUpAlarmSnoozed = false;
                 updateListenersRegistration();
+                checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
                 updateNotification();
                 android.widget.Toast.makeText(this, R.string.toast_alarm_dismissed, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_SNOOZE_WAKEUP_ALARM.equals(intent.getAction())) {
@@ -565,9 +567,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         long scheduledAlarmMillis = calCurrent.getTimeInMillis();
 
-        long minWakeTimeMillis = now + minSleepMin * 60_000L;
-        if (minWakeTimeMillis > scheduledAlarmMillis) {
-            scheduledAlarmMillis = minWakeTimeMillis;
+        if (timerEndsAt > 0L) {
+            long minWakeTimeMillis = timerEndsAt + minSleepMin * 60_000L;
+            if (minWakeTimeMillis > scheduledAlarmMillis) {
+                scheduledAlarmMillis = minWakeTimeMillis;
+            }
         }
 
         Calendar calAlarm = Calendar.getInstance();
