@@ -333,6 +333,31 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testReloadSettingsDoesNotOverrideManualTimerToggleWhenAutoDndIsEnabled() throws Exception {
+        preferences.edit()
+                .putBoolean("active", false)
+                .putBoolean("auto_timer_enabled", true)
+                .putInt("duration_minutes", 20)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        java.lang.reflect.Field stateMachineField = SleepTimerService.class.getDeclaredField("stateMachine");
+        stateMachineField.setAccessible(true);
+        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
+
+        assertFalse(stateMachine.isEnabled());
+
+        // Redraw notification / settings reload must keep timer off if user turned it off
+        Intent redrawIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_REDRAW_NOTIFICATION);
+        service.onStartCommand(redrawIntent, 0, 1);
+
+        assertFalse("Reloading settings must not force timer ON when user explicitly disabled it", stateMachine.isEnabled());
+    }
+
+    @Test
     public void testTogglingTimerOffKeepsNapAlarmRunning() {
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();

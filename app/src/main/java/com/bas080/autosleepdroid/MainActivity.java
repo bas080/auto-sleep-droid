@@ -730,11 +730,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     protected void onResume() {
         super.onResume();
         EventLogger.setListener(this);
-        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-        if (prefs.getBoolean("auto_timer_enabled", false)) {
-            boolean dndActive = isDndActive();
-            prefs.edit().putBoolean("active", dndActive).apply();
-        }
         refreshEventLog();
         loadPreferencesIntoUi();
         redrawNotification();

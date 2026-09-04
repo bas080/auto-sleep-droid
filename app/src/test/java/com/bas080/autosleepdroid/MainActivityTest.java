@@ -282,6 +282,30 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testManualTimerTogglePreservedWhenAutoDndIsEnabledAndActivityResumed() {
+        Application application = ApplicationProvider.getApplicationContext();
+        android.content.SharedPreferences prefs = application.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
+        prefs.edit().putBoolean("auto_timer_enabled", true).putBoolean("active", true).commit();
+
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
+        assertNotNull(switchEnable);
+        assertTrue(switchEnable.isChecked());
+
+        // User manually toggles timer off while Auto DND is enabled
+        switchEnable.setChecked(false);
+        assertFalse(prefs.getBoolean("active", true));
+
+        // Resuming MainActivity must NOT override user's manual toggle back to DND state
+        controller.pause().resume();
+
+        assertFalse("Manual timer toggle should be preserved on resume even when auto DND is enabled", switchEnable.isChecked());
+        assertFalse(prefs.getBoolean("active", true));
+    }
+
+    @Test
     public void testTargetTimeButtonClickOpensDialogAndSavesTime() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
