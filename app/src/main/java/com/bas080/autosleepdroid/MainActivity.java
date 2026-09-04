@@ -357,6 +357,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 if (isUpdatingUi) return;
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
                 prefs.edit().putBoolean("auto_timer_enabled", isChecked).apply();
+                if (isChecked) {
+                    boolean dndActive = isDndActive();
+                    prefs.edit().putBoolean("active", dndActive).apply();
+                    if (switchEnableTimer != null) {
+                        switchEnableTimer.setChecked(dndActive);
+                    }
+                }
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Auto sleep timer (DND) enabled" : "Auto sleep timer (DND) disabled");
                 redrawNotification();
             });
@@ -409,6 +416,16 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (goalContainer != null) {
             goalContainer.setVisibility(View.VISIBLE);
         }
+    }
+
+    private boolean isDndActive() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (nm != null) {
+                return nm.getCurrentInterruptionFilter() != android.app.NotificationManager.INTERRUPTION_FILTER_ALL;
+            }
+        }
+        return false;
     }
 
     private void openDndSettings() {
@@ -701,6 +718,11 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     protected void onResume() {
         super.onResume();
         EventLogger.setListener(this);
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        if (prefs.getBoolean("auto_timer_enabled", false)) {
+            boolean dndActive = isDndActive();
+            prefs.edit().putBoolean("active", dndActive).apply();
+        }
         refreshEventLog();
         loadPreferencesIntoUi();
         redrawNotification();
