@@ -854,16 +854,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             if (alarmUri == null) {
                 alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
             }
-            currentAlarmRingtone = RingtoneManager.getRingtone(getApplicationContext(), alarmUri);
+            currentAlarmRingtone = getRingtone(getApplicationContext(), alarmUri);
             if (currentAlarmRingtone != null) {
-                if (android.os.Build.VERSION.SDK_INT >= 21) {
-                    currentAlarmRingtone.setAudioAttributes(new AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ALARM)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build());
-                } else {
-                    currentAlarmRingtone.setStreamType(AudioManager.STREAM_ALARM);
-                }
+                AlarmAudioUtils.configureAlarmAudioAttributes(currentAlarmRingtone);
                 if (android.os.Build.VERSION.SDK_INT >= 28) {
                     currentAlarmRingtone.setVolume(0.0f);
                 }
@@ -907,6 +900,20 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         } else {
             alarmCrescendoRunnable = null;
         }
+    }
+
+    Ringtone getRingtone(Context context, Uri uri) {
+        Ringtone ringtone = RingtoneManager.getRingtone(context, uri);
+        if (ringtone == null) {
+            try {
+                java.lang.reflect.Constructor<Ringtone> constructor =
+                        Ringtone.class.getDeclaredConstructor(Context.class, boolean.class);
+                constructor.setAccessible(true);
+                ringtone = constructor.newInstance(context, false);
+            } catch (Exception ignored) {
+            }
+        }
+        return ringtone;
     }
 
     private void stopWakeUpAlarmSound() {
