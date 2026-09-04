@@ -102,7 +102,7 @@
     <string name="label_wake_up_goal">Objetivo de despertar</string>
     <string name="desc_wake_up_goal">Programación automática de alarma de despertar diaria con protección de tiempo de sueño</string>
     <string name="label_auto_timer">Temporizador automático (No molestar)</string>
-    <string name="desc_auto_timer">Activa/desactiva el temporizador con No molestar (toca para abrir ajustes de No molestar)</string>
+    <string name="desc_auto_timer">Activa/desactiva opcionalmente el temporizador con No molestar (control manual siempre disponible; toca para abrir ajustes)</string>
     <string name="label_target_time">Hora de despertar deseada</string>
     <string name="desc_target_time">Hora deseada para despertar cada día</string>
     <string name="label_min_sleep">Duración de sueño mínima</string>
