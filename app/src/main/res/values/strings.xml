@@ -102,7 +102,7 @@
     <string name="label_wake_up_goal">Target wake-up goal</string>
     <string name="desc_wake_up_goal">Automatically schedule daily wake-up alarms with sleep duration safeguards</string>
     <string name="label_auto_timer">Auto sleep timer (DND)</string>
-    <string name="desc_auto_timer">Turn sleep timer on/off with Do Not Disturb (tap row to open DND settings)</string>
+    <string name="desc_auto_timer">Optionally turn sleep timer on/off with Do Not Disturb (manual toggle always available; tap row for DND settings)</string>
     <string name="label_target_time">Target wake-up time</string>
     <string name="desc_target_time">Desired daily wake-up clock time</string>
     <string name="label_min_sleep">Minimum sleep duration</string>
