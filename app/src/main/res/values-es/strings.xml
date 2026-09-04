@@ -59,7 +59,6 @@
     <string name="action_cancel_nap">Cancelar siesta</string>
     <string name="notification_nap_suffix">" • Siesta a las %1$s"</string>
     <string name="dialog_nap_title">Iniciar siesta</string>
-    <string name="dialog_nap_explanation">Establecer duración de la siesta para la alarma de despertar</string>
     <string name="toast_nap_started">Alarma de siesta programada para %1$s</string>
     <string name="toast_nap_cancelled">Alarma de siesta cancelada</string>
     <string name="heading_nap">Siesta</string>
