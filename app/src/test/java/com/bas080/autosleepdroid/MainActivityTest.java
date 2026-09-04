@@ -658,12 +658,12 @@ public class MainActivityTest {
         assertFalse(headerAlarm.isEnabled());
         assertEquals(0.38f, headerAlarm.getAlpha(), 0.01f);
 
-        // When timer is disabled, timer heading should look disabled while alarm heading reflects goal status
+        // When timer is disabled, timer heading and duration input remain enabled while alarm heading reflects goal status
         switchEnable.setChecked(false);
         assertTrue(headerNap.isEnabled());
         assertEquals(1.0f, headerNap.getAlpha(), 0.01f);
-        assertFalse(headerTimer.isEnabled());
-        assertEquals(0.38f, headerTimer.getAlpha(), 0.01f);
+        assertTrue(headerTimer.isEnabled());
+        assertEquals(1.0f, headerTimer.getAlpha(), 0.01f);
         assertFalse(headerAlarm.isEnabled());
         assertEquals(0.38f, headerAlarm.getAlpha(), 0.01f);
 
@@ -673,7 +673,7 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testInputsDisabledWhenSleepTimerIsDisabledHasReducedAlpha() {
+    public void testTimerInputsRemainEnabledWhenSleepTimerIsDisabled() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
 
@@ -691,10 +691,10 @@ public class MainActivityTest {
         switchGoal.setChecked(false);
         switchEnable.setChecked(false);
 
-        assertFalse(headerTimer.isEnabled());
-        assertEquals(0.38f, headerTimer.getAlpha(), 0.01f);
-        assertFalse(inputDuration.isEnabled());
-        assertEquals(0.38f, inputDuration.getAlpha(), 0.01f);
+        assertTrue(headerTimer.isEnabled());
+        assertEquals(1.0f, headerTimer.getAlpha(), 0.01f);
+        assertTrue(inputDuration.isEnabled());
+        assertEquals(1.0f, inputDuration.getAlpha(), 0.01f);
         assertTrue(rowAutoTimer.isEnabled());
         assertTrue(rowEnableGoal.isEnabled());
         assertEquals(1.0f, rowEnableGoal.getAlpha(), 0.01f);
