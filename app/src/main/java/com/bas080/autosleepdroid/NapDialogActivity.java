@@ -21,7 +21,7 @@ public class NapDialogActivity extends Activity {
         durationInputView.setPadding(48, 24, 48, 24);
         durationInputView.setTotalMinutes(savedDuration);
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(new android.view.ContextThemeWrapper(this, R.style.AppTheme));
         builder.setTitle(R.string.dialog_nap_title);
         builder.setView(durationInputView);
         builder.setPositiveButton(R.string.action_nap, (dialog, which) -> {
