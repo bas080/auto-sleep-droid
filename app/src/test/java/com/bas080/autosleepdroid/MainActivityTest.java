@@ -49,12 +49,20 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testVersionDisplay() {
+    public void testVersionDisplayAndClickLaunchesReleases() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().get();
+        View btnVersion = activity.findViewById(R.id.btn_version);
         TextView versionView = activity.findViewById(R.id.app_version_text);
+        assertNotNull(btnVersion);
         assertNotNull(versionView);
         assertTrue(versionView.getText().toString().contains(BuildConfig.VERSION_NAME));
+
+        btnVersion.performClick();
+        Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(intent);
+        assertEquals(Intent.ACTION_VIEW, intent.getAction());
+        assertEquals("https://github.com/bas080/auto-sleep-droid/releases", intent.getDataString());
     }
 
     @Test
@@ -546,13 +554,9 @@ public class MainActivityTest {
 
         btnNap.performClick();
 
-        AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
-        assertNotNull(dialog);
-        List<DurationInputView> list = new ArrayList<>();
-        if (dialog.getWindow() != null) {
-            findViewsOfType(dialog.getWindow().getDecorView(), DurationInputView.class, list);
-        }
-        assertFalse(list.isEmpty());
+        Intent nextStarted = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(nextStarted);
+        assertEquals(NapDialogActivity.class.getName(), nextStarted.getComponent().getClassName());
     }
 
     @Test
@@ -709,6 +713,19 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testAutoTimerToggleIsOffByDefaultOnAppInstall() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.Switch switchAutoTimer = activity.findViewById(R.id.switch_auto_timer);
+        assertNotNull(switchAutoTimer);
+        assertFalse("Auto Sleep Timer (DND) toggle must be OFF by default on app install", switchAutoTimer.isChecked());
+
+        android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
+        assertFalse("auto_timer_enabled preference must default to false", prefs.getBoolean("auto_timer_enabled", false));
+    }
+
+    @Test
     public void testCurrentWakeTimeButtonClickOpensDialogAndSavesTime() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
@@ -736,6 +753,62 @@ public class MainActivityTest {
         android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
         assertEquals(8, prefs.getInt("current_wake_hour", -1));
         assertEquals(15, prefs.getInt("current_wake_minute", -1));
+    }
+
+    @Test
+    public void testSettingCurrentWakeTimeRegistersAlarmAndUpdatesNotification() {
+        android.content.SharedPreferences prefs = ApplicationProvider.getApplicationContext()
+                .getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
+        prefs.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .commit();
+
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        View btnCurrentWakeTime = activity.findViewById(R.id.btn_current_wake_time);
+        assertNotNull(btnCurrentWakeTime);
+
+        btnCurrentWakeTime.performClick();
+
+        android.app.Dialog dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog();
+        assertNotNull(dialog);
+        assertTrue(dialog instanceof android.app.TimePickerDialog);
+
+        android.app.TimePickerDialog timePickerDialog = (android.app.TimePickerDialog) dialog;
+        timePickerDialog.updateTime(8, 15);
+
+        android.widget.Button okButton = timePickerDialog.getButton(DialogInterface.BUTTON_POSITIVE);
+        assertNotNull(okButton);
+        okButton.performClick();
+
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+
+        org.robolectric.android.controller.ServiceController<SleepTimerService> serviceController =
+                Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = serviceController.create().get();
+
+        ShadowApplication shadowApp = Shadows.shadowOf(activity.getApplication());
+        Intent serviceIntent;
+        while ((serviceIntent = shadowApp.getNextStartedService()) != null) {
+            service.onStartCommand(serviceIntent, 0, 1);
+        }
+
+        assertEquals(8, prefs.getInt("current_wake_hour", -1));
+        assertEquals(15, prefs.getInt("current_wake_minute", -1));
+        assertTrue("Wake alarm timestamp must be registered after setting current wake time",
+                prefs.contains(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS));
+
+        android.app.NotificationManager notificationManager =
+                (android.app.NotificationManager) activity.getSystemService(android.content.Context.NOTIFICATION_SERVICE);
+        org.robolectric.shadows.ShadowNotificationManager shadowNotificationManager =
+                Shadows.shadowOf(notificationManager);
+        android.app.Notification notification = shadowNotificationManager.getNotification(1001);
+        assertNotNull("Notification should be posted", notification);
+        String text = notification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString();
+        assertTrue("Notification text should display wake time: " + text, text.contains("Wake at") || text.contains("8:15"));
     }
 
     @Test
@@ -770,7 +843,7 @@ public class MainActivityTest {
         android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
         switchGoal.setChecked(true);
 
-        int[] rowIds = new int[]{R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_links};
+        int[] rowIds = new int[]{R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_version, R.id.btn_links};
         for (int rowId : rowIds) {
             View parentRow = activity.findViewById(rowId);
             assertNotNull("Row should exist", parentRow);

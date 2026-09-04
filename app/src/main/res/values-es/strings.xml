@@ -57,7 +57,7 @@
     <string name="toast_alarm_snoozed">Alarma pospuesta 9m</string>
     <string name="action_nap">Siesta</string>
     <string name="action_cancel_nap">Cancelar siesta</string>
-    <string name="notification_nap_suffix"> • Siesta a las %1$s</string>
+    <string name="notification_nap_suffix">" • Siesta a las %1$s"</string>
     <string name="dialog_nap_title">Iniciar siesta</string>
     <string name="dialog_nap_explanation">Establecer duración de la siesta para la alarma de despertar</string>
     <string name="toast_nap_started">Alarma de siesta programada para %1$s</string>
@@ -68,9 +68,11 @@
     <string name="heading_about">Acerca de</string>
     <string name="label_nap">Alarma de siesta</string>
     <string name="desc_nap">Inicia una alarma de siesta rápida</string>
+    <string name="label_version">Versión</string>
+    <string name="desc_version">Ver notas de la versión y buscar actualizaciones</string>
     <string name="label_links">Enlaces</string>
     <string name="desc_links">Manual, registros, comentarios, donación, exportar e importar</string>
-    <string name="version_label">Versión %1$s</string>
+    <string name="version_label">v%1$s</string>
     <string name="btn_back">Volver</string>
     <string name="link_manual">Manual</string>
     <string name="link_logs">Registros</string>

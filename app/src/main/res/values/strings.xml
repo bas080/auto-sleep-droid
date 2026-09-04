@@ -57,7 +57,7 @@
     <string name="toast_alarm_snoozed">Alarm snoozed 9m</string>
     <string name="action_nap">Nap</string>
     <string name="action_cancel_nap">Cancel Nap</string>
-    <string name="notification_nap_suffix"> • Nap at %1$s</string>
+    <string name="notification_nap_suffix">" • Nap at %1$s"</string>
     <string name="dialog_nap_title">Start Nap</string>
     <string name="dialog_nap_explanation">Set nap duration for wake alarm</string>
     <string name="toast_nap_started">Nap alarm set for %1$s</string>
@@ -68,9 +68,11 @@
     <string name="heading_about">About</string>
     <string name="label_nap">Nap alarm</string>
     <string name="desc_nap">Start a quick nap wake alarm</string>
+    <string name="label_version">Version</string>
+    <string name="desc_version">View release notes and check for updates</string>
     <string name="label_links">Links</string>
     <string name="desc_links">Manual, event logs, feedback, donation, export, and import</string>
-    <string name="version_label">Version %1$s</string>
+    <string name="version_label">v%1$s</string>
     <string name="btn_back">Back</string>
     <string name="link_manual">Manual</string>
     <string name="link_logs">Logs</string>
