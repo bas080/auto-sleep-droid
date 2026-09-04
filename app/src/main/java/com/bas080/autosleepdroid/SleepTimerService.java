@@ -1039,8 +1039,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         stateMachine.reloadSettings(savedEnabled, savedDuration, musicActive, now);
 
-        checkAndApplyDndAutoTimer();
-
         boolean goalEnabled = preferences.getBoolean("wake_up_goal_enabled", false);
         if (goalEnabled) {
             checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
