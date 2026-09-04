@@ -17,6 +17,7 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 - [NOTIFICATION_GOAL_INPUT_OPTIONS.md](docs/NOTIFICATION_GOAL_INPUT_OPTIONS.md): options, constraints, parsing specifications, and architectural design for setting target wake-up goal alarms from notifications.
 - [UPDATE_NOTIFICATIONS.md](docs/UPDATE_NOTIFICATIONS.md): technical architecture, UX design, GitHub REST API integration, WorkManager check scheduling, and version comparison for non-store update notifications.
 - [IMPORT_EXPORT.md](docs/IMPORT_EXPORT.md): specification, data schema format (JSON Schema v1), UI layout placement, clipboard/dialog workflows, and architecture for the Import/Export feature.
+- [GOOGLE_PLAY_RELEASE.md](docs/GOOGLE_PLAY_RELEASE.md): research on feasibility, prerequisites, tooling, workflow configurations, and Google Play policy requirements for releasing via GitHub Workflows.
 
 ## Build & Test Instructions
 
