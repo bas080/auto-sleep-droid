@@ -99,7 +99,7 @@
     <string name="unit_minutes">mins</string>
     <string name="label_duration">Timer duration</string>
     <string name="desc_duration">Sleep timer countdown duration before audio volume fades out</string>
-    <string name="label_wake_up_goal">Target wake-up goal</string>
+    <string name="label_wake_up_goal">Wake-up alarm</string>
     <string name="desc_wake_up_goal">Automatically schedule daily wake-up alarms with sleep duration safeguards</string>
     <string name="label_auto_timer">Auto sleep timer (DND)</string>
     <string name="desc_auto_timer">Optionally turn sleep timer on/off with Do Not Disturb (manual toggle always available; tap row for DND settings)</string>
