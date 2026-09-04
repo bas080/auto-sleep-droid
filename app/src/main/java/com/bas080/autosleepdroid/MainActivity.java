@@ -58,6 +58,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView textMinSleepValue;
     private View btnNap;
     private TextView textNapStatus;
+    private View btnVersion;
     private View btnLinks;
     private ScrollView eventScrollView;
     private TextView eventLogText;
@@ -137,6 +138,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         textMinSleepValue = findViewById(R.id.text_min_sleep_value);
         btnNap = findViewById(R.id.btn_nap);
         textNapStatus = findViewById(R.id.text_nap_status);
+        btnVersion = findViewById(R.id.btn_version);
         btnLinks = findViewById(R.id.btn_links);
         eventScrollView = findViewById(R.id.event_scroll_view);
         eventLogText = findViewById(R.id.event_log_text);
@@ -156,6 +158,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         Button btnLogsBack = findViewById(R.id.btn_logs_back);
         if (btnLogsBack != null) {
             btnLogsBack.setOnClickListener(v -> hideOverlays());
+        }
+
+        if (btnVersion != null) {
+            btnVersion.setOnClickListener(v -> openUrl("https://github.com/bas080/auto-sleep-droid/releases"));
         }
 
         if (btnLinks != null) {
@@ -435,6 +441,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setRowEnabled(btnCurrentWakeTime, goalEnabled);
         setRowEnabled(inputMinSleep, goalEnabled);
         setRowEnabled(headerAbout, true);
+        setRowEnabled(btnVersion, true);
 
         if (goalContainer != null) {
             goalContainer.setVisibility(View.VISIBLE);
@@ -611,34 +618,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void openNapDialog() {
-        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-        int currentMinutes = prefs.getInt(SleepTimerService.KEY_NAP_DURATION_MINUTES, 20);
-
-        final DurationInputView durationInputView = new DurationInputView(this);
-        durationInputView.setPadding(48, 24, 48, 24);
-        durationInputView.setTotalMinutes(currentMinutes);
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(R.string.dialog_nap_title);
-        builder.setView(durationInputView);
-        builder.setPositiveButton(R.string.dialog_ok, (dialog, which) -> {
-            int minutes = durationInputView.getTotalMinutes();
-            if (minutes > 0) {
-                Intent serviceIntent = new Intent(this, SleepTimerService.class);
-                serviceIntent.setAction(SleepTimerService.ACTION_START_NAP);
-                serviceIntent.putExtra(SleepTimerService.EXTRA_NAP_DURATION_MINUTES, minutes);
-                if (Build.VERSION.SDK_INT >= 26) {
-                    startForegroundService(serviceIntent);
-                } else {
-                    startService(serviceIntent);
-                }
-                loadPreferencesIntoUi();
-            } else {
-                Toast.makeText(MainActivity.this, R.string.toast_duration_invalid, Toast.LENGTH_SHORT).show();
-            }
-        });
-        builder.setNegativeButton(R.string.dialog_cancel, (dialog, which) -> dialog.dismiss());
-        builder.show();
+        Intent intent = new Intent(this, NapDialogActivity.class);
+        startActivity(intent);
     }
 
     private void cancelNap() {
