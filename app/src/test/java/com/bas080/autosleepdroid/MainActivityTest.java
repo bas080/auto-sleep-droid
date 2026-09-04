@@ -319,11 +319,13 @@ public class MainActivityTest {
 
         android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
         View inputDuration = activity.findViewById(R.id.input_duration);
-        android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
+        android.widget.Switch switchAutoTimer = activity.findViewById(R.id.switch_auto_timer);
+        android.widget.Switch switchWakeAlarm = activity.findViewById(R.id.switch_wake_alarm);
 
         assertNotNull(switchEnable);
         assertNotNull(inputDuration);
-        assertNotNull(switchGoal);
+        assertNotNull(switchAutoTimer);
+        assertNotNull(switchWakeAlarm);
 
         switchEnable.setChecked(false);
 
@@ -340,12 +342,12 @@ public class MainActivityTest {
 
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
-        switchGoal.setChecked(true);
+        switchWakeAlarm.setChecked(true);
 
         android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
         assertFalse(prefs.getBoolean("active", true));
         assertEquals(45, prefs.getInt("duration_minutes", -1));
-        assertTrue(prefs.getBoolean("wake_up_goal_enabled", false));
+        assertTrue(prefs.getBoolean("wake_alarm_enabled", false));
     }
 
     @Test
@@ -581,8 +583,8 @@ public class MainActivityTest {
 
         android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
         View inputDuration = activity.findViewById(R.id.input_duration);
-        View rowEnableGoal = activity.findViewById(R.id.row_enable_goal);
-        android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
+        View rowAutoTimer = activity.findViewById(R.id.row_auto_timer);
+        View rowWakeAlarm = activity.findViewById(R.id.row_wake_alarm);
         View btnTargetTime = activity.findViewById(R.id.btn_target_time);
         View inputMinSleep = activity.findViewById(R.id.input_min_sleep);
 
@@ -590,8 +592,8 @@ public class MainActivityTest {
 
         assertFalse(inputDuration.isEnabled());
         assertEquals(0.38f, inputDuration.getAlpha(), 0.01f);
-        assertFalse(switchGoal.isEnabled());
-        assertEquals(0.38f, rowEnableGoal.getAlpha(), 0.01f);
+        assertTrue(rowAutoTimer.isEnabled());
+        assertTrue(rowWakeAlarm.isEnabled());
         assertFalse(btnTargetTime.isEnabled());
         assertEquals(0.38f, btnTargetTime.getAlpha(), 0.01f);
         assertFalse(inputMinSleep.isEnabled());
@@ -600,7 +602,6 @@ public class MainActivityTest {
         switchEnable.setChecked(true);
         assertTrue(inputDuration.isEnabled());
         assertEquals(1.0f, inputDuration.getAlpha(), 0.01f);
-        assertEquals(1.0f, rowEnableGoal.getAlpha(), 0.01f);
     }
 
     @Test
@@ -609,18 +610,21 @@ public class MainActivityTest {
         MainActivity activity = controller.create().resume().get();
 
         android.widget.Switch switchEnable = activity.findViewById(R.id.switch_enable_timer);
-        android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
+        android.widget.Switch switchAutoTimer = activity.findViewById(R.id.switch_auto_timer);
+        android.widget.Switch switchWakeAlarm = activity.findViewById(R.id.switch_wake_alarm);
         View goalContainer = activity.findViewById(R.id.goal_container);
         View btnTargetTime = activity.findViewById(R.id.btn_target_time);
         View inputMinSleep = activity.findViewById(R.id.input_min_sleep);
 
         switchEnable.setChecked(true);
-        switchGoal.setChecked(false);
+        switchAutoTimer.setChecked(false);
+        switchWakeAlarm.setChecked(false);
 
         assertEquals(View.VISIBLE, goalContainer.getVisibility());
         View inputDuration = activity.findViewById(R.id.input_duration);
         assertTrue(inputDuration.isEnabled());
-        assertTrue(switchGoal.isEnabled());
+        assertTrue(switchAutoTimer.isEnabled());
+        assertTrue(switchWakeAlarm.isEnabled());
         assertFalse(btnTargetTime.isEnabled());
         assertEquals(0.38f, btnTargetTime.getAlpha(), 0.01f);
         assertFalse(inputMinSleep.isEnabled());
@@ -632,8 +636,8 @@ public class MainActivityTest {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
 
-        android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
-        switchGoal.setChecked(true);
+        android.widget.Switch switchWakeAlarm = activity.findViewById(R.id.switch_wake_alarm);
+        switchWakeAlarm.setChecked(true);
 
         int[] rowIds = new int[]{R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_links};
         for (int rowId : rowIds) {

@@ -93,6 +93,10 @@
     <string name="desc_duration">Duración de la cuenta atrás antes de atenuar el volumen del audio</string>
     <string name="label_wake_up_goal">Objetivo de despertar</string>
     <string name="desc_wake_up_goal">Programación automática de alarma de despertar diaria con protección de tiempo de sueño</string>
+    <string name="label_auto_timer">Temporizador automático</string>
+    <string name="desc_auto_timer">Activa automáticamente el temporizador antes de la hora de despertar y lo desactiva después</string>
+    <string name="label_wake_alarm">Alarma de despertar</string>
+    <string name="desc_wake_alarm">Reproduce un tono de alarma a la hora de despertar</string>
     <string name="label_target_time">Hora de despertar deseada</string>
     <string name="desc_target_time">Hora deseada para despertar cada día</string>
     <string name="label_min_sleep">Duración de sueño mínima</string>

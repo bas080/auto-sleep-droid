@@ -40,6 +40,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public static final String ACTION_SNOOZE_WAKEUP_ALARM = "com.bas080.autosleepdroid.SNOOZE_WAKEUP_ALARM";
     public static final String ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION";
     public static final String ACTION_CLEAR_GOAL = "com.bas080.autosleepdroid.CLEAR_GOAL";
+    public static final String ACTION_AUTO_TIMER_CHECK = "com.bas080.autosleepdroid.AUTO_TIMER_CHECK";
     public static final String ACTION_START_NAP = "com.bas080.autosleepdroid.START_NAP";
     public static final String ACTION_CANCEL_NAP = "com.bas080.autosleepdroid.CANCEL_NAP";
     public static final String ACTION_NAP_EXPIRY = "com.bas080.autosleepdroid.NAP_EXPIRY";
@@ -126,14 +127,16 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         EventLogger.log(this, "SleepTimerService state initialized (enabled: " + savedEnabled + ", duration: " + savedDuration + "m)");
 
+        stateMachine.initialize(savedEnabled, savedDuration, savedEndsAt, currentVolume, musicActive, System.currentTimeMillis());
+
+        checkAndApplyAutoTimer(System.currentTimeMillis());
+
         showOrHideNotification();
 
-        boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
-        if (goalEnabled) {
+        boolean wakeAlarmEnabled = isWakeAlarmEnabled();
+        if (wakeAlarmEnabled) {
             checkAndScheduleSmartWakeUpAlarm(savedEndsAt);
         }
-
-        stateMachine.initialize(savedEnabled, savedDuration, savedEndsAt, currentVolume, musicActive, System.currentTimeMillis());
     }
 
     private void registerAudioPlaybackCallback() {
@@ -234,12 +237,19 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "AlarmManager trigger received");
                 int currentVol = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
                 stateMachine.handleAlarmExpiry(currentVol);
+            } else if (ACTION_AUTO_TIMER_CHECK.equals(intent.getAction())) {
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto timer check triggered");
+                checkAndApplyAutoTimer(System.currentTimeMillis());
             } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep wake-up alarm triggered");
-                isWakeUpAlarmRinging = true;
-                isWakeUpAlarmSnoozed = false;
-                updateListenersRegistration();
-                playWakeUpAlarmSound();
+                if (isWakeAlarmEnabled()) {
+                    isWakeUpAlarmRinging = true;
+                    isWakeUpAlarmSnoozed = false;
+                    updateListenersRegistration();
+                    playWakeUpAlarmSound();
+                } else {
+                    EventLogger.log(this, "Wake alarm disabled; skipping alarm tone");
+                }
                 updateNotification();
                 checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
             } else if (ACTION_DISMISS_WAKEUP_ALARM.equals(intent.getAction())) {
@@ -469,13 +479,19 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         handler.postDelayed(restoreVolumeRunnable, PAUSE_RESET_DELAY_MS);
     }
 
+    private boolean isWakeAlarmEnabled() {
+        if (preferences == null) return false;
+        return preferences.getBoolean("wake_alarm_enabled", preferences.getBoolean("wake_up_goal_enabled", false));
+    }
+
     public static Calendar calculateScheduledAlarm(Context context, long now, long timerEndsAt) {
         if (context == null) {
             return null;
         }
         SharedPreferences prefs = context.getSharedPreferences(PREFERENCES, MODE_PRIVATE);
-        boolean enabled = prefs.getBoolean("wake_up_goal_enabled", false);
-        if (!enabled) {
+        boolean wakeAlarmEnabled = prefs.getBoolean("wake_alarm_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
+        boolean autoTimerEnabled = prefs.getBoolean("auto_timer_enabled", false);
+        if (!wakeAlarmEnabled && !autoTimerEnabled) {
             return null;
         }
 
@@ -504,7 +520,94 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         return calAlarm;
     }
 
+    private void checkAndApplyAutoTimer(long now) {
+        if (preferences == null) return;
+        boolean autoTimerEnabled = preferences.getBoolean("auto_timer_enabled", false);
+        if (!autoTimerEnabled) {
+            return;
+        }
+
+        int goalHour = preferences.getInt("wake_up_goal_hour", 6);
+        int goalMin = preferences.getInt("wake_up_goal_minute", 30);
+        int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
+
+        Calendar calWake = Calendar.getInstance();
+        calWake.setTimeInMillis(now);
+        calWake.set(Calendar.HOUR_OF_DAY, goalHour);
+        calWake.set(Calendar.MINUTE, goalMin);
+        calWake.set(Calendar.SECOND, 0);
+        calWake.set(Calendar.MILLISECOND, 0);
+
+        long wakeUpTime = calWake.getTimeInMillis();
+
+        // Auto-on window start: wake_up_time - 1.2 * min_sleep_duration
+        long autoOnDurationMs = (long) (1.2 * minSleepMin * 60_000L);
+        long autoOnTime = wakeUpTime - autoOnDurationMs;
+
+        // Determine relevant window boundaries
+        if (now >= wakeUpTime) {
+            // Wake time passed for today's goal instance
+            // If now is past wakeUpTime, window start for next cycle is wakeUpTime + 1 day - autoOnDurationMs
+            calWake.add(Calendar.DAY_OF_YEAR, 1);
+            long nextWakeUpTime = calWake.getTimeInMillis();
+            long nextAutoOnTime = nextWakeUpTime - autoOnDurationMs;
+
+            if (now < nextAutoOnTime) {
+                // We are after today's wake up time and before tomorrow's auto-on time -> turn OFF
+                if (stateMachine != null && stateMachine.isEnabled()) {
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep Timer: turning OFF (after wake up time)");
+                    stateMachine.handleTurnOff(true);
+                }
+                scheduleAutoTimerNextCheck(nextAutoOnTime);
+            } else {
+                // We are in tomorrow's auto-on window -> turn ON
+                if (stateMachine != null && !stateMachine.isEnabled()) {
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep Timer: turning ON (entered auto window)");
+                    boolean musicActive = audioManager != null && audioManager.isMusicActive();
+                    stateMachine.handleTurnOn(musicActive, now, true);
+                }
+                scheduleAutoTimerNextCheck(nextWakeUpTime);
+            }
+        } else if (now < autoOnTime) {
+            // Before today's auto-on window -> turn OFF
+            if (stateMachine != null && stateMachine.isEnabled()) {
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep Timer: turning OFF (outside auto window)");
+                stateMachine.handleTurnOff(true);
+            }
+            scheduleAutoTimerNextCheck(autoOnTime);
+        } else {
+            // now >= autoOnTime && now < wakeUpTime -> turn ON
+            if (stateMachine != null && !stateMachine.isEnabled()) {
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep Timer: turning ON (inside auto window)");
+                boolean musicActive = audioManager != null && audioManager.isMusicActive();
+                stateMachine.handleTurnOn(musicActive, now, true);
+            }
+            scheduleAutoTimerNextCheck(wakeUpTime);
+        }
+    }
+
+    private void scheduleAutoTimerNextCheck(long triggerAtMs) {
+        if (alarmManager == null) return;
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_AUTO_TIMER_CHECK);
+        PendingIntent pendingIntent = PendingIntent.getService(this, 108, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 23) {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMs, pendingIntent);
+            } else {
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMs, pendingIntent);
+            }
+        } catch (Exception e) {
+            EventLogger.log(this, "Failed to schedule auto timer check: " + e.getMessage());
+        }
+    }
+
     private void checkAndScheduleSmartWakeUpAlarm(long timerEndsAt) {
+        if (!isWakeAlarmEnabled()) {
+            dismissAutoSleepAlarm();
+            return;
+        }
+
         Calendar calAlarm = calculateScheduledAlarm(this, System.currentTimeMillis(), timerEndsAt);
         if (calAlarm == null) {
             return;
@@ -918,6 +1021,22 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 .setOnlyAlertOnce(true)
                 .setShowWhen(false);
 
+        Notification.Action toggleAction;
+        if (stateMachine.isEnabled()) {
+            toggleAction = new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_media_pause),
+                    getString(R.string.action_turn_off),
+                    turnOffIntent())
+                    .build();
+        } else {
+            toggleAction = new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_media_play),
+                    getString(R.string.action_turn_on),
+                    turnOnIntent())
+                    .build();
+        }
+        builder.addAction(toggleAction);
+
         Notification.Action napAction;
         if (isNapActive()) {
             napAction = new Notification.Action.Builder(
@@ -943,6 +1062,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             return;
         }
 
+        checkAndApplyAutoTimer(System.currentTimeMillis());
+
         boolean savedEnabled = preferences.getBoolean(KEY_ENABLED, true);
         int savedDuration = preferences.getInt(KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
         long now = System.currentTimeMillis();
@@ -950,8 +1071,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         stateMachine.reloadSettings(savedEnabled, savedDuration, musicActive, now);
 
-        boolean goalEnabled = preferences.getBoolean("wake_up_goal_enabled", false);
-        if (goalEnabled) {
+        boolean wakeAlarmEnabled = isWakeAlarmEnabled();
+        if (wakeAlarmEnabled) {
             checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
         } else {
             dismissAutoSleepAlarm();
