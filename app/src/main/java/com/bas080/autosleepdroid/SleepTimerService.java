@@ -1148,7 +1148,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private PendingIntent startNapIntent() {
         Intent intent = new Intent(this, NapDialogActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         return PendingIntent.getActivity(this, 12, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }

@@ -120,7 +120,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - **UI & Notification Actions**:
   - Main Screen (`MainActivity`): Features a dedicated Nap section with a Nap button (`btn_nap`). Tapping **Nap** launches `NapDialogActivity` prefilled with previously used nap duration; if active, tapping **Cancel Nap** cancels the active nap alarm.
   - Nap Dialog: Presented using standard system alert dialog styling with DurationInputView and standard positive ("Nap") / negative ("Cancel") buttons, styled consistently with all other dialogs.
-  - Notification Shade: Features a **Nap** / **Cancel Nap** action button. Tapping **Nap** launches `NapDialogActivity` without pulling `MainActivity` to the foreground; tapping **Cancel Nap** cancels the nap alarm.
+  - Notification Shade: Features a **Nap** / **Cancel Nap** action button. Tapping **Nap** launches `NapDialogActivity` without pulling `MainActivity` or the main UI to the foreground; tapping **Cancel Nap** cancels the nap alarm.
 - **Nap Alarm & Reset Behavior**:
   - Uses existing wake alarm behavior (alarm tone with 3-minute volume crescendo, flip gesture snooze, volume button dismiss).
   - When the sleep timer is reset (via flip gesture, volume button press, or duration update), an active nap alarm is pushed forward by the same reset increment.
