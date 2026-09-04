@@ -86,7 +86,7 @@ File: `app/src/main/java/com/bas080/autosleepdroid/NapDialogActivity.java`
 
 A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) launched from `MainActivity` or the status notification's "Nap" action when no nap is active:
 
-- Constructs an `AlertDialog` using `AlertDialog.Builder` wrapped with `ContextThemeWrapper(this, themeRes)` (where `themeRes` resolves to `android.R.style.Theme_DeviceDefault_Dialog` in dark mode or `Theme_DeviceDefault_Light_Dialog` in light mode) containing `DurationInputView` prefilled with previously used nap duration (`nap_duration_minutes`, default 20) and standard positive ("Nap") / negative ("Cancel") buttons, matching the exact dialog styling of all duration configuration dialogs across `MainActivity`.
+- Constructs an `AlertDialog` using `AlertDialog.Builder` wrapped with `ContextThemeWrapper(this, R.style.AppTheme)` containing `DurationInputView(dialogContext)` prefilled with previously used nap duration (`nap_duration_minutes`, default 20) and standard positive ("Nap") / negative ("Cancel") buttons, matching the exact dialog styling and theme of all duration configuration dialogs across `MainActivity`.
 - Confirming "Nap" persists the nap duration in `SharedPreferences` and sends `ACTION_START_NAP` with `EXTRA_NAP_DURATION_MINUTES` to `SleepTimerService`.
 
 ### `MainActivity`
