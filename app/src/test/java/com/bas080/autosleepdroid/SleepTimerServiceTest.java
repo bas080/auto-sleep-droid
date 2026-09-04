@@ -754,8 +754,8 @@ public class SleepTimerServiceTest {
         service.onStartCommand(dismissIntent, 0, 1);
 
         // 7:30 - 15m = 7:15
-        assertEquals("expected hour 7 but was " + preferences.getInt("current_wake_hour", -1), 7, preferences.getInt("current_wake_hour", -1));
-        assertEquals("expected min 15 but was " + preferences.getInt("current_wake_minute", -1), 15, preferences.getInt("current_wake_minute", -1));
+        assertEquals(7, preferences.getInt("current_wake_hour", -1));
+        assertEquals(15, preferences.getInt("current_wake_minute", -1));
     }
 
     @Test

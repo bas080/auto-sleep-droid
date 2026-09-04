@@ -70,6 +70,8 @@
     <string name="desc_nap">Inicia una alarma de siesta rápida</string>
     <string name="label_links">Enlaces</string>
     <string name="desc_links">Manual, registros, comentarios, donación, exportar e importar</string>
+    <string name="label_version">Versión</string>
+    <string name="desc_version">Detalles de la versión de la aplicación y notas de lanzamiento</string>
     <string name="version_label">Versión %1$s</string>
     <string name="btn_back">Volver</string>
     <string name="link_manual">Manual</string>
@@ -88,9 +90,7 @@
     <string name="dialog_crash_message">Auto Sleep Droid se cerró inesperadamente la última vez. ¿Deseas enviar un informe de error para ayudarnos a solucionarlo?</string>
     <string name="btn_send_report">Enviar informe</string>
     <string name="label_enable_timer">Temporizador de apagado</string>
-    <string name="desc_enable_timer">Activa o desactiva el temporizador de apagado (sin afectar alarmas de despertar ni de siesta)</string>
-    <string name="label_current_wake_time">Hora de despertar actual</string>
-    <string name="desc_current_wake_time">Próxima alarma de despertar programada; se ajusta automáticamente al reiniciarse el temporizador</string>
+    <string name="desc_enable_timer">Activa o desactiva el temporizador de apagado y la alarma de despertar (sin afectar la alarma de siesta)</string>
     <string name="label_hours">Horas</string>
     <string name="label_minutes">Minutos</string>
     <string name="unit_hours">horas</string>
@@ -103,6 +103,8 @@
     <string name="desc_auto_timer">Activa/desactiva el temporizador con No molestar (toca para abrir ajustes de No molestar)</string>
     <string name="label_target_time">Hora de despertar deseada</string>
     <string name="desc_target_time">Hora deseada para despertar cada día</string>
+    <string name="label_current_wake_time">Hora de despertar actual</string>
+    <string name="desc_current_wake_time">Próxima alarma de despertar programada; se ajusta automáticamente al reiniciarse el temporizador</string>
     <string name="label_min_sleep">Duración de sueño mínima</string>
     <string name="desc_min_sleep">Garantiza una duración mínima de sueño aunque te duermas tarde</string>
     <string name="label_show_notification">Mostrar notificación</string>

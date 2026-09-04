@@ -70,6 +70,8 @@
     <string name="desc_nap">Start a quick nap wake alarm</string>
     <string name="label_links">Links</string>
     <string name="desc_links">Manual, event logs, feedback, donation, export, and import</string>
+    <string name="label_version">Version</string>
+    <string name="desc_version">App version details and release notes</string>
     <string name="version_label">Version %1$s</string>
     <string name="btn_back">Back</string>
     <string name="link_manual">Manual</string>
@@ -88,9 +90,7 @@
     <string name="dialog_crash_message">Auto Sleep Droid closed unexpectedly last time. Would you like to send a crash report to help us fix the issue?</string>
     <string name="btn_send_report">Send Report</string>
     <string name="label_enable_timer">Sleep timer</string>
-    <string name="desc_enable_timer">Turn the sleep timer on or off (wake and nap alarms unaffected)</string>
-    <string name="label_current_wake_time">Current wake-up time</string>
-    <string name="desc_current_wake_time">Next scheduled wake alarm time; adjusts automatically when sleep timer resets</string>
+    <string name="desc_enable_timer">Turn the sleep timer and wake alarm on or off (nap alarm unaffected)</string>
     <string name="label_hours">Hours</string>
     <string name="label_minutes">Minutes</string>
     <string name="unit_hours">hours</string>
@@ -103,6 +103,8 @@
     <string name="desc_auto_timer">Turn sleep timer on/off with Do Not Disturb (tap row to open DND settings)</string>
     <string name="label_target_time">Target wake-up time</string>
     <string name="desc_target_time">Desired daily wake-up clock time</string>
+    <string name="label_current_wake_time">Current wake-up time</string>
+    <string name="desc_current_wake_time">Next scheduled wake alarm time; adjusts automatically when sleep timer resets</string>
     <string name="label_min_sleep">Minimum sleep duration</string>
     <string name="desc_min_sleep">Guarantees minimum sleep duration even if you go to sleep late</string>
     <string name="label_show_notification">Show notification</string>

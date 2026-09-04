@@ -1010,7 +1010,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             contentText = getString(R.string.toast_alarm_snoozed);
         } else if (!stateMachine.isEnabled()) {
             title = getString(R.string.timer_off);
-            contentText = getString(R.string.timer_off_collapsed, formattedDurationStr);
+            if (scheduledAlarm != null) {
+                String formattedAlarmTime = formatTime(scheduledAlarm.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE));
+                contentText = getString(R.string.timer_off_collapsed, formattedDurationStr) + " • Wake at " + formattedAlarmTime;
+            } else {
+                contentText = getString(R.string.timer_off_collapsed, formattedDurationStr);
+            }
         } else if (stateMachine.isFading()) {
             title = getString(R.string.fading_title);
             contentText = getString(R.string.fading_collapsed);

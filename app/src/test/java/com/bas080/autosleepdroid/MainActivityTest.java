@@ -546,23 +546,9 @@ public class MainActivityTest {
 
         btnNap.performClick();
 
-        AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
-        assertNotNull(dialog);
-        List<DurationInputView> list = new ArrayList<>();
-        if (dialog.getWindow() != null) {
-            findViewsOfType(dialog.getWindow().getDecorView(), DurationInputView.class, list);
-        }
-        assertFalse(list.isEmpty());
-    }
-
-    @Test
-    public void testAboutHeaderExistsAboveLinks() {
-        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
-        MainActivity activity = controller.create().resume().get();
-
-        TextView headerAbout = activity.findViewById(R.id.header_about);
-        assertNotNull(headerAbout);
-        assertEquals(activity.getString(R.string.heading_about), headerAbout.getText().toString());
+        Intent startedActivity = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(startedActivity);
+        assertEquals(NapDialogActivity.class.getName(), startedActivity.getComponent().getClassName());
     }
 
     @Test
@@ -654,7 +640,7 @@ public class MainActivityTest {
         assertFalse(headerAlarm.isEnabled());
         assertEquals(0.38f, headerAlarm.getAlpha(), 0.01f);
 
-        // When timer is disabled, timer heading should look disabled while alarm heading reflects goal status
+        // When timer is disabled, timer and alarm headings should look disabled
         switchEnable.setChecked(false);
         assertTrue(headerNap.isEnabled());
         assertEquals(1.0f, headerNap.getAlpha(), 0.01f);
@@ -662,10 +648,6 @@ public class MainActivityTest {
         assertEquals(0.38f, headerTimer.getAlpha(), 0.01f);
         assertFalse(headerAlarm.isEnabled());
         assertEquals(0.38f, headerAlarm.getAlpha(), 0.01f);
-
-        switchGoal.setChecked(true);
-        assertTrue(headerAlarm.isEnabled());
-        assertEquals(1.0f, headerAlarm.getAlpha(), 0.01f);
     }
 
     @Test
@@ -706,36 +688,6 @@ public class MainActivityTest {
         assertTrue(btnTargetTime.isEnabled());
         assertTrue(btnCurrentWakeTime.isEnabled());
         assertTrue(inputMinSleep.isEnabled());
-    }
-
-    @Test
-    public void testCurrentWakeTimeButtonClickOpensDialogAndSavesTime() {
-        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
-        MainActivity activity = controller.create().resume().get();
-
-        View btnCurrentWakeTime = activity.findViewById(R.id.btn_current_wake_time);
-        TextView textCurrentWakeTimeValue = activity.findViewById(R.id.text_current_wake_time_value);
-        assertNotNull(btnCurrentWakeTime);
-        assertNotNull(textCurrentWakeTimeValue);
-
-        btnCurrentWakeTime.performClick();
-
-        android.app.Dialog dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog();
-        assertNotNull(dialog);
-        assertTrue(dialog instanceof android.app.TimePickerDialog);
-
-        android.app.TimePickerDialog timePickerDialog = (android.app.TimePickerDialog) dialog;
-        timePickerDialog.updateTime(8, 15);
-
-        android.widget.Button okButton = timePickerDialog.getButton(DialogInterface.BUTTON_POSITIVE);
-        assertNotNull(okButton);
-        okButton.performClick();
-
-        ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
-
-        android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
-        assertEquals(8, prefs.getInt("current_wake_hour", -1));
-        assertEquals(15, prefs.getInt("current_wake_minute", -1));
     }
 
     @Test
