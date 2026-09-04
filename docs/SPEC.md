@@ -35,6 +35,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
     - Nap alarm section at top featuring a Nap button ("Nap" or "Cancel Nap" when active).
     - Sleep timer enable/disable switch.
     - Sleep timer duration input using side-by-side numeric fields for hours and minutes with conventional unit labels ("hours" and "mins").
+    - Auto sleep timer (DND) enable/disable switch.
     - Show notification switch to toggle ongoing notification shade visibility.
     - Target wake-up goal enable switch, target wake-up time picker button, and minimum sleep duration input.
   - Action links at the bottom of the form under a "Links" header: Manual, Logs, Feedback, Donate, Export, and Import arranged in a FlowLayout inline wrapping layout separated by middle dots.
@@ -66,6 +67,14 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - When the timer expires: fade to zero over 30 seconds (starting fast and slowing down along a curve), pause all active media apps, restore the pre-fade volume after pausing media, and return to the Waiting state.
 - When the timer is turned off: leave the current volume unchanged, display the Off notification (if notification display is enabled), and allow media to continue playing.
 - Provide haptic feedback (a short, faint vibration) to confirm user actions (turning off/on, volume button resets, and flip gestures).
+
+## Auto Sleep Timer (Do Not Disturb)
+- **Purpose**: Automatically turn on the sleep timer when Android's Do Not Disturb mode is activated and turn it off when DND is deactivated.
+- **Behavior**:
+  - Tapping the row opens Android Do Not Disturb settings.
+  - When `auto_timer_enabled` is true, Auto Sleep Droid listens for DND filter change events (`NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED`).
+  - When DND becomes active (interruption filter is not `INTERRUPTION_FILTER_ALL`), the sleep timer is automatically turned ON.
+  - When DND becomes inactive (interruption filter returns to `INTERRUPTION_FILTER_ALL`), the sleep timer is automatically turned OFF.
 
 ## Reboot behavior & Alarm persistence
 - Persist whether the timer was running (Waiting, Active, Fading) versus explicitly **Off**, along with the target expiration timestamp.

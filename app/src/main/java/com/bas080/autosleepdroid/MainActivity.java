@@ -42,8 +42,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView textDurationValue;
     private View rowAutoTimer;
     private Switch switchAutoTimer;
-    private View rowWakeAlarm;
-    private Switch switchWakeAlarm;
+    private View rowEnableGoal;
+    private Switch switchEnableGoal;
     private View goalContainer;
     private View btnTargetTime;
     private TextView textTargetTimeValue;
@@ -114,8 +114,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         textDurationValue = findViewById(R.id.text_duration_value);
         rowAutoTimer = findViewById(R.id.row_auto_timer);
         switchAutoTimer = findViewById(R.id.switch_auto_timer);
-        rowWakeAlarm = findViewById(R.id.row_wake_alarm);
-        switchWakeAlarm = findViewById(R.id.switch_wake_alarm);
+        rowEnableGoal = findViewById(R.id.row_enable_goal);
+        switchEnableGoal = findViewById(R.id.switch_enable_goal);
         goalContainer = findViewById(R.id.goal_container);
         btnTargetTime = findViewById(R.id.btn_target_time);
         textTargetTimeValue = findViewById(R.id.text_target_time_value);
@@ -328,9 +328,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 if (isUpdatingUi) return;
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
                 prefs.edit().putBoolean("active", isChecked).apply();
-                boolean autoTimer = prefs.getBoolean("auto_timer_enabled", false);
-                boolean wakeAlarm = prefs.getBoolean("wake_alarm_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
-                updateInputEnabledStates(isChecked, autoTimer, wakeAlarm);
+                boolean goalEnabled = prefs.getBoolean("wake_up_goal_enabled", false);
+                updateInputEnabledStates(isChecked, goalEnabled);
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Timer enabled from UI" : "Timer disabled from UI");
                 redrawNotification();
             });
@@ -349,32 +348,31 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             ));
         }
 
+        if (rowAutoTimer != null) {
+            rowAutoTimer.setOnClickListener(v -> openDndSettings());
+        }
+
         if (switchAutoTimer != null) {
             switchAutoTimer.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
                 prefs.edit().putBoolean("auto_timer_enabled", isChecked).apply();
-                boolean timerActive = prefs.getBoolean("active", true);
-                boolean wakeAlarm = prefs.getBoolean("wake_alarm_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
-                updateInputEnabledStates(timerActive, isChecked, wakeAlarm);
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Auto sleep timer enabled" : "Auto sleep timer disabled");
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Auto sleep timer (DND) enabled" : "Auto sleep timer (DND) disabled");
                 redrawNotification();
             });
         }
 
-        if (switchWakeAlarm != null) {
-            switchWakeAlarm.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        if (switchEnableGoal != null) {
+            switchEnableGoal.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
                 prefs.edit()
-                        .putBoolean("wake_alarm_enabled", isChecked)
                         .putBoolean("wake_up_goal_enabled", isChecked)
                         .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
                         .apply();
                 boolean timerActive = prefs.getBoolean("active", true);
-                boolean autoTimer = prefs.getBoolean("auto_timer_enabled", false);
-                updateInputEnabledStates(timerActive, autoTimer, isChecked);
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Wake alarm enabled" : "Wake alarm disabled");
+                updateInputEnabledStates(timerActive, isChecked);
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Wake-up goal enabled" : "Wake-up goal disabled");
                 redrawNotification();
             });
         }
@@ -399,17 +397,31 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
     }
 
-    private void updateInputEnabledStates(boolean active, boolean autoTimer, boolean wakeAlarm) {
+    private void updateInputEnabledStates(boolean active, boolean goalEnabled) {
         setRowEnabled(inputDuration, active);
         setRowEnabled(rowAutoTimer, true);
-        setRowEnabled(rowWakeAlarm, true);
+        setRowEnabled(rowEnableGoal, active);
 
-        boolean goalInputsEnabled = autoTimer || wakeAlarm;
+        boolean goalInputsEnabled = active && goalEnabled;
         setRowEnabled(btnTargetTime, goalInputsEnabled);
         setRowEnabled(inputMinSleep, goalInputsEnabled);
 
         if (goalContainer != null) {
             goalContainer.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void openDndSettings() {
+        try {
+            Intent intent = new Intent(Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS);
+            startActivity(intent);
+        } catch (Exception e) {
+            try {
+                Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
+                startActivity(intent);
+            } catch (Exception ex) {
+                Toast.makeText(this, "Could not open DND settings", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -486,7 +498,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         boolean active = prefs.getBoolean("active", true);
         int durationMinutes = prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
         boolean autoTimer = prefs.getBoolean("auto_timer_enabled", false);
-        boolean wakeAlarm = prefs.getBoolean("wake_alarm_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
+        boolean goalEnabled = prefs.getBoolean("wake_up_goal_enabled", false);
         int goalHour = prefs.getInt("wake_up_goal_hour", 6);
         int goalMin = prefs.getInt("wake_up_goal_minute", 30);
         int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
@@ -503,8 +515,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (switchAutoTimer != null) {
             switchAutoTimer.setChecked(autoTimer);
         }
-        if (switchWakeAlarm != null) {
-            switchWakeAlarm.setChecked(wakeAlarm);
+        if (switchEnableGoal != null) {
+            switchEnableGoal.setChecked(goalEnabled);
         }
         updateTargetTimeButtonText(goalHour, goalMin);
         if (textMinSleepValue != null) {
@@ -519,7 +531,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 btnNap.setOnClickListener(v -> openNapDialog());
             }
         }
-        updateInputEnabledStates(active, autoTimer, wakeAlarm);
+        updateInputEnabledStates(active, goalEnabled);
         isUpdatingUi = false;
     }
 
@@ -550,7 +562,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             json.put("duration_minutes", prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES));
             json.put("active", prefs.getBoolean("active", true));
             json.put("auto_timer_enabled", prefs.getBoolean("auto_timer_enabled", false));
-            json.put("wake_alarm_enabled", prefs.getBoolean("wake_alarm_enabled", prefs.getBoolean("wake_up_goal_enabled", false)));
             json.put("wake_up_goal_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
             json.put("wake_up_goal_hour", prefs.getInt("wake_up_goal_hour", 6));
             json.put("wake_up_goal_minute", prefs.getInt("wake_up_goal_minute", 30));
@@ -622,7 +633,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
             boolean active = json.optBoolean("active", false);
             boolean autoTimerEnabled = json.optBoolean("auto_timer_enabled", false);
-            boolean wakeAlarmEnabled = json.optBoolean("wake_alarm_enabled", json.optBoolean("wake_up_goal_enabled", false));
+            boolean wakeUpGoalEnabled = json.getBoolean("wake_up_goal_enabled");
             int wakeUpGoalHour = json.getInt("wake_up_goal_hour");
             if (wakeUpGoalHour < 0 || wakeUpGoalHour > 23) {
                 throw new JSONException("wake_up_goal_hour out of range");
@@ -643,8 +654,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     .putInt("duration_minutes", durationMinutes)
                     .putBoolean("active", active)
                     .putBoolean("auto_timer_enabled", autoTimerEnabled)
-                    .putBoolean("wake_alarm_enabled", wakeAlarmEnabled)
-                    .putBoolean("wake_up_goal_enabled", wakeAlarmEnabled)
+                    .putBoolean("wake_up_goal_enabled", wakeUpGoalEnabled)
                     .putInt("wake_up_goal_hour", wakeUpGoalHour)
                     .putInt("wake_up_goal_minute", wakeUpGoalMinute)
                     .putInt("min_sleep_duration_minutes", minSleepMinutes)

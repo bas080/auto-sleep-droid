@@ -72,6 +72,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private Runnable restoreVolumeRunnable;
     private AudioManager.AudioPlaybackCallback audioPlaybackCallback;
     private android.content.BroadcastReceiver volumeReceiver;
+    private android.content.BroadcastReceiver dndReceiver;
 
     private static final int ORIENTATION_UNKNOWN = 0;
     private static final int ORIENTATION_FACE_UP = 1;
@@ -129,12 +130,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         stateMachine.initialize(savedEnabled, savedDuration, savedEndsAt, currentVolume, musicActive, System.currentTimeMillis());
 
-        checkAndApplyAutoTimer(System.currentTimeMillis());
+        registerDndReceiver();
+        checkAndApplyDndAutoTimer();
 
         showOrHideNotification();
 
-        boolean wakeAlarmEnabled = isWakeAlarmEnabled();
-        if (wakeAlarmEnabled) {
+        boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
+        if (goalEnabled) {
             checkAndScheduleSmartWakeUpAlarm(savedEndsAt);
         }
     }
@@ -157,6 +159,58 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (audioManager != null && audioPlaybackCallback != null && android.os.Build.VERSION.SDK_INT >= 26) {
             audioManager.unregisterAudioPlaybackCallback(audioPlaybackCallback);
             audioPlaybackCallback = null;
+        }
+    }
+
+    private void registerDndReceiver() {
+        if (dndReceiver == null && android.os.Build.VERSION.SDK_INT >= 23) {
+            dndReceiver = new android.content.BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if (NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED.equals(intent.getAction())) {
+                        EventLogger.log(context, EventLogger.LEVEL_HIGH, "DND state changed");
+                        checkAndApplyDndAutoTimer();
+                    }
+                }
+            };
+            android.content.IntentFilter filter = new android.content.IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED);
+            registerReceiver(dndReceiver, filter);
+        }
+    }
+
+    private void unregisterDndReceiver() {
+        if (dndReceiver != null) {
+            try {
+                unregisterReceiver(dndReceiver);
+            } catch (IllegalArgumentException ignored) {
+            }
+            dndReceiver = null;
+        }
+    }
+
+    private void checkAndApplyDndAutoTimer() {
+        if (preferences == null || stateMachine == null) return;
+        boolean autoTimerEnabled = preferences.getBoolean("auto_timer_enabled", false);
+        if (!autoTimerEnabled) return;
+
+        if (android.os.Build.VERSION.SDK_INT >= 23) {
+            NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (nm != null) {
+                int filter = nm.getCurrentInterruptionFilter();
+                boolean dndActive = (filter != NotificationManager.INTERRUPTION_FILTER_ALL);
+                boolean musicActive = audioManager != null && audioManager.isMusicActive();
+                long now = System.currentTimeMillis();
+
+                if (dndActive && !stateMachine.isEnabled()) {
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "DND active: turning ON sleep timer");
+                    stateMachine.handleTurnOn(musicActive, now, true);
+                    updateNotification();
+                } else if (!dndActive && stateMachine.isEnabled()) {
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "DND inactive: turning OFF sleep timer");
+                    stateMachine.handleTurnOff(true);
+                    updateNotification();
+                }
+            }
         }
     }
 
@@ -1071,8 +1125,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         stateMachine.reloadSettings(savedEnabled, savedDuration, musicActive, now);
 
-        boolean wakeAlarmEnabled = isWakeAlarmEnabled();
-        if (wakeAlarmEnabled) {
+        checkAndApplyDndAutoTimer();
+
+        boolean goalEnabled = preferences.getBoolean("wake_up_goal_enabled", false);
+        if (goalEnabled) {
             checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
         } else {
             dismissAutoSleepAlarm();
@@ -1203,6 +1259,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         isWakeUpAlarmSnoozed = false;
         unregisterSensorListener();
         unregisterVolumeObserver();
+        unregisterDndReceiver();
         unregisterAudioPlaybackCallback();
         cancelTimerCallbacks();
         super.onDestroy();

@@ -61,6 +61,7 @@ The export string must be a valid JSON object adhering to schema version `1`:
 | `version` | Integer | `1` | Yes | Schema version identifier for forward compatibility. |
 | `duration_minutes` | Integer | `1` to `1440` (minutes) | Yes | Configured sleep timer duration (default 20 minutes, max 24 hours). |
 | `active` | Boolean | `true`, `false` | No | Whether the timer is currently enabled (defaults to `false` if missing). |
+| `auto_timer_enabled` | Boolean | `true`, `false` | No | Whether DND-based Auto Sleep Timer is enabled. |
 | `wake_up_goal_enabled` | Boolean | `true`, `false` | Yes | Whether the Smart Wake-Up Goal feature is enabled. |
 | `wake_up_goal_hour` | Integer | `0` to `23` (hours) | Yes | Target wake-up goal clock hour (24-hour format). |
 | `wake_up_goal_minute` | Integer | `0` to `59` (minutes) | Yes | Target wake-up goal clock minute. |
