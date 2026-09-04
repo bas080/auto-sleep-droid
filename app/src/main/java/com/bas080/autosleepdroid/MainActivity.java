@@ -40,6 +40,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private View headerNap;
     private View headerTimer;
     private View headerAlarm;
+    private View headerAbout;
 
     private Switch switchEnableTimer;
     private View inputDuration;
@@ -118,6 +119,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         headerNap = findViewById(R.id.header_nap);
         headerTimer = findViewById(R.id.header_timer);
         headerAlarm = findViewById(R.id.header_alarm);
+        headerAbout = findViewById(R.id.header_about);
 
         switchEnableTimer = findViewById(R.id.switch_enable_timer);
         inputDuration = findViewById(R.id.input_duration);
@@ -432,6 +434,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setRowEnabled(btnTargetTime, goalEnabled);
         setRowEnabled(btnCurrentWakeTime, goalEnabled);
         setRowEnabled(inputMinSleep, goalEnabled);
+        setRowEnabled(headerAbout, true);
 
         if (goalContainer != null) {
             goalContainer.setVisibility(View.VISIBLE);
@@ -503,12 +506,16 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         TimePickerDialog timePickerDialog = new TimePickerDialog(this,
                 (view, hourOfDay, minute) -> {
                     SharedPreferences prefs1 = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-                    prefs1.edit()
+                    SharedPreferences.Editor editor = prefs1.edit()
                             .putInt("wake_up_goal_hour", hourOfDay)
-                            .putInt("wake_up_goal_minute", minute)
-                            .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
-                            .apply();
+                            .putInt("wake_up_goal_minute", minute);
+                    if (!prefs1.contains("current_wake_hour")) {
+                        editor.putInt("current_wake_hour", hourOfDay)
+                              .putInt("current_wake_minute", minute);
+                    }
+                    editor.remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
                     updateTargetTimeButtonText(hourOfDay, minute);
+                    updateCurrentWakeTimeButtonText(prefs1.getInt("current_wake_hour", hourOfDay), prefs1.getInt("current_wake_minute", minute));
                     redrawNotification();
                 }, goalHour, goalMin, is24Hour);
         timePickerDialog.show();
@@ -604,8 +611,34 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void openNapDialog() {
-        Intent intent = new Intent(this, NapDialogActivity.class);
-        startActivity(intent);
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        int currentMinutes = prefs.getInt(SleepTimerService.KEY_NAP_DURATION_MINUTES, 20);
+
+        final DurationInputView durationInputView = new DurationInputView(this);
+        durationInputView.setPadding(48, 24, 48, 24);
+        durationInputView.setTotalMinutes(currentMinutes);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.dialog_nap_title);
+        builder.setView(durationInputView);
+        builder.setPositiveButton(R.string.dialog_ok, (dialog, which) -> {
+            int minutes = durationInputView.getTotalMinutes();
+            if (minutes > 0) {
+                Intent serviceIntent = new Intent(this, SleepTimerService.class);
+                serviceIntent.setAction(SleepTimerService.ACTION_START_NAP);
+                serviceIntent.putExtra(SleepTimerService.EXTRA_NAP_DURATION_MINUTES, minutes);
+                if (Build.VERSION.SDK_INT >= 26) {
+                    startForegroundService(serviceIntent);
+                } else {
+                    startService(serviceIntent);
+                }
+                loadPreferencesIntoUi();
+            } else {
+                Toast.makeText(MainActivity.this, R.string.toast_duration_invalid, Toast.LENGTH_SHORT).show();
+            }
+        });
+        builder.setNegativeButton(R.string.dialog_cancel, (dialog, which) -> dialog.dismiss());
+        builder.show();
     }
 
     private void cancelNap() {

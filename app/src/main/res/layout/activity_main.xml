@@ -126,7 +126,7 @@
                     android:layout_height="wrap_content"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
-                    android:paddingTop="16dp"
+                    android:paddingTop="24dp"
                     android:paddingBottom="4dp"
                     android:text="@string/heading_timer"
                     android:textColor="?android:attr/colorAccent"
@@ -283,7 +283,7 @@
                     android:layout_height="wrap_content"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
-                    android:paddingTop="16dp"
+                    android:paddingTop="24dp"
                     android:paddingBottom="4dp"
                     android:text="@string/heading_alarm"
                     android:textColor="?android:attr/colorAccent"
@@ -493,6 +493,20 @@
                             android:focusable="false" />
                     </LinearLayout>
                 </LinearLayout>
+
+                <!-- About Section -->
+                <TextView
+                    android:id="@+id/header_about"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="24dp"
+                    android:paddingBottom="4dp"
+                    android:text="@string/heading_about"
+                    android:textColor="?android:attr/colorAccent"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
                 <!-- Links Section -->
                 <LinearLayout

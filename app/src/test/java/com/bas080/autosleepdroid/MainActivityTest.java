@@ -546,9 +546,23 @@ public class MainActivityTest {
 
         btnNap.performClick();
 
-        Intent startedActivity = Shadows.shadowOf(activity).getNextStartedActivity();
-        assertNotNull(startedActivity);
-        assertEquals(NapDialogActivity.class.getName(), startedActivity.getComponent().getClassName());
+        AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
+        assertNotNull(dialog);
+        List<DurationInputView> list = new ArrayList<>();
+        if (dialog.getWindow() != null) {
+            findViewsOfType(dialog.getWindow().getDecorView(), DurationInputView.class, list);
+        }
+        assertFalse(list.isEmpty());
+    }
+
+    @Test
+    public void testAboutHeaderExistsAboveLinks() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        TextView headerAbout = activity.findViewById(R.id.header_about);
+        assertNotNull(headerAbout);
+        assertEquals(activity.getString(R.string.heading_about), headerAbout.getText().toString());
     }
 
     @Test

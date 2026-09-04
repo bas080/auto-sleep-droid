@@ -65,6 +65,7 @@
     <string name="heading_nap">Siesta</string>
     <string name="heading_timer">Temporizador</string>
     <string name="heading_alarm">Alarma</string>
+    <string name="heading_about">Acerca de</string>
     <string name="label_nap">Alarma de siesta</string>
     <string name="desc_nap">Inicia una alarma de siesta rápida</string>
     <string name="label_links">Enlaces</string>
