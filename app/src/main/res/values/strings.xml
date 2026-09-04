@@ -25,7 +25,7 @@
     <string name="action_sleep_duration">Sleep %1$s</string>
     <string name="action_timer_on">On</string>
     <string name="action_timer_off">Disable</string>
-    <string name="action_turn_off">Turn Off</string>
+    <string name="action_turn_off">Disable</string>
     <string name="action_turn_on">Enable</string>
     <string name="action_set_goal">Set Goal</string>
     <string name="action_set_alarm">Set Alarm</string>
