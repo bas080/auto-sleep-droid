@@ -21,7 +21,10 @@ public class NapDialogActivity extends Activity {
         durationInputView.setPadding(48, 24, 48, 24);
         durationInputView.setTotalMinutes(savedDuration);
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(new android.view.ContextThemeWrapper(this, R.style.AppTheme));
+        boolean isNightMode = (getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+        int themeRes = isNightMode ? android.R.style.Theme_DeviceDefault_Dialog : android.R.style.Theme_DeviceDefault_Light_Dialog;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(new android.view.ContextThemeWrapper(this, themeRes));
         builder.setTitle(R.string.dialog_nap_title);
         builder.setView(durationInputView);
         builder.setPositiveButton(R.string.action_nap, (dialog, which) -> {

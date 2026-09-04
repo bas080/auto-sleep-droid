@@ -733,7 +733,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (isWakeAlarmEnabled() && preferences != null) {
             int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
             long now = System.currentTimeMillis();
-            long requiredWakeTime = now + minSleepMin * 60_000L;
+            long baseTime = newTimerEndsAt > 0L ? newTimerEndsAt : now;
+            long requiredWakeTime = baseTime + minSleepMin * 60_000L;
 
             int goalHour = preferences.getInt("wake_up_goal_hour", 6);
             int goalMin = preferences.getInt("wake_up_goal_minute", 30);
@@ -999,7 +1000,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         long now = System.currentTimeMillis();
         Calendar scheduledAlarm = calculateScheduledAlarm(this, now, stateMachine.getTimerEndsAt());
-        boolean showWakeAlarm = scheduledAlarm != null &&
+        boolean showWakeAlarm = isWakeAlarmEnabled() && scheduledAlarm != null &&
                 (scheduledAlarm.getTimeInMillis() - now) >= (long) (stateMachine.getConfiguredDurationMinutes() * 1.5 * 60_000L);
 
         if (isWakeUpAlarmRinging) {
