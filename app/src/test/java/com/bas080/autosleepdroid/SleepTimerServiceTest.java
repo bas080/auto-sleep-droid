@@ -868,6 +868,46 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testWakeUpAlarmAudioAttributesConfiguredAsAlarmToBypassDnd() throws Exception {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        android.media.AudioManager am = (android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        if (am != null) {
+            am.setStreamVolume(android.media.AudioManager.STREAM_ALARM, 0, 0);
+        }
+
+        java.lang.reflect.Method playMethod = SleepTimerService.class.getDeclaredMethod("playWakeUpAlarmSound");
+        playMethod.setAccessible(true);
+        playMethod.invoke(service);
+
+        java.lang.reflect.Field ringtoneField = SleepTimerService.class.getDeclaredField("currentAlarmRingtone");
+        ringtoneField.setAccessible(true);
+        android.media.Ringtone ringtone = (android.media.Ringtone) ringtoneField.get(service);
+
+        assertNotNull("currentAlarmRingtone must be non-null when playing alarm sound", ringtone);
+
+        if (android.os.Build.VERSION.SDK_INT >= 21) {
+            android.media.AudioAttributes attributes = ringtone.getAudioAttributes();
+            assertNotNull("AudioAttributes must be configured on currentAlarmRingtone by playWakeUpAlarmSound", attributes);
+            assertEquals("AudioAttributes usage must be USAGE_ALARM to ensure Do Not Disturb does not prevent alarm playback",
+                    android.media.AudioAttributes.USAGE_ALARM, attributes.getUsage());
+            assertEquals("AudioAttributes content type must be CONTENT_TYPE_SONIFICATION",
+                    android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION, attributes.getContentType());
+        } else {
+            assertEquals("Stream type must be STREAM_ALARM",
+                    android.media.AudioManager.STREAM_ALARM, ringtone.getStreamType());
+        }
+
+        if (am != null) {
+            int maxVol = am.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM);
+            int expectedMinVol = Math.max(1, (int) Math.round(maxVol * 0.3));
+            assertEquals("STREAM_ALARM volume should be raised to audible volume when alarm plays",
+                    expectedMinVol, am.getStreamVolume(android.media.AudioManager.STREAM_ALARM));
+        }
+    }
+
+    @Test
     public void testWakeUpAlarmTriggersNextDailyAlarm() {
         preferences.edit()
                 .putBoolean("wake_up_goal_enabled", true)
