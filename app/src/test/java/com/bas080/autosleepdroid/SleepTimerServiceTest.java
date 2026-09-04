@@ -290,8 +290,9 @@ public class SleepTimerServiceTest {
         ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
         android.app.Notification notificationOff = shadowNotificationManager.getNotification(1001);
         assertNotNull(notificationOff);
-        assertEquals(1, notificationOff.actions.length);
-        assertEquals("Nap", notificationOff.actions[0].title.toString());
+        assertEquals(2, notificationOff.actions.length);
+        assertEquals("Enable", notificationOff.actions[0].title.toString());
+        assertEquals("Nap", notificationOff.actions[1].title.toString());
     }
 
     @Test
@@ -313,8 +314,8 @@ public class SleepTimerServiceTest {
         ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
         android.app.Notification notificationNapActive = shadowNotificationManager.getNotification(1001);
         assertNotNull(notificationNapActive);
-        assertEquals(1, notificationNapActive.actions.length);
-        assertEquals("Cancel Nap", notificationNapActive.actions[0].title.toString());
+        assertEquals(2, notificationNapActive.actions.length);
+        assertEquals("Cancel Nap", notificationNapActive.actions[1].title.toString());
         String activeContentText = notificationNapActive.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString();
         assertTrue("Notification content text must communicate active nap state", activeContentText.contains("Nap at"));
 
@@ -326,7 +327,7 @@ public class SleepTimerServiceTest {
 
         android.app.Notification notificationNapCancelled = shadowNotificationManager.getNotification(1001);
         assertNotNull(notificationNapCancelled);
-        assertEquals("Nap", notificationNapCancelled.actions[0].title.toString());
+        assertEquals("Nap", notificationNapCancelled.actions[1].title.toString());
         String cancelledContentText = notificationNapCancelled.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString();
         assertFalse("Notification content text must not contain nap state after cancel", cancelledContentText.contains("Nap at"));
     }
@@ -524,7 +525,7 @@ public class SleepTimerServiceTest {
 
     @Test
     public void testWakeUpAlarmSnoozeKeepsNotificationOpen() {
-        preferences.edit().putBoolean("show_notification", true).commit();
+        preferences.edit().putBoolean("show_notification", true).putBoolean("wake_alarm_enabled", true).commit();
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
@@ -563,7 +564,7 @@ public class SleepTimerServiceTest {
 
     @Test
     public void testWakeUpAlarmFlipSnoozeKeepsNotificationOpen() throws Exception {
-        preferences.edit().putBoolean("show_notification", true).commit();
+        preferences.edit().putBoolean("show_notification", true).putBoolean("wake_alarm_enabled", true).commit();
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
