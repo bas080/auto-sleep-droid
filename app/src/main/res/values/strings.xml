@@ -93,10 +93,8 @@
     <string name="desc_duration">Sleep timer countdown duration before audio volume fades out</string>
     <string name="label_wake_up_goal">Target wake-up goal</string>
     <string name="desc_wake_up_goal">Automatically schedule daily wake-up alarms with sleep duration safeguards</string>
-    <string name="label_auto_timer">Auto sleep timer</string>
-    <string name="desc_auto_timer">Automatically turn on sleep timer before wake-up time and off after</string>
-    <string name="label_wake_alarm">Wake-up alarm</string>
-    <string name="desc_wake_alarm">Play an audible alarm tone at your wake-up time</string>
+    <string name="label_auto_timer">Auto sleep timer (DND)</string>
+    <string name="desc_auto_timer">Turn on sleep timer when Do Not Disturb is active and off when DND ends</string>
     <string name="label_target_time">Target wake-up time</string>
     <string name="desc_target_time">Desired daily wake-up clock time</string>
     <string name="label_min_sleep">Minimum sleep duration</string>

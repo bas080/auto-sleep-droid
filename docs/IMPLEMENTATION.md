@@ -102,7 +102,7 @@ Main Configuration Controls & Action Links:
   - Nap alarm section at top (`btn_nap` button launching `NapDialogActivity` or canceling active nap).
   - Sleep timer enable/disable Switch (`active` preference).
   - Sleep timer duration input using custom `DurationInputView` (`input_duration`, saving `duration_minutes` preference).
-  - Show notification Switch (`show_notification` preference).
+- Auto sleep timer (DND) toggle Switch (`auto_timer_enabled` preference).
   - Target wake-up goal enable Switch (`wake_up_goal_enabled` preference).
   - Target wake-up goal time Button (`btn_target_time`, displaying formatted system time and opening `TimePickerDialog` on click).
   - Minimum sleep duration input using custom `DurationInputView` (`input_min_sleep`, saving `min_sleep_duration_minutes` preference).
@@ -133,6 +133,7 @@ Timer and Wake-Up Goal state is stored in the `sleep_timer` `SharedPreferences` 
 | `duration_minutes` | integer | The configured duration used for every reset |
 | `show_notification` | boolean | Whether ongoing sleep timer notification is visible across timer states |
 | `timer_ends_at` | long | Wall-clock timestamp (millis) when active timer expires |
+| `auto_timer_enabled` | boolean | Whether DND-based Auto Sleep Timer is enabled |
 | `wake_up_goal_enabled` | boolean | Whether Smart Wake-Up Goal is enabled |
 | `wake_up_goal_hour` | integer | Target goal hour of day (0-23) |
 | `wake_up_goal_minute` | integer | Target goal minute (0-59) |
