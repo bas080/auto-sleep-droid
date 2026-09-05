@@ -59,7 +59,8 @@ public class NapDialogActivityTest {
         assertNotNull(pickerHours);
         assertNotNull(pickerMinutes);
         assertEquals(0, pickerHours.getValue());
-        assertEquals(45, pickerMinutes.getValue());
+        assertEquals(9, pickerMinutes.getValue());
+        assertEquals(45, inputNapDuration.getTotalMinutes());
     }
 
     @Test
@@ -75,12 +76,9 @@ public class NapDialogActivityTest {
         assertEquals(1, list.size());
         DurationInputView inputNapDuration = list.get(0);
 
-        NumberPicker pickerHours = inputNapDuration.getHoursPicker();
-        NumberPicker pickerMinutes = inputNapDuration.getMinutesPicker();
         Button btnStart = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
 
-        pickerHours.setValue(1);
-        pickerMinutes.setValue(15);
+        inputNapDuration.setTotalMinutes(75);
 
         btnStart.performClick();
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();

@@ -20,6 +20,7 @@ public class NapDialogActivity extends Activity {
         android.view.ContextThemeWrapper dialogContext = new android.view.ContextThemeWrapper(this, R.style.AppTheme);
 
         final DurationInputView durationInputView = new DurationInputView(dialogContext);
+        durationInputView.configure(0, 3, 5);
         durationInputView.setPadding(48, 24, 48, 24);
         durationInputView.setTotalMinutes(savedDuration);
 

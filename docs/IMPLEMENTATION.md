@@ -102,7 +102,7 @@ Main Configuration Controls & Action Links:
   - Section headings (`headerNap`, `headerTimer`, `headerAlarm`, `headerAbout`) remain enabled (`true`) with full opacity (`1.0f`) at all times.
   - Nap alarm section at top (`btn_nap` button launching `NapDialogActivity` or canceling active nap).
   - Sleep timer enable/disable Switch (`active` preference).
-  - Sleep timer duration input using custom `DurationInputView` (`input_duration`, incorporating `NumberPicker` hour and minute wheel pickers, saving `duration_minutes` preference, displaying formatted duration value on `text_duration_value`). Timer duration controls remain enabled when the sleep timer switch is OFF.
+  - Sleep timer duration input using custom `DurationInputView` (`input_duration`, incorporating `NumberPicker` hour and minute wheel pickers configured via `configure(minHours, maxHours, minuteStep)`, saving `duration_minutes` preference, displaying formatted duration value on `text_duration_value`). Timer duration controls remain enabled when the sleep timer switch is OFF.
   - Auto sleep timer (DND) toggle Switch (`auto_timer_enabled` preference).
   - Wake-up alarm enable Switch (`wake_up_goal_enabled` preference, labeled "Wake-up alarm").
   - Target wake-up goal time Button (`btn_target_time`, displaying formatted system time and opening `TimePickerDialog` on click).
