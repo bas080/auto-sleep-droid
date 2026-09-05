@@ -394,6 +394,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         if (rowAutoTimer != null && switchAutoTimer != null) {
             rowAutoTimer.setOnClickListener(v -> {
+                isUserInitiatedAutoTimer = true;
                 switchAutoTimer.setPressed(true);
                 switchAutoTimer.toggle();
                 switchAutoTimer.setPressed(false);
@@ -475,6 +476,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         if (rowHealthConnect != null && switchHealthConnect != null) {
             rowHealthConnect.setOnClickListener(v -> {
+                isUserInitiatedHealthConnect = true;
                 switchHealthConnect.setPressed(true);
                 switchHealthConnect.toggle();
                 switchHealthConnect.setPressed(false);
