@@ -109,6 +109,8 @@
     <string name="desc_target_time">Hora deseada para despertar cada día</string>
     <string name="label_min_sleep">Duración de sueño mínima</string>
     <string name="desc_min_sleep">Garantiza una duración mínima de sueño aunque te duermas tarde</string>
+    <string name="label_alarm_sound">Sonido de alarma</string>
+    <string name="desc_alarm_sound">Abrir ajustes del sistema para configurar el sonido y volumen de la alarma</string>
     <string name="label_show_notification">Mostrar notificación</string>
     <string name="desc_show_notification">Muestra una notificación de estado permanente en la barra de notificaciones</string>
     <string name="label_health_connect">Health Connect</string>
