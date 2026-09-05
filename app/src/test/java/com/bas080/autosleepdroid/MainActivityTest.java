@@ -837,6 +837,38 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testSwitchRowClicksToggleSwitches() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        View rowEnableTimer = activity.findViewById(R.id.row_enable_timer);
+        android.widget.Switch switchEnableTimer = activity.findViewById(R.id.switch_enable_timer);
+        View rowAutoTimer = activity.findViewById(R.id.row_auto_timer);
+        android.widget.Switch switchAutoTimer = activity.findViewById(R.id.switch_auto_timer);
+        View rowEnableGoal = activity.findViewById(R.id.row_enable_goal);
+        android.widget.Switch switchEnableGoal = activity.findViewById(R.id.switch_enable_goal);
+
+        assertNotNull(rowEnableTimer);
+        assertNotNull(switchEnableTimer);
+        assertNotNull(rowAutoTimer);
+        assertNotNull(switchAutoTimer);
+        assertNotNull(rowEnableGoal);
+        assertNotNull(switchEnableGoal);
+
+        boolean initialEnable = switchEnableTimer.isChecked();
+        rowEnableTimer.performClick();
+        assertEquals(!initialEnable, switchEnableTimer.isChecked());
+
+        boolean initialAuto = switchAutoTimer.isChecked();
+        rowAutoTimer.performClick();
+        assertEquals(!initialAuto, switchAutoTimer.isChecked());
+
+        boolean initialGoal = switchEnableGoal.isChecked();
+        rowEnableGoal.performClick();
+        assertEquals(!initialGoal, switchEnableGoal.isChecked());
+    }
+
+    @Test
     public void testButtonRowChildViewsAreNotClickableAndParentIsClickable() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
