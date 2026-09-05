@@ -6,7 +6,7 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
+import android.widget.NumberPicker;
 import androidx.test.core.app.ApplicationProvider;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,13 +53,14 @@ public class NapDialogActivityTest {
         assertEquals(1, list.size());
         DurationInputView inputNapDuration = list.get(0);
 
-        EditText inputHours = inputNapDuration.getHoursInput();
-        EditText inputMinutes = inputNapDuration.getMinutesInput();
+        NumberPicker pickerHours = inputNapDuration.getHoursPicker();
+        NumberPicker pickerMinutes = inputNapDuration.getMinutesPicker();
 
-        assertNotNull(inputHours);
-        assertNotNull(inputMinutes);
-        assertEquals("", inputHours.getText().toString());
-        assertEquals("45", inputMinutes.getText().toString());
+        assertNotNull(pickerHours);
+        assertNotNull(pickerMinutes);
+        assertEquals(0, pickerHours.getValue());
+        assertEquals(9, pickerMinutes.getValue());
+        assertEquals(45, inputNapDuration.getTotalMinutes());
     }
 
     @Test
@@ -75,12 +76,9 @@ public class NapDialogActivityTest {
         assertEquals(1, list.size());
         DurationInputView inputNapDuration = list.get(0);
 
-        EditText inputHours = inputNapDuration.getHoursInput();
-        EditText inputMinutes = inputNapDuration.getMinutesInput();
         Button btnStart = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
 
-        inputHours.setText("1");
-        inputMinutes.setText("15");
+        inputNapDuration.setTotalMinutes(75);
 
         btnStart.performClick();
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();

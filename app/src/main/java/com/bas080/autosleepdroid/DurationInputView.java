@@ -1,18 +1,20 @@
 package com.bas080.autosleepdroid;
 
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.AttributeSet;
+import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.NumberPicker;
 
 public class DurationInputView extends LinearLayout {
-    private EditText inputHours;
-    private EditText inputMinutes;
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private NumberPicker pickerHours;
+    private NumberPicker pickerMinutes;
     private OnDurationChangeListener durationChangeListener;
+
+    private int minHours = 0;
+    private int maxHours = 24;
+    private int minuteStep = 1;
 
     public interface OnDurationChangeListener {
         void onDurationChanged(int totalMinutes);
@@ -36,37 +38,62 @@ public class DurationInputView extends LinearLayout {
 
     private void init(Context context) {
         setOrientation(HORIZONTAL);
-        setGravity(android.view.Gravity.CENTER_VERTICAL);
+        setGravity(Gravity.CENTER);
         LayoutInflater.from(context).inflate(R.layout.view_duration_input, this, true);
 
-        inputHours = findViewById(R.id.input_hours);
-        inputMinutes = findViewById(R.id.input_minutes);
+        pickerHours = findViewById(R.id.picker_hours);
+        pickerMinutes = findViewById(R.id.picker_minutes);
 
-        OnFocusChangeListener focusListener = (v, hasFocus) -> {
-            mainHandler.post(() -> {
-                boolean hoursFocused = inputHours != null && inputHours.hasFocus();
-                boolean minutesFocused = inputMinutes != null && inputMinutes.hasFocus();
-                if (!hoursFocused && !minutesFocused) {
-                    handleFocusLoss();
+        NumberPicker.OnValueChangeListener valueChangeListener = (picker, oldVal, newVal) -> handleDurationChange();
+
+        if (pickerHours != null) pickerHours.setOnValueChangedListener(valueChangeListener);
+        if (pickerMinutes != null) pickerMinutes.setOnValueChangedListener(valueChangeListener);
+
+        configure(0, 24, 1);
+    }
+
+    public void configure(int minHours, int maxHours, int minuteStep) {
+        this.minHours = Math.max(0, minHours);
+        this.maxHours = Math.max(this.minHours, maxHours);
+        this.minuteStep = Math.max(1, minuteStep);
+
+        if (pickerHours != null) {
+            pickerHours.setMinValue(this.minHours);
+            pickerHours.setMaxValue(this.maxHours);
+            pickerHours.setWrapSelectorWheel(false);
+        }
+
+        if (pickerMinutes != null) {
+            pickerMinutes.setDisplayedValues(null);
+            if (this.minuteStep > 1) {
+                int count = 60 / this.minuteStep;
+                String[] values = new String[count];
+                for (int i = 0; i < count; i++) {
+                    values[i] = String.format(java.util.Locale.US, "%02d", i * this.minuteStep);
                 }
-            });
-        };
-
-        if (inputHours != null) inputHours.setOnFocusChangeListener(focusListener);
-        if (inputMinutes != null) inputMinutes.setOnFocusChangeListener(focusListener);
+                pickerMinutes.setMinValue(0);
+                pickerMinutes.setMaxValue(count - 1);
+                pickerMinutes.setDisplayedValues(values);
+            } else {
+                pickerMinutes.setMinValue(0);
+                pickerMinutes.setMaxValue(59);
+                pickerMinutes.setFormatter(val -> String.format(java.util.Locale.US, "%02d", val));
+            }
+            pickerMinutes.setWrapSelectorWheel(true);
+        }
     }
 
     public void setChildInputIds(int hoursId, int minutesId) {
-        if (inputHours != null) inputHours.setId(hoursId);
-        if (inputMinutes != null) inputMinutes.setId(minutesId);
+        if (pickerHours != null) pickerHours.setId(hoursId);
+        if (pickerMinutes != null) pickerMinutes.setId(minutesId);
     }
 
-    public EditText getHoursInput() {
-        return inputHours;
+    public NumberPicker getHoursPicker() {
+        return pickerHours;
     }
 
-    public EditText getMinutesInput() {
-        return inputMinutes;
+    public NumberPicker getMinutesPicker() {
+        return pickerMinutes;
     }
 
     public void setOnDurationChangeListener(OnDurationChangeListener listener) {
@@ -74,46 +101,52 @@ public class DurationInputView extends LinearLayout {
     }
 
     public int getTotalMinutes() {
-        if (inputHours == null || inputMinutes == null) return -1;
-        String hStr = inputHours.getText().toString().trim();
-        String mStr = inputMinutes.getText().toString().trim();
-        if (hStr.isEmpty() && mStr.isEmpty()) return -1;
-        int h = 0;
-        int m = 0;
-        try {
-            if (!hStr.isEmpty()) h = Integer.parseInt(hStr);
-            if (!mStr.isEmpty()) m = Integer.parseInt(mStr);
-        } catch (NumberFormatException e) {
-            return -1;
+        if (pickerHours == null || pickerMinutes == null) return -1;
+        int h = pickerHours.getValue();
+        int m;
+        if (minuteStep > 1) {
+            m = pickerMinutes.getValue() * minuteStep;
+        } else {
+            m = pickerMinutes.getValue();
         }
-        if (h < 0 || m < 0) return -1;
-        long total = h * 60L + m;
+        int total = h * 60 + m;
         if (total <= 0 || total > 1440) {
             return -1;
         }
-        return (int) total;
+        return total;
     }
 
     public void setTotalMinutes(int totalMinutes) {
-        if (inputHours == null || inputMinutes == null) return;
+        if (pickerHours == null || pickerMinutes == null) return;
+        if (totalMinutes < 0) totalMinutes = 0;
+        if (totalMinutes > 1440) totalMinutes = 1440;
+
         int h = totalMinutes / 60;
-        int m = totalMinutes % 60;
-        inputHours.setText(h > 0 ? String.valueOf(h) : "");
-        inputMinutes.setText(m > 0 || h == 0 ? String.valueOf(m) : "");
+        int remainingMins = totalMinutes % 60;
+
+        if (h < minHours) h = minHours;
+        if (h > maxHours) h = maxHours;
+
+        pickerHours.setValue(h);
+
+        if (minuteStep > 1) {
+            int count = 60 / minuteStep;
+            int stepIdx = Math.round((float) remainingMins / minuteStep);
+            if (stepIdx >= count) stepIdx = count - 1;
+            pickerMinutes.setValue(stepIdx);
+        } else {
+            pickerMinutes.setValue(remainingMins);
+        }
     }
 
     @Override
     public void setEnabled(boolean enabled) {
         super.setEnabled(enabled);
-        if (inputHours != null) inputHours.setEnabled(enabled);
-        if (inputMinutes != null) inputMinutes.setEnabled(enabled);
+        if (pickerHours != null) pickerHours.setEnabled(enabled);
+        if (pickerMinutes != null) pickerMinutes.setEnabled(enabled);
     }
 
-    public boolean hasInputFocus() {
-        return (inputHours != null && inputHours.hasFocus()) || (inputMinutes != null && inputMinutes.hasFocus());
-    }
-
-    private void handleFocusLoss() {
+    private void handleDurationChange() {
         int totalMinutes = getTotalMinutes();
         if (durationChangeListener != null) {
             if (totalMinutes > 0) {

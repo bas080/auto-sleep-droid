@@ -36,7 +36,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - Provides a complete single-screen configuration UI for all settings:
     - Nap alarm section at top featuring a Nap button ("Nap" or "Cancel Nap" when active).
     - Sleep timer enable/disable switch.
-    - Sleep timer duration input using side-by-side numeric fields for hours and minutes with unit labels ("hours" and "mins"). Timer duration controls remain enabled when the sleep timer switch is OFF.
+    - Duration inputs (sleep timer duration: 0-12h with 5m steps, minimum sleep duration: 0-16h with 15m steps, nap alarm duration: 0-3h with 5m steps) use hour and minute wheel pickers. Timer duration controls remain enabled when the sleep timer switch is OFF.
     - Auto sleep timer (DND) enable/disable switch (optional automation; manual toggle always available).
     - Wake-up alarm enable switch ("Wake-up alarm"), target wake-up time picker button, and minimum sleep duration input.
     - Section headings (Nap, Timer, Alarm, About) remain fully visible and opaque at all times.
