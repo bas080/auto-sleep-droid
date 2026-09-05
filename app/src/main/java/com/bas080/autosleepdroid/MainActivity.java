@@ -69,6 +69,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private final android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private boolean isUpdatingUi = false;
+    private boolean isUserInitiatedAutoTimer = false;
+    private boolean isUserInitiatedHealthConnect = false;
 
     private interface OnDurationSavedListener {
         void onSaved(int minutes);
@@ -387,7 +389,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
 
         if (rowAutoTimer != null && switchAutoTimer != null) {
-            rowAutoTimer.setOnClickListener(v -> switchAutoTimer.toggle());
+            rowAutoTimer.setOnClickListener(v -> {
+                isUserInitiatedAutoTimer = true;
+                switchAutoTimer.toggle();
+            });
         }
 
         if (switchAutoTimer != null) {
@@ -395,7 +400,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 if (isUpdatingUi) return;
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
                 prefs.edit().putBoolean("auto_timer_enabled", isChecked).apply();
-                boolean isUserInitiated = buttonView.isPressed();
+                boolean isUserInitiated = buttonView.isPressed() || isUserInitiatedAutoTimer;
+                isUserInitiatedAutoTimer = false;
                 if (isChecked) {
                     boolean dndActive = isDndActive();
                     prefs.edit().putBoolean("active", dndActive).apply();
@@ -459,14 +465,18 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
 
         if (rowHealthConnect != null && switchHealthConnect != null) {
-            rowHealthConnect.setOnClickListener(v -> switchHealthConnect.toggle());
+            rowHealthConnect.setOnClickListener(v -> {
+                isUserInitiatedHealthConnect = true;
+                switchHealthConnect.toggle();
+            });
         }
 
         if (switchHealthConnect != null) {
             switchHealthConnect.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-                boolean isUserInitiated = buttonView.isPressed();
+                boolean isUserInitiated = buttonView.isPressed() || isUserInitiatedHealthConnect;
+                isUserInitiatedHealthConnect = false;
                 if (isChecked) {
                     if (!HealthConnectManager.isHealthConnectAvailable(this)) {
                         isUpdatingUi = true;
