@@ -60,7 +60,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView textMinSleepValue;
     private View rowHealthConnect;
     private Switch switchHealthConnect;
-    private View btnHealthConnectPermissions;
     private View btnNap;
     private TextView textNapStatus;
     private View btnVersion;
@@ -145,7 +144,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         textMinSleepValue = findViewById(R.id.text_min_sleep_value);
         rowHealthConnect = findViewById(R.id.row_health_connect);
         switchHealthConnect = findViewById(R.id.switch_health_connect);
-        btnHealthConnectPermissions = findViewById(R.id.btn_health_connect_permissions);
         btnNap = findViewById(R.id.btn_nap);
         textNapStatus = findViewById(R.id.text_nap_status);
         btnVersion = findViewById(R.id.btn_version);
@@ -397,8 +395,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     if (switchEnableTimer != null) {
                         switchEnableTimer.setChecked(dndActive);
                     }
+                    openDndSettings();
                 }
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Auto sleep timer (DND) enabled" : "Auto sleep timer (DND) disabled");
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Auto sleep timer (DND) enabled; opening DND settings" : "Auto sleep timer (DND) disabled");
                 redrawNotification();
             });
         }
@@ -463,20 +462,14 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                         return;
                     }
                     prefs.edit().putBoolean("health_connect_enabled", true).apply();
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled");
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled; opening permissions settings");
                     Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show();
+                    HealthConnectManager.openHealthConnectPermissions(this);
                 } else {
                     prefs.edit().putBoolean("health_connect_enabled", false).apply();
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled");
                     Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show();
                 }
-            });
-        }
-
-        if (btnHealthConnectPermissions != null) {
-            btnHealthConnectPermissions.setOnClickListener(v -> {
-                EventLogger.log(this, EventLogger.LEVEL_LOW, "Opening Health Connect permissions");
-                HealthConnectManager.openHealthConnectPermissions(this);
             });
         }
     }
@@ -497,7 +490,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setRowEnabled(btnCurrentWakeTime, goalEnabled);
         setRowEnabled(inputMinSleep, goalEnabled);
         setRowEnabled(rowHealthConnect, true);
-        setRowEnabled(btnHealthConnectPermissions, true);
         setRowEnabled(btnVersion, true);
 
         if (goalContainer != null) {

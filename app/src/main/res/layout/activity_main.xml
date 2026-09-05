@@ -569,16 +569,6 @@
                         android:layout_marginStart="16dp" />
                 </LinearLayout>
 
-                <Button
-                    android:id="@+id/btn_health_connect_permissions"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="8dp"
-                    android:text="@string/btn_health_connect_permissions"
-                    style="?android:attr/buttonBarButtonStyle" />
-
                 <!-- About Section -->
                 <TextView
                     android:id="@+id/header_about"
