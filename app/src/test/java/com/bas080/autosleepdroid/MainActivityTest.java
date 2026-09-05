@@ -23,6 +23,7 @@ import org.robolectric.shadows.ShadowLooper;
 import org.robolectric.shadows.ShadowToast;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -742,8 +743,13 @@ public class MainActivityTest {
         assertNotNull(dialog);
         assertTrue(dialog instanceof android.app.TimePickerDialog);
 
+        Calendar targetCal = Calendar.getInstance();
+        targetCal.add(Calendar.HOUR_OF_DAY, 12);
+        int targetHour = targetCal.get(Calendar.HOUR_OF_DAY);
+        int targetMin = targetCal.get(Calendar.MINUTE);
+
         android.app.TimePickerDialog timePickerDialog = (android.app.TimePickerDialog) dialog;
-        timePickerDialog.updateTime(8, 15);
+        timePickerDialog.updateTime(targetHour, targetMin);
 
         android.widget.Button okButton = timePickerDialog.getButton(DialogInterface.BUTTON_POSITIVE);
         assertNotNull(okButton);
@@ -752,8 +758,8 @@ public class MainActivityTest {
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
         android.content.SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
-        assertEquals(8, prefs.getInt("current_wake_hour", -1));
-        assertEquals(15, prefs.getInt("current_wake_minute", -1));
+        assertEquals(targetHour, prefs.getInt("current_wake_hour", -1));
+        assertEquals(targetMin, prefs.getInt("current_wake_minute", -1));
     }
 
     @Test
@@ -778,8 +784,13 @@ public class MainActivityTest {
         assertNotNull(dialog);
         assertTrue(dialog instanceof android.app.TimePickerDialog);
 
+        Calendar targetCal = Calendar.getInstance();
+        targetCal.add(Calendar.HOUR_OF_DAY, 12);
+        int targetHour = targetCal.get(Calendar.HOUR_OF_DAY);
+        int targetMin = targetCal.get(Calendar.MINUTE);
+
         android.app.TimePickerDialog timePickerDialog = (android.app.TimePickerDialog) dialog;
-        timePickerDialog.updateTime(8, 15);
+        timePickerDialog.updateTime(targetHour, targetMin);
 
         android.widget.Button okButton = timePickerDialog.getButton(DialogInterface.BUTTON_POSITIVE);
         assertNotNull(okButton);
@@ -797,8 +808,8 @@ public class MainActivityTest {
             service.onStartCommand(serviceIntent, 0, 1);
         }
 
-        assertEquals(8, prefs.getInt("current_wake_hour", -1));
-        assertEquals(15, prefs.getInt("current_wake_minute", -1));
+        assertEquals(targetHour, prefs.getInt("current_wake_hour", -1));
+        assertEquals(targetMin, prefs.getInt("current_wake_minute", -1));
         assertTrue("Wake alarm timestamp must be registered after setting current wake time",
                 prefs.contains(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS));
 
@@ -809,7 +820,9 @@ public class MainActivityTest {
         android.app.Notification notification = shadowNotificationManager.getNotification(1001);
         assertNotNull("Notification should be posted", notification);
         String text = notification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString();
-        assertTrue("Notification text should display wake time: " + text, text.contains("Wake at") || text.contains("8:15"));
+        java.text.DateFormat timeFormat = android.text.format.DateFormat.getTimeFormat(activity);
+        String formattedExpectedTime = timeFormat.format(targetCal.getTime());
+        assertTrue("Notification text should display wake time: " + text, text.contains("Wake at") || text.contains(formattedExpectedTime));
     }
 
     @Test
