@@ -47,6 +47,22 @@ The Health Connect integration uses `androidx.health.connect.client.records.Slee
 - Re-checking permission status on `onResume()` automatically disables sync if write permissions are revoked externally in Health Connect settings.
 - Exported and imported seamlessly alongside existing app configuration in JSON format (`health_connect_enabled`).
 
+## Permission Revocation and Data Retention
+
+### How Permission Revocation Works
+
+When Health Connect permissions are revoked (either by toggling Health Connect OFF in Auto Sleep Droid via `PermissionController.revokeAllPermissions()` or by manually revoking access in Android's Health Connect system settings):
+
+1. **Future Sync Blocked**: Auto Sleep Droid loses authorization to write new `SleepSessionRecord` entries into Health Connect.
+2. **Previously Written Data Retained**: Revoking permissions **does NOT delete or erase previously recorded sleep data**. All sleep sessions previously written by Auto Sleep Droid remain safely stored in the user's Health Connect database on the device and remain accessible to other health apps authorized by the user.
+3. **Deleting Historical Data**: If a user wishes to delete past sleep records, they can view, manage, or delete historical data created by Auto Sleep Droid directly inside Android's Health Connect system app under **Settings > Health Connect > App permissions > Auto Sleep Droid > Delete Auto Sleep Droid data**.
+
+### Documentation References
+
+- [Google Health Connect Developer Permissions Guide](https://developer.android.com/health-and-fitness/guides/health-connect/develop/permissions)
+- [Google Health Connect Privacy & Data Access Principles](https://developer.android.com/health-and-fitness/guides/health-connect/get-started/privacy-and-data-access)
+- [Android Help: Manage your Health Connect data](https://support.google.com/android/answer/12201281)
+
 ## Build Size Optimization
 
 Integrating Health Connect and Protocol Buffers adds AndroidX Health Connect, ProtoBuf runtime, and Kotlin coroutines libraries. Enabling R8 minification (`minifyEnabled true`) in `app/build.gradle` trims unused library classes, keeping the release APK size at ~330 KB.
