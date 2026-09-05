@@ -1,6 +1,8 @@
 package com.bas080.autosleepdroid;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 
 import androidx.test.core.app.ApplicationProvider;
@@ -9,6 +11,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.robolectric.Robolectric;
+import org.robolectric.Shadows;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -52,6 +56,21 @@ public class HealthConnectManagerTest {
         boolean available = HealthConnectManager.isHealthConnectAvailable(context);
         // In Robolectric environment without Health Connect provider APK installed, should return false safely
         assertFalse(available);
+    }
+
+    @Test
+    public void testOpenHealthConnectPermissions_LaunchesManageHealthPermissionsIntentWithPackageName() {
+        HealthConnectManager.setClientForTesting(null, true);
+        Activity activity = Robolectric.buildActivity(Activity.class).create().get();
+
+        HealthConnectManager.openHealthConnectPermissions(activity);
+
+        Intent startedIntent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(startedIntent);
+        assertEquals("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS", startedIntent.getAction());
+        assertEquals(activity.getPackageName(), startedIntent.getStringExtra(Intent.EXTRA_PACKAGE_NAME));
+
+        HealthConnectManager.setClientForTesting(null, null);
     }
 
     @Test

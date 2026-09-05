@@ -39,20 +39,27 @@ object HealthConnectManager {
             return
         }
         try {
-            val intent = Intent("androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE")
-            intent.setPackage("com.google.android.apps.healthdata")
+            val intent = Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS")
+            intent.putExtra(Intent.EXTRA_PACKAGE_NAME, activity.packageName)
             activity.startActivity(intent)
-        } catch (e1: Exception) {
+        } catch (e0: Exception) {
             try {
-                val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
+                val intent = Intent("androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE")
+                intent.setPackage("com.google.android.apps.healthdata")
                 activity.startActivity(intent)
-            } catch (e2: Exception) {
+            } catch (e1: Exception) {
                 try {
-                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                    intent.data = android.net.Uri.parse("package:${activity.packageName}")
+                    val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
+                    intent.putExtra(Intent.EXTRA_PACKAGE_NAME, activity.packageName)
                     activity.startActivity(intent)
-                } catch (e3: Exception) {
-                    android.widget.Toast.makeText(activity, R.string.toast_health_connect_not_available, android.widget.Toast.LENGTH_SHORT).show()
+                } catch (e2: Exception) {
+                    try {
+                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        intent.data = android.net.Uri.parse("package:${activity.packageName}")
+                        activity.startActivity(intent)
+                    } catch (e3: Exception) {
+                        android.widget.Toast.makeText(activity, R.string.toast_health_connect_not_available, android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
