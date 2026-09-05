@@ -761,6 +761,103 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testDismissingNapAlarmDoesNotAffectCurrentWakeTime() {
+        preferences.edit()
+                .putBoolean("active", false)
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 7)
+                .putInt("current_wake_minute", 30)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        // Trigger nap alarm expiry
+        Intent napExpiryIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_NAP_EXPIRY);
+        service.onStartCommand(napExpiryIntent, 0, 1);
+
+        // Dismiss nap alarm
+        Intent dismissIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_DISMISS_WAKEUP_ALARM);
+        service.onStartCommand(dismissIntent, 0, 1);
+
+        // Current wake time must remain 7:30
+        assertEquals("Current wake hour must remain unchanged on nap alarm dismiss",
+                7, preferences.getInt("current_wake_hour", -1));
+        assertEquals("Current wake minute must remain unchanged on nap alarm dismiss",
+                30, preferences.getInt("current_wake_minute", -1));
+    }
+
+    @Test
+    public void testDismissingNapAlarmViaVolumeKeyDoesNotAffectCurrentWakeTime() {
+        preferences.edit()
+                .putBoolean("active", false)
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 7)
+                .putInt("current_wake_minute", 30)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        // Trigger nap alarm expiry
+        Intent napExpiryIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_NAP_EXPIRY);
+        service.onStartCommand(napExpiryIntent, 0, 1);
+
+        // Send volume change broadcast while ringing
+        context.sendBroadcast(new Intent("android.media.VOLUME_CHANGED_ACTION"));
+        org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+
+        // Current wake time must remain 7:30
+        assertEquals("Current wake hour must remain unchanged on nap alarm volume key dismiss",
+                7, preferences.getInt("current_wake_hour", -1));
+        assertEquals("Current wake minute must remain unchanged on nap alarm volume key dismiss",
+                30, preferences.getInt("current_wake_minute", -1));
+    }
+
+    @Test
+    public void testSnoozingAndDismissingNapAlarmDoesNotAffectCurrentWakeTime() {
+        preferences.edit()
+                .putBoolean("active", false)
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 7)
+                .putInt("current_wake_minute", 30)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        // Trigger nap alarm expiry
+        Intent napExpiryIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_NAP_EXPIRY);
+        service.onStartCommand(napExpiryIntent, 0, 1);
+
+        // Snooze nap alarm
+        Intent snoozeIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_SNOOZE_WAKEUP_ALARM);
+        service.onStartCommand(snoozeIntent, 0, 1);
+
+        // Dismiss snoozed nap alarm
+        Intent dismissIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_DISMISS_WAKEUP_ALARM);
+        service.onStartCommand(dismissIntent, 0, 1);
+
+        // Current wake time must remain 7:30
+        assertEquals("Current wake hour must remain unchanged on snoozed nap alarm dismiss",
+                7, preferences.getInt("current_wake_hour", -1));
+        assertEquals("Current wake minute must remain unchanged on snoozed nap alarm dismiss",
+                30, preferences.getInt("current_wake_minute", -1));
+    }
+
+    @Test
     public void testFadeVolumeStateConsistencyDuringStreamVolumeSet() throws Exception {
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
