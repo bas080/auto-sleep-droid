@@ -24,6 +24,8 @@ All notification content is concise and directly visible in the notification bod
 - Waiting: "Waiting for playback (20m) • Wake at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
 - Active: "Fades out at 11:15 PM (20m) • Wake at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
 - Fading: "Fading volume" • Button: "Disable"
+- Wake-up Alarm Ringing: "Flip to snooze • Press volume button to dismiss" • Buttons: "Dismiss", "Snooze"
+- Wake-up Alarm Snoozed: "Snoozed 9m • Press volume button to dismiss" • Button: "Dismiss"
 
 Only the action button lives in the expanded shade. All information text is directly visible in the main notification view.
 If the "Show notification" setting is disabled by the user (disabled by default), the ongoing sleep timer notification is hidden in all timer states (Off, Waiting, Active, Fading).
