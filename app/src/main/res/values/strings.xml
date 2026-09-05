@@ -109,6 +109,8 @@
     <string name="desc_target_time">Desired daily wake-up clock time</string>
     <string name="label_min_sleep">Minimum sleep duration</string>
     <string name="desc_min_sleep">Guarantees minimum sleep duration even if you go to sleep late</string>
+    <string name="label_alarm_sound">Alarm sound</string>
+    <string name="desc_alarm_sound">Open system settings to configure default alarm sound and volume</string>
     <string name="label_show_notification">Show notification</string>
     <string name="desc_show_notification">Show an ongoing status notification in the notification shade</string>
     <string name="label_health_connect">Health Connect</string>

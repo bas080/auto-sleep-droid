@@ -836,6 +836,8 @@ public class MainActivityTest {
         View btnTargetTime = activity.findViewById(R.id.btn_target_time);
         View inputMinSleep = activity.findViewById(R.id.input_min_sleep);
 
+        View btnAlarmSound = activity.findViewById(R.id.btn_alarm_sound);
+
         switchEnable.setChecked(true);
         switchGoal.setChecked(false);
 
@@ -847,6 +849,33 @@ public class MainActivityTest {
         assertEquals(0.38f, btnTargetTime.getAlpha(), 0.01f);
         assertFalse(inputMinSleep.isEnabled());
         assertEquals(0.38f, inputMinSleep.getAlpha(), 0.01f);
+        assertFalse(btnAlarmSound.isEnabled());
+        assertEquals(0.38f, btnAlarmSound.getAlpha(), 0.01f);
+    }
+
+    @Test
+    public void testAlarmSoundButtonClickLaunchesSoundSettingsIntent() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        View btnAlarmSound = activity.findViewById(R.id.btn_alarm_sound);
+        assertNotNull(btnAlarmSound);
+
+        btnAlarmSound.performClick();
+
+        Intent intent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(intent);
+        assertEquals(android.provider.Settings.ACTION_SOUND_SETTINGS, intent.getAction());
+
+        List<String> events = EventLogger.getEvents(activity);
+        boolean logged = false;
+        for (String event : events) {
+            if (event.contains("system sound settings")) {
+                logged = true;
+                break;
+            }
+        }
+        assertTrue("Opening sound settings should be logged", logged);
     }
 
     @Test
@@ -889,7 +918,7 @@ public class MainActivityTest {
         android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
         switchGoal.setChecked(true);
 
-        int[] rowIds = new int[]{R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_version, R.id.btn_links};
+        int[] rowIds = new int[]{R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_alarm_sound, R.id.btn_version, R.id.btn_links};
         for (int rowId : rowIds) {
             View parentRow = activity.findViewById(rowId);
             assertNotNull("Row should exist", parentRow);
