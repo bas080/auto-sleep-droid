@@ -43,7 +43,8 @@ The Health Connect integration uses `androidx.health.connect.client.records.Slee
 
 - Configuration switch located in `MainActivity` under the dedicated Health Connect section (`label_health_connect`).
 - Toggling Health Connect ON automatically opens Android Health Connect permission settings for immediate permission configuration.
-- Re-checking permission status on `onResume()` automatically disables sync if write permissions are revoked in Health Connect settings.
+- Toggling Health Connect OFF programmatically revokes all application permission grants in Health Connect (`PermissionController.revokeAllPermissions()`).
+- Re-checking permission status on `onResume()` automatically disables sync if write permissions are revoked externally in Health Connect settings.
 - Exported and imported seamlessly alongside existing app configuration in JSON format (`health_connect_enabled`).
 
 ## Build Size Optimization

@@ -15,6 +15,23 @@ import java.time.ZoneId
 
 object HealthConnectManager {
 
+    @Volatile
+    private var testClient: HealthConnectClient? = null
+
+    @Volatile
+    private var testSdkAvailable: Boolean? = null
+
+    @JvmStatic
+    @JvmOverloads
+    fun setClientForTesting(client: HealthConnectClient?, isSdkAvailable: Boolean? = true) {
+        this.testClient = client
+        this.testSdkAvailable = isSdkAvailable
+    }
+
+    private fun getClient(context: Context): HealthConnectClient {
+        return testClient ?: HealthConnectClient.getOrCreate(context)
+    }
+
     @JvmStatic
     fun openHealthConnectPermissions(activity: Activity) {
         if (!isHealthConnectAvailable(activity)) {
@@ -55,11 +72,37 @@ object HealthConnectManager {
 
     @JvmStatic
     fun isHealthConnectAvailable(context: Context): Boolean {
+        testSdkAvailable?.let { return it }
         return try {
             val status = HealthConnectClient.getSdkStatus(context)
             status == HealthConnectClient.SDK_AVAILABLE
         } catch (e: Exception) {
             false
+        }
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun revokeAllPermissions(context: Context, callback: Callback? = null) {
+        if (!isHealthConnectAvailable(context)) {
+            callback?.onResult(false, "Health Connect SDK unavailable")
+            return
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val client = getClient(context)
+                client.permissionController.revokeAllPermissions()
+                EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: Revoked all granted permissions")
+                withContext(Dispatchers.Main) {
+                    callback?.onResult(true, null)
+                }
+            } catch (e: Exception) {
+                val errorMsg = "Error revoking permissions: ${e.message}"
+                EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: $errorMsg")
+                withContext(Dispatchers.Main) {
+                    callback?.onResult(false, errorMsg)
+                }
+            }
         }
     }
 
@@ -71,7 +114,7 @@ object HealthConnectManager {
         }
         CoroutineScope(Dispatchers.IO).launch {
             val hasPermission = try {
-                val client = HealthConnectClient.getOrCreate(context)
+                val client = getClient(context)
                 val granted = client.permissionController.getGrantedPermissions()
                 granted.containsAll(REQUIRED_PERMISSIONS)
             } catch (e: Exception) {
@@ -115,7 +158,7 @@ object HealthConnectManager {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val client = HealthConnectClient.getOrCreate(context)
+                val client = getClient(context)
                 val granted = client.permissionController.getGrantedPermissions()
                 if (!granted.containsAll(REQUIRED_PERMISSIONS)) {
                     val errorMsg = "Write permission not granted"
