@@ -125,7 +125,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - Notification Shade: Features a **Nap** / **Cancel Nap** action button. Tapping **Nap** launches `NapDialogActivity` without pulling `MainActivity` or the main UI to the foreground; tapping **Cancel Nap** cancels the nap alarm.
 - **Nap Alarm & Reset Behavior**:
   - Uses existing wake alarm behavior (alarm tone with 3-minute volume crescendo, flip gesture snooze, volume button dismiss).
-  - When the sleep timer is reset (via flip gesture, volume button press, or duration update), an active nap alarm is pushed forward by the same reset increment.
+  - When the sleep timer is reset (via flip gesture, volume button press, or duration update), an active nap alarm is pushed forward by the same reset increment. Dismissing a nap alarm when triggered does not affect or adjust the current wake-up time.
 
 ## Health Connect Integration
 - **Purpose**: Automatically save sleep and wake timestamps as sleep sessions (both nightly sleep and naps) to Health Connect when enabled.

@@ -50,6 +50,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = "wakeup_last_scheduled_ms";
     public static final String KEY_NAP_DURATION_MINUTES = "nap_duration_minutes";
     public static final String KEY_NAP_ALARM_ENDS_AT = "nap_alarm_ends_at";
+    public static final String KEY_NAP_ALARM_RINGING = "is_nap_alarm_ringing";
 
     private static final String CHANNEL_ID = "sleep_timer";
     private static final int NOTIFICATION_ID = 1001;
@@ -95,6 +96,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private boolean isForeground = false;
     private long napAlarmEndsAt = 0L;
     private long lastTimerEndsAt = 0L;
+    private boolean isNapAlarmRinging = false;
 
     private SleepTimerStateMachine stateMachine;
 
@@ -123,6 +125,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         int savedDuration = preferences.getInt(KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
         long savedEndsAt = preferences.getLong(KEY_TIMER_ENDS_AT, 0L);
         napAlarmEndsAt = preferences.getLong(KEY_NAP_ALARM_ENDS_AT, 0L);
+        isNapAlarmRinging = preferences.getBoolean(KEY_NAP_ALARM_RINGING, false);
         int currentVolume = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
         boolean musicActive = audioManager != null && audioManager.isMusicActive();
 
@@ -293,7 +296,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 stateMachine.handleAlarmExpiry(currentVol);
             } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep wake-up alarm triggered");
-                updateNextWakeUpTimeOnDismissOrExpiry();
+                if (!isNapAlarmRinging) {
+                    updateNextWakeUpTimeOnDismissOrExpiry();
+                }
                 if (isWakeAlarmEnabled()) {
                     isWakeUpAlarmRinging = true;
                     isWakeUpAlarmSnoozed = false;
@@ -307,10 +312,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             } else if (ACTION_DISMISS_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed");
                 processSleepSessionOnAlarmDismissal();
-                updateNextWakeUpTimeOnDismissOrExpiry();
+                if (!isNapAlarmRinging) {
+                    updateNextWakeUpTimeOnDismissOrExpiry();
+                }
                 stopWakeUpAlarmSound();
                 cancelSnoozeAlarm();
                 cancelNapAlarm(false);
+                setNapAlarmRinging(false);
                 isWakeUpAlarmRinging = false;
                 isWakeUpAlarmSnoozed = false;
                 updateListenersRegistration();
@@ -346,6 +354,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             } else if (ACTION_NAP_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm triggered");
                 cancelNapAlarm(false);
+                setNapAlarmRinging(true);
                 isWakeUpAlarmRinging = true;
                 isWakeUpAlarmSnoozed = false;
                 updateListenersRegistration();
@@ -829,6 +838,17 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
     }
 
+    private void setNapAlarmRinging(boolean ringing) {
+        this.isNapAlarmRinging = ringing;
+        if (preferences != null) {
+            if (ringing) {
+                preferences.edit().putBoolean(KEY_NAP_ALARM_RINGING, true).apply();
+            } else {
+                preferences.edit().remove(KEY_NAP_ALARM_RINGING).apply();
+            }
+        }
+    }
+
     private void cancelNapAlarm(boolean showToast) {
         if (alarmManager != null) {
             Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_NAP_EXPIRY);
@@ -843,10 +863,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (preferences != null) {
             preferences.edit()
                     .remove(KEY_NAP_ALARM_ENDS_AT)
-                    .remove("nap_start_time_ms")
                     .apply();
+            if (showToast) {
+                preferences.edit().remove("nap_start_time_ms").apply();
+            }
         }
         if (showToast) {
+            setNapAlarmRinging(false);
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm cancelled");
             android.widget.Toast.makeText(this, R.string.toast_nap_cancelled, android.widget.Toast.LENGTH_SHORT).show();
             updateNotification();
@@ -1000,9 +1023,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private void dismissWakeUpAlarmViaVolumeKey() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed via volume button");
         processSleepSessionOnAlarmDismissal();
+        if (!isNapAlarmRinging) {
+            updateNextWakeUpTimeOnDismissOrExpiry();
+        }
         stopWakeUpAlarmSound();
         cancelSnoozeAlarm();
         cancelNapAlarm(false);
+        setNapAlarmRinging(false);
         isWakeUpAlarmRinging = false;
         isWakeUpAlarmSnoozed = false;
         onTriggerVibration();
@@ -1305,6 +1332,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         stopWakeUpAlarmSound();
         isWakeUpAlarmRinging = false;
         isWakeUpAlarmSnoozed = false;
+        setNapAlarmRinging(false);
         unregisterSensorListener();
         unregisterVolumeObserver();
         unregisterDndReceiver();
