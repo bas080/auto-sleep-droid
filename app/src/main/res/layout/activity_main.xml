@@ -504,55 +504,80 @@
                             android:focusable="false" />
                     </LinearLayout>
 
+                </LinearLayout>
+
+                <!-- Health Connect Section -->
+                <TextView
+                    android:id="@+id/header_health_connect"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="24dp"
+                    android:paddingBottom="4dp"
+                    android:text="@string/heading_health_connect"
+                    android:textColor="?android:attr/colorAccent"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:id="@+id/row_health_connect"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="64dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground">
+
                     <LinearLayout
-                        android:id="@+id/row_health_connect"
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:minHeight="64dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp"
-                        android:paddingTop="8dp"
-                        android:paddingBottom="8dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:background="?android:attr/selectableItemBackground">
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:clickable="false"
+                        android:focusable="false">
 
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:clickable="false"
-                            android:focusable="false">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/label_health_connect"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:clickable="false"
-                                android:focusable="false" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/desc_health_connect"
-                                android:textSize="12sp"
-                                android:textColor="?android:attr/textColorSecondary"
-                                android:clickable="false"
-                                android:focusable="false" />
-                        </LinearLayout>
-
-                        <Switch
-                            android:id="@+id/switch_health_connect"
+                        <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp" />
+                            android:text="@string/label_health_connect"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:clickable="false"
+                            android:focusable="false" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/desc_health_connect"
+                            android:textSize="12sp"
+                            android:textColor="?android:attr/textColorSecondary"
+                            android:clickable="false"
+                            android:focusable="false" />
                     </LinearLayout>
+
+                    <Switch
+                        android:id="@+id/switch_health_connect"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp" />
                 </LinearLayout>
+
+                <Button
+                    android:id="@+id/btn_health_connect_permissions"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/btn_health_connect_permissions"
+                    style="?android:attr/buttonBarButtonStyle" />
 
                 <!-- About Section -->
                 <TextView
