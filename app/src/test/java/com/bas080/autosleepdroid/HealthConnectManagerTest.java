@@ -15,10 +15,25 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import androidx.health.connect.client.HealthConnectClient;
+import androidx.health.connect.client.PermissionController;
+import androidx.health.connect.client.records.Record;
+import androidx.health.connect.client.records.SleepSessionRecord;
+import androidx.health.connect.client.response.InsertRecordsResponse;
+
+import org.mockito.ArgumentCaptor;
+
+import java.util.List;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(AndroidJUnit4.class)
 public class HealthConnectManagerTest {
@@ -124,4 +139,5 @@ public class HealthConnectManagerTest {
         prefs.edit().remove("nap_start_time_ms").apply();
         assertEquals(0L, prefs.getLong("nap_start_time_ms", 0L));
     }
+
 }

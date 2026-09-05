@@ -1032,4 +1032,5 @@ public class SleepTimerServiceTest {
         assertTrue("Notification text when timer is off and wake alarm is enabled should contain 'Wake at': " + contentText,
                 contentText.contains("Wake at"));
     }
+
 }
