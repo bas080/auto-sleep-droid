@@ -882,6 +882,66 @@ public class MainActivityTest {
     }
 
     @Test
+    public void testProgrammaticToggleDoesNotOpenSettingsPages() {
+        HealthConnectManager.setClientForTesting(null, true);
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.Switch switchAutoTimer = activity.findViewById(R.id.switch_auto_timer);
+        android.widget.Switch switchHealthConnect = activity.findViewById(R.id.switch_health_connect);
+
+        assertNotNull(switchAutoTimer);
+        assertNotNull(switchHealthConnect);
+
+        org.robolectric.shadows.ShadowActivity shadowActivity = Shadows.shadowOf(activity);
+        while (shadowActivity.getNextStartedActivity() != null) {}
+
+        // Programmatically toggle Auto DND switch ON
+        switchAutoTimer.setChecked(true);
+        Intent nextIntent = shadowActivity.getNextStartedActivity();
+        assertEquals("Programmatic toggle of Auto DND must not open DND settings page", null, nextIntent);
+
+        // Programmatically toggle Health Connect switch ON
+        switchHealthConnect.setChecked(true);
+        nextIntent = shadowActivity.getNextStartedActivity();
+        assertEquals("Programmatic toggle of Health Connect must not open permissions settings page", null, nextIntent);
+    }
+
+    @Test
+    public void testUserInitiatedToggleOpensSettingsPages() {
+        HealthConnectManager.setClientForTesting(null, true);
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.Switch switchAutoTimer = activity.findViewById(R.id.switch_auto_timer);
+        android.widget.Switch switchHealthConnect = activity.findViewById(R.id.switch_health_connect);
+
+        assertNotNull(switchAutoTimer);
+        assertNotNull(switchHealthConnect);
+
+        org.robolectric.shadows.ShadowActivity shadowActivity = Shadows.shadowOf(activity);
+        while (shadowActivity.getNextStartedActivity() != null) {}
+
+        // Simulate user touch press on Auto DND switch
+        switchAutoTimer.setPressed(true);
+        switchAutoTimer.setChecked(true);
+        switchAutoTimer.setPressed(false);
+
+        Intent nextIntent = shadowActivity.getNextStartedActivity();
+        assertNotNull("User-initiated toggle of Auto DND must open settings page", nextIntent);
+
+        while (shadowActivity.getNextStartedActivity() != null) {}
+
+        // Simulate user touch press on Health Connect switch
+        switchHealthConnect.setPressed(true);
+        switchHealthConnect.setChecked(true);
+        switchHealthConnect.setPressed(false);
+
+        nextIntent = shadowActivity.getNextStartedActivity();
+        assertNotNull("User-initiated toggle of Health Connect must open settings page", nextIntent);
+    }
+
+    @Test
     public void testButtonRowChildViewsAreNotClickableAndParentIsClickable() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();

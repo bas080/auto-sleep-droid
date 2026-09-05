@@ -395,15 +395,22 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 if (isUpdatingUi) return;
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
                 prefs.edit().putBoolean("auto_timer_enabled", isChecked).apply();
+                boolean isUserInitiated = buttonView.isPressed();
                 if (isChecked) {
                     boolean dndActive = isDndActive();
                     prefs.edit().putBoolean("active", dndActive).apply();
                     if (switchEnableTimer != null) {
                         switchEnableTimer.setChecked(dndActive);
                     }
-                    openDndSettings();
+                    if (isUserInitiated) {
+                        openDndSettings();
+                    }
                 }
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Auto sleep timer (DND) enabled; opening DND settings" : "Auto sleep timer (DND) disabled");
+                if (isChecked) {
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, isUserInitiated ? "Auto sleep timer (DND) enabled; opening DND settings" : "Auto sleep timer (DND) enabled");
+                } else {
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto sleep timer (DND) disabled");
+                }
                 redrawNotification();
             });
         }
@@ -459,6 +466,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             switchHealthConnect.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+                boolean isUserInitiated = buttonView.isPressed();
                 if (isChecked) {
                     if (!HealthConnectManager.isHealthConnectAvailable(this)) {
                         isUpdatingUi = true;
@@ -469,9 +477,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                         return;
                     }
                     prefs.edit().putBoolean("health_connect_enabled", true).apply();
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled; opening permissions settings");
                     Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show();
-                    HealthConnectManager.openHealthConnectPermissions(this);
+                    if (isUserInitiated) {
+                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled; opening permissions settings");
+                        HealthConnectManager.openHealthConnectPermissions(this);
+                    } else {
+                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled");
+                    }
                 } else {
                     prefs.edit().putBoolean("health_connect_enabled", false).apply();
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled; revoking permissions");
