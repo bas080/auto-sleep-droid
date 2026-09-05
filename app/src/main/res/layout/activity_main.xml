@@ -14,25 +14,6 @@
         android:paddingStart="0dp"
         android:paddingEnd="0dp">
 
-        <LinearLayout
-            android:id="@+id/header_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="8dp">
-
-            <TextView
-                android:id="@+id/app_title_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/app_name"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -43,7 +24,27 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingTop="8dp">
+                android:paddingTop="0dp">
+
+                <LinearLayout
+                    android:id="@+id/header_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="8dp">
+
+                    <TextView
+                        android:id="@+id/app_title_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/app_name"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <!-- Nap Section -->
                 <TextView
@@ -55,7 +56,7 @@
                     android:paddingTop="8dp"
                     android:paddingBottom="4dp"
                     android:text="@string/heading_nap"
-                    android:textColor="?android:attr/colorAccent"
+                    android:textColor="?android:attr/textColorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
@@ -106,6 +107,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
+                        android:textColor="?android:attr/textColorPrimary"
                         android:textSize="16sp"
                         android:clickable="false"
                         android:focusable="false" />
@@ -121,7 +123,7 @@
                     android:paddingTop="24dp"
                     android:paddingBottom="4dp"
                     android:text="@string/heading_timer"
-                    android:textColor="?android:attr/colorAccent"
+                    android:textColor="?android:attr/textColorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
@@ -273,6 +275,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
+                        android:textColor="?android:attr/textColorPrimary"
                         android:textSize="16sp"
                         android:clickable="false"
                         android:focusable="false" />
@@ -288,7 +291,7 @@
                     android:paddingTop="24dp"
                     android:paddingBottom="4dp"
                     android:text="@string/heading_alarm"
-                    android:textColor="?android:attr/colorAccent"
+                    android:textColor="?android:attr/textColorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
@@ -395,6 +398,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp"
+                            android:textColor="?android:attr/textColorPrimary"
                             android:textSize="16sp"
                             android:clickable="false"
                             android:focusable="false" />
@@ -447,6 +451,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp"
+                            android:textColor="?android:attr/textColorPrimary"
                             android:textSize="16sp"
                             android:clickable="false"
                             android:focusable="false" />
@@ -499,6 +504,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp"
+                            android:textColor="?android:attr/textColorPrimary"
                             android:textSize="16sp"
                             android:clickable="false"
                             android:focusable="false" />
@@ -516,7 +522,7 @@
                     android:paddingTop="24dp"
                     android:paddingBottom="4dp"
                     android:text="@string/heading_health_connect"
-                    android:textColor="?android:attr/colorAccent"
+                    android:textColor="?android:attr/textColorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
@@ -579,7 +585,7 @@
                     android:paddingTop="24dp"
                     android:paddingBottom="4dp"
                     android:text="@string/heading_about"
-                    android:textColor="?android:attr/colorAccent"
+                    android:textColor="?android:attr/textColorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
@@ -631,6 +637,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
+                        android:textColor="?android:attr/textColorPrimary"
                         android:textSize="16sp"
                         android:clickable="false"
                         android:focusable="false" />
