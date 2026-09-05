@@ -1,9 +1,12 @@
 package com.bas080.autosleepdroid;
 
 import android.content.Context;
+import android.text.InputType;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 
@@ -61,6 +64,7 @@ public class DurationInputView extends LinearLayout {
             pickerHours.setMinValue(this.minHours);
             pickerHours.setMaxValue(this.maxHours);
             pickerHours.setWrapSelectorWheel(false);
+            setNumericKeyboard(pickerHours);
         }
 
         if (pickerMinutes != null) {
@@ -69,7 +73,7 @@ public class DurationInputView extends LinearLayout {
                 int count = 60 / this.minuteStep;
                 String[] values = new String[count];
                 for (int i = 0; i < count; i++) {
-                    values[i] = String.format(java.util.Locale.US, "%02d", i * this.minuteStep);
+                    values[i] = String.valueOf(i * this.minuteStep);
                 }
                 pickerMinutes.setMinValue(0);
                 pickerMinutes.setMaxValue(count - 1);
@@ -77,9 +81,31 @@ public class DurationInputView extends LinearLayout {
             } else {
                 pickerMinutes.setMinValue(0);
                 pickerMinutes.setMaxValue(59);
-                pickerMinutes.setFormatter(val -> String.format(java.util.Locale.US, "%02d", val));
+                pickerMinutes.setFormatter(String::valueOf);
             }
             pickerMinutes.setWrapSelectorWheel(true);
+            setNumericKeyboard(pickerMinutes);
+        }
+    }
+
+    private void setNumericKeyboard(NumberPicker picker) {
+        if (picker == null) return;
+        int inputId = android.content.res.Resources.getSystem().getIdentifier("numberpicker_input", "id", "android");
+        EditText editText = null;
+        if (inputId != 0) {
+            editText = picker.findViewById(inputId);
+        }
+        if (editText == null) {
+            for (int i = 0; i < picker.getChildCount(); i++) {
+                View child = picker.getChildAt(i);
+                if (child instanceof EditText) {
+                    editText = (EditText) child;
+                    break;
+                }
+            }
+        }
+        if (editText != null) {
+            editText.setInputType(InputType.TYPE_CLASS_NUMBER);
         }
     }
 
