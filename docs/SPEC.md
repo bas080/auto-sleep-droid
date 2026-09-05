@@ -127,6 +127,14 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - Uses existing wake alarm behavior (alarm tone with 3-minute volume crescendo, flip gesture snooze, volume button dismiss).
   - When the sleep timer is reset (via flip gesture, volume button press, or duration update), an active nap alarm is pushed forward by the same reset increment.
 
+## Health Connect Integration
+- **Purpose**: Automatically save sleep and wake timestamps as sleep sessions to Health Connect when enabled.
+- **Behavior**:
+  - A toggle setting on the main screen allows enabling or disabling Health Connect synchronization.
+  - When enabled, the app captures the timestamp when the sleep timer expires and media pauses (representing sleep start time) and when the wake alarm is dismissed (representing wake time).
+  - Valid sleep sessions are automatically persisted to Health Connect.
+  - If Health Connect is unavailable or permissions are not granted, the user is notified via a message and the setting remains off.
+
 ## Acceptance criteria
 - The main activity presents a single-screen configuration UI for all timer, goal, notification, and event log settings.
 - Real-time timestamped event logs are displayed directly on `MainActivity`.
@@ -147,3 +155,4 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - The main screen includes "Export" and "Import" action links rendered in the bottom action link list.
 - Tapping "Export" serializes configuration settings and launches a system share action (`ACTION_SEND`).
 - Tapping "Import" presents an instructional dialog for pasting configuration strings, updating preferences and notifications upon valid input, or preserving existing preferences when given invalid input.
+- Health Connect synchronization can be toggled from the main screen UI and automatically records sleep sessions when sleep and wake events occur.

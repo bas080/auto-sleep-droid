@@ -31,6 +31,7 @@ The app is an Android sleep timer app configured directly from a single main UI 
 ├── README.md
 ├── docs/
 │   ├── EVENTS_AND_STATES.md
+│   ├── HEALTH_CONNECT.md
 │   ├── IMPLEMENTATION.md
 │   ├── IMPORT_EXPORT.md
 │   ├── NOTIFICATION_GOAL_INPUT_OPTIONS.md
@@ -111,6 +112,16 @@ Main Configuration Controls & Action Links:
 - Export Settings Action: Serializes current preferences into a Schema Version 1 JSON string, launches system share action (`ACTION_SEND`), and logs to `EventLogger`.
 - Import Settings Action: Prompts user with instructional `AlertDialog`, validates syntax and boundaries, applies valid values, sends `ACTION_REDRAW_NOTIFICATION` to `SleepTimerService`, refreshes UI controls, and logs to `EventLogger`.
 
+### `HealthConnectManager`
+
+File: `app/src/main/java/com/bas080/autosleepdroid/HealthConnectManager.kt`
+
+Utility object managing integration with Android Health Connect (`androidx.health.connect:connect-client`):
+
+- Provides `isHealthConnectAvailable(context)` to check SDK status.
+- Provides `hasSleepWritePermission(context, callback)` to check if `WRITE_SLEEP` permission is granted.
+- Provides `writeSleepSession(context, startTimeMs, endTimeMs, callback)` to write `SleepSessionRecord` objects containing start/end timestamps and local system zone offsets (`ZoneOffset`) on a background I/O dispatcher.
+
 ### `EventLogger`
 
 File: `app/src/main/java/com/bas080/autosleepdroid/EventLogger.java`
@@ -140,6 +151,8 @@ Timer and Wake-Up Goal state is stored in the `sleep_timer` `SharedPreferences` 
 | `min_sleep_duration_minutes` | integer | Safeguard minimum sleep duration in minutes (default 450 = 7.5h) |
 | `nap_duration_minutes` | integer | Previously used nap duration in minutes (default 20) |
 | `nap_alarm_ends_at` | long | Wall-clock timestamp (millis) when active nap alarm triggers |
+| `health_connect_enabled` | boolean | Whether sleep sessions are synchronized with Android Health Connect |
+| `sleep_start_time_ms` | long | Wall-clock timestamp (millis) recorded when sleep timer expired |
 
 Event log history is stored in the `event_logger` `SharedPreferences` file:
 
