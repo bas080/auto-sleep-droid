@@ -42,6 +42,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private View headerAlarm;
     private View headerAbout;
 
+    private View rowEnableTimer;
     private Switch switchEnableTimer;
     private View inputDuration;
     private TextView textDurationValue;
@@ -122,6 +123,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         headerAlarm = findViewById(R.id.header_alarm);
         headerAbout = findViewById(R.id.header_about);
 
+        rowEnableTimer = findViewById(R.id.row_enable_timer);
         switchEnableTimer = findViewById(R.id.switch_enable_timer);
         inputDuration = findViewById(R.id.input_duration);
         textDurationValue = findViewById(R.id.text_duration_value);
@@ -343,6 +345,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void setupConfigControls() {
+        if (rowEnableTimer != null && switchEnableTimer != null) {
+            rowEnableTimer.setOnClickListener(v -> switchEnableTimer.toggle());
+        }
+
         if (switchEnableTimer != null) {
             switchEnableTimer.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
@@ -368,8 +374,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             ));
         }
 
-        if (rowAutoTimer != null) {
-            rowAutoTimer.setOnClickListener(v -> openDndSettings());
+        if (rowAutoTimer != null && switchAutoTimer != null) {
+            rowAutoTimer.setOnClickListener(v -> switchAutoTimer.toggle());
         }
 
         if (switchAutoTimer != null) {
@@ -387,6 +393,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Auto sleep timer (DND) enabled" : "Auto sleep timer (DND) disabled");
                 redrawNotification();
             });
+        }
+
+        if (rowEnableGoal != null && switchEnableGoal != null) {
+            rowEnableGoal.setOnClickListener(v -> switchEnableGoal.toggle());
         }
 
         if (switchEnableGoal != null) {
@@ -434,6 +444,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setRowEnabled(headerAlarm, true);
         setRowEnabled(headerAbout, true);
 
+        setRowEnabled(rowEnableTimer, true);
         setRowEnabled(inputDuration, true);
         setRowEnabled(rowAutoTimer, true);
         setRowEnabled(rowEnableGoal, true);
