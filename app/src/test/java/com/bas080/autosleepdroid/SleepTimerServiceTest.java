@@ -974,4 +974,33 @@ public class SleepTimerServiceTest {
         assertNotNull("calculateScheduledAlarm should return scheduled Calendar for daily goal", cal);
         assertTrue("Scheduled alarm must be in the future", cal.getTimeInMillis() > now);
     }
+
+    @Test
+    public void testTimerOffNotificationShowsWakeUpAlarmStatusWhenWakeAlarmIsEnabled() {
+        preferences.edit()
+                .putBoolean("active", false)
+                .putBoolean("show_notification", true)
+                .putBoolean("wake_alarm_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 6)
+                .putInt("current_wake_minute", 30)
+                .putInt("duration_minutes", 20)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+        android.app.Notification notification = shadowNotificationManager.getNotification(1001);
+        assertNotNull(notification);
+
+        String contentText = notification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString();
+        assertTrue("Notification text when timer is off and wake alarm is enabled should contain 'Timer off': " + contentText,
+                contentText.contains("Timer off"));
+        assertTrue("Notification text when timer is off and wake alarm is enabled should contain 'Wake at': " + contentText,
+                contentText.contains("Wake at"));
+    }
 }
