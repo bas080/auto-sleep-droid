@@ -324,10 +324,15 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void showDurationDialog(int titleResId, String prefKey, int defaultMinutes, OnDurationSavedListener listener) {
+        showDurationDialog(titleResId, prefKey, defaultMinutes, 0, 24, 1, listener);
+    }
+
+    private void showDurationDialog(int titleResId, String prefKey, int defaultMinutes, int minHours, int maxHours, int minuteStep, OnDurationSavedListener listener) {
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
         int currentMinutes = prefs.getInt(prefKey, defaultMinutes);
 
         final DurationInputView durationInputView = new DurationInputView(this);
+        durationInputView.configure(minHours, maxHours, minuteStep);
         durationInputView.setPadding(48, 24, 48, 24);
         durationInputView.setTotalMinutes(currentMinutes);
 
@@ -372,6 +377,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     R.string.label_duration,
                     "duration_minutes",
                     SleepTimerStateMachine.DEFAULT_DURATION_MINUTES,
+                    0, 12, 5,
                     minutes -> {
                         if (textDurationValue != null) {
                             textDurationValue.setText(DurationUtils.formatDurationString(minutes));
@@ -434,6 +440,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     R.string.label_min_sleep,
                     "min_sleep_duration_minutes",
                     450,
+                    0, 16, 15,
                     minutes -> {
                         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
                         prefs.edit().remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS).apply();

@@ -12,6 +12,10 @@ public class DurationInputView extends LinearLayout {
     private NumberPicker pickerMinutes;
     private OnDurationChangeListener durationChangeListener;
 
+    private int minHours = 0;
+    private int maxHours = 24;
+    private int minuteStep = 1;
+
     public interface OnDurationChangeListener {
         void onDurationChanged(int totalMinutes);
         void onInvalidDuration();
@@ -40,23 +44,43 @@ public class DurationInputView extends LinearLayout {
         pickerHours = findViewById(R.id.picker_hours);
         pickerMinutes = findViewById(R.id.picker_minutes);
 
-        if (pickerHours != null) {
-            pickerHours.setMinValue(0);
-            pickerHours.setMaxValue(24);
-            pickerHours.setWrapSelectorWheel(false);
-        }
-
-        if (pickerMinutes != null) {
-            pickerMinutes.setMinValue(0);
-            pickerMinutes.setMaxValue(59);
-            pickerMinutes.setFormatter(val -> String.format(java.util.Locale.US, "%02d", val));
-            pickerMinutes.setWrapSelectorWheel(true);
-        }
-
         NumberPicker.OnValueChangeListener valueChangeListener = (picker, oldVal, newVal) -> handleDurationChange();
 
         if (pickerHours != null) pickerHours.setOnValueChangedListener(valueChangeListener);
         if (pickerMinutes != null) pickerMinutes.setOnValueChangedListener(valueChangeListener);
+
+        configure(0, 24, 1);
+    }
+
+    public void configure(int minHours, int maxHours, int minuteStep) {
+        this.minHours = Math.max(0, minHours);
+        this.maxHours = Math.max(this.minHours, maxHours);
+        this.minuteStep = Math.max(1, minuteStep);
+
+        if (pickerHours != null) {
+            pickerHours.setMinValue(this.minHours);
+            pickerHours.setMaxValue(this.maxHours);
+            pickerHours.setWrapSelectorWheel(false);
+        }
+
+        if (pickerMinutes != null) {
+            pickerMinutes.setDisplayedValues(null);
+            if (this.minuteStep > 1) {
+                int count = 60 / this.minuteStep;
+                String[] values = new String[count];
+                for (int i = 0; i < count; i++) {
+                    values[i] = String.format(java.util.Locale.US, "%02d", i * this.minuteStep);
+                }
+                pickerMinutes.setMinValue(0);
+                pickerMinutes.setMaxValue(count - 1);
+                pickerMinutes.setDisplayedValues(values);
+            } else {
+                pickerMinutes.setMinValue(0);
+                pickerMinutes.setMaxValue(59);
+                pickerMinutes.setFormatter(val -> String.format(java.util.Locale.US, "%02d", val));
+            }
+            pickerMinutes.setWrapSelectorWheel(true);
+        }
     }
 
     public void setChildInputIds(int hoursId, int minutesId) {
@@ -79,7 +103,12 @@ public class DurationInputView extends LinearLayout {
     public int getTotalMinutes() {
         if (pickerHours == null || pickerMinutes == null) return -1;
         int h = pickerHours.getValue();
-        int m = pickerMinutes.getValue();
+        int m;
+        if (minuteStep > 1) {
+            m = pickerMinutes.getValue() * minuteStep;
+        } else {
+            m = pickerMinutes.getValue();
+        }
         int total = h * 60 + m;
         if (total <= 0 || total > 1440) {
             return -1;
@@ -91,10 +120,23 @@ public class DurationInputView extends LinearLayout {
         if (pickerHours == null || pickerMinutes == null) return;
         if (totalMinutes < 0) totalMinutes = 0;
         if (totalMinutes > 1440) totalMinutes = 1440;
+
         int h = totalMinutes / 60;
-        int m = totalMinutes % 60;
+        int remainingMins = totalMinutes % 60;
+
+        if (h < minHours) h = minHours;
+        if (h > maxHours) h = maxHours;
+
         pickerHours.setValue(h);
-        pickerMinutes.setValue(m);
+
+        if (minuteStep > 1) {
+            int count = 60 / minuteStep;
+            int stepIdx = Math.round((float) remainingMins / minuteStep);
+            if (stepIdx >= count) stepIdx = count - 1;
+            pickerMinutes.setValue(stepIdx);
+        } else {
+            pickerMinutes.setValue(remainingMins);
+        }
     }
 
     @Override
