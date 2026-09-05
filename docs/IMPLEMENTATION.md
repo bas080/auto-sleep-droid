@@ -31,6 +31,7 @@ The app is an Android sleep timer app configured directly from a single main UI 
 ├── README.md
 ├── docs/
 │   ├── EVENTS_AND_STATES.md
+│   ├── EVENT_STATE_REDRAW_ARCHITECTURE.md
 │   ├── IMPLEMENTATION.md
 │   ├── IMPORT_EXPORT.md
 │   ├── NOTIFICATION_GOAL_INPUT_OPTIONS.md

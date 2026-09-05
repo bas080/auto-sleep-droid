@@ -12,6 +12,7 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 - [IMPLEMENTATION.md](docs/IMPLEMENTATION.md): architecture, runtime flows, persistence, permissions, build/release details, and guidance for future developers and AI agents.
 - [USER_PERSONA_AND_NEEDS.md](docs/USER_PERSONA_AND_NEEDS.md): user personas, target audience needs, mental models, reasoning, and product workflows. Consult this document whenever UX design decisions have to be made.
 - [EVENTS_AND_STATES.md](docs/EVENTS_AND_STATES.md): comprehensive reference of system states, input/sensor events, state transitions, transition matrix, state diagram, and event log formats.
+- [EVENT_STATE_REDRAW_ARCHITECTURE.md](docs/EVENT_STATE_REDRAW_ARCHITECTURE.md): design specification for the unidirectional Event-State-Redraw execution loop, pure models, listener synchronization, and migration roadmap.
 - [PERFORMANCE.md](docs/PERFORMANCE.md): performance analysis, optimizations implemented, and recommendations for future increases.
 - [NOTIFICATION_INPUT_OPTIONS.md](docs/NOTIFICATION_INPUT_OPTIONS.md): analysis of notification duration input options, framework constraints, and string parsing.
 - [NOTIFICATION_GOAL_INPUT_OPTIONS.md](docs/NOTIFICATION_GOAL_INPUT_OPTIONS.md): options, constraints, parsing specifications, and architectural design for setting target wake-up goal alarms from notifications.
