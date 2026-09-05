@@ -18,11 +18,14 @@ The app is an Android sleep timer app configured directly from a single main UI 
 │       │   ├── BootReceiver.java
 │       │   ├── EventLogger.java
 │       │   ├── MainActivity.java
+│       │   ├── SettingRowView.java
 │       │   └── SleepTimerService.java
 │       └── res/
 │           ├── layout/
-│           │   └── activity_main.xml
+│           │   ├── activity_main.xml
+│           │   └── view_setting_row.xml
 │           ├── values/
+│           │   ├── attrs.xml
 │           │   ├── strings.xml
 │           │   └── styles.xml
 │           └── values-es/
@@ -89,6 +92,17 @@ A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) la
 
 - Constructs an `AlertDialog` using `AlertDialog.Builder` wrapped with `ContextThemeWrapper(this, R.style.AppTheme)` containing `DurationInputView(dialogContext)` prefilled with previously used nap duration (`nap_duration_minutes`, default 20) and standard positive ("Nap") / negative ("Cancel") buttons, matching the exact dialog styling and theme of all duration configuration dialogs across `MainActivity`.
 - Confirming "Nap" persists the nap duration in `SharedPreferences` and sends `ACTION_START_NAP` with `EXTRA_NAP_DURATION_MINUTES` to `SleepTimerService`.
+
+### `SettingRowView`
+
+File: `app/src/main/java/com/bas080/autosleepdroid/SettingRowView.java`
+
+Custom compound `ViewGroup` extending `LinearLayout` that encapsulates settings row layout, styling, and enablement logic:
+
+- Uses `view_setting_row.xml` shared layout containing title `TextView`, description `TextView`, value `TextView`, and `Switch`.
+- Supports custom XML attributes defined in `attrs.xml`: `rowTitle`, `rowDescription`, `rowValue`, `rowType` (`none`, `value`, `switch`), `valueId`, and `switchId`.
+- Automatically assigns designated resource IDs to child `valueTextView` and `switchView` so standard `findViewById` calls on `Activity` find child views seamlessly.
+- Encapsulates `setEnabled(boolean enabled)` logic, dynamically adjusting row container and child view enablement, alpha transparency (`1.0f` vs `0.38f`), and focusable/clickable states.
 
 ### `MainActivity`
 

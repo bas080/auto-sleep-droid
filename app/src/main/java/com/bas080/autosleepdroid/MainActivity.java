@@ -554,13 +554,15 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private void setRowEnabled(View view, boolean enabled) {
         if (view == null) return;
         view.setEnabled(enabled);
-        view.setClickable(enabled);
-        view.setFocusable(enabled);
-        view.setAlpha(enabled ? 1.0f : 0.38f);
-        if (view instanceof ViewGroup) {
-            ViewGroup group = (ViewGroup) view;
-            for (int i = 0; i < group.getChildCount(); i++) {
-                setChildViewsEnabled(group.getChildAt(i), enabled);
+        if (!(view instanceof SettingRowView)) {
+            view.setClickable(enabled);
+            view.setFocusable(enabled);
+            view.setAlpha(enabled ? 1.0f : 0.38f);
+            if (view instanceof ViewGroup) {
+                ViewGroup group = (ViewGroup) view;
+                for (int i = 0; i < group.getChildCount(); i++) {
+                    setChildViewsEnabled(group.getChildAt(i), enabled);
+                }
             }
         }
     }
