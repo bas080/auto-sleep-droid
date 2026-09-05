@@ -204,7 +204,9 @@ public class SettingRowView extends LinearLayout {
 
     public void toggleSwitch() {
         if (switchView != null && switchView.getVisibility() == View.VISIBLE) {
+            switchView.setPressed(true);
             switchView.toggle();
+            switchView.setPressed(false);
         }
     }
 }
