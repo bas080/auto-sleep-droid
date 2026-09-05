@@ -46,7 +46,7 @@ Auto Sleep Droid puts your phone to sleep when you fall asleep, and wakes you up
 
 Auto Sleep Droid uses minimal permissions required to function reliably as a background sleep timer:
 
-- **Notifications (`POST_NOTIFICATIONS`)** *(Optional)*: Displays ongoing timer status and single-tap controls directly in your notification shade.
+- **Notifications (`POST_NOTIFICATIONS`)** *(Required)*: Displays ongoing timer status and single-tap controls in your notification shade, ensuring Android keeps the foreground timer service active and does not kill or put the app to sleep.
 - **Foreground Service (`FOREGROUND_SERVICE` & `FOREGROUND_SERVICE_MEDIA_PLAYBACK`)** *(Required)*: Keeps the timer service running reliably in the background while media plays.
 - **Audio Settings (`MODIFY_AUDIO_SETTINGS`)** *(Required)*: Fades music volume down to zero at expiry and restores pre-fade volume after pausing.
 - **Vibration (`VIBRATE`)** *(Optional)*: Provides faint haptic feedback confirming your actions (turning off/on, volume button resets, and phone flips).

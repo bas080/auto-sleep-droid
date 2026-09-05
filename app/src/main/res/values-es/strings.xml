@@ -66,6 +66,7 @@
     <string name="heading_nap">Siesta</string>
     <string name="heading_timer">Temporizador</string>
     <string name="heading_alarm">Alarma</string>
+    <string name="heading_health_connect">Health Connect</string>
     <string name="heading_about">Acerca de</string>
     <string name="label_nap">Alarma de siesta</string>
     <string name="desc_nap">Inicia una alarma de siesta rápida</string>
@@ -115,6 +116,7 @@
     <string name="toast_health_connect_not_available">Health Connect no está disponible en este dispositivo</string>
     <string name="toast_health_connect_enabled">Sincronización con Health Connect activada</string>
     <string name="toast_health_connect_disabled">Sincronización con Health Connect desactivada</string>
+    <string name="btn_health_connect_permissions">Gestionar permisos</string>
     <string name="label_event_logs">Registros de eventos</string>
     <string name="desc_event_logs">Actividad del sistema y temporizador en tiempo real</string>
 </resources>

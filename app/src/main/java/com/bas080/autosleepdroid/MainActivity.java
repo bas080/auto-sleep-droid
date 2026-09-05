@@ -40,6 +40,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private View headerNap;
     private View headerTimer;
     private View headerAlarm;
+    private View headerHealthConnect;
     private View headerAbout;
 
     private View rowEnableTimer;
@@ -59,6 +60,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView textMinSleepValue;
     private View rowHealthConnect;
     private Switch switchHealthConnect;
+    private View btnHealthConnectPermissions;
     private View btnNap;
     private TextView textNapStatus;
     private View btnVersion;
@@ -123,6 +125,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         headerNap = findViewById(R.id.header_nap);
         headerTimer = findViewById(R.id.header_timer);
         headerAlarm = findViewById(R.id.header_alarm);
+        headerHealthConnect = findViewById(R.id.header_health_connect);
         headerAbout = findViewById(R.id.header_about);
 
         rowEnableTimer = findViewById(R.id.row_enable_timer);
@@ -142,6 +145,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         textMinSleepValue = findViewById(R.id.text_min_sleep_value);
         rowHealthConnect = findViewById(R.id.row_health_connect);
         switchHealthConnect = findViewById(R.id.switch_health_connect);
+        btnHealthConnectPermissions = findViewById(R.id.btn_health_connect_permissions);
         btnNap = findViewById(R.id.btn_nap);
         textNapStatus = findViewById(R.id.text_nap_status);
         btnVersion = findViewById(R.id.btn_version);
@@ -468,12 +472,20 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 }
             });
         }
+
+        if (btnHealthConnectPermissions != null) {
+            btnHealthConnectPermissions.setOnClickListener(v -> {
+                EventLogger.log(this, EventLogger.LEVEL_LOW, "Opening Health Connect permissions");
+                HealthConnectManager.openHealthConnectPermissions(this);
+            });
+        }
     }
 
     private void updateInputEnabledStates(boolean active, boolean goalEnabled) {
         setRowEnabled(headerNap, true);
         setRowEnabled(headerTimer, true);
         setRowEnabled(headerAlarm, true);
+        setRowEnabled(headerHealthConnect, true);
         setRowEnabled(headerAbout, true);
 
         setRowEnabled(rowEnableTimer, true);
@@ -485,6 +497,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setRowEnabled(btnCurrentWakeTime, goalEnabled);
         setRowEnabled(inputMinSleep, goalEnabled);
         setRowEnabled(rowHealthConnect, true);
+        setRowEnabled(btnHealthConnectPermissions, true);
         setRowEnabled(btnVersion, true);
 
         if (goalContainer != null) {
@@ -646,6 +659,20 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
         if (switchHealthConnect != null) {
             switchHealthConnect.setChecked(healthConnectEnabled);
+        }
+        if (healthConnectEnabled) {
+            HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
+                if (!hasPermission) {
+                    SharedPreferences prefs1 = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+                    prefs1.edit().putBoolean("health_connect_enabled", false).apply();
+                    if (switchHealthConnect != null) {
+                        isUpdatingUi = true;
+                        switchHealthConnect.setChecked(false);
+                        isUpdatingUi = false;
+                    }
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission revoked; disabling sync");
+                }
+            });
         }
         updateTargetTimeButtonText(goalHour, goalMin);
         updateCurrentWakeTimeButtonText(currentHour, currentMin);
