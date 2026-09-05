@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="SettingRowView">
+        <attr name="rowTitle" format="string|reference" />
+        <attr name="rowDescription" format="string|reference" />
+        <attr name="rowValue" format="string|reference" />
+        <attr name="rowType" format="enum">
+            <enum name="none" value="0" />
+            <enum name="value" value="1" />
+            <enum name="toggle" value="2" />
+        </attr>
+        <attr name="valueId" format="reference" />
+        <attr name="switchId" format="reference" />
+    </declare-styleable>
+</resources>

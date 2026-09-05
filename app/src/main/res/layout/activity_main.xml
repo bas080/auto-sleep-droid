@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true">
@@ -60,59 +61,14 @@
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
-                <LinearLayout
+                <com.bas080.autosleepdroid.SettingRowView
                     android:id="@+id/btn_nap"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="64dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:clickable="false"
-                        android:focusable="false">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_nap"
-                            android:textColor="?android:attr/textColorPrimary"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:clickable="false"
-                            android:focusable="false" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/desc_nap"
-                            android:textSize="12sp"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:clickable="false"
-                            android:focusable="false" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/text_nap_status"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:textSize="16sp"
-                        android:clickable="false"
-                        android:focusable="false" />
-                </LinearLayout>
+                    app:rowTitle="@string/label_nap"
+                    app:rowDescription="@string/desc_nap"
+                    app:rowType="value"
+                    app:valueId="@+id/text_nap_status" />
 
                 <!-- Timer Section -->
                 <TextView
@@ -129,161 +85,34 @@
                     android:textStyle="bold" />
 
                 <!-- Auto Sleep Timer Toggle Row -->
-                <LinearLayout
+                <com.bas080.autosleepdroid.SettingRowView
                     android:id="@+id/row_auto_timer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="64dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:clickable="false"
-                        android:focusable="false">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_auto_timer"
-                            android:textColor="?android:attr/textColorPrimary"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:clickable="false"
-                            android:focusable="false" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/desc_auto_timer"
-                            android:textSize="12sp"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:clickable="false"
-                            android:focusable="false" />
-                    </LinearLayout>
-
-                    <Switch
-                        android:id="@+id/switch_auto_timer"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp" />
-                </LinearLayout>
+                    app:rowTitle="@string/label_auto_timer"
+                    app:rowDescription="@string/desc_auto_timer"
+                    app:rowType="toggle"
+                    app:switchId="@+id/switch_auto_timer" />
 
                 <!-- Enable Sleep Timer -->
-                <LinearLayout
+                <com.bas080.autosleepdroid.SettingRowView
                     android:id="@+id/row_enable_timer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="64dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:clickable="false"
-                        android:focusable="false">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_enable_timer"
-                            android:textColor="?android:attr/textColorPrimary"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:clickable="false"
-                            android:focusable="false" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/desc_enable_timer"
-                            android:textSize="12sp"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:clickable="false"
-                            android:focusable="false" />
-                    </LinearLayout>
-
-                    <Switch
-                        android:id="@+id/switch_enable_timer"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp" />
-                </LinearLayout>
+                    app:rowTitle="@string/label_enable_timer"
+                    app:rowDescription="@string/desc_enable_timer"
+                    app:rowType="toggle"
+                    app:switchId="@+id/switch_enable_timer" />
 
                 <!-- Timer Duration -->
-                <LinearLayout
+                <com.bas080.autosleepdroid.SettingRowView
                     android:id="@+id/input_duration"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="64dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:clickable="false"
-                        android:focusable="false">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_duration"
-                            android:textColor="?android:attr/textColorPrimary"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:clickable="false"
-                            android:focusable="false" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/desc_duration"
-                            android:textSize="12sp"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:clickable="false"
-                            android:focusable="false" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/text_duration_value"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:textSize="16sp"
-                        android:clickable="false"
-                        android:focusable="false" />
-                </LinearLayout>
+                    app:rowTitle="@string/label_duration"
+                    app:rowDescription="@string/desc_duration"
+                    app:rowType="value"
+                    app:valueId="@+id/text_duration_value" />
 
                 <!-- Alarm Section -->
                 <TextView
@@ -300,55 +129,14 @@
                     android:textStyle="bold" />
 
                 <!-- Wake-Up Goal Section -->
-                <LinearLayout
+                <com.bas080.autosleepdroid.SettingRowView
                     android:id="@+id/row_enable_goal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="64dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:clickable="false"
-                        android:focusable="false">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_wake_up_goal"
-                            android:textColor="?android:attr/textColorPrimary"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:clickable="false"
-                            android:focusable="false" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/desc_wake_up_goal"
-                            android:textSize="12sp"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:clickable="false"
-                            android:focusable="false" />
-                    </LinearLayout>
-
-                    <Switch
-                        android:id="@+id/switch_enable_goal"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp" />
-                </LinearLayout>
+                    app:rowTitle="@string/label_wake_up_goal"
+                    app:rowDescription="@string/desc_wake_up_goal"
+                    app:rowType="toggle"
+                    app:switchId="@+id/switch_enable_goal" />
 
                 <LinearLayout
                     android:id="@+id/goal_container"
@@ -356,167 +144,32 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <LinearLayout
+                    <com.bas080.autosleepdroid.SettingRowView
                         android:id="@+id/btn_target_time"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:minHeight="64dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp"
-                        android:paddingTop="8dp"
-                        android:paddingBottom="8dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:background="?android:attr/selectableItemBackground">
+                        app:rowTitle="@string/label_target_time"
+                        app:rowDescription="@string/desc_target_time"
+                        app:rowType="value"
+                        app:valueId="@+id/text_target_time_value" />
 
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:clickable="false"
-                            android:focusable="false">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/label_target_time"
-                                android:textColor="?android:attr/textColorPrimary"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:clickable="false"
-                                android:focusable="false" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/desc_target_time"
-                                android:textSize="12sp"
-                                android:textColor="?android:attr/textColorSecondary"
-                                android:clickable="false"
-                                android:focusable="false" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/text_target_time_value"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
-                            android:textColor="?android:attr/textColorPrimary"
-                            android:textSize="16sp"
-                            android:clickable="false"
-                            android:focusable="false" />
-                    </LinearLayout>
-
-                    <LinearLayout
+                    <com.bas080.autosleepdroid.SettingRowView
                         android:id="@+id/btn_current_wake_time"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:minHeight="64dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp"
-                        android:paddingTop="8dp"
-                        android:paddingBottom="8dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:background="?android:attr/selectableItemBackground">
+                        app:rowTitle="@string/label_current_wake_time"
+                        app:rowDescription="@string/desc_current_wake_time"
+                        app:rowType="value"
+                        app:valueId="@+id/text_current_wake_time_value" />
 
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:clickable="false"
-                            android:focusable="false">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/label_current_wake_time"
-                                android:textColor="?android:attr/textColorPrimary"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:clickable="false"
-                                android:focusable="false" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/desc_current_wake_time"
-                                android:textSize="12sp"
-                                android:textColor="?android:attr/textColorSecondary"
-                                android:clickable="false"
-                                android:focusable="false" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/text_current_wake_time_value"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
-                            android:textColor="?android:attr/textColorPrimary"
-                            android:textSize="16sp"
-                            android:clickable="false"
-                            android:focusable="false" />
-                    </LinearLayout>
-
-                    <LinearLayout
+                    <com.bas080.autosleepdroid.SettingRowView
                         android:id="@+id/input_min_sleep"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:minHeight="64dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp"
-                        android:paddingTop="8dp"
-                        android:paddingBottom="8dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:background="?android:attr/selectableItemBackground">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:clickable="false"
-                            android:focusable="false">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/label_min_sleep"
-                                android:textColor="?android:attr/textColorPrimary"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:clickable="false"
-                                android:focusable="false" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/desc_min_sleep"
-                                android:textSize="12sp"
-                                android:textColor="?android:attr/textColorSecondary"
-                                android:clickable="false"
-                                android:focusable="false" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/text_min_sleep_value"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
-                            android:textColor="?android:attr/textColorPrimary"
-                            android:textSize="16sp"
-                            android:clickable="false"
-                            android:focusable="false" />
-                    </LinearLayout>
+                        app:rowTitle="@string/label_min_sleep"
+                        app:rowDescription="@string/desc_min_sleep"
+                        app:rowType="value"
+                        app:valueId="@+id/text_min_sleep_value" />
 
                 </LinearLayout>
 
@@ -534,55 +187,14 @@
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
-                <LinearLayout
+                <com.bas080.autosleepdroid.SettingRowView
                     android:id="@+id/row_health_connect"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="64dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:clickable="false"
-                        android:focusable="false">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_health_connect"
-                            android:textColor="?android:attr/textColorPrimary"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:clickable="false"
-                            android:focusable="false" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/desc_health_connect"
-                            android:textSize="12sp"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:clickable="false"
-                            android:focusable="false" />
-                    </LinearLayout>
-
-                    <Switch
-                        android:id="@+id/switch_health_connect"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp" />
-                </LinearLayout>
+                    app:rowTitle="@string/label_health_connect"
+                    app:rowDescription="@string/desc_health_connect"
+                    app:rowType="toggle"
+                    app:switchId="@+id/switch_health_connect" />
 
                 <!-- About Section -->
                 <TextView
@@ -599,104 +211,23 @@
                     android:textStyle="bold" />
 
                 <!-- Version Row -->
-                <LinearLayout
+                <com.bas080.autosleepdroid.SettingRowView
                     android:id="@+id/btn_version"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="64dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:clickable="false"
-                        android:focusable="false">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_version"
-                            android:textColor="?android:attr/textColorPrimary"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:clickable="false"
-                            android:focusable="false" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/desc_version"
-                            android:textSize="12sp"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:clickable="false"
-                            android:focusable="false" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/app_version_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:textSize="16sp"
-                        android:clickable="false"
-                        android:focusable="false" />
-                </LinearLayout>
+                    app:rowTitle="@string/label_version"
+                    app:rowDescription="@string/desc_version"
+                    app:rowType="value"
+                    app:valueId="@+id/app_version_text" />
 
                 <!-- Links Section -->
-                <LinearLayout
+                <com.bas080.autosleepdroid.SettingRowView
                     android:id="@+id/btn_links"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="64dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:clickable="false"
-                        android:focusable="false">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_links"
-                            android:textColor="?android:attr/textColorPrimary"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:clickable="false"
-                            android:focusable="false" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/desc_links"
-                            android:textSize="12sp"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:clickable="false"
-                            android:focusable="false" />
-                    </LinearLayout>
-                </LinearLayout>
+                    app:rowTitle="@string/label_links"
+                    app:rowDescription="@string/desc_links"
+                    app:rowType="none" />
 
             </LinearLayout>
         </ScrollView>
