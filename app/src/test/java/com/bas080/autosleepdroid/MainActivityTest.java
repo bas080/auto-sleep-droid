@@ -441,8 +441,8 @@ public class MainActivityTest {
             findViewsOfType(dialog.getWindow().getDecorView(), DurationInputView.class, list);
         }
         assertFalse(list.isEmpty());
-        list.get(0).getHoursInput().setText("");
-        list.get(0).getMinutesInput().setText("");
+        list.get(0).getHoursPicker().setValue(0);
+        list.get(0).getMinutesPicker().setValue(0);
 
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick();
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
@@ -471,8 +471,8 @@ public class MainActivityTest {
             findViewsOfType(dialog.getWindow().getDecorView(), DurationInputView.class, list);
         }
         assertFalse(list.isEmpty());
-        list.get(0).getHoursInput().setText("0");
-        list.get(0).getMinutesInput().setText("0");
+        list.get(0).getHoursPicker().setValue(0);
+        list.get(0).getMinutesPicker().setValue(0);
 
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick();
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
@@ -503,8 +503,8 @@ public class MainActivityTest {
             findViewsOfType(dialog.getWindow().getDecorView(), DurationInputView.class, list);
         }
         assertFalse(list.isEmpty());
-        list.get(0).getHoursInput().setText("0");
-        list.get(0).getMinutesInput().setText("0");
+        list.get(0).getHoursPicker().setValue(0);
+        list.get(0).getMinutesPicker().setValue(0);
 
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick();
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
