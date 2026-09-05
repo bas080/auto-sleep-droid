@@ -359,7 +359,11 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private void setupConfigControls() {
         if (rowEnableTimer != null && switchEnableTimer != null) {
-            rowEnableTimer.setOnClickListener(v -> switchEnableTimer.toggle());
+            rowEnableTimer.setOnClickListener(v -> {
+                switchEnableTimer.setPressed(true);
+                switchEnableTimer.toggle();
+                switchEnableTimer.setPressed(false);
+            });
         }
 
         if (switchEnableTimer != null) {
@@ -390,8 +394,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         if (rowAutoTimer != null && switchAutoTimer != null) {
             rowAutoTimer.setOnClickListener(v -> {
-                isUserInitiatedAutoTimer = true;
+                switchAutoTimer.setPressed(true);
                 switchAutoTimer.toggle();
+                switchAutoTimer.setPressed(false);
             });
         }
 
@@ -422,7 +427,11 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
 
         if (rowEnableGoal != null && switchEnableGoal != null) {
-            rowEnableGoal.setOnClickListener(v -> switchEnableGoal.toggle());
+            rowEnableGoal.setOnClickListener(v -> {
+                switchEnableGoal.setPressed(true);
+                switchEnableGoal.toggle();
+                switchEnableGoal.setPressed(false);
+            });
         }
 
         if (switchEnableGoal != null) {
@@ -466,8 +475,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         if (rowHealthConnect != null && switchHealthConnect != null) {
             rowHealthConnect.setOnClickListener(v -> {
-                isUserInitiatedHealthConnect = true;
+                switchHealthConnect.setPressed(true);
                 switchHealthConnect.toggle();
+                switchHealthConnect.setPressed(false);
             });
         }
 

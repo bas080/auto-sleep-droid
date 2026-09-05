@@ -942,31 +942,38 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testRowClickOpensSettingsPages() {
-        HealthConnectManager.setClientForTesting(null, true);
+    public void testAutoTimerRowClickLaunchesDndSettings() {
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
 
         View rowAutoTimer = activity.findViewById(R.id.row_auto_timer);
-        View rowHealthConnect = activity.findViewById(R.id.row_health_connect);
-
         assertNotNull(rowAutoTimer);
+
+        org.robolectric.shadows.ShadowActivity shadowActivity = Shadows.shadowOf(activity);
+        while (shadowActivity.getNextStartedActivity() != null) {}
+
+        rowAutoTimer.performClick();
+
+        Intent nextIntent = shadowActivity.getNextStartedActivity();
+        assertNotNull("Clicking Auto DND row container must open DND settings page", nextIntent);
+    }
+
+    @Test
+    public void testHealthConnectRowClickLaunchesHealthConnectSettings() {
+        HealthConnectManager.setClientForTesting(null, true);
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        View rowHealthConnect = activity.findViewById(R.id.row_health_connect);
         assertNotNull(rowHealthConnect);
 
         org.robolectric.shadows.ShadowActivity shadowActivity = Shadows.shadowOf(activity);
         while (shadowActivity.getNextStartedActivity() != null) {}
 
-        // Click on Auto DND row
-        rowAutoTimer.performClick();
-        Intent nextIntent = shadowActivity.getNextStartedActivity();
-        assertNotNull("Clicking Auto DND row must open settings page", nextIntent);
-
-        while (shadowActivity.getNextStartedActivity() != null) {}
-
-        // Click on Health Connect row
         rowHealthConnect.performClick();
-        nextIntent = shadowActivity.getNextStartedActivity();
-        assertNotNull("Clicking Health Connect row must open settings page", nextIntent);
+
+        Intent nextIntent = shadowActivity.getNextStartedActivity();
+        assertNotNull("Clicking Health Connect row container must open Health Connect settings page", nextIntent);
     }
 
     @Test
