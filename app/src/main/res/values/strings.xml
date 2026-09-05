@@ -110,6 +110,11 @@
     <string name="desc_min_sleep">Guarantees minimum sleep duration even if you go to sleep late</string>
     <string name="label_show_notification">Show notification</string>
     <string name="desc_show_notification">Show an ongoing status notification in the notification shade</string>
+    <string name="label_health_connect">Health Connect</string>
+    <string name="desc_health_connect">Persist sleep and wake times to Android Health Connect</string>
+    <string name="toast_health_connect_not_available">Health Connect is not available on this device</string>
+    <string name="toast_health_connect_enabled">Health Connect sync enabled</string>
+    <string name="toast_health_connect_disabled">Health Connect sync disabled</string>
     <string name="label_event_logs">Event logs</string>
     <string name="desc_event_logs">Real-time system and sleep timer event activity</string>
 </resources>

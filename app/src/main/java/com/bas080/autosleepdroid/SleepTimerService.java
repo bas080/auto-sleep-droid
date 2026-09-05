@@ -306,6 +306,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
             } else if (ACTION_DISMISS_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed");
+                processSleepSessionOnAlarmDismissal();
                 updateNextWakeUpTimeOnDismissOrExpiry();
                 stopWakeUpAlarmSound();
                 cancelSnoozeAlarm();
@@ -526,10 +527,26 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onPauseMedia() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer expired: pausing media");
+        long now = System.currentTimeMillis();
+        if (preferences != null) {
+            preferences.edit().putLong("sleep_start_time_ms", now).apply();
+        }
         pauseMediaViaAudioFocus();
 
         restoreVolumeRunnable = () -> stateMachine.restoreVolumeAfterPause();
         handler.postDelayed(restoreVolumeRunnable, PAUSE_RESET_DELAY_MS);
+    }
+
+    private void processSleepSessionOnAlarmDismissal() {
+        if (preferences == null) return;
+        boolean healthConnectEnabled = preferences.getBoolean("health_connect_enabled", false);
+        long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
+        long wakeTime = System.currentTimeMillis();
+
+        if (healthConnectEnabled && sleepStartTime > 0L && wakeTime > sleepStartTime) {
+            HealthConnectManager.writeSleepSession(this, sleepStartTime, wakeTime, null);
+            preferences.edit().remove("sleep_start_time_ms").apply();
+        }
     }
 
     private boolean isWakeAlarmEnabled() {
@@ -972,6 +989,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private void dismissWakeUpAlarmViaVolumeKey() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed via volume button");
+        processSleepSessionOnAlarmDismissal();
         stopWakeUpAlarmSound();
         cancelSnoozeAlarm();
         cancelNapAlarm(false);

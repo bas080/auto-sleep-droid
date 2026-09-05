@@ -57,6 +57,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView textCurrentWakeTimeValue;
     private View inputMinSleep;
     private TextView textMinSleepValue;
+    private View rowHealthConnect;
+    private Switch switchHealthConnect;
     private View btnNap;
     private TextView textNapStatus;
     private View btnVersion;
@@ -138,6 +140,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         textCurrentWakeTimeValue = findViewById(R.id.text_current_wake_time_value);
         inputMinSleep = findViewById(R.id.input_min_sleep);
         textMinSleepValue = findViewById(R.id.text_min_sleep_value);
+        rowHealthConnect = findViewById(R.id.row_health_connect);
+        switchHealthConnect = findViewById(R.id.switch_health_connect);
         btnNap = findViewById(R.id.btn_nap);
         textNapStatus = findViewById(R.id.text_nap_status);
         btnVersion = findViewById(R.id.btn_version);
@@ -436,6 +440,34 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     }
             ));
         }
+
+        if (rowHealthConnect != null && switchHealthConnect != null) {
+            rowHealthConnect.setOnClickListener(v -> switchHealthConnect.toggle());
+        }
+
+        if (switchHealthConnect != null) {
+            switchHealthConnect.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isUpdatingUi) return;
+                SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+                if (isChecked) {
+                    if (!HealthConnectManager.isHealthConnectAvailable(this)) {
+                        isUpdatingUi = true;
+                        switchHealthConnect.setChecked(false);
+                        isUpdatingUi = false;
+                        Toast.makeText(this, R.string.toast_health_connect_not_available, Toast.LENGTH_SHORT).show();
+                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect requested but SDK is unavailable");
+                        return;
+                    }
+                    prefs.edit().putBoolean("health_connect_enabled", true).apply();
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled");
+                    Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show();
+                } else {
+                    prefs.edit().putBoolean("health_connect_enabled", false).apply();
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled");
+                    Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
 
     private void updateInputEnabledStates(boolean active, boolean goalEnabled) {
@@ -452,6 +484,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setRowEnabled(btnTargetTime, goalEnabled);
         setRowEnabled(btnCurrentWakeTime, goalEnabled);
         setRowEnabled(inputMinSleep, goalEnabled);
+        setRowEnabled(rowHealthConnect, true);
         setRowEnabled(btnVersion, true);
 
         if (goalContainer != null) {
@@ -589,6 +622,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         int durationMinutes = prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
         boolean autoTimer = prefs.getBoolean("auto_timer_enabled", false);
         boolean goalEnabled = prefs.getBoolean("wake_up_goal_enabled", false);
+        boolean healthConnectEnabled = prefs.getBoolean("health_connect_enabled", false);
         int goalHour = prefs.getInt("wake_up_goal_hour", 6);
         int goalMin = prefs.getInt("wake_up_goal_minute", 30);
         int currentHour = prefs.getInt("current_wake_hour", goalHour);
@@ -609,6 +643,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
         if (switchEnableGoal != null) {
             switchEnableGoal.setChecked(goalEnabled);
+        }
+        if (switchHealthConnect != null) {
+            switchHealthConnect.setChecked(healthConnectEnabled);
         }
         updateTargetTimeButtonText(goalHour, goalMin);
         updateCurrentWakeTimeButtonText(currentHour, currentMin);
@@ -663,6 +700,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             json.put("current_wake_hour", prefs.getInt("current_wake_hour", goalHour));
             json.put("current_wake_minute", prefs.getInt("current_wake_minute", goalMin));
             json.put("min_sleep_duration_minutes", prefs.getInt("min_sleep_duration_minutes", 450));
+            json.put("health_connect_enabled", prefs.getBoolean("health_connect_enabled", false));
 
             String exportStr = json.toString();
             Intent sendIntent = new Intent(Intent.ACTION_SEND);
@@ -756,6 +794,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 throw new JSONException("min_sleep_duration_minutes out of range");
             }
 
+            boolean healthConnectEnabled = json.optBoolean("health_connect_enabled", false);
+
             SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
             prefs.edit()
                     .putInt("duration_minutes", durationMinutes)
@@ -767,6 +807,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     .putInt("current_wake_hour", currentWakeHour)
                     .putInt("current_wake_minute", currentWakeMinute)
                     .putInt("min_sleep_duration_minutes", minSleepMinutes)
+                    .putBoolean("health_connect_enabled", healthConnectEnabled)
                     .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
                     .apply();
 

@@ -110,6 +110,11 @@
     <string name="desc_min_sleep">Garantiza una duración mínima de sueño aunque te duermas tarde</string>
     <string name="label_show_notification">Mostrar notificación</string>
     <string name="desc_show_notification">Muestra una notificación de estado permanente en la barra de notificaciones</string>
+    <string name="label_health_connect">Health Connect</string>
+    <string name="desc_health_connect">Guarda las horas de sueño y despertar en Android Health Connect</string>
+    <string name="toast_health_connect_not_available">Health Connect no está disponible en este dispositivo</string>
+    <string name="toast_health_connect_enabled">Sincronización con Health Connect activada</string>
+    <string name="toast_health_connect_disabled">Sincronización con Health Connect desactivada</string>
     <string name="label_event_logs">Registros de eventos</string>
     <string name="desc_event_logs">Actividad del sistema y temporizador en tiempo real</string>
 </resources>
