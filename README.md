@@ -46,12 +46,13 @@ Auto Sleep Droid puts your phone to sleep when you fall asleep, and wakes you up
 
 Auto Sleep Droid uses minimal permissions required to function reliably as a background sleep timer:
 
-- **Notifications (`POST_NOTIFICATIONS`)**: Displays ongoing timer status and single-tap controls directly in your notification shade.
-- **Foreground Service (`FOREGROUND_SERVICE` & `FOREGROUND_SERVICE_MEDIA_PLAYBACK`)**: Keeps the timer service running reliably in the background while media plays.
-- **Audio Settings (`MODIFY_AUDIO_SETTINGS`)**: Fades music volume down to zero at expiry and restores pre-fade volume after pausing.
-- **Vibration (`VIBRATE`)**: Provides faint haptic feedback confirming your actions (turning off/on, volume button resets, and phone flips).
-- **Alarms & Reminders (`SCHEDULE_EXACT_ALARM`)**: Schedules exact backup alarms so the timer expires on time even when Android enters Doze mode or battery saver.
-- **Run at Startup (`RECEIVE_BOOT_COMPLETED`)**: Restores your timer state automatically when your device reboots.
+- **Notifications (`POST_NOTIFICATIONS`)** *(Optional)*: Displays ongoing timer status and single-tap controls directly in your notification shade.
+- **Foreground Service (`FOREGROUND_SERVICE` & `FOREGROUND_SERVICE_MEDIA_PLAYBACK`)** *(Required)*: Keeps the timer service running reliably in the background while media plays.
+- **Audio Settings (`MODIFY_AUDIO_SETTINGS`)** *(Required)*: Fades music volume down to zero at expiry and restores pre-fade volume after pausing.
+- **Vibration (`VIBRATE`)** *(Optional)*: Provides faint haptic feedback confirming your actions (turning off/on, volume button resets, and phone flips).
+- **Alarms & Reminders (`SCHEDULE_EXACT_ALARM` & `SET_ALARM`)** *(Required)*: Schedules exact backup alarms so the timer expires on time and wake alarms ring reliably even when Android enters Doze mode or battery saver.
+- **Run at Startup (`RECEIVE_BOOT_COMPLETED`)** *(Optional)*: Restores your timer state automatically when your device reboots.
+- **Health Connect Write Sleep (`android.permission.health.WRITE_SLEEP`)** *(Optional)*: Persists sleep, nap, and wake times as sleep sessions to Android Health Connect when Health Connect synchronization is enabled.
 
 ## Donate
 

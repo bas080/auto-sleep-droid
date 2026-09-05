@@ -112,4 +112,16 @@ public class HealthConnectManagerTest {
         prefs.edit().putBoolean("health_connect_enabled", true).apply();
         assertTrue(prefs.getBoolean("health_connect_enabled", false));
     }
+
+    @Test
+    public void testNapAndSleepSessionStartKeyPersistence() {
+        SharedPreferences prefs = context.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE);
+        long now = System.currentTimeMillis();
+
+        prefs.edit().putLong("nap_start_time_ms", now).apply();
+        assertEquals(now, prefs.getLong("nap_start_time_ms", 0L));
+
+        prefs.edit().remove("nap_start_time_ms").apply();
+        assertEquals(0L, prefs.getLong("nap_start_time_ms", 0L));
+    }
 }

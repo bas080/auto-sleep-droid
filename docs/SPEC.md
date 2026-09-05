@@ -128,11 +128,11 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - When the sleep timer is reset (via flip gesture, volume button press, or duration update), an active nap alarm is pushed forward by the same reset increment.
 
 ## Health Connect Integration
-- **Purpose**: Automatically save sleep and wake timestamps as sleep sessions to Health Connect when enabled.
+- **Purpose**: Automatically save sleep and wake timestamps as sleep sessions (both nightly sleep and naps) to Health Connect when enabled.
 - **Behavior**:
   - A toggle setting on the main screen allows enabling or disabling Health Connect synchronization.
-  - When enabled, the app captures the timestamp when the sleep timer expires and media pauses (representing sleep start time) and when the wake alarm is dismissed (representing wake time).
-  - Valid sleep sessions are automatically persisted to Health Connect.
+  - When enabled, the app captures the start time when the sleep timer expires or a nap is started, and records the wake time when the wake alarm or nap alarm is dismissed.
+  - Valid sleep sessions and naps are automatically persisted to Health Connect.
   - If Health Connect is unavailable or permissions are not granted, the user is notified via a message and the setting remains off.
 
 ## Acceptance criteria

@@ -540,10 +540,16 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private void processSleepSessionOnAlarmDismissal() {
         if (preferences == null) return;
         boolean healthConnectEnabled = preferences.getBoolean("health_connect_enabled", false);
+        if (!healthConnectEnabled) return;
+
         long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
+        long napStartTime = preferences.getLong("nap_start_time_ms", 0L);
         long wakeTime = System.currentTimeMillis();
 
-        if (healthConnectEnabled && sleepStartTime > 0L && wakeTime > sleepStartTime) {
+        if (napStartTime > 0L && wakeTime > napStartTime) {
+            HealthConnectManager.writeSleepSession(this, napStartTime, wakeTime, null);
+            preferences.edit().remove("nap_start_time_ms").apply();
+        } else if (sleepStartTime > 0L && wakeTime > sleepStartTime) {
             HealthConnectManager.writeSleepSession(this, sleepStartTime, wakeTime, null);
             preferences.edit().remove("sleep_start_time_ms").apply();
         }
@@ -796,6 +802,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             preferences.edit()
                     .putInt(KEY_NAP_DURATION_MINUTES, durationMinutes)
                     .putLong(KEY_NAP_ALARM_ENDS_AT, napAlarmEndsAt)
+                    .putLong("nap_start_time_ms", now)
                     .apply();
         }
         scheduleNapAlarm(napAlarmEndsAt);
@@ -834,7 +841,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
         napAlarmEndsAt = 0L;
         if (preferences != null) {
-            preferences.edit().remove(KEY_NAP_ALARM_ENDS_AT).apply();
+            preferences.edit()
+                    .remove(KEY_NAP_ALARM_ENDS_AT)
+                    .remove("nap_start_time_ms")
+                    .apply();
         }
         if (showToast) {
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm cancelled");

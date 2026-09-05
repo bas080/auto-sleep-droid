@@ -153,6 +153,7 @@ Timer and Wake-Up Goal state is stored in the `sleep_timer` `SharedPreferences` 
 | `nap_alarm_ends_at` | long | Wall-clock timestamp (millis) when active nap alarm triggers |
 | `health_connect_enabled` | boolean | Whether sleep sessions are synchronized with Android Health Connect |
 | `sleep_start_time_ms` | long | Wall-clock timestamp (millis) recorded when sleep timer expired |
+| `nap_start_time_ms` | long | Wall-clock timestamp (millis) recorded when a nap alarm started |
 
 Event log history is stored in the `event_logger` `SharedPreferences` file:
 

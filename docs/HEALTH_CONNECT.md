@@ -2,24 +2,25 @@
 
 ## Overview
 
-Auto Sleep Droid integrates with Android Health Connect (`androidx.health.connect:connect-client`) to automatically record sleep sessions (`SleepSessionRecord`) based on sleep timer expiration and wake alarm dismissals.
+Auto Sleep Droid integrates with Android Health Connect (`androidx.health.connect:connect-client`) to automatically record sleep sessions (`SleepSessionRecord`) based on sleep timer expiration, nap alarm completions, and wake alarm dismissals.
 
 ## Product Goal
 
-Automatically log your nightly sleep session into Android Health Connect without requiring manual sleep tracking apps or wearables. When you fall asleep listening to media and wake up to your alarm, Auto Sleep Droid records the start and end of your sleep cycle directly into Health Connect.
+Automatically log your nightly sleep sessions and daytime naps into Android Health Connect without requiring manual sleep tracking apps or wearables. When you fall asleep listening to media or take a quick nap, Auto Sleep Droid records the start and end of your sleep cycle directly into Health Connect upon alarm dismissal.
 
 ## Architecture and Flow
 
-1. **Sleep Start Time Capture**:
-   - When the sleep timer expires and active media playback is paused (or when volume fade completes), the exact timestamp (`sleep_start_time_ms`) is persisted to `SharedPreferences`.
+1. **Sleep & Nap Start Time Capture**:
+   - **Nightly Sleep**: When the sleep timer expires and active media playback is paused (or when volume fade completes), the exact timestamp (`sleep_start_time_ms`) is persisted to `SharedPreferences`.
+   - **Naps**: When a nap alarm is started, the nap start timestamp (`nap_start_time_ms`) is persisted to `SharedPreferences`.
 2. **Wake Time Capture**:
-   - When the scheduled wake-up alarm or nap alarm triggers and is dismissed (via notification action button, hardware volume key press, or main UI), the current timestamp (`wake_time_ms`) is captured as the wake time.
+   - When a scheduled wake-up alarm or nap alarm triggers and is dismissed (via notification action button, hardware volume key press, or main UI), the current timestamp (`wake_time_ms`) is captured as the wake time.
 3. **Session Persistence**:
    - If `health_connect_enabled` is true, Health Connect SDK is available on the device, and write permission (`android.permission.health.WRITE_SLEEP`) is granted:
-     - Auto Sleep Droid Constructs a `SleepSessionRecord` with `startTime` set to `sleep_start_time_ms` and `endTime` set to `wake_time_ms`, along with local system zone offsets (`ZoneOffset`).
+     - Auto Sleep Droid constructs a `SleepSessionRecord` with `startTime` set to `nap_start_time_ms` (for naps) or `sleep_start_time_ms` (for nightly sleep) and `endTime` set to `wake_time_ms`, along with local system zone offsets (`ZoneOffset`).
      - Asynchronously writes the record to Health Connect via `HealthConnectClient.insertRecords(...)` on a background I/O thread.
      - Logs the outcome to `EventLogger`.
-     - Clears the pending `sleep_start_time_ms` timestamp to prevent duplicate session records.
+     - Clears the pending start timestamp to prevent duplicate session records.
 
 ## Data Schema
 
