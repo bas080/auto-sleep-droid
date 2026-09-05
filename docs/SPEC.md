@@ -73,7 +73,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 ## Auto Sleep Timer (Do Not Disturb)
 - **Purpose**: Optionally turn on the sleep timer when Android's Do Not Disturb mode is activated and turn it off when DND is deactivated.
 - **Behavior**:
-  - Tapping the row opens Android Do Not Disturb settings.
+  - Toggling ON opens Android Do Not Disturb settings.
   - Optional automation feature; manual sleep timer toggling remains available at all times regardless of whether this setting is enabled.
   - When `auto_timer_enabled` is true, Auto Sleep Droid listens for DND filter change events (`NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED`).
   - When DND becomes active (interruption filter is not `INTERRUPTION_FILTER_ALL`), the sleep timer is automatically turned ON.

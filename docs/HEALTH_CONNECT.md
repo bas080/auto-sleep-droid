@@ -41,8 +41,14 @@ The Health Connect integration uses `androidx.health.connect.client.records.Slee
 
 ## Settings and User Interface
 
-- Configuration switch located in `MainActivity` under the Alarm section (`label_health_connect`).
+- Configuration switch located in `MainActivity` under the dedicated Health Connect section (`label_health_connect`).
+- Toggling Health Connect ON automatically opens Android Health Connect permission settings for immediate permission configuration.
+- Re-checking permission status on `onResume()` automatically disables sync if write permissions are revoked in Health Connect settings.
 - Exported and imported seamlessly alongside existing app configuration in JSON format (`health_connect_enabled`).
+
+## Build Size Optimization
+
+Integrating Health Connect and Protocol Buffers adds AndroidX Health Connect, ProtoBuf runtime, and Kotlin coroutines libraries. Enabling R8 minification (`minifyEnabled true`) in `app/build.gradle` trims unused library classes, keeping the release APK size at ~330 KB.
 
 ## Questions and Future Considerations
 
