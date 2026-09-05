@@ -22,7 +22,7 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
   * Alarm Clock & AlarmManager: No alarms scheduled; any active `"Auto Sleep"` wake-up alarm is cancelled.
 * **Notification Presentation**:
   * Collapsed Text: `"Timer off"`
-  * Expanded Text: `"Sleep timer is off"`
+  * Expanded Text: `"Timer off (<duration>)"` (appends `" • Wake at <alarm_time>"` when Smart Wake-Up Goal alarm is set).
   - Action Button: `"Enable"` (if `show_notification` is `true`; notification is hidden across all states if `show_notification` is `false`).
 * **State Invariants**: `enabled = false`, `timerEndsAt = 0`.
 

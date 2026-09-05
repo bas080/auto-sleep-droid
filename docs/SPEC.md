@@ -20,9 +20,9 @@ Provide an Android sleep timer app configured directly from a single main UI scr
 ## Notification states and content
 All notification content is concise and directly visible in the notification body without hiding text in expanded views:
 
-- Off: "Timer off (20m)" • Button: "Enable"
-- Waiting: "Waiting for playback (20m) • Alarm at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
-- Active: "Fades out at 11:15 PM (20m) • Alarm at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
+- Off: "Timer off (20m) • Wake at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Enable"
+- Waiting: "Waiting for playback (20m) • Wake at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
+- Active: "Fades out at 11:15 PM (20m) • Wake at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
 - Fading: "Fading volume" • Button: "Disable"
 
 Only the action button lives in the expanded shade. All information text is directly visible in the main notification view.

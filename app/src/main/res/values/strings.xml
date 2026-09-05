@@ -4,6 +4,7 @@
     <string name="notification_channel_description">Sleep timer status and controls</string>
     <string name="timer_off_collapsed">Timer off (%1$s)</string>
     <string name="timer_off_expanded">Sleep timer is off (%1$s)</string>
+    <string name="timer_off_expanded_alarm">Timer off (%1$s) • Wake at %2$s</string>
     <string name="timer_off">Sleep timer is off</string>
     <string name="waiting_collapsed">Waiting for playback (%1$s)</string>
     <string name="waiting_expanded">Waiting for media playback (%1$s)</string>
