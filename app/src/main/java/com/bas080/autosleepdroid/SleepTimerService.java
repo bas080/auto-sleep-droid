@@ -1015,7 +1015,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             contentText = getString(R.string.wakeup_alarm_text);
         } else if (isWakeUpAlarmSnoozed) {
             title = getString(R.string.wakeup_alarm_title);
-            contentText = getString(R.string.toast_alarm_snoozed);
+            contentText = getString(R.string.wakeup_alarm_snoozed_text);
         } else if (!stateMachine.isEnabled()) {
             title = getString(R.string.timer_off);
             if (showWakeAlarm) {
@@ -1068,37 +1068,56 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 .setOnlyAlertOnce(true)
                 .setShowWhen(false);
 
-        Notification.Action toggleAction;
-        if (stateMachine.isEnabled()) {
-            toggleAction = new Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_media_pause),
-                    getString(R.string.action_turn_off),
-                    turnOffIntent())
-                    .build();
-        } else {
-            toggleAction = new Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_media_play),
-                    getString(R.string.action_turn_on),
-                    turnOnIntent())
-                    .build();
-        }
-        builder.addAction(toggleAction);
-
-        Notification.Action napAction;
-        if (isNapActive()) {
-            napAction = new Notification.Action.Builder(
+        if (isWakeUpAlarmRinging) {
+            builder.addAction(new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    getString(R.string.action_cancel_nap),
-                    cancelNapIntent())
-                    .build();
-        } else {
-            napAction = new Notification.Action.Builder(
+                    getString(R.string.action_dismiss_alarm),
+                    dismissWakeUpAlarmIntent())
+                    .build());
+            builder.addAction(new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
-                    getString(R.string.action_nap),
-                    startNapIntent())
-                    .build();
+                    getString(R.string.action_snooze_alarm),
+                    snoozeWakeUpAlarmIntent())
+                    .build());
+        } else if (isWakeUpAlarmSnoozed) {
+            builder.addAction(new Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                    getString(R.string.action_dismiss_alarm),
+                    dismissWakeUpAlarmIntent())
+                    .build());
+        } else {
+            Notification.Action toggleAction;
+            if (stateMachine.isEnabled()) {
+                toggleAction = new Notification.Action.Builder(
+                        Icon.createWithResource(this, android.R.drawable.ic_media_pause),
+                        getString(R.string.action_turn_off),
+                        turnOffIntent())
+                        .build();
+            } else {
+                toggleAction = new Notification.Action.Builder(
+                        Icon.createWithResource(this, android.R.drawable.ic_media_play),
+                        getString(R.string.action_turn_on),
+                        turnOnIntent())
+                        .build();
+            }
+            builder.addAction(toggleAction);
+
+            Notification.Action napAction;
+            if (isNapActive()) {
+                napAction = new Notification.Action.Builder(
+                        Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                        getString(R.string.action_cancel_nap),
+                        cancelNapIntent())
+                        .build();
+            } else {
+                napAction = new Notification.Action.Builder(
+                        Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
+                        getString(R.string.action_nap),
+                        startNapIntent())
+                        .build();
+            }
+            builder.addAction(napAction);
         }
-        builder.addAction(napAction);
 
         return builder.build();
     }
@@ -1169,6 +1188,18 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private PendingIntent cancelNapIntent() {
         Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_CANCEL_NAP);
         return PendingIntent.getService(this, 13, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private PendingIntent dismissWakeUpAlarmIntent() {
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_DISMISS_WAKEUP_ALARM);
+        return PendingIntent.getService(this, 14, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private PendingIntent snoozeWakeUpAlarmIntent() {
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_SNOOZE_WAKEUP_ALARM);
+        return PendingIntent.getService(this, 15, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 

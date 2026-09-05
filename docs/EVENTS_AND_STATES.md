@@ -24,6 +24,16 @@ The system operates in one of four mutually exclusive states defined in `SleepTi
   * Collapsed Text: `"Timer off"`
   * Expanded Text: `"Timer off (<duration>)"` (appends `" • Wake at <alarm_time>"` when Smart Wake-Up Goal alarm is set).
   - Action Button: `"Enable"` (if `show_notification` is `true`; notification is hidden across all states if `show_notification` is `false`).
+
+* **Wake-Up Alarm Ringing / Snoozed Notification Presentation**:
+  * **When Ringing**:
+    * Title: `"Wake-up alarm"`
+    * Content Text: `"Flip to snooze • Press volume button to dismiss"`
+    * Actions: `"Dismiss"` and `"Snooze"`
+  * **When Snoozed**:
+    * Title: `"Wake-up alarm"`
+    * Content Text: `"Snoozed 9m • Press volume button to dismiss"`
+    * Actions: `"Dismiss"`
 * **State Invariants**: `enabled = false`, `timerEndsAt = 0`.
 
 ### 2. `WAITING`

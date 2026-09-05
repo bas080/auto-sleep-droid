@@ -575,7 +575,8 @@ public class SleepTimerServiceTest {
         // Notification should STILL be present after snooze
         android.app.Notification snoozedNotification = shadowNotificationManager.getNotification(1001);
         assertNotNull("Wake-up alarm notification must remain open when snoozed", snoozedNotification);
-        assertEquals(context.getString(R.string.toast_alarm_snoozed), snoozedNotification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT));
+        assertTrue("Snoozed notification content text should contain snooze instruction text",
+                snoozedNotification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString().contains("Snoozed 9m"));
 
         // Dismiss wake-up alarm
         Intent dismissIntent = new Intent(context, SleepTimerService.class)
@@ -635,7 +636,8 @@ public class SleepTimerServiceTest {
         // Notification should STILL be present after snooze via flip
         android.app.Notification snoozedNotification = shadowNotificationManager.getNotification(1001);
         assertNotNull("Wake-up alarm notification must remain open when snoozed via flip", snoozedNotification);
-        assertEquals(context.getString(R.string.toast_alarm_snoozed), snoozedNotification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT));
+        assertTrue("Notification content text when snoozed should contain 'Snoozed 9m'",
+                snoozedNotification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString().contains("Snoozed 9m"));
     }
 
     @Test
@@ -973,6 +975,33 @@ public class SleepTimerServiceTest {
         java.util.Calendar cal = SleepTimerService.calculateScheduledAlarm(context, now, 0L);
         assertNotNull("calculateScheduledAlarm should return scheduled Calendar for daily goal", cal);
         assertTrue("Scheduled alarm must be in the future", cal.getTimeInMillis() > now);
+    }
+
+    @Test
+    public void testWakeUpAlarmRingingNotificationShowsSnoozeAndDismissActionsAndInstructions() {
+        preferences.edit().putBoolean("show_notification", true).putBoolean("wake_alarm_enabled", true).commit();
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+
+        // Trigger wake-up alarm
+        Intent triggerIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_WAKEUP_ALARM_EXPIRY);
+        service.onStartCommand(triggerIntent, 0, 1);
+
+        android.app.Notification wakeUpNotification = shadowNotificationManager.getNotification(1001);
+        assertNotNull(wakeUpNotification);
+
+        String contentText = wakeUpNotification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString();
+        assertTrue("Notification content text when alarm is ringing should inform user how to snooze/dismiss: " + contentText,
+                contentText.contains("Flip to snooze") || contentText.contains("volume button"));
+
+        assertEquals("Notification should feature 2 actions (Dismiss and Snooze) when ringing", 2, wakeUpNotification.actions.length);
+        assertEquals(context.getString(R.string.action_dismiss_alarm), wakeUpNotification.actions[0].title.toString());
+        assertEquals(context.getString(R.string.action_snooze_alarm), wakeUpNotification.actions[1].title.toString());
     }
 
     @Test
