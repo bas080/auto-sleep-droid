@@ -119,6 +119,21 @@ object HealthConnectManager {
             callback.onPermissionResult(false)
             return
         }
+        if (testSdkAvailable != null || testClient != null) {
+            val hasPermission = try {
+                val client = testClient
+                if (client != null) {
+                    val granted = client.permissionController.getGrantedPermissions()
+                    granted.containsAll(REQUIRED_PERMISSIONS)
+                } else {
+                    false
+                }
+            } catch (e: Exception) {
+                false
+            }
+            callback.onPermissionResult(hasPermission)
+            return
+        }
         CoroutineScope(Dispatchers.IO).launch {
             val hasPermission = try {
                 val client = getClient(context)
