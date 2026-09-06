@@ -376,10 +376,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 if (isUpdatingUi) return;
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
                 prefs.edit().putBoolean("nap_dnd_enabled", isChecked).apply();
-                boolean isUserInitiated = buttonView.isPressed();
-                if (isChecked && isUserInitiated) {
-                    openDndSettings();
-                }
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Nap DND enabled" : "Nap DND disabled");
                 redrawNotification();
             });
