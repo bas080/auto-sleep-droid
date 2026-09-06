@@ -462,9 +462,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         if (btnAwake != null) {
             btnAwake.setOnClickListener(v -> {
-                Intent awakeIntent = new Intent(this, SleepTimerService.class);
-                awakeIntent.setAction(SleepTimerService.ACTION_AWAKE);
-                startService(awakeIntent);
+                Intent intent = new Intent(this, AwakeDialogActivity.class);
+                startActivity(intent);
             });
         }
 

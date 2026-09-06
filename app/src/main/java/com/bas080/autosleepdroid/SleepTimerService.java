@@ -649,11 +649,16 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         long scheduledAlarmMillis = calCurrent.getTimeInMillis();
 
-        if (timerEndsAt > 0L) {
-            long minWakeTimeMillis = timerEndsAt + minSleepMin * 60_000L;
-            if (minWakeTimeMillis > scheduledAlarmMillis) {
-                scheduledAlarmMillis = minWakeTimeMillis;
-            }
+        long sleepStartTime = prefs.getLong("sleep_start_time_ms", 0L);
+        long minWakeTimeMillis = 0L;
+        if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
+            minWakeTimeMillis = sleepStartTime + minSleepMin * 60_000L;
+        } else if (timerEndsAt > 0L) {
+            minWakeTimeMillis = timerEndsAt + minSleepMin * 60_000L;
+        }
+
+        if (minWakeTimeMillis > scheduledAlarmMillis) {
+            scheduledAlarmMillis = minWakeTimeMillis;
         }
 
         Calendar calAlarm = Calendar.getInstance();
@@ -815,7 +820,13 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (isWakeAlarmEnabled() && preferences != null) {
             int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
             long now = System.currentTimeMillis();
-            long baseTime = newTimerEndsAt > 0L ? newTimerEndsAt : now;
+            long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
+            long baseTime;
+            if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
+                baseTime = sleepStartTime;
+            } else {
+                baseTime = newTimerEndsAt > 0L ? newTimerEndsAt : now;
+            }
             long requiredWakeTime = baseTime + minSleepMin * 60_000L;
 
             int goalHour = preferences.getInt("wake_up_goal_hour", 6);
@@ -1207,30 +1218,27 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             }
             builder.addAction(toggleAction);
 
-            Notification.Action napAction;
+            Notification.Action secondAction;
             if (isNapActive()) {
-                napAction = new Notification.Action.Builder(
+                secondAction = new Notification.Action.Builder(
                         Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
                         getString(R.string.action_cancel_nap),
                         cancelNapIntent())
                         .build();
+            } else if (isWakeAlarmEnabled()) {
+                secondAction = new Notification.Action.Builder(
+                        Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
+                        getString(R.string.action_awake),
+                        awakeIntent())
+                        .build();
             } else {
-                napAction = new Notification.Action.Builder(
+                secondAction = new Notification.Action.Builder(
                         Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
                         getString(R.string.action_nap),
                         startNapIntent())
                         .build();
             }
-            builder.addAction(napAction);
-
-            if (isWakeAlarmEnabled()) {
-                Notification.Action awakeAction = new Notification.Action.Builder(
-                        Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
-                        getString(R.string.action_awake),
-                        awakeIntent())
-                        .build();
-                builder.addAction(awakeAction);
-            }
+            builder.addAction(secondAction);
         }
 
         return builder.build();
@@ -1318,8 +1326,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private PendingIntent awakeIntent() {
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_AWAKE);
-        return PendingIntent.getService(this, 16, intent,
+        Intent intent = new Intent(this, AwakeDialogActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        return PendingIntent.getActivity(this, 16, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 

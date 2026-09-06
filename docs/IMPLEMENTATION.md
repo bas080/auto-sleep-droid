@@ -93,6 +93,16 @@ A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) la
 - Constructs an `AlertDialog` using `AlertDialog.Builder` wrapped with `ContextThemeWrapper(this, R.style.AppTheme)` containing `DurationInputView(dialogContext)` prefilled with previously used nap duration (`nap_duration_minutes`, default 20) and standard positive ("Nap") / negative ("Cancel") buttons, matching the exact dialog styling and theme of all duration configuration dialogs across `MainActivity`.
 - Confirming "Nap" persists the nap duration in `SharedPreferences` and sends `ACTION_START_NAP` with `EXTRA_NAP_DURATION_MINUTES` to `SleepTimerService`.
 
+### `AwakeDialogActivity`
+
+File: `app/src/main/java/com/bas080/autosleepdroid/AwakeDialogActivity.java`
+
+A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) launched from `MainActivity`'s "I'm Awake" button or the status notification's "I'm Awake" action:
+
+- Constructs an `AlertDialog` using `AlertDialog.Builder` wrapped with `ContextThemeWrapper(this, R.style.AppTheme)` presenting a cancelable "Are you awake?" confirmation dialog.
+- Confirming "I'm Awake" sends `ACTION_AWAKE` to `SleepTimerService` to log the sleep session and update alarm schedules, then finishes.
+- Canceling or dismissing the dialog finishes without modifying alarm schedules or logging sleep sessions.
+
 ### `SettingRowView`
 
 File: `app/src/main/java/com/bas080/autosleepdroid/SettingRowView.java`
@@ -136,6 +146,7 @@ Utility object managing integration with Android Health Connect (`androidx.healt
 - Provides `hasSleepWritePermission(context, callback)` to check if `WRITE_SLEEP` permission is granted.
 - Provides `writeSleepSession(context, startTimeMs, endTimeMs, callback)` to write `SleepSessionRecord` objects containing start/end timestamps and local system zone offsets (`ZoneOffset`) on a background I/O dispatcher.
 - Handles sleep session recording on alarm dismissal or when triggered explicitly via **I'm Awake** (`ACTION_AWAKE`), falling back to minimum sleep duration estimates if `sleep_start_time_ms` was not previously persisted.
+- Uses session-anchored minimum sleep calculations (`sleep_start_time_ms + min_sleep_duration_minutes`) when a sleep session started within the last 14 hours to prevent pushing alarms forward on brief night wake-ups or morning playback checks.
 
 ### `EventLogger`
 

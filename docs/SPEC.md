@@ -100,7 +100,8 @@ Toggling "Show notification" to ON prompts the user for notification permission 
      - **Current Wake-Up Time**: Represents the exact clock time when the upcoming wake alarm will ring. Users can view and manually adjust the current wake-up time directly via a dedicated picker row on `MainActivity`.
      - When configured and enabled, the wake alarm is set daily. When the current wake alarm is dismissed or triggered, the next wake-up alarm for the following day is set to `currentWakeUpTime - 15 minutes` (or target goal time if `currentWakeUpTime - 15m` is earlier than target goal time).
   3. **Minimum Sleep Safeguard & Push-Forward Behavior**:
-     - Any user interactions with the sleep timer (starting or resetting the timer, or updating timer duration) calculate `requiredWakeUpTime = timerStartTime + minimumSleepDuration` (simply adding minimum sleep duration to timer start time, without including sleep timer countdown duration).
+     - When an active sleep session exists (`sleep_start_time_ms` recorded within the last 14 hours), minimum sleep safeguard is session-anchored: `requiredWakeUpTime = sleep_start_time_ms + minimumSleepDuration`. This guarantees total night sleep without resetting the safeguard clock on brief night wake-ups or morning media playback checks.
+     - If no active sleep session exists, user interactions with the sleep timer calculate `requiredWakeUpTime = timerStartTime + minimumSleepDuration`.
      - If `requiredWakeUpTime` is later than `currentWakeUpTime`, `currentWakeUpTime` is automatically pushed forward to `requiredWakeUpTime` to respect the minimum sleep safeguard.
   4. **Alarm Trigger & Audio**:
      - Upon expiration, the app gradually increases the default system alarm tone volume over 3 minutes along a gentle psychoacoustic crescendo curve and updates the ongoing status notification to display the ringing alarm status.
@@ -108,7 +109,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   6. **Wake-Up Alarm Gestures & Persistence**:
      - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes and updates the notification text.
      - **Volume Button to Dismiss**: Pressing a hardware volume button while the wake-up alarm is ringing or snoozed dismisses the alarm and reverts the notification back to standard status.
-     - **Early Wake-Up ("I'm Awake")**: When waking up before the alarm, users can explicitly trigger **I'm Awake** from the main screen or ongoing status notification. This registers a sleep session in Health Connect (if enabled), cancels today's pending wake alarm, steps the wake-up time 15 minutes back towards the target goal time, and reschedules the alarm for tomorrow.
+     - **Early Wake-Up ("I'm Awake")**: When waking up before the alarm, users can explicitly trigger **I'm Awake** from the main screen or ongoing status notification (replacing the Nap notification action button when wake alarm is enabled). A cancelable confirmation dialog ("Are you awake?") is presented to prevent accidental triggers when checking the phone quickly. Confirming registers a sleep session in Health Connect (if enabled), cancels today's pending wake alarm, steps the wake-up time 15 minutes back towards the target goal time, and reschedules the alarm for tomorrow.
      - **Sleep Timer Toggle Independence**: Turning off or disabling the sleep timer does not affect scheduled wake alarms.
 - **Disabled by Default**: The feature is off by default until enabled in `MainActivity`.
 - **User Inputs**:
