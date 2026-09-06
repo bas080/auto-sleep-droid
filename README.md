@@ -53,6 +53,7 @@ Auto Sleep Droid uses minimal permissions required to function reliably as a bac
 - **Alarms & Reminders (`SCHEDULE_EXACT_ALARM` & `SET_ALARM`)** *(Required)*: Schedules exact backup alarms so the timer expires on time and wake alarms ring reliably even when Android enters Doze mode or battery saver.
 - **Run at Startup (`RECEIVE_BOOT_COMPLETED`)** *(Optional)*: Restores your timer state automatically when your device reboots.
 - **Health Connect Write Sleep (`android.permission.health.WRITE_SLEEP`)** *(Optional)*: Persists sleep, nap, and wake times as sleep sessions to Android Health Connect when Health Connect synchronization is enabled.
+- **Do Not Disturb Access (`android.permission.ACCESS_NOTIFICATION_POLICY`)** *(Optional)*: Controls Do Not Disturb (DND) mode during naps and checks DND state when Auto Sleep Timer (DND) mode is enabled.
 
 ## Donate
 
