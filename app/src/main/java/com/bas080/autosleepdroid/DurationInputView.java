@@ -65,6 +65,7 @@ public class DurationInputView extends LinearLayout {
             pickerHours.setMaxValue(this.maxHours);
             pickerHours.setWrapSelectorWheel(false);
             setNumericKeyboard(pickerHours);
+            syncEditText(pickerHours);
         }
 
         if (pickerMinutes != null) {
@@ -85,25 +86,13 @@ public class DurationInputView extends LinearLayout {
             }
             pickerMinutes.setWrapSelectorWheel(true);
             setNumericKeyboard(pickerMinutes);
+            syncEditText(pickerMinutes);
         }
     }
 
     private void setNumericKeyboard(NumberPicker picker) {
         if (picker == null) return;
-        int inputId = android.content.res.Resources.getSystem().getIdentifier("numberpicker_input", "id", "android");
-        EditText editText = null;
-        if (inputId != 0) {
-            editText = picker.findViewById(inputId);
-        }
-        if (editText == null) {
-            for (int i = 0; i < picker.getChildCount(); i++) {
-                View child = picker.getChildAt(i);
-                if (child instanceof EditText) {
-                    editText = (EditText) child;
-                    break;
-                }
-            }
-        }
+        EditText editText = findEditTextInPicker(picker);
         if (editText != null) {
             editText.setInputType(InputType.TYPE_CLASS_NUMBER);
         }
@@ -126,8 +115,91 @@ public class DurationInputView extends LinearLayout {
         this.durationChangeListener = listener;
     }
 
+    private String getCurrentlyDisplayedValue(NumberPicker picker) {
+        if (picker == null) return "";
+        String[] displayedValues = picker.getDisplayedValues();
+        int val = picker.getValue();
+        if (displayedValues != null && val >= 0 && val < displayedValues.length) {
+            return displayedValues[val];
+        }
+        return String.valueOf(val);
+    }
+
+    private void syncEditText(NumberPicker picker) {
+        if (picker == null) return;
+        EditText editText = findEditTextInPicker(picker);
+        if (editText != null) {
+            editText.setText(getCurrentlyDisplayedValue(picker));
+        }
+    }
+
+    private void commitPickerInput(NumberPicker picker) {
+        if (picker == null) return;
+
+        EditText editText = findEditTextInPicker(picker);
+        String str = (editText != null && editText.getText() != null) ? editText.getText().toString().trim() : "";
+        String currentDisplayed = getCurrentlyDisplayedValue(picker);
+        String currentValStr = String.valueOf(picker.getValue());
+
+        boolean isSameAsCurrent = str.equals(currentDisplayed) || str.equals(currentValStr);
+        boolean isEdited = !str.isEmpty() && !isSameAsCurrent;
+        boolean isFocused = picker.hasFocus() || (editText != null && editText.hasFocus());
+
+        if ((isEdited || isFocused) && !str.isEmpty() && !isSameAsCurrent) {
+            try {
+                int val = Integer.parseInt(str);
+                if (picker == pickerHours) {
+                    if (val >= minHours && val <= maxHours) {
+                        picker.setValue(val);
+                    }
+                } else if (picker == pickerMinutes) {
+                    if (minuteStep > 1) {
+                        int count = 60 / minuteStep;
+                        int stepIdx = Math.round((float) val / minuteStep);
+                        if (stepIdx < 0) stepIdx = 0;
+                        if (stepIdx >= count) stepIdx = count - 1;
+                        picker.setValue(stepIdx);
+                    } else {
+                        if (val >= 0 && val <= 59) {
+                            picker.setValue(val);
+                        }
+                    }
+                }
+                syncEditText(picker);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        if (isFocused) {
+            if (editText != null) {
+                editText.clearFocus();
+            }
+            picker.clearFocus();
+        }
+    }
+
+    private EditText findEditTextInPicker(NumberPicker picker) {
+        if (picker == null) return null;
+        int inputId = android.content.res.Resources.getSystem().getIdentifier("numberpicker_input", "id", "android");
+        if (inputId != 0) {
+            View v = picker.findViewById(inputId);
+            if (v instanceof EditText) return (EditText) v;
+        }
+        for (int i = 0; i < picker.getChildCount(); i++) {
+            View child = picker.getChildAt(i);
+            if (child instanceof EditText) {
+                return (EditText) child;
+            }
+        }
+        return null;
+    }
+
     public int getTotalMinutes() {
         if (pickerHours == null || pickerMinutes == null) return -1;
+
+        commitPickerInput(pickerHours);
+        commitPickerInput(pickerMinutes);
+
         int h = pickerHours.getValue();
         int m;
         if (minuteStep > 1) {
@@ -154,14 +226,17 @@ public class DurationInputView extends LinearLayout {
         if (h > maxHours) h = maxHours;
 
         pickerHours.setValue(h);
+        syncEditText(pickerHours);
 
         if (minuteStep > 1) {
             int count = 60 / minuteStep;
             int stepIdx = Math.round((float) remainingMins / minuteStep);
             if (stepIdx >= count) stepIdx = count - 1;
             pickerMinutes.setValue(stepIdx);
+            syncEditText(pickerMinutes);
         } else {
             pickerMinutes.setValue(remainingMins);
+            syncEditText(pickerMinutes);
         }
     }
 
