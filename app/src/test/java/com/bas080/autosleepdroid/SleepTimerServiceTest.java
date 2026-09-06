@@ -1155,6 +1155,29 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testAwakeActionDuringActiveNapPreservesCurrentWakeTime() {
+        long napEndsAt = System.currentTimeMillis() + 1200_000L;
+        preferences.edit()
+                .putBoolean("wake_alarm_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 7)
+                .putInt("current_wake_minute", 30)
+                .putLong(SleepTimerService.KEY_NAP_ALARM_ENDS_AT, napEndsAt)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        Intent awakeIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_AWAKE);
+        service.onStartCommand(awakeIntent, 0, 1);
+
+        assertEquals("Current wake hour must remain unchanged when marking awake during a nap", 7, preferences.getInt("current_wake_hour", -1));
+        assertEquals("Current wake minute must remain unchanged when marking awake during a nap", 30, preferences.getInt("current_wake_minute", -1));
+    }
+
+    @Test
     public void testAwakeActionNotificationActionWhenWakeAlarmIsEnabledAndActiveSleepSession() {
         long sleepStart = System.currentTimeMillis() - 4 * 3600_000L;
         preferences.edit()

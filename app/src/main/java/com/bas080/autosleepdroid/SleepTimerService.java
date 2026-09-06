@@ -573,6 +573,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             stateMachine.handleTurnOff(false);
         }
 
+        boolean wasNap = isNapAlarmRinging || isNapActive();
+
         processSleepSessionOnAwake();
 
         stopWakeUpAlarmSound();
@@ -582,9 +584,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         isWakeUpAlarmRinging = false;
         isWakeUpAlarmSnoozed = false;
 
-        dismissAutoSleepAlarm();
-        updateNextWakeUpTimeOnDismissOrExpiry();
-        checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
+        if (!wasNap) {
+            dismissAutoSleepAlarm();
+            updateNextWakeUpTimeOnDismissOrExpiry();
+            checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
+        }
 
         updateListenersRegistration();
         updateNotification();
