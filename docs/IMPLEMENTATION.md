@@ -135,6 +135,7 @@ Utility object managing integration with Android Health Connect (`androidx.healt
 - Provides `isHealthConnectAvailable(context)` to check SDK status.
 - Provides `hasSleepWritePermission(context, callback)` to check if `WRITE_SLEEP` permission is granted.
 - Provides `writeSleepSession(context, startTimeMs, endTimeMs, callback)` to write `SleepSessionRecord` objects containing start/end timestamps and local system zone offsets (`ZoneOffset`) on a background I/O dispatcher.
+- Handles sleep session recording on alarm dismissal or when triggered explicitly via **I'm Awake** (`ACTION_AWAKE`), falling back to minimum sleep duration estimates if `sleep_start_time_ms` was not previously persisted.
 
 ### `EventLogger`
 

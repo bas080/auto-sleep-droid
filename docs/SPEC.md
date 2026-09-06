@@ -108,6 +108,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   6. **Wake-Up Alarm Gestures & Persistence**:
      - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes and updates the notification text.
      - **Volume Button to Dismiss**: Pressing a hardware volume button while the wake-up alarm is ringing or snoozed dismisses the alarm and reverts the notification back to standard status.
+     - **Early Wake-Up ("I'm Awake")**: When waking up before the alarm, users can explicitly trigger **I'm Awake** from the main screen or ongoing status notification. This registers a sleep session in Health Connect (if enabled), cancels today's pending wake alarm, steps the wake-up time 15 minutes back towards the target goal time, and reschedules the alarm for tomorrow.
      - **Sleep Timer Toggle Independence**: Turning off or disabling the sleep timer does not affect scheduled wake alarms.
 - **Disabled by Default**: The feature is off by default until enabled in `MainActivity`.
 - **User Inputs**:

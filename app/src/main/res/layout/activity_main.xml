@@ -171,6 +171,14 @@
                         app:rowType="value"
                         app:valueId="@+id/text_min_sleep_value" />
 
+                    <com.bas080.autosleepdroid.SettingRowView
+                        android:id="@+id/btn_awake"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:rowTitle="@string/label_awake"
+                        app:rowDescription="@string/desc_awake"
+                        app:rowType="none" />
+
                 </LinearLayout>
 
                 <!-- Health Connect Section -->
