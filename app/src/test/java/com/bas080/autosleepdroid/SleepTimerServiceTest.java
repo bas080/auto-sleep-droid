@@ -1182,4 +1182,30 @@ public class SleepTimerServiceTest {
         assertTrue("Ongoing notification should feature 'I\'m Awake' action button when wake alarm is enabled", foundAwakeAction);
     }
 
+    @Test
+    public void testSessionAnchoredMinimumSleepDoesNotPushAlarmWhenSleepDurationSatisfied() {
+        long now = System.currentTimeMillis();
+        long sleepStart = now - (6 * 3600_000L + 45 * 60_000L); // 6 hours 45 mins ago
+        preferences.edit()
+                .putBoolean("wake_alarm_enabled", true)
+                .putInt("wake_up_goal_hour", 7)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 7)
+                .putInt("current_wake_minute", 30)
+                .putInt("min_sleep_duration_minutes", 450) // 7.5 hours
+                .putLong("sleep_start_time_ms", sleepStart)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        // Reschedule timer during active sleep session
+        service.onTimerRescheduled();
+
+        assertEquals("Current wake hour should remain 7 when session-anchored min sleep is satisfied",
+                7, preferences.getInt("current_wake_hour", -1));
+        assertEquals("Current wake minute should remain 30 when session-anchored min sleep is satisfied",
+                30, preferences.getInt("current_wake_minute", -1));
+    }
+
 }

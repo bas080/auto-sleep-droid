@@ -15,7 +15,7 @@
 
 <h3>Sleep Timer &amp; Notifications</h3>
 <ul>
-  <li><b>Notification Controls</b>: The ongoing notification shade display provides single-tap toggle actions (<b>Disable</b> / <b>Enable</b>) and a quick <b>Nap</b> / <b>Cancel Nap</b> button. All notification content is concise and directly visible.</li>
+  <li><b>Notification Controls</b>: The ongoing notification shade display provides single-tap toggle actions (<b>Disable</b> / <b>Enable</b>) and a <b>Nap</b> or <b>I'm Awake</b> button (replacing Nap with I'm Awake when wake alarm is enabled). All notification content is concise and directly visible.</li>
   <li><b>Nap Timer</b>: Tap <b>Nap</b> on the main screen or in the notification shade to set a quick nap duration and start a nap alarm. If a nap is active, tapping <b>Cancel Nap</b> cancels the nap. Resetting the sleep timer pushes any active nap alarm forward by the same reset increment. Dismissing a nap alarm does not affect your current wake-up time.</li>
   <li><b>Automatic Playback Detection</b>: The timer sits waiting until media starts playing, then automatically begins counting down.</li>
   <li><b>Fade &amp; Pause</b>: When timer expires, audio slowly fades down over 30 seconds before media playback is paused, and original volume is restored.</li>
@@ -24,11 +24,11 @@
 
 <h3>Smart Wake-Up Goal</h3>
 <ul>
-  <li><b>Independent Wake Alarm &amp; Current Wake Time</b>: The wake alarm operates independently of whether the sleep timer is turned on. You can adjust the upcoming wake alarm clock time using the <b>Current wake-up time</b> setting. On alarm trigger or dismiss, the next wake-up time steps back towards your target goal time by 15 minutes. Sleep timer resets automatically push the current wake time forward to enforce your minimum sleep duration safeguard.</li>
+  <li><b>Independent Wake Alarm &amp; Current Wake Time</b>: The wake alarm operates independently of whether the sleep timer is turned on. You can adjust the upcoming wake alarm clock time using the <b>Current wake-up time</b> setting. On alarm trigger or dismiss, the next wake-up time steps back towards your target goal time by 15 minutes. Sleep timer resets automatically push the current wake time forward to enforce your minimum sleep duration safeguard (anchored to when you originally fell asleep if you wake up briefly during the night).</li>
   <li><b>Gentle Crescendo Wake-Up</b>: When the wake-up alarm triggers, the tone volume gradually increases over 3 minutes along a gentle psychoacoustic curve for a peaceful transition.</li>
   <li><b>Snooze Alarm (9m)</b>: Flip your phone over or tap <b>Snooze</b> on the alarm notification when the alarm triggers to snooze for 9 minutes.</li>
   <li><b>Dismiss Alarm</b>: Press a physical volume button or tap <b>Dismiss</b> on the alarm notification to dismiss the wake alarm.</li>
-  <li><b>I'm Awake</b>: If you wake up before your alarm, tap <b>I'm Awake</b> on the main screen or in the notification shade. This registers your sleep session in Health Connect, cancels today's pending wake alarm, steps your wake-up time 15 minutes back towards your goal time, and reschedules your alarm for tomorrow.</li>
+  <li><b>I'm Awake</b>: If you wake up before your alarm, tap <b>I'm Awake</b> on the main screen or in the notification shade. A cancelable confirmation dialog ("Are you awake?") allows you to easily cancel if you just wanted to check your phone quickly. Confirming registers your sleep session in Health Connect, cancels today's pending wake alarm, steps your wake-up time 15 minutes back towards your goal time, and reschedules your alarm for tomorrow.</li>
 </ul>
 
 <h3>Health Connect Integration</h3>
