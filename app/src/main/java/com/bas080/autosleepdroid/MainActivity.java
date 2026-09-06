@@ -530,8 +530,14 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     prefs.edit().putBoolean("health_connect_enabled", true).apply();
                     Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show();
                     if (isUserInitiated) {
-                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled; opening permissions settings");
-                        HealthConnectManager.openHealthConnectPermissions(this);
+                        HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
+                            if (!hasPermission) {
+                                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled; opening permissions settings");
+                                HealthConnectManager.openHealthConnectPermissions(this);
+                            } else {
+                                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled");
+                            }
+                        });
                     } else {
                         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled");
                     }
