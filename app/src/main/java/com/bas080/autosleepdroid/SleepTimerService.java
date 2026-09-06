@@ -569,6 +569,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private void handleAwakeAction() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "User marked as awake explicitly");
+        if (stateMachine != null && stateMachine.isActive()) {
+            stateMachine.handleTurnOff(false);
+        }
+
         processSleepSessionOnAwake();
 
         stopWakeUpAlarmSound();
@@ -617,6 +621,15 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private boolean isWakeAlarmEnabled() {
         if (preferences == null) return false;
         return preferences.getBoolean("wake_alarm_enabled", preferences.getBoolean("wake_up_goal_enabled", false));
+    }
+
+    private boolean hasActiveSleepSession() {
+        if (preferences == null) return false;
+        long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
+        long now = System.currentTimeMillis();
+        boolean activeSleepSession = sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L);
+        boolean timerActive = stateMachine != null && stateMachine.isActive();
+        return activeSleepSession || timerActive;
     }
 
     public static Calendar calculateScheduledAlarm(Context context, long now, long timerEndsAt) {
@@ -1225,7 +1238,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                         getString(R.string.action_cancel_nap),
                         cancelNapIntent())
                         .build();
-            } else if (isWakeAlarmEnabled()) {
+            } else if (hasActiveSleepSession() && isWakeAlarmEnabled()) {
                 secondAction = new Notification.Action.Builder(
                         Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
                         getString(R.string.action_awake),

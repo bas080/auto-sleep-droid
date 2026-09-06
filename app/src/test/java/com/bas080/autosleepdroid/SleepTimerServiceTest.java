@@ -1155,10 +1155,12 @@ public class SleepTimerServiceTest {
     }
 
     @Test
-    public void testAwakeActionNotificationActionWhenWakeAlarmIsEnabled() {
+    public void testAwakeActionNotificationActionWhenWakeAlarmIsEnabledAndActiveSleepSession() {
+        long sleepStart = System.currentTimeMillis() - 4 * 3600_000L;
         preferences.edit()
                 .putBoolean("show_notification", true)
                 .putBoolean("wake_alarm_enabled", true)
+                .putLong("sleep_start_time_ms", sleepStart)
                 .commit();
 
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
@@ -1179,7 +1181,73 @@ public class SleepTimerServiceTest {
                 }
             }
         }
-        assertTrue("Ongoing notification should feature 'I\'m Awake' action button when wake alarm is enabled", foundAwakeAction);
+        assertTrue("Ongoing notification should feature 'I\'m Awake' action button during active sleep session", foundAwakeAction);
+    }
+
+    @Test
+    public void testNotificationShowsNapWhenNoActiveSleepSessionEvenIfWakeAlarmEnabled() {
+        preferences.edit()
+                .putBoolean("show_notification", true)
+                .putBoolean("wake_alarm_enabled", true)
+                .remove("sleep_start_time_ms")
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+        android.app.Notification notification = shadowNotificationManager.getNotification(1001);
+        assertNotNull(notification);
+
+        boolean foundNapAction = false;
+        if (notification.actions != null) {
+            for (android.app.Notification.Action action : notification.actions) {
+                if (context.getString(R.string.action_nap).equals(action.title.toString())) {
+                    foundNapAction = true;
+                    break;
+                }
+            }
+        }
+        assertTrue("Ongoing notification should feature 'Nap' action button during daytime when no active sleep session exists", foundNapAction);
+    }
+
+    @Test
+    public void testAwakeActionClearsSessionAndRevertsNotificationToNap() {
+        long sleepStart = System.currentTimeMillis() - 4 * 3600_000L;
+        preferences.edit()
+                .putBoolean("show_notification", true)
+                .putBoolean("wake_alarm_enabled", true)
+                .putLong("sleep_start_time_ms", sleepStart)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        // Perform Awake action
+        Intent awakeIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_AWAKE);
+        service.onStartCommand(awakeIntent, 0, 1);
+
+        assertEquals("sleep_start_time_ms should be removed", 0L, preferences.getLong("sleep_start_time_ms", 0L));
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+        android.app.Notification notification = shadowNotificationManager.getNotification(1001);
+        assertNotNull(notification);
+
+        boolean foundNapAction = false;
+        if (notification.actions != null) {
+            for (android.app.Notification.Action action : notification.actions) {
+                if (context.getString(R.string.action_nap).equals(action.title.toString())) {
+                    foundNapAction = true;
+                    break;
+                }
+            }
+        }
+        assertTrue("Notification action should revert to 'Nap' after marking awake", foundNapAction);
     }
 
     @Test
