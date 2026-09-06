@@ -915,7 +915,7 @@ public class MainActivityTest {
 
     @Test
     public void testUserInitiatedToggleOpensSettingsPages() {
-        HealthConnectManager.setClientForTesting(null, false);
+        HealthConnectManager.setClientForTesting(null, true);
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
 
@@ -968,7 +968,7 @@ public class MainActivityTest {
 
     @Test
     public void testHealthConnectRowClickLaunchesHealthConnectSettings() {
-        HealthConnectManager.setClientForTesting(null, false);
+        HealthConnectManager.setClientForTesting(null, true);
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
 

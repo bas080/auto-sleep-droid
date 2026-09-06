@@ -7,6 +7,7 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import android.app.Activity
 import android.content.Intent
@@ -123,8 +124,10 @@ object HealthConnectManager {
             val hasPermission = try {
                 val client = testClient
                 if (client != null) {
-                    val granted = client.permissionController.getGrantedPermissions()
-                    granted.containsAll(REQUIRED_PERMISSIONS)
+                    runBlocking {
+                        val granted = client.permissionController.getGrantedPermissions()
+                        granted.containsAll(REQUIRED_PERMISSIONS)
+                    }
                 } else {
                     false
                 }
