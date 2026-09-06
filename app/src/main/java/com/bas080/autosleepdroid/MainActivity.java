@@ -227,6 +227,14 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         StringBuilder bodyBuilder = new StringBuilder();
         if (crashReport != null && !crashReport.isEmpty()) {
             bodyBuilder.append("Crash Report:\n").append(crashReport).append("\n\n");
+            List<String> events = EventLogger.getEvents(this);
+            if (!events.isEmpty()) {
+                bodyBuilder.append("Logs:\n");
+                for (String event : events) {
+                    bodyBuilder.append(EventLogger.formatColoredEvent(this, event).toString()).append("\n");
+                }
+                bodyBuilder.append("\n");
+            }
         }
         bodyBuilder.append("---\nApp Version: ").append(BuildConfig.VERSION_NAME)
                 .append("\nAndroid Version: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")")
