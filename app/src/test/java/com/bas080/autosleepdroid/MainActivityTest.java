@@ -137,6 +137,7 @@ public class MainActivityTest {
     @Test
     public void testPendingCrashReportPromptsUserDialogAndLaunchesFeedbackIntent() {
         Application application = ApplicationProvider.getApplicationContext();
+        EventLogger.log(application, EventLogger.LEVEL_HIGH, "Sample logged event before crash");
         android.content.SharedPreferences prefs = application.getSharedPreferences("crash_reports", android.content.Context.MODE_PRIVATE);
         prefs.edit().putString("pending_crash_report", "CRASH: java.lang.NullPointerException at test.DummyClass").commit();
 
@@ -158,7 +159,10 @@ public class MainActivityTest {
         Intent sendIntent = chooserIntent.getParcelableExtra(Intent.EXTRA_INTENT);
         assertNotNull(sendIntent);
         assertEquals(Intent.ACTION_SENDTO, sendIntent.getAction());
-        assertTrue(sendIntent.getStringExtra(Intent.EXTRA_TEXT).contains("NullPointerException"));
+        String bodyText = sendIntent.getStringExtra(Intent.EXTRA_TEXT);
+        assertTrue(bodyText.contains("NullPointerException"));
+        assertTrue("Crash report email must include Logs section", bodyText.contains("Logs:"));
+        assertTrue("Crash report email must contain logged events", bodyText.contains("Sample logged event before crash"));
 
         assertFalse("Pending crash report should be cleared after prompting user", prefs.contains("pending_crash_report"));
     }

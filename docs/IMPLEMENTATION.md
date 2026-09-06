@@ -133,6 +133,7 @@ Main Configuration Controls & Action Links:
   - Minimum sleep duration input using custom `DurationInputView` (`input_min_sleep`, saving `min_sleep_duration_minutes` preference).
 - Links header & action link list at the bottom of the form: Manual, Logs, Feedback, Donate, Export, and Import rendered inside custom `FlowLayout` wrapping inline with light font weight (`sans-serif-light`) separated by middle dots (`·`).
 - Full-screen Manual & Event Logs Views: Overlay `RelativeLayout` views in `activity_main.xml` with a Back button pinned to the bottom-right corner (`alignParentBottom="true"`, `alignParentEnd="true"`), displaying formatted HTML manual text or real-time monospace event logs and closing upon Back button tap or hardware back button press.
+- Crash Reporting: Prompts user on launch via `AlertDialog` if a pending uncaught exception was saved in `SharedPreferences` by `AutoSleepApplication`. Choosing to send report opens the email client prefilled with the crash stack trace, recent event logs (`EventLogger.getEvents`), and app/device version metadata.
 - Export Settings Action: Serializes current preferences into a Schema Version 1 JSON string, launches system share action (`ACTION_SEND`), and logs to `EventLogger`.
 - Import Settings Action: Prompts user with instructional `AlertDialog`, validates syntax and boundaries, applies valid values, sends `ACTION_REDRAW_NOTIFICATION` to `SleepTimerService`, refreshes UI controls, and logs to `EventLogger`.
 
