@@ -376,7 +376,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 if (isUpdatingUi) return;
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
                 prefs.edit().putBoolean("nap_dnd_enabled", isChecked).apply();
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Nap DND enabled" : "Nap DND disabled");
+                boolean isUserInitiated = buttonView.isPressed();
+                if (isChecked && isUserInitiated && !isDndPermissionGranted()) {
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap DND enabled; DND policy permission missing, opening settings");
+                    openDndSettings();
+                } else {
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Nap DND enabled" : "Nap DND disabled");
+                }
                 redrawNotification();
             });
         }
@@ -561,6 +567,14 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (goalContainer != null) {
             goalContainer.setVisibility(View.VISIBLE);
         }
+    }
+
+    private boolean isDndPermissionGranted() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            return nm != null && nm.isNotificationPolicyAccessGranted();
+        }
+        return true;
     }
 
     private boolean isDndActive() {
