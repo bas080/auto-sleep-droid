@@ -58,6 +58,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView textCurrentWakeTimeValue;
     private View inputMinSleep;
     private TextView textMinSleepValue;
+    private View btnAlarmSound;
     private View rowHealthConnect;
     private Switch switchHealthConnect;
     private View btnNap;
@@ -144,6 +145,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         textCurrentWakeTimeValue = findViewById(R.id.text_current_wake_time_value);
         inputMinSleep = findViewById(R.id.input_min_sleep);
         textMinSleepValue = findViewById(R.id.text_min_sleep_value);
+        btnAlarmSound = findViewById(R.id.btn_alarm_sound);
         rowHealthConnect = findViewById(R.id.row_health_connect);
         switchHealthConnect = findViewById(R.id.switch_health_connect);
         btnNap = findViewById(R.id.btn_nap);
@@ -474,6 +476,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             ));
         }
 
+        if (btnAlarmSound != null) {
+            btnAlarmSound.setOnClickListener(v -> openAlarmSoundSettings());
+        }
+
         if (rowHealthConnect != null && switchHealthConnect != null) {
             rowHealthConnect.setOnClickListener(v -> {
                 isUserInitiatedHealthConnect = true;
@@ -531,6 +537,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setRowEnabled(btnTargetTime, goalEnabled);
         setRowEnabled(btnCurrentWakeTime, goalEnabled);
         setRowEnabled(inputMinSleep, goalEnabled);
+        setRowEnabled(btnAlarmSound, goalEnabled);
         setRowEnabled(rowHealthConnect, true);
         setRowEnabled(btnVersion, true);
 
@@ -547,6 +554,23 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             }
         }
         return false;
+    }
+
+    private void openAlarmSoundSettings() {
+        try {
+            Intent intent = new Intent(Settings.ACTION_SOUND_SETTINGS);
+            startActivity(intent);
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Opened system sound settings for alarm sound configuration");
+        } catch (Exception e) {
+            try {
+                Intent intent = new Intent(Settings.ACTION_SETTINGS);
+                startActivity(intent);
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Opened system settings");
+            } catch (Exception ex) {
+                Toast.makeText(this, "Could not open system sound settings", Toast.LENGTH_SHORT).show();
+                EventLogger.log(this, "Failed to open sound settings: " + ex.getMessage());
+            }
+        }
     }
 
     private void openDndSettings() {
