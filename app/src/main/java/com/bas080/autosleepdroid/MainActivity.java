@@ -379,7 +379,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 boolean isUserInitiated = buttonView.isPressed();
                 if (isChecked && isUserInitiated && !isDndPermissionGranted()) {
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap DND enabled; DND policy permission missing, opening settings");
-                    openDndSettings();
+                    openDndPermissionSettings();
                 } else {
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Nap DND enabled" : "Nap DND disabled");
                 }
@@ -587,13 +587,27 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         return false;
     }
 
-    private void openDndSettings() {
+    private void openDndPermissionSettings() {
         try {
             Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
             startActivity(intent);
         } catch (Exception e) {
             try {
                 Intent intent = new Intent(Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS);
+                startActivity(intent);
+            } catch (Exception ex) {
+                Toast.makeText(this, "Could not open DND settings", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void openDndSettings() {
+        try {
+            Intent intent = new Intent(Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS);
+            startActivity(intent);
+        } catch (Exception e) {
+            try {
+                Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
                 startActivity(intent);
             } catch (Exception ex) {
                 Toast.makeText(this, "Could not open DND settings", Toast.LENGTH_SHORT).show();
