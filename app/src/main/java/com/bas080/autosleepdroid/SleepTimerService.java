@@ -887,6 +887,26 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         return napAlarmEndsAt > System.currentTimeMillis();
     }
 
+    private void setDndMode(boolean enable) {
+        if (preferences != null && !preferences.getBoolean("nap_dnd_enabled", false)) {
+            return;
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 23) {
+            NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (nm != null && nm.isNotificationPolicyAccessGranted()) {
+                try {
+                    int targetFilter = enable
+                            ? NotificationManager.INTERRUPTION_FILTER_PRIORITY
+                            : NotificationManager.INTERRUPTION_FILTER_ALL;
+                    nm.setInterruptionFilter(targetFilter);
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, enable ? "DND enabled for nap" : "DND disabled after nap");
+                } catch (Exception e) {
+                    EventLogger.log(this, "Failed to set DND mode: " + e.getMessage());
+                }
+            }
+        }
+    }
+
     private void startNapAlarm(int durationMinutes) {
         long now = System.currentTimeMillis();
         napAlarmEndsAt = now + durationMinutes * 60_000L;
@@ -898,6 +918,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                     .apply();
         }
         scheduleNapAlarm(napAlarmEndsAt);
+        setDndMode(true);
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm started for " + formatDurationString(durationMinutes));
         android.widget.Toast.makeText(this, getString(R.string.toast_nap_started, formatDurationString(durationMinutes)), android.widget.Toast.LENGTH_SHORT).show();
         updateNotification();
@@ -951,6 +972,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 preferences.edit().remove("nap_start_time_ms").apply();
             }
         }
+        setDndMode(false);
         if (showToast) {
             setNapAlarmRinging(false);
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm cancelled");

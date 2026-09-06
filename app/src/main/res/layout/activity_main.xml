@@ -62,6 +62,15 @@
                     android:textStyle="bold" />
 
                 <com.bas080.autosleepdroid.SettingRowView
+                    android:id="@+id/row_nap_dnd"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:rowTitle="@string/label_nap_dnd"
+                    app:rowDescription="@string/desc_nap_dnd"
+                    app:rowType="toggle"
+                    app:switchId="@+id/switch_nap_dnd" />
+
+                <com.bas080.autosleepdroid.SettingRowView
                     android:id="@+id/btn_nap"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

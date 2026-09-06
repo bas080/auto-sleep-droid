@@ -70,6 +70,8 @@
     <string name="heading_about">Acerca de</string>
     <string name="label_nap">Alarma de siesta</string>
     <string name="desc_nap">Inicia una alarma de siesta rápida</string>
+    <string name="label_nap_dnd">No molestar (DND)</string>
+    <string name="desc_nap_dnd">Activa No molestar durante la siesta y desactívalo al finalizar</string>
     <string name="label_version">Versión</string>
     <string name="desc_version">Ver notas de la versión y buscar actualizaciones</string>
     <string name="label_links">Enlaces</string>
