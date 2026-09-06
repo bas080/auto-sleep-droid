@@ -43,6 +43,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private View headerHealthConnect;
     private View headerAbout;
 
+    private View rowNapDnd;
+    private Switch switchNapDnd;
     private View rowEnableTimer;
     private Switch switchEnableTimer;
     private View inputDuration;
@@ -130,6 +132,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         headerHealthConnect = findViewById(R.id.header_health_connect);
         headerAbout = findViewById(R.id.header_about);
 
+        rowNapDnd = findViewById(R.id.row_nap_dnd);
+        switchNapDnd = findViewById(R.id.switch_nap_dnd);
         rowEnableTimer = findViewById(R.id.row_enable_timer);
         switchEnableTimer = findViewById(R.id.switch_enable_timer);
         inputDuration = findViewById(R.id.input_duration);
@@ -359,6 +363,28 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void setupConfigControls() {
+        if (rowNapDnd != null && switchNapDnd != null) {
+            rowNapDnd.setOnClickListener(v -> {
+                switchNapDnd.setPressed(true);
+                switchNapDnd.toggle();
+                switchNapDnd.setPressed(false);
+            });
+        }
+
+        if (switchNapDnd != null) {
+            switchNapDnd.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isUpdatingUi) return;
+                SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+                prefs.edit().putBoolean("nap_dnd_enabled", isChecked).apply();
+                boolean isUserInitiated = buttonView.isPressed();
+                if (isChecked && isUserInitiated) {
+                    openDndSettings();
+                }
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Nap DND enabled" : "Nap DND disabled");
+                redrawNotification();
+            });
+        }
+
         if (rowEnableTimer != null && switchEnableTimer != null) {
             rowEnableTimer.setOnClickListener(v -> {
                 switchEnableTimer.setPressed(true);
@@ -524,6 +550,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setRowEnabled(headerHealthConnect, true);
         setRowEnabled(headerAbout, true);
 
+        setRowEnabled(rowNapDnd, true);
         setRowEnabled(rowEnableTimer, true);
         setRowEnabled(inputDuration, true);
         setRowEnabled(rowAutoTimer, true);
@@ -668,6 +695,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         isUpdatingUi = true;
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
 
+        boolean napDndEnabled = prefs.getBoolean("nap_dnd_enabled", false);
         boolean active = prefs.getBoolean("active", true);
         int durationMinutes = prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
         boolean autoTimer = prefs.getBoolean("auto_timer_enabled", false);
@@ -682,6 +710,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         long napEndsAt = prefs.getLong("nap_alarm_ends_at", 0L);
         boolean isNapActive = napEndsAt > System.currentTimeMillis();
 
+        if (switchNapDnd != null) {
+            switchNapDnd.setChecked(napDndEnabled);
+        }
         if (switchEnableTimer != null) {
             switchEnableTimer.setChecked(active);
         }
@@ -753,6 +784,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         try {
             JSONObject json = new JSONObject();
             json.put("version", 1);
+            json.put("nap_dnd_enabled", prefs.getBoolean("nap_dnd_enabled", false));
             json.put("duration_minutes", prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES));
             json.put("active", prefs.getBoolean("active", true));
             json.put("auto_timer_enabled", prefs.getBoolean("auto_timer_enabled", false));
@@ -825,6 +857,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 throw new JSONException("Unsupported schema version");
             }
 
+            boolean napDndEnabled = json.optBoolean("nap_dnd_enabled", false);
             int durationMinutes = json.getInt("duration_minutes");
             if (durationMinutes < 1 || durationMinutes > 1440) {
                 throw new JSONException("duration_minutes out of range");
@@ -862,6 +895,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
             SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
             prefs.edit()
+                    .putBoolean("nap_dnd_enabled", napDndEnabled)
                     .putInt("duration_minutes", durationMinutes)
                     .putBoolean("active", active)
                     .putBoolean("auto_timer_enabled", autoTimerEnabled)
