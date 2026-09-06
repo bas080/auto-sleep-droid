@@ -921,6 +921,16 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         checkAndPromptAwakeDialog();
     }
 
+    private boolean hasActiveSleepSession() {
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        long sleepStartTime = prefs.getLong("sleep_start_time_ms", 0L);
+        long timerEndsAt = prefs.getLong("timer_ends_at", 0L);
+        long now = System.currentTimeMillis();
+        boolean activeSleepSession = sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L);
+        boolean timerActive = prefs.getBoolean("active", false) && timerEndsAt > 0L;
+        return activeSleepSession || timerActive;
+    }
+
     private void checkAndPromptAwakeDialog() {
         if (hasPromptedAwakeInSession) {
             return;
@@ -931,10 +941,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             return;
         }
 
-        long sleepStartTime = prefs.getLong("sleep_start_time_ms", 0L);
-        long now = System.currentTimeMillis();
-
-        if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
+        if (hasActiveSleepSession()) {
             hasPromptedAwakeInSession = true;
             Intent intent = new Intent(this, AwakeDialogActivity.class);
             startActivity(intent);

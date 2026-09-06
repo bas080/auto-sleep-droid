@@ -1022,4 +1022,22 @@ public class MainActivityTest {
         assertNotNull(nextIntent);
         assertEquals(AwakeDialogActivity.class.getName(), nextIntent.getComponent().getClassName());
     }
+
+    @Test
+    public void testAutomaticAwakePromptLaunchesAwakeDialogActivityWhenTimerIsActive() {
+        long futureEndsAt = System.currentTimeMillis() + 1200_000L;
+        SharedPreferences prefs = ApplicationProvider.getApplicationContext().getSharedPreferences("sleep_timer", Context.MODE_PRIVATE);
+        prefs.edit()
+                .putBoolean("wake_alarm_enabled", true)
+                .putBoolean("active", true)
+                .putLong("timer_ends_at", futureEndsAt)
+                .commit();
+
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        Intent nextIntent = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(nextIntent);
+        assertEquals(AwakeDialogActivity.class.getName(), nextIntent.getComponent().getClassName());
+    }
 }
