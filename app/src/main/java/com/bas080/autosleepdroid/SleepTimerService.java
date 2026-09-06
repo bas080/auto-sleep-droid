@@ -38,6 +38,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     public static final String ACTION_WAKEUP_ALARM_EXPIRY = "com.bas080.autosleepdroid.AUTO_SLEEP_ALARM_EXPIRY";
     public static final String ACTION_DISMISS_WAKEUP_ALARM = "com.bas080.autosleepdroid.DISMISS_WAKEUP_ALARM";
     public static final String ACTION_SNOOZE_WAKEUP_ALARM = "com.bas080.autosleepdroid.SNOOZE_WAKEUP_ALARM";
+    public static final String ACTION_AWAKE = "com.bas080.autosleepdroid.AWAKE";
     public static final String ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION";
     public static final String ACTION_CLEAR_GOAL = "com.bas080.autosleepdroid.CLEAR_GOAL";
     public static final String ACTION_AUTO_TIMER_CHECK = "com.bas080.autosleepdroid.AUTO_TIMER_CHECK";
@@ -334,6 +335,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 updateListenersRegistration();
                 updateNotification();
                 android.widget.Toast.makeText(this, R.string.toast_alarm_snoozed, android.widget.Toast.LENGTH_SHORT).show();
+            } else if (ACTION_AWAKE.equals(intent.getAction())) {
+                handleAwakeAction();
             } else if (ACTION_CLEAR_GOAL.equals(intent.getAction())) {
                 if (preferences != null) {
                     preferences.edit()
@@ -561,6 +564,53 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         } else if (sleepStartTime > 0L && wakeTime > sleepStartTime) {
             HealthConnectManager.writeSleepSession(this, sleepStartTime, wakeTime, null);
             preferences.edit().remove("sleep_start_time_ms").apply();
+        }
+    }
+
+    private void handleAwakeAction() {
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "User marked as awake explicitly");
+        processSleepSessionOnAwake();
+
+        stopWakeUpAlarmSound();
+        cancelSnoozeAlarm();
+        cancelNapAlarm(false);
+        setNapAlarmRinging(false);
+        isWakeUpAlarmRinging = false;
+        isWakeUpAlarmSnoozed = false;
+
+        dismissAutoSleepAlarm();
+        updateNextWakeUpTimeOnDismissOrExpiry();
+        checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
+
+        updateListenersRegistration();
+        updateNotification();
+        android.widget.Toast.makeText(this, R.string.toast_awake_registered, android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    private void processSleepSessionOnAwake() {
+        if (preferences == null) return;
+        boolean healthConnectEnabled = preferences.getBoolean("health_connect_enabled", false);
+
+        long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
+        long napStartTime = preferences.getLong("nap_start_time_ms", 0L);
+        long wakeTime = System.currentTimeMillis();
+
+        if (napStartTime > 0L && wakeTime > napStartTime) {
+            if (healthConnectEnabled) {
+                HealthConnectManager.writeSleepSession(this, napStartTime, wakeTime, null);
+            }
+            preferences.edit().remove("nap_start_time_ms").apply();
+        } else {
+            if (sleepStartTime <= 0L) {
+                int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
+                sleepStartTime = wakeTime - minSleepMin * 60_000L;
+            }
+            if (wakeTime > sleepStartTime) {
+                if (healthConnectEnabled) {
+                    HealthConnectManager.writeSleepSession(this, sleepStartTime, wakeTime, null);
+                }
+                preferences.edit().remove("sleep_start_time_ms").apply();
+            }
         }
     }
 
@@ -1172,6 +1222,15 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                         .build();
             }
             builder.addAction(napAction);
+
+            if (isWakeAlarmEnabled()) {
+                Notification.Action awakeAction = new Notification.Action.Builder(
+                        Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
+                        getString(R.string.action_awake),
+                        awakeIntent())
+                        .build();
+                builder.addAction(awakeAction);
+            }
         }
 
         return builder.build();
@@ -1255,6 +1314,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private PendingIntent snoozeWakeUpAlarmIntent() {
         Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_SNOOZE_WAKEUP_ALARM);
         return PendingIntent.getService(this, 15, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private PendingIntent awakeIntent() {
+        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_AWAKE);
+        return PendingIntent.getService(this, 16, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 

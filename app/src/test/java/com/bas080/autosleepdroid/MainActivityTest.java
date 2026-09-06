@@ -984,7 +984,7 @@ public class MainActivityTest {
         android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
         switchGoal.setChecked(true);
 
-        int[] rowIds = new int[]{R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_version, R.id.btn_links};
+        int[] rowIds = new int[]{R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_awake, R.id.btn_version, R.id.btn_links};
         for (int rowId : rowIds) {
             View parentRow = activity.findViewById(rowId);
             assertNotNull("Row should exist", parentRow);
@@ -1002,5 +1002,27 @@ public class MainActivityTest {
                 }
             }
         }
+    }
+
+    @Test
+    public void testAwakeButtonClickStartsServiceWithAwakeAction() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
+        switchGoal.setChecked(true);
+
+        Application app = ApplicationProvider.getApplicationContext();
+        ShadowApplication shadowApp = Shadows.shadowOf(app);
+        while (shadowApp.getNextStartedService() != null) {}
+
+        View btnAwake = activity.findViewById(R.id.btn_awake);
+        assertNotNull(btnAwake);
+
+        btnAwake.performClick();
+
+        Intent serviceIntent = shadowApp.getNextStartedService();
+        assertNotNull(serviceIntent);
+        assertEquals(SleepTimerService.ACTION_AWAKE, serviceIntent.getAction());
     }
 }

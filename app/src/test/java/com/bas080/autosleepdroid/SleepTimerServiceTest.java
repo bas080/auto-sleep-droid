@@ -1130,4 +1130,56 @@ public class SleepTimerServiceTest {
                 contentText.contains("Wake at"));
     }
 
+    @Test
+    public void testAwakeActionRegistersSleepAndUpdatesAlarmSchedule() {
+        long sleepStart = System.currentTimeMillis() - 8 * 3600_000L;
+        preferences.edit()
+                .putBoolean("wake_alarm_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 7)
+                .putInt("current_wake_minute", 30)
+                .putLong("sleep_start_time_ms", sleepStart)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        Intent awakeIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_AWAKE);
+        service.onStartCommand(awakeIntent, 0, 1);
+
+        assertEquals("Current wake hour should step 15m back to 7", 7, preferences.getInt("current_wake_hour", -1));
+        assertEquals("Current wake minute should step 15m back to 15", 15, preferences.getInt("current_wake_minute", -1));
+        assertEquals("sleep_start_time_ms should be cleared", 0L, preferences.getLong("sleep_start_time_ms", 0L));
+    }
+
+    @Test
+    public void testAwakeActionNotificationActionWhenWakeAlarmIsEnabled() {
+        preferences.edit()
+                .putBoolean("show_notification", true)
+                .putBoolean("wake_alarm_enabled", true)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+        android.app.Notification notification = shadowNotificationManager.getNotification(1001);
+        assertNotNull(notification);
+
+        boolean foundAwakeAction = false;
+        if (notification.actions != null) {
+            for (android.app.Notification.Action action : notification.actions) {
+                if (context.getString(R.string.action_awake).equals(action.title.toString())) {
+                    foundAwakeAction = true;
+                    break;
+                }
+            }
+        }
+        assertTrue("Ongoing notification should feature 'I\'m Awake' action button when wake alarm is enabled", foundAwakeAction);
+    }
+
 }

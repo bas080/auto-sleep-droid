@@ -57,6 +57,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private View btnCurrentWakeTime;
     private TextView textCurrentWakeTimeValue;
     private View inputMinSleep;
+    private View btnAwake;
     private TextView textMinSleepValue;
     private View rowHealthConnect;
     private Switch switchHealthConnect;
@@ -144,6 +145,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         textCurrentWakeTimeValue = findViewById(R.id.text_current_wake_time_value);
         inputMinSleep = findViewById(R.id.input_min_sleep);
         textMinSleepValue = findViewById(R.id.text_min_sleep_value);
+        btnAwake = findViewById(R.id.btn_awake);
         rowHealthConnect = findViewById(R.id.row_health_connect);
         switchHealthConnect = findViewById(R.id.switch_health_connect);
         btnNap = findViewById(R.id.btn_nap);
@@ -458,6 +460,14 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             btnCurrentWakeTime.setOnClickListener(v -> showCurrentWakeTimeDialog());
         }
 
+        if (btnAwake != null) {
+            btnAwake.setOnClickListener(v -> {
+                Intent awakeIntent = new Intent(this, SleepTimerService.class);
+                awakeIntent.setAction(SleepTimerService.ACTION_AWAKE);
+                startService(awakeIntent);
+            });
+        }
+
         if (inputMinSleep != null) {
             inputMinSleep.setOnClickListener(v -> showDurationDialog(
                     R.string.label_min_sleep,
@@ -531,6 +541,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setRowEnabled(btnTargetTime, goalEnabled);
         setRowEnabled(btnCurrentWakeTime, goalEnabled);
         setRowEnabled(inputMinSleep, goalEnabled);
+        setRowEnabled(btnAwake, goalEnabled);
         setRowEnabled(rowHealthConnect, true);
         setRowEnabled(btnVersion, true);
 
