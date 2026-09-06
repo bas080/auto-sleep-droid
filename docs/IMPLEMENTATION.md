@@ -97,7 +97,7 @@ A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) la
 
 File: `app/src/main/java/com/bas080/autosleepdroid/AwakeDialogActivity.java`
 
-A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) launched automatically when opening `MainActivity` during an active sleep session (`sleep_start_time_ms` within 14 hours) or from the status notification's "I'm Awake" action (shown strictly during active sleep sessions when wake alarms are enabled):
+A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) launched automatically when opening `MainActivity` during an active sleep session (active timer or `sleep_start_time_ms` within 14 hours) or from the status notification's "I'm Awake" action (shown strictly during active sleep sessions when wake alarms are enabled):
 
 - Constructs an `AlertDialog` using `AlertDialog.Builder` wrapped with `ContextThemeWrapper(this, R.style.AppTheme)` presenting a cancelable "Are you awake?" confirmation dialog.
 - Confirming "I'm Awake" sends `ACTION_AWAKE` to `SleepTimerService` to log the sleep session and update alarm schedules, then finishes.

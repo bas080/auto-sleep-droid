@@ -804,6 +804,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 .putInt(KEY_DURATION_MINUTES, durationMinutes);
         if (timerEndsAt > 0L) {
             editor.putLong(KEY_TIMER_ENDS_AT, timerEndsAt);
+            long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
+            long now = System.currentTimeMillis();
+            if (sleepStartTime <= 0L || (now - sleepStartTime >= 14 * 3600_000L)) {
+                editor.putLong("sleep_start_time_ms", now);
+            }
         } else {
             editor.remove(KEY_TIMER_ENDS_AT);
         }
