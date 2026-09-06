@@ -589,11 +589,11 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private void openDndSettings() {
         try {
-            Intent intent = new Intent(Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS);
+            Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
             startActivity(intent);
         } catch (Exception e) {
             try {
-                Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
+                Intent intent = new Intent(Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS);
                 startActivity(intent);
             } catch (Exception ex) {
                 Toast.makeText(this, "Could not open DND settings", Toast.LENGTH_SHORT).show();
