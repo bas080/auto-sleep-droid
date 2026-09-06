@@ -3,8 +3,10 @@ package com.bas080.autosleepdroid;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Application;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.view.View;
 import android.widget.TextView;
 import androidx.test.core.app.ApplicationProvider;
@@ -984,7 +986,7 @@ public class MainActivityTest {
         android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
         switchGoal.setChecked(true);
 
-        int[] rowIds = new int[]{R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_awake, R.id.btn_version, R.id.btn_links};
+        int[] rowIds = new int[]{R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_version, R.id.btn_links};
         for (int rowId : rowIds) {
             View parentRow = activity.findViewById(rowId);
             assertNotNull("Row should exist", parentRow);
@@ -1005,17 +1007,16 @@ public class MainActivityTest {
     }
 
     @Test
-    public void testAwakeButtonClickLaunchesAwakeDialogActivity() {
+    public void testAutomaticAwakePromptLaunchesAwakeDialogActivityOnResumeWhenSleepSessionActive() {
+        long sleepStart = System.currentTimeMillis() - 4 * 3600_000L;
+        SharedPreferences prefs = ApplicationProvider.getApplicationContext().getSharedPreferences("sleep_timer", Context.MODE_PRIVATE);
+        prefs.edit()
+                .putBoolean("wake_alarm_enabled", true)
+                .putLong("sleep_start_time_ms", sleepStart)
+                .commit();
+
         ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
         MainActivity activity = controller.create().resume().get();
-
-        android.widget.Switch switchGoal = activity.findViewById(R.id.switch_enable_goal);
-        switchGoal.setChecked(true);
-
-        View btnAwake = activity.findViewById(R.id.btn_awake);
-        assertNotNull(btnAwake);
-
-        btnAwake.performClick();
 
         Intent nextIntent = Shadows.shadowOf(activity).getNextStartedActivity();
         assertNotNull(nextIntent);

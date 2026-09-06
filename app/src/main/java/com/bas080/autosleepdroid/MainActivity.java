@@ -57,7 +57,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private View btnCurrentWakeTime;
     private TextView textCurrentWakeTimeValue;
     private View inputMinSleep;
-    private View btnAwake;
     private TextView textMinSleepValue;
     private View rowHealthConnect;
     private Switch switchHealthConnect;
@@ -72,6 +71,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private boolean isUpdatingUi = false;
     private boolean isUserInitiatedAutoTimer = false;
     private boolean isUserInitiatedHealthConnect = false;
+    private boolean hasPromptedAwakeInSession = false;
 
     private interface OnDurationSavedListener {
         void onSaved(int minutes);
@@ -145,7 +145,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         textCurrentWakeTimeValue = findViewById(R.id.text_current_wake_time_value);
         inputMinSleep = findViewById(R.id.input_min_sleep);
         textMinSleepValue = findViewById(R.id.text_min_sleep_value);
-        btnAwake = findViewById(R.id.btn_awake);
         rowHealthConnect = findViewById(R.id.row_health_connect);
         switchHealthConnect = findViewById(R.id.switch_health_connect);
         btnNap = findViewById(R.id.btn_nap);
@@ -460,13 +459,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             btnCurrentWakeTime.setOnClickListener(v -> showCurrentWakeTimeDialog());
         }
 
-        if (btnAwake != null) {
-            btnAwake.setOnClickListener(v -> {
-                Intent intent = new Intent(this, AwakeDialogActivity.class);
-                startActivity(intent);
-            });
-        }
-
         if (inputMinSleep != null) {
             inputMinSleep.setOnClickListener(v -> showDurationDialog(
                     R.string.label_min_sleep,
@@ -540,7 +532,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setRowEnabled(btnTargetTime, goalEnabled);
         setRowEnabled(btnCurrentWakeTime, goalEnabled);
         setRowEnabled(inputMinSleep, goalEnabled);
-        setRowEnabled(btnAwake, goalEnabled);
         setRowEnabled(rowHealthConnect, true);
         setRowEnabled(btnVersion, true);
 
@@ -927,6 +918,27 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         refreshEventLog();
         loadPreferencesIntoUi();
         redrawNotification();
+        checkAndPromptAwakeDialog();
+    }
+
+    private void checkAndPromptAwakeDialog() {
+        if (hasPromptedAwakeInSession) {
+            return;
+        }
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        boolean wakeAlarmEnabled = prefs.getBoolean("wake_alarm_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
+        if (!wakeAlarmEnabled) {
+            return;
+        }
+
+        long sleepStartTime = prefs.getLong("sleep_start_time_ms", 0L);
+        long now = System.currentTimeMillis();
+
+        if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
+            hasPromptedAwakeInSession = true;
+            Intent intent = new Intent(this, AwakeDialogActivity.class);
+            startActivity(intent);
+        }
     }
 
     @Override
