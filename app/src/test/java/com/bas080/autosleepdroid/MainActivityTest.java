@@ -943,6 +943,8 @@ public class MainActivityTest {
         switchHealthConnect.setChecked(true);
         switchHealthConnect.setPressed(false);
 
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+
         nextIntent = shadowActivity.getNextStartedActivity();
         assertNotNull("User-initiated toggle of Health Connect must open settings page", nextIntent);
     }
@@ -977,6 +979,8 @@ public class MainActivityTest {
         while (shadowActivity.getNextStartedActivity() != null) {}
 
         rowHealthConnect.performClick();
+
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
         Intent nextIntent = shadowActivity.getNextStartedActivity();
         assertNotNull("Clicking Health Connect row container must open Health Connect settings page", nextIntent);

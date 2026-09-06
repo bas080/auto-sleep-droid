@@ -7,6 +7,7 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import android.app.Activity
 import android.content.Intent
@@ -117,6 +118,23 @@ object HealthConnectManager {
     fun hasSleepWritePermission(context: Context, callback: PermissionCallback) {
         if (!isHealthConnectAvailable(context)) {
             callback.onPermissionResult(false)
+            return
+        }
+        if (testSdkAvailable != null || testClient != null) {
+            val hasPermission = try {
+                val client = testClient
+                if (client != null) {
+                    runBlocking {
+                        val granted = client.permissionController.getGrantedPermissions()
+                        granted.containsAll(REQUIRED_PERMISSIONS)
+                    }
+                } else {
+                    false
+                }
+            } catch (e: Exception) {
+                false
+            }
+            callback.onPermissionResult(hasPermission)
             return
         }
         CoroutineScope(Dispatchers.IO).launch {
