@@ -1347,6 +1347,23 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testAwakeIntentTargetsSleepTimerServiceWithAwakeAction() throws Exception {
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        java.lang.reflect.Method awakeIntentMethod = SleepTimerService.class.getDeclaredMethod("awakeIntent");
+        awakeIntentMethod.setAccessible(true);
+        android.app.PendingIntent pendingIntent = (android.app.PendingIntent) awakeIntentMethod.invoke(service);
+
+        assertNotNull("awakeIntent pendingIntent must be non-null", pendingIntent);
+        org.robolectric.shadows.ShadowPendingIntent shadowPendingIntent = Shadows.shadowOf(pendingIntent);
+        assertTrue("awakeIntent must be a service PendingIntent", shadowPendingIntent.isService());
+        Intent intent = shadowPendingIntent.getSavedIntent();
+        assertEquals(SleepTimerService.ACTION_AWAKE, intent.getAction());
+        assertEquals(SleepTimerService.class.getName(), intent.getComponent().getClassName());
+    }
+
+    @Test
     public void testSessionAnchoredMinimumSleepDoesNotPushAlarmWhenSleepDurationSatisfied() {
         long now = System.currentTimeMillis();
         long sleepStart = now - (6 * 3600_000L + 45 * 60_000L); // 6 hours 45 mins ago
