@@ -1317,6 +1317,36 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testNotificationReportsProjectedWakeAlarmTimeWhileTimerIsActive() {
+        long now = System.currentTimeMillis();
+        long timerEndsAt = now + 30 * 60_000L;
+        preferences.edit()
+                .putBoolean("active", true)
+                .putBoolean("show_notification", true)
+                .putBoolean("wake_alarm_enabled", true)
+                .putInt("duration_minutes", 30)
+                .putInt("min_sleep_duration_minutes", 450)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 6)
+                .putInt("current_wake_minute", 30)
+                .putLong("timer_ends_at", timerEndsAt)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+        android.app.Notification notification = shadowNotificationManager.getNotification(1001);
+        assertNotNull(notification);
+
+        String text = notification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString();
+        assertTrue("Notification while timer active should contain 'Wake at': " + text, text.contains("Wake at"));
+    }
+
+    @Test
     public void testSessionAnchoredMinimumSleepDoesNotPushAlarmWhenSleepDurationSatisfied() {
         long now = System.currentTimeMillis();
         long sleepStart = now - (6 * 3600_000L + 45 * 60_000L); // 6 hours 45 mins ago
