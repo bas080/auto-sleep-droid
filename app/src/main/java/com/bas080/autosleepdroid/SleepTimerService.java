@@ -552,17 +552,20 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     private void processSleepSessionOnAlarmDismissal() {
         if (preferences == null) return;
         boolean healthConnectEnabled = preferences.getBoolean("health_connect_enabled", false);
-        if (!healthConnectEnabled) return;
 
         long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
         long napStartTime = preferences.getLong("nap_start_time_ms", 0L);
         long wakeTime = System.currentTimeMillis();
 
         if (napStartTime > 0L && wakeTime > napStartTime) {
-            HealthConnectManager.writeSleepSession(this, napStartTime, wakeTime, null);
+            if (healthConnectEnabled && (wakeTime - napStartTime < 14 * 3600_000L)) {
+                HealthConnectManager.writeSleepSession(this, napStartTime, wakeTime, null);
+            }
             preferences.edit().remove("nap_start_time_ms").apply();
         } else if (sleepStartTime > 0L && wakeTime > sleepStartTime) {
-            HealthConnectManager.writeSleepSession(this, sleepStartTime, wakeTime, null);
+            if (healthConnectEnabled && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
+                HealthConnectManager.writeSleepSession(this, sleepStartTime, wakeTime, null);
+            }
             preferences.edit().remove("sleep_start_time_ms").apply();
         }
     }
@@ -604,21 +607,15 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         long wakeTime = System.currentTimeMillis();
 
         if (napStartTime > 0L && wakeTime > napStartTime) {
-            if (healthConnectEnabled) {
+            if (healthConnectEnabled && (wakeTime - napStartTime < 14 * 3600_000L)) {
                 HealthConnectManager.writeSleepSession(this, napStartTime, wakeTime, null);
             }
             preferences.edit().remove("nap_start_time_ms").apply();
-        } else {
-            if (sleepStartTime <= 0L) {
-                int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
-                sleepStartTime = wakeTime - minSleepMin * 60_000L;
+        } else if (sleepStartTime > 0L) {
+            if (healthConnectEnabled && (wakeTime > sleepStartTime) && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
+                HealthConnectManager.writeSleepSession(this, sleepStartTime, wakeTime, null);
             }
-            if (wakeTime > sleepStartTime) {
-                if (healthConnectEnabled) {
-                    HealthConnectManager.writeSleepSession(this, sleepStartTime, wakeTime, null);
-                }
-                preferences.edit().remove("sleep_start_time_ms").apply();
-            }
+            preferences.edit().remove("sleep_start_time_ms").apply();
         }
     }
 
@@ -634,9 +631,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (preferences == null) return false;
         long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
         long now = System.currentTimeMillis();
-        boolean activeSleepSession = sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L);
-        boolean timerActive = stateMachine != null && stateMachine.isActive();
-        return activeSleepSession || timerActive;
+        return sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L);
     }
 
     public static Calendar calculateScheduledAlarm(Context context, long now, long timerEndsAt) {
@@ -802,11 +797,6 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 .putInt(KEY_DURATION_MINUTES, durationMinutes);
         if (timerEndsAt > 0L) {
             editor.putLong(KEY_TIMER_ENDS_AT, timerEndsAt);
-            long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
-            long now = System.currentTimeMillis();
-            if (sleepStartTime <= 0L || (now - sleepStartTime >= 14 * 3600_000L)) {
-                editor.putLong("sleep_start_time_ms", now);
-            }
         } else {
             editor.remove(KEY_TIMER_ENDS_AT);
         }
