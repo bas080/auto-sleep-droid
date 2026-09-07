@@ -6,7 +6,7 @@
 - **Fade-Out / Fading**: The 30-second volume fade at sleep timer expiration where music volume gradually decreases along an ease-out curve down to zero before media playback is paused.
 - **Wake-Up Alarm ("Auto Sleep")**: The background wake-up alarm scheduled via AlarmManager by Auto Sleep Droid that plays the system default alarm tone and updates the ongoing status notification to display the wake-up alarm status. Users can snooze the alarm with a phone flip gesture or dismiss it with a hardware volume button click.
 - **Target Goal Time**: The user's desired daily wake-up clock time (e.g., `06:30 AM`).
-- **Minimum Sleep Duration**: The user-configured minimum sleep safeguard duration in hours (default 7.5 hours) ensuring that the wake-up alarm is set no earlier than `timerStartTime + sleepTimerDuration + minimumSleepDuration`.
+- **Minimum Sleep Duration**: The user-configured minimum sleep safeguard duration in hours (default 7.5 hours) ensuring that the wake-up alarm is set no earlier than `timerStartTime + minimumSleepDuration`. When media pauses after timer expiration, the effective remaining sleep safeguard is `Math.max(0, minimumSleepDuration - sleepTimerDuration)`.
 
 ## Product goal
 Provide an Android sleep timer app configured directly from a single main UI screen with full-screen Manual and Event Logs views, simplified notification shade actions, and zero intrusive UI dialogs.
@@ -103,8 +103,8 @@ Toggling "Show notification" to ON prompts the user for notification permission 
      - When configured and enabled, the wake alarm is set daily. When the current wake alarm is dismissed or triggered, the next wake-up alarm for the following day is reset to target goal time (`wake_up_goal_hour` / `wake_up_goal_minute`).
   3. **Minimum Sleep Safeguard & Push-Forward Behavior**:
      - A night sleep session begins when the sleep timer expires and media is paused. If media is played again during the night and expires, the sleep start time restarts (`sleep_start_time_ms` updated to latest expiration time).
-     - When an active sleep session exists (`sleep_start_time_ms` recorded upon timer expiration within the last 14 hours), minimum sleep safeguard calculation uses `requiredWakeUpTime = sleep_start_time_ms + minimumSleepDuration`.
-     - If no active sleep session exists, user interactions with the sleep timer calculate `requiredWakeUpTime = timerStartTime + minimumSleepDuration`.
+     - When an active sleep session exists (`sleep_start_time_ms` recorded upon timer expiration within the last 14 hours), minimum sleep safeguard calculation uses `requiredWakeUpTime = sleep_start_time_ms + Math.max(0, minimumSleepDuration - sleepTimerDuration)`.
+     - When the sleep timer is active (`timerEndsAt > 0`), the projected wake alarm time `requiredWakeUpTime = timerStartTime + minimumSleepDuration` is calculated and displayed in the notification's 'Wake at' status.
      - If `requiredWakeUpTime` is later than `currentWakeUpTime`, `currentWakeUpTime` is automatically pushed forward to `requiredWakeUpTime` to respect the minimum sleep safeguard.
      - When going to bed early (within a `1.2 * minimumSleepDuration` window before `currentWakeUpTime`), starting or rescheduling the sleep timer automatically moves `currentWakeUpTime` earlier toward `Math.max(targetGoalTime, requiredWakeUpTime)`.
   4. **Alarm Trigger & Audio**:

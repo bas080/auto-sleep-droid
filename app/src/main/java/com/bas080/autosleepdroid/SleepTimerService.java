@@ -664,12 +664,15 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         long scheduledAlarmMillis = calCurrent.getTimeInMillis();
 
+        int timerDuration = prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
         long sleepStartTime = prefs.getLong("sleep_start_time_ms", 0L);
         long minWakeTimeMillis = 0L;
         if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
-            minWakeTimeMillis = sleepStartTime + minSleepMin * 60_000L;
+            long effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L);
+            minWakeTimeMillis = sleepStartTime + effectiveMinSleepMs;
         } else if (timerEndsAt > 0L) {
-            minWakeTimeMillis = timerEndsAt + minSleepMin * 60_000L;
+            long effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L);
+            minWakeTimeMillis = timerEndsAt + effectiveMinSleepMs;
         }
 
         if (minWakeTimeMillis > scheduledAlarmMillis) {
@@ -825,16 +828,21 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         if (isWakeAlarmEnabled() && preferences != null) {
             int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
+            int timerDuration = preferences.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
             long minSleepMs = minSleepMin * 60_000L;
             long now = System.currentTimeMillis();
             long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
+            long requiredWakeTime;
             long baseTime;
             if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
                 baseTime = sleepStartTime;
+                long effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L);
+                requiredWakeTime = sleepStartTime + effectiveMinSleepMs;
             } else {
                 baseTime = newTimerEndsAt > 0L ? newTimerEndsAt : now;
+                long effectiveMinSleepMs = newTimerEndsAt > 0L ? Math.max(0L, (minSleepMin - timerDuration) * 60_000L) : minSleepMs;
+                requiredWakeTime = baseTime + effectiveMinSleepMs;
             }
-            long requiredWakeTime = baseTime + minSleepMs;
 
             int goalHour = preferences.getInt("wake_up_goal_hour", 6);
             int goalMin = preferences.getInt("wake_up_goal_minute", 30);
