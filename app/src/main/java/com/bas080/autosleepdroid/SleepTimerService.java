@@ -480,6 +480,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             showOrHideNotification();
             startFadeRunnable();
         } else if (newState == SleepTimerStateMachine.State.ACTIVE) {
+            if (preferences != null && !preferences.contains("timer_start_time_ms")) {
+                preferences.edit().putLong("timer_start_time_ms", System.currentTimeMillis()).apply();
+            }
             unregisterAudioPlaybackCallback();
             updateListenersRegistration();
             checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
@@ -549,36 +552,68 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         handler.postDelayed(restoreVolumeRunnable, PAUSE_RESET_DELAY_MS);
     }
 
-    private void processSleepSessionOnAlarmDismissal() {
+    private void processSleepSession() {
         if (preferences == null) return;
         boolean healthConnectEnabled = preferences.getBoolean("health_connect_enabled", false);
+        int hcMinDurationMinutes = preferences.getInt("hc_min_duration_minutes", 15);
 
         long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
+        long timerStartTime = preferences.getLong("timer_start_time_ms", 0L);
         long napStartTime = preferences.getLong("nap_start_time_ms", 0L);
         long wakeTime = System.currentTimeMillis();
 
         if (napStartTime > 0L && wakeTime > napStartTime) {
-            if (healthConnectEnabled && (wakeTime - napStartTime < 14 * 3600_000L)) {
+            long durationMinutes = (wakeTime - napStartTime) / 60_000L;
+            if (healthConnectEnabled && (wakeTime - napStartTime < 14 * 3600_000L) && durationMinutes >= hcMinDurationMinutes) {
                 HealthConnectManager.writeSleepSession(this, napStartTime, wakeTime, null);
             }
             preferences.edit().remove("nap_start_time_ms").apply();
-        } else if (sleepStartTime > 0L && wakeTime > sleepStartTime) {
-            if (healthConnectEnabled && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
-                HealthConnectManager.writeSleepSession(this, sleepStartTime, wakeTime, null);
+        } else {
+            long startTime = 0L;
+            if (timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)) {
+                startTime = timerStartTime;
+            } else if (sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
+                startTime = sleepStartTime;
+            } else if (isWakeAlarmEnabled()) {
+                int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
+                startTime = wakeTime - (minSleepMin * 60_000L);
             }
-            preferences.edit().remove("sleep_start_time_ms").apply();
+
+            if (startTime > 0L && wakeTime > startTime) {
+                long durationMinutes = (wakeTime - startTime) / 60_000L;
+                if (healthConnectEnabled && durationMinutes >= hcMinDurationMinutes && (wakeTime - startTime < 14 * 3600_000L)) {
+                    HealthConnectManager.writeSleepSession(this, startTime, wakeTime, null);
+                }
+            }
+            preferences.edit()
+                    .remove("sleep_start_time_ms")
+                    .remove("timer_start_time_ms")
+                    .apply();
         }
+    }
+
+    private void processSleepSessionOnAlarmDismissal() {
+        processSleepSession();
     }
 
     private void handleAwakeAction() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "User marked as awake explicitly");
+
         if (stateMachine != null && stateMachine.isActive()) {
-            stateMachine.handleTurnOff(false);
+            if (preferences != null) {
+                preferences.edit()
+                        .remove("sleep_start_time_ms")
+                        .remove("timer_start_time_ms")
+                        .apply();
+            }
+            updateNotification();
+            android.widget.Toast.makeText(this, R.string.toast_awake_registered, android.widget.Toast.LENGTH_SHORT).show();
+            return;
         }
 
         boolean wasNap = isNapAlarmRinging || isNapActive();
 
-        processSleepSessionOnAwake();
+        processSleepSession();
 
         stopWakeUpAlarmSound();
         cancelSnoozeAlarm();
@@ -599,24 +634,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private void processSleepSessionOnAwake() {
-        if (preferences == null) return;
-        boolean healthConnectEnabled = preferences.getBoolean("health_connect_enabled", false);
-
-        long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
-        long napStartTime = preferences.getLong("nap_start_time_ms", 0L);
-        long wakeTime = System.currentTimeMillis();
-
-        if (napStartTime > 0L && wakeTime > napStartTime) {
-            if (healthConnectEnabled && (wakeTime - napStartTime < 14 * 3600_000L)) {
-                HealthConnectManager.writeSleepSession(this, napStartTime, wakeTime, null);
-            }
-            preferences.edit().remove("nap_start_time_ms").apply();
-        } else if (sleepStartTime > 0L) {
-            if (healthConnectEnabled && (wakeTime > sleepStartTime) && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
-                HealthConnectManager.writeSleepSession(this, sleepStartTime, wakeTime, null);
-            }
-            preferences.edit().remove("sleep_start_time_ms").apply();
-        }
+        processSleepSession();
     }
 
     private boolean isWakeAlarmEnabled() {
@@ -630,8 +648,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
         if (preferences == null) return false;
         long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
+        long timerStartTime = preferences.getLong("timer_start_time_ms", 0L);
         long now = System.currentTimeMillis();
-        return sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L);
+        return (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L))
+                || (timerStartTime > 0L && (now - timerStartTime < 14 * 3600_000L));
     }
 
     public static Calendar calculateScheduledAlarm(Context context, long now, long timerEndsAt) {

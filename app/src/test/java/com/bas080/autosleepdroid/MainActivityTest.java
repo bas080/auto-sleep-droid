@@ -255,7 +255,7 @@ public class MainActivityTest {
         }
         assertNotNull(editText);
 
-        String json = "{\"version\":1,\"duration_minutes\":45,\"active\":true,\"wake_up_goal_enabled\":true,\"wake_up_goal_hour\":7,\"wake_up_goal_minute\":15,\"min_sleep_duration_minutes\":480}";
+        String json = "{\"version\":1,\"duration_minutes\":45,\"active\":true,\"wake_up_goal_enabled\":true,\"wake_up_goal_hour\":7,\"wake_up_goal_minute\":15,\"min_sleep_duration_minutes\":480,\"hc_min_duration_minutes\":20}";
         editText.setText(json);
 
         android.widget.Button importBtn = importDialog.getButton(DialogInterface.BUTTON_POSITIVE);
@@ -271,6 +271,7 @@ public class MainActivityTest {
         assertEquals(7, prefs.getInt("wake_up_goal_hour", -1));
         assertEquals(15, prefs.getInt("wake_up_goal_minute", -1));
         assertEquals(480, prefs.getInt("min_sleep_duration_minutes", -1));
+        assertEquals(20, prefs.getInt("hc_min_duration_minutes", -1));
     }
 
     private <T extends View> void findViewsOfType(View root, Class<T> clazz, List<T> outList) {

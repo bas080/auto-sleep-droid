@@ -205,6 +205,15 @@
                     app:rowType="toggle"
                     app:switchId="@+id/switch_health_connect" />
 
+                <com.bas080.autosleepdroid.SettingRowView
+                    android:id="@+id/input_hc_min_duration"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:rowTitle="@string/label_hc_min_duration"
+                    app:rowDescription="@string/desc_hc_min_duration"
+                    app:rowType="value"
+                    app:valueId="@+id/text_hc_min_duration_value" />
+
                 <!-- About Section -->
                 <TextView
                     android:id="@+id/header_about"
