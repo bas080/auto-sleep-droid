@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import java.util.Calendar;
 import androidx.test.core.app.ApplicationProvider;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
@@ -737,7 +738,7 @@ public class SleepTimerServiceTest {
     }
 
     @Test
-    public void testDismissingWakeUpAlarmStepsBackCurrentWakeTimeBy15Minutes() {
+    public void testDismissingWakeUpAlarmResetsCurrentWakeTimeToGoalTime() {
         preferences.edit()
                 .putBoolean("active", false)
                 .putBoolean("wake_up_goal_enabled", true)
@@ -755,9 +756,8 @@ public class SleepTimerServiceTest {
                 .setAction(SleepTimerService.ACTION_DISMISS_WAKEUP_ALARM);
         service.onStartCommand(dismissIntent, 0, 1);
 
-        // 7:30 - 15m = 7:15
-        assertEquals("expected hour 7 but was " + preferences.getInt("current_wake_hour", -1), 7, preferences.getInt("current_wake_hour", -1));
-        assertEquals("expected min 15 but was " + preferences.getInt("current_wake_minute", -1), 15, preferences.getInt("current_wake_minute", -1));
+        assertEquals("expected goal hour 6 but was " + preferences.getInt("current_wake_hour", -1), 6, preferences.getInt("current_wake_hour", -1));
+        assertEquals("expected goal min 30 but was " + preferences.getInt("current_wake_minute", -1), 30, preferences.getInt("current_wake_minute", -1));
     }
 
     @Test
@@ -1149,9 +1149,46 @@ public class SleepTimerServiceTest {
                 .setAction(SleepTimerService.ACTION_AWAKE);
         service.onStartCommand(awakeIntent, 0, 1);
 
-        assertEquals("Current wake hour should step 15m back to 7", 7, preferences.getInt("current_wake_hour", -1));
-        assertEquals("Current wake minute should step 15m back to 15", 15, preferences.getInt("current_wake_minute", -1));
+        assertEquals("Current wake hour should reset to goal hour 6", 6, preferences.getInt("current_wake_hour", -1));
+        assertEquals("Current wake minute should reset to goal min 30", 30, preferences.getInt("current_wake_minute", -1));
         assertEquals("sleep_start_time_ms should be cleared", 0L, preferences.getLong("sleep_start_time_ms", 0L));
+    }
+
+    @Test
+    public void testOnTimerRescheduledMovesWakeAlarmEarlierWhenGoingToBedEarlyWithinWindow() {
+        long now = System.currentTimeMillis();
+        int minSleepMin = 450; // 7.5h -> 1.2x = 9h
+        Calendar calCurrent = Calendar.getInstance();
+        calCurrent.setTimeInMillis(now);
+        calCurrent.set(Calendar.HOUR_OF_DAY, 7);
+        calCurrent.set(Calendar.MINUTE, 30);
+        calCurrent.set(Calendar.SECOND, 0);
+        calCurrent.set(Calendar.MILLISECOND, 0);
+        if (calCurrent.getTimeInMillis() <= now) {
+            calCurrent.add(Calendar.DAY_OF_YEAR, 1);
+        }
+
+        // Set bedtime 8.5 hours before current wake alarm (within 9h 1.2x window)
+        // 7:30 AM - 8.5h = bedtime -> bedtime + 7.5h min sleep = 6:30 AM wake time
+        long bedtimeMs = calCurrent.getTimeInMillis() - (8 * 3600_000L + 30 * 60_000L);
+
+        preferences.edit()
+                .putBoolean("wake_alarm_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 7)
+                .putInt("current_wake_minute", 30)
+                .putInt("min_sleep_duration_minutes", minSleepMin)
+                .putLong("sleep_start_time_ms", bedtimeMs)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        service.onTimerRescheduled();
+
+        assertEquals(6, preferences.getInt("current_wake_hour", -1));
+        assertEquals(30, preferences.getInt("current_wake_minute", -1));
     }
 
     @Test
