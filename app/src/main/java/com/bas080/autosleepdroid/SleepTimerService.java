@@ -690,19 +690,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (preferences == null) return;
         int goalHour = preferences.getInt("wake_up_goal_hour", 6);
         int goalMin = preferences.getInt("wake_up_goal_minute", 30);
-        int currentHour = preferences.getInt("current_wake_hour", goalHour);
-        int currentMin = preferences.getInt("current_wake_minute", goalMin);
-
-        int currentTotalMins = currentHour * 60 + currentMin;
-        int goalTotalMins = goalHour * 60 + goalMin;
-
-        int nextTotalMins = Math.max(goalTotalMins, currentTotalMins - 15);
-        int nextHour = (nextTotalMins / 60) % 24;
-        int nextMin = nextTotalMins % 60;
 
         preferences.edit()
-                .putInt("current_wake_hour", nextHour)
-                .putInt("current_wake_minute", nextMin)
+                .putInt("current_wake_hour", goalHour)
+                .putInt("current_wake_minute", goalMin)
                 .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
                 .apply();
     }
@@ -844,6 +835,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
         if (isWakeAlarmEnabled() && preferences != null) {
             int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
+            long minSleepMs = minSleepMin * 60_000L;
             long now = System.currentTimeMillis();
             long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
             long baseTime;
@@ -852,7 +844,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             } else {
                 baseTime = newTimerEndsAt > 0L ? newTimerEndsAt : now;
             }
-            long requiredWakeTime = baseTime + minSleepMin * 60_000L;
+            long requiredWakeTime = baseTime + minSleepMs;
 
             int goalHour = preferences.getInt("wake_up_goal_hour", 6);
             int goalMin = preferences.getInt("wake_up_goal_minute", 30);
@@ -869,7 +861,21 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                 calCurrent.add(Calendar.DAY_OF_YEAR, 1);
             }
 
-            if (requiredWakeTime > calCurrent.getTimeInMillis()) {
+            Calendar calGoal = Calendar.getInstance();
+            calGoal.setTimeInMillis(now);
+            calGoal.set(Calendar.HOUR_OF_DAY, goalHour);
+            calGoal.set(Calendar.MINUTE, goalMin);
+            calGoal.set(Calendar.SECOND, 0);
+            calGoal.set(Calendar.MILLISECOND, 0);
+            if (calGoal.getTimeInMillis() <= now) {
+                calGoal.add(Calendar.DAY_OF_YEAR, 1);
+            }
+
+            long currentAlarmMs = calCurrent.getTimeInMillis();
+            long goalAlarmMs = calGoal.getTimeInMillis();
+            long windowMs = (long) (1.2 * minSleepMs);
+
+            if (requiredWakeTime > currentAlarmMs) {
                 Calendar calRequired = Calendar.getInstance();
                 calRequired.setTimeInMillis(requiredWakeTime);
                 int pushedHour = calRequired.get(Calendar.HOUR_OF_DAY);
@@ -880,6 +886,20 @@ public class SleepTimerService extends Service implements SensorEventListener, S
                         .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
                         .apply();
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Pushed wake alarm forward to " + formatTime(pushedHour, pushedMin) + " due to min sleep safeguard");
+            } else if (currentAlarmMs - baseTime <= windowMs) {
+                long earlierWakeMs = Math.max(goalAlarmMs, requiredWakeTime);
+                if (earlierWakeMs < currentAlarmMs) {
+                    Calendar calEarlier = Calendar.getInstance();
+                    calEarlier.setTimeInMillis(earlierWakeMs);
+                    int earlierHour = calEarlier.get(Calendar.HOUR_OF_DAY);
+                    int earlierMin = calEarlier.get(Calendar.MINUTE);
+                    preferences.edit()
+                            .putInt("current_wake_hour", earlierHour)
+                            .putInt("current_wake_minute", earlierMin)
+                            .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
+                            .apply();
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Moved wake alarm earlier to " + formatTime(earlierHour, earlierMin) + " (within 1.2x min sleep window)");
+                }
             }
         }
 
