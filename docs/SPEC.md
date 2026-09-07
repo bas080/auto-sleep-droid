@@ -113,7 +113,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   6. **Wake-Up Alarm Gestures & Persistence**:
      - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes and updates the notification text.
      - **Volume Button to Dismiss**: Pressing a hardware volume button while the wake-up alarm is ringing or snoozed dismisses the alarm and reverts the notification back to standard status.
-     - **Early Wake-Up ("I'm Awake")**: The ongoing status notification displays **I'm Awake** as its secondary action whenever a nap is active, an alarm is ringing or snoozed, or an active night sleep session exists (`sleep_start_time_ms` recorded upon timer expiration within the last 14 hours). Tapping **I'm Awake** in the notification shade marks the user awake directly in the background without launching an activity or pop-up dialog, registering the sleep session in Health Connect (if enabled), turning off active sleep timers, clearing `sleep_start_time_ms`, canceling today's pending wake alarm, resetting the wake-up time to target goal time (for night sleep sessions), rescheduling the alarm for tomorrow, and reverting the notification action back to **Nap**. If 14 hours pass without tapping **I'm Awake** or dismissing the alarm, the unconfirmed sleep session is dropped and not recorded to Health Connect.
+     - **Early Wake-Up ("I'm Awake")**: The ongoing status notification displays **I'm Awake** as its secondary action whenever a nap is active, an alarm is ringing or snoozed, or an active night sleep session exists (`sleep_start_time_ms` recorded upon timer expiration within the last 14 hours). Tapping **I'm Awake** in the notification shade marks the user awake directly in the background without launching an activity or pop-up dialog, registering the sleep session in Health Connect (if enabled and exceeding the minimum session duration threshold), clearing `sleep_start_time_ms`, canceling today's pending wake alarm, resetting the wake-up time to target goal time (for night sleep sessions), rescheduling the alarm for tomorrow, and reverting the notification action back to **Nap**. Tapping **I'm Awake** while the sleep timer countdown is still running discards the pending sleep session without stopping the countdown timer. If 14 hours pass without tapping **I'm Awake** or dismissing the alarm, the unconfirmed sleep session is dropped and not recorded to Health Connect.
      - **Sleep Timer Toggle Independence**: Turning off or disabling the sleep timer does not affect scheduled wake alarms.
 - **Disabled by Default**: The feature is off by default until enabled in `MainActivity`.
 - **User Inputs**:
@@ -138,8 +138,9 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - **Purpose**: Automatically save sleep and wake timestamps as sleep sessions (both nightly sleep and naps) to Health Connect when enabled.
 - **Behavior**:
   - A toggle setting on the main screen allows enabling or disabling Health Connect synchronization.
-  - When enabled, the app captures the start time when the sleep timer expires or a nap is started, and records the wake time when the wake alarm or nap alarm is dismissed.
-  - Valid sleep sessions and naps are automatically persisted to Health Connect.
+  - A configurable "Min session duration" row (`hc_min_duration_minutes`, default 15 minutes) under the Health Connect section on `MainActivity` specifies the minimum session length required before writing to Health Connect. Sleep sessions or naps shorter than this threshold are ignored.
+  - When enabled, night sleep start time uses the sleep timer start time (`timer_start_time_ms`), falling back to `wakeTime - minimumSleepDuration` if no sleep timer was run. Wake time is captured when the wake alarm or nap alarm is dismissed or when **I'm Awake** is tapped.
+  - Valid sleep sessions and naps exceeding the threshold duration are automatically persisted to Health Connect.
   - If Health Connect is unavailable or permissions are not granted, the user is notified via a message and the setting remains off.
 
 ## Acceptance criteria

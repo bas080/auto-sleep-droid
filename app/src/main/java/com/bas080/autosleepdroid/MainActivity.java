@@ -62,6 +62,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView textMinSleepValue;
     private View rowHealthConnect;
     private Switch switchHealthConnect;
+    private View inputHcMinDuration;
+    private TextView textHcMinDurationValue;
     private View btnNap;
     private TextView textNapStatus;
     private View btnVersion;
@@ -151,6 +153,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         textMinSleepValue = findViewById(R.id.text_min_sleep_value);
         rowHealthConnect = findViewById(R.id.row_health_connect);
         switchHealthConnect = findViewById(R.id.switch_health_connect);
+        inputHcMinDuration = findViewById(R.id.input_hc_min_duration);
+        textHcMinDurationValue = findViewById(R.id.text_hc_min_duration_value);
         btnNap = findViewById(R.id.btn_nap);
         textNapStatus = findViewById(R.id.text_nap_status);
         btnVersion = findViewById(R.id.btn_version);
@@ -555,11 +559,34 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show();
                     HealthConnectManager.revokeAllPermissions(this);
                 }
+                boolean active = prefs.getBoolean("active", true);
+                boolean goalEnabled = prefs.getBoolean("wake_up_goal_enabled", false);
+                updateInputEnabledStates(active, goalEnabled, isChecked);
             });
+        }
+
+        if (inputHcMinDuration != null) {
+            inputHcMinDuration.setOnClickListener(v -> showDurationDialog(
+                    R.string.label_hc_min_duration,
+                    "hc_min_duration_minutes",
+                    15,
+                    0, 2, 5,
+                    minutes -> {
+                        if (textHcMinDurationValue != null) {
+                            textHcMinDurationValue.setText(DurationUtils.formatDurationString(minutes));
+                        }
+                    }
+            ));
         }
     }
 
     private void updateInputEnabledStates(boolean active, boolean goalEnabled) {
+        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        boolean healthConnectEnabled = prefs.getBoolean("health_connect_enabled", false);
+        updateInputEnabledStates(active, goalEnabled, healthConnectEnabled);
+    }
+
+    private void updateInputEnabledStates(boolean active, boolean goalEnabled, boolean healthConnectEnabled) {
         setRowEnabled(headerNap, true);
         setRowEnabled(headerTimer, true);
         setRowEnabled(headerAlarm, true);
@@ -576,6 +603,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         setRowEnabled(btnCurrentWakeTime, goalEnabled);
         setRowEnabled(inputMinSleep, goalEnabled);
         setRowEnabled(rowHealthConnect, true);
+        setRowEnabled(inputHcMinDuration, healthConnectEnabled);
         setRowEnabled(btnVersion, true);
 
         if (goalContainer != null) {
@@ -744,6 +772,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         int currentHour = prefs.getInt("current_wake_hour", goalHour);
         int currentMin = prefs.getInt("current_wake_minute", goalMin);
         int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
+        int hcMinDurationMin = prefs.getInt("hc_min_duration_minutes", 15);
         int napDurationMinutes = prefs.getInt(SleepTimerService.KEY_NAP_DURATION_MINUTES, 20);
         long napEndsAt = prefs.getLong("nap_alarm_ends_at", 0L);
         boolean isNapActive = napEndsAt > System.currentTimeMillis();
@@ -785,6 +814,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (textMinSleepValue != null) {
             textMinSleepValue.setText(DurationUtils.formatDurationString(minSleepMin));
         }
+        if (textHcMinDurationValue != null) {
+            textHcMinDurationValue.setText(DurationUtils.formatDurationString(hcMinDurationMin));
+        }
         if (btnNap != null && textNapStatus != null) {
             if (isNapActive) {
                 textNapStatus.setText(R.string.action_cancel_nap);
@@ -794,7 +826,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 btnNap.setOnClickListener(v -> openNapDialog());
             }
         }
-        updateInputEnabledStates(active, goalEnabled);
+        updateInputEnabledStates(active, goalEnabled, healthConnectEnabled);
         isUpdatingUi = false;
     }
 
@@ -835,6 +867,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             json.put("current_wake_minute", prefs.getInt("current_wake_minute", goalMin));
             json.put("min_sleep_duration_minutes", prefs.getInt("min_sleep_duration_minutes", 450));
             json.put("health_connect_enabled", prefs.getBoolean("health_connect_enabled", false));
+            json.put("hc_min_duration_minutes", prefs.getInt("hc_min_duration_minutes", 15));
 
             String exportStr = json.toString();
             Intent sendIntent = new Intent(Intent.ACTION_SEND);
@@ -930,6 +963,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             }
 
             boolean healthConnectEnabled = json.optBoolean("health_connect_enabled", false);
+            int hcMinDurationMinutes = json.optInt("hc_min_duration_minutes", 15);
+            if (hcMinDurationMinutes < 0 || hcMinDurationMinutes > 1440) {
+                throw new JSONException("hc_min_duration_minutes out of range");
+            }
 
             SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
             prefs.edit()
@@ -944,6 +981,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     .putInt("current_wake_minute", currentWakeMinute)
                     .putInt("min_sleep_duration_minutes", minSleepMinutes)
                     .putBoolean("health_connect_enabled", healthConnectEnabled)
+                    .putInt("hc_min_duration_minutes", hcMinDurationMinutes)
                     .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
                     .apply();
 

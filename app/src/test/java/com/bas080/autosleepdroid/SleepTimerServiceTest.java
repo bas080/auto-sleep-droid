@@ -1131,6 +1131,72 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testTimerActivationRecordsTimerStartTimeMsAndPreservesItOnExpiry() throws Exception {
+        preferences.edit()
+                .putBoolean("active", true)
+                .putInt("duration_minutes", 30)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        java.lang.reflect.Field stateMachineField = SleepTimerService.class.getDeclaredField("stateMachine");
+        stateMachineField.setAccessible(true);
+        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
+
+        stateMachine.startTimer(30, System.currentTimeMillis() + 1800_000L, System.currentTimeMillis(), true);
+
+        assertTrue("timer_start_time_ms should be recorded when timer is active", preferences.contains("timer_start_time_ms"));
+
+        // When timer turns off after expiry, timer_start_time_ms must be preserved for night sleep logging and awake action
+        stateMachine.handleTurnOff(false);
+
+        assertTrue("timer_start_time_ms should be preserved when timer expires and turns off", preferences.contains("timer_start_time_ms"));
+    }
+
+    @Test
+    public void testAwakeActionWhileTimerIsActiveDiscardsSessionAndKeepsTimerRunning() throws Exception {
+        preferences.edit()
+                .putBoolean("active", true)
+                .putInt("duration_minutes", 30)
+                .putLong("timer_start_time_ms", System.currentTimeMillis() - 300_000L)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        java.lang.reflect.Field stateMachineField = SleepTimerService.class.getDeclaredField("stateMachine");
+        stateMachineField.setAccessible(true);
+        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
+        stateMachine.startTimer(30, System.currentTimeMillis() + 1500_000L, System.currentTimeMillis(), true);
+
+        Intent awakeIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_AWAKE);
+        service.onStartCommand(awakeIntent, 0, 1);
+
+        assertTrue("Timer state machine should remain active when marking awake during countdown", stateMachine.isActive());
+        assertFalse("timer_start_time_ms should be cleared when marking awake during countdown", preferences.contains("timer_start_time_ms"));
+    }
+
+    @Test
+    public void testProcessSleepSessionClearsStartTimePreferences() {
+        preferences.edit()
+                .putLong("sleep_start_time_ms", System.currentTimeMillis() - 3600_000L)
+                .putLong("timer_start_time_ms", System.currentTimeMillis() - 3600_000L)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        Intent awakeIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_AWAKE);
+        service.onStartCommand(awakeIntent, 0, 1);
+
+        assertFalse(preferences.contains("sleep_start_time_ms"));
+        assertFalse(preferences.contains("timer_start_time_ms"));
+    }
+
+    @Test
     public void testAwakeActionRegistersSleepAndUpdatesAlarmSchedule() {
         long sleepStart = System.currentTimeMillis() - 8 * 3600_000L;
         preferences.edit()

@@ -121,6 +121,8 @@
     <string name="desc_show_notification">Show an ongoing status notification in the notification shade</string>
     <string name="label_health_connect">Health Connect</string>
     <string name="desc_health_connect">Persist sleep and wake times to Android Health Connect</string>
+    <string name="label_hc_min_duration">Min session duration</string>
+    <string name="desc_hc_min_duration">Minimum duration required before saving sleep or nap sessions to Health Connect</string>
     <string name="toast_health_connect_not_available">Health Connect is not available on this device</string>
     <string name="toast_health_connect_enabled">Health Connect sync enabled</string>
     <string name="toast_health_connect_disabled">Health Connect sync disabled</string>
