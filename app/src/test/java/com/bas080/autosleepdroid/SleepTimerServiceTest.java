@@ -315,7 +315,7 @@ public class SleepTimerServiceTest {
         android.app.Notification notificationNapActive = shadowNotificationManager.getNotification(1001);
         assertNotNull(notificationNapActive);
         assertEquals(2, notificationNapActive.actions.length);
-        assertEquals("Cancel Nap", notificationNapActive.actions[1].title.toString());
+        assertEquals("I'm Awake", notificationNapActive.actions[1].title.toString());
         String activeContentText = notificationNapActive.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString();
         assertTrue("Notification content text must communicate active nap state", activeContentText.contains("Nap at"));
 
@@ -1097,7 +1097,7 @@ public class SleepTimerServiceTest {
                 contentText.contains("Flip to snooze") || contentText.contains("volume button"));
 
         assertEquals("Notification should feature 2 actions (Dismiss and Snooze) when ringing", 2, wakeUpNotification.actions.length);
-        assertEquals(context.getString(R.string.action_dismiss_alarm), wakeUpNotification.actions[0].title.toString());
+        assertEquals(context.getString(R.string.action_awake), wakeUpNotification.actions[0].title.toString());
         assertEquals(context.getString(R.string.action_snooze_alarm), wakeUpNotification.actions[1].title.toString());
     }
 
@@ -1164,10 +1164,13 @@ public class SleepTimerServiceTest {
                 .putInt("current_wake_hour", 7)
                 .putInt("current_wake_minute", 30)
                 .putLong(SleepTimerService.KEY_NAP_ALARM_ENDS_AT, napEndsAt)
+                .putLong("nap_start_time_ms", System.currentTimeMillis() - 600_000L)
                 .commit();
 
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
+
+        assertTrue("shouldShowAwakeAction should return true when a nap is active", service.shouldShowAwakeAction());
 
         Intent awakeIntent = new Intent(context, SleepTimerService.class)
                 .setAction(SleepTimerService.ACTION_AWAKE);
@@ -1175,6 +1178,9 @@ public class SleepTimerServiceTest {
 
         assertEquals("Current wake hour must remain unchanged when marking awake during a nap", 7, preferences.getInt("current_wake_hour", -1));
         assertEquals("Current wake minute must remain unchanged when marking awake during a nap", 30, preferences.getInt("current_wake_minute", -1));
+        assertFalse("nap_alarm_ends_at must be cleared after marking awake", preferences.contains(SleepTimerService.KEY_NAP_ALARM_ENDS_AT));
+        assertFalse("nap_start_time_ms must be cleared after marking awake", preferences.contains("nap_start_time_ms"));
+        assertFalse("shouldShowAwakeAction should revert to false after marking awake", service.shouldShowAwakeAction());
     }
 
     @Test

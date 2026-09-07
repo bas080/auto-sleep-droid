@@ -70,10 +70,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView eventLogText;
 
     private final android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener;
     private boolean isUpdatingUi = false;
     private boolean isUserInitiatedAutoTimer = false;
     private boolean isUserInitiatedHealthConnect = false;
-    private boolean hasPromptedAwakeInSession = false;
 
     private interface OnDurationSavedListener {
         void onSaved(int minutes);
@@ -990,33 +990,25 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         refreshEventLog();
         loadPreferencesIntoUi();
         redrawNotification();
-        checkAndPromptAwakeDialog();
+        registerPreferenceListener();
     }
 
-    private boolean hasActiveSleepSession() {
+    private void registerPreferenceListener() {
+        if (preferenceChangeListener == null) {
+            preferenceChangeListener = (sharedPreferences, key) -> {
+                if ("active".equals(key) || "nap_alarm_ends_at".equals(key) || "auto_timer_enabled".equals(key)) {
+                    mainHandler.post(this::loadPreferencesIntoUi);
+                }
+            };
+        }
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-        long sleepStartTime = prefs.getLong("sleep_start_time_ms", 0L);
-        long timerEndsAt = prefs.getLong("timer_ends_at", 0L);
-        long now = System.currentTimeMillis();
-        boolean activeSleepSession = sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L);
-        boolean timerActive = prefs.getBoolean("active", false) && timerEndsAt > 0L;
-        return activeSleepSession || timerActive;
+        prefs.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
     }
 
-    private void checkAndPromptAwakeDialog() {
-        if (hasPromptedAwakeInSession) {
-            return;
-        }
-        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-        boolean wakeAlarmEnabled = prefs.getBoolean("wake_alarm_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
-        if (!wakeAlarmEnabled) {
-            return;
-        }
-
-        if (hasActiveSleepSession()) {
-            hasPromptedAwakeInSession = true;
-            Intent intent = new Intent(this, AwakeDialogActivity.class);
-            startActivity(intent);
+    private void unregisterPreferenceListener() {
+        if (preferenceChangeListener != null) {
+            SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+            prefs.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
         }
     }
 
@@ -1024,6 +1016,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     protected void onPause() {
         super.onPause();
         EventLogger.setListener(null);
+        unregisterPreferenceListener();
     }
 
     private void refreshEventLog() {
