@@ -43,8 +43,10 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - Action links at the bottom of the form under a "Links" header: Manual, Logs, Feedback, Donate, Export, and Import arranged in a FlowLayout inline wrapping layout separated by middle dots.
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
-  - The notification features toggle actions ("Disable" when enabled, or "Enable" when disabled) and a "Nap" / "Cancel Nap" action button.
-  - Tapping "Nap" when no nap is active opens a duration dialog prefilled with the previously used nap duration. Starting a nap schedules a nap wake alarm. Tapping "Cancel Nap" while a nap is active cancels the nap alarm.
+  - The notification features primary toggle actions ("Disable" when enabled, or "Enable" when disabled) and a secondary action button ("Nap" or "I'm Awake").
+  - Tapping "Nap" opens a duration dialog prefilled with the previously used nap duration. Starting a nap schedules a nap wake alarm and switches the notification action to "I'm Awake".
+  - The secondary action displays "I'm Awake" whenever a nap is active, an alarm is ringing or snoozed, or an active night sleep session is underway (`sleep_start_time_ms` recorded within the last 14 hours or active sleep timer). When no sleep session, nap, or alarm is active, it displays "Nap".
+  - Tapping "I'm Awake" stops any active alarm or nap, completes/logs the active sleep session to Health Connect (if enabled), steps night wake-up time 15 minutes back toward target goal time (for night sleep), reschedules the wake alarm for tomorrow, and reverts the notification action back to "Nap".
   - Tapping/clicking the notification body opens `MainActivity`.
 
 ## Timer configuration
@@ -109,7 +111,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   6. **Wake-Up Alarm Gestures & Persistence**:
      - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes and updates the notification text.
      - **Volume Button to Dismiss**: Pressing a hardware volume button while the wake-up alarm is ringing or snoozed dismisses the alarm and reverts the notification back to standard status.
-     - **Early Wake-Up ("I'm Awake")**: An active sleep session is defined consistently across the notification shade and main UI whenever the sleep timer is active or `sleep_start_time_ms` was recorded within the last 14 hours. When waking up before the alarm during an active sleep session, the ongoing status notification displays **I'm Awake** and opening the main app presents a cancelable "Are you awake?" confirmation dialog automatically. Confirming **I'm Awake** registers a sleep session in Health Connect (if enabled), turns off active sleep timers, clears `sleep_start_time_ms`, cancels today's pending wake alarm, steps the wake-up time 15 minutes back towards the target goal time, reschedules the alarm for tomorrow, and reverts the notification action back to **Nap**.
+     - **Early Wake-Up ("I'm Awake")**: The ongoing status notification displays **I'm Awake** as its secondary action whenever a nap is active, an alarm is ringing or snoozed, or an active night sleep session is underway (`sleep_start_time_ms` recorded within the last 14 hours or active sleep timer). Triggering **I'm Awake** registers the sleep session in Health Connect (if enabled), turns off active sleep timers, clears `sleep_start_time_ms`, cancels today's pending wake alarm, steps the wake-up time 15 minutes back towards the target goal time (for night sleep sessions), reschedules the alarm for tomorrow, and reverts the notification action back to **Nap**. Opening `MainActivity` does not pop up an automatic "Are you awake?" dialog.
      - **Sleep Timer Toggle Independence**: Turning off or disabling the sleep timer does not affect scheduled wake alarms.
 - **Disabled by Default**: The feature is off by default until enabled in `MainActivity`.
 - **User Inputs**:
@@ -122,7 +124,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 ## Nap Timer
 - **Purpose**: A minimal, quick way to start or cancel a nap directly from the main screen or status notification shade.
 - **UI & Notification Actions**:
-  - Main Screen (`MainActivity`): Features a dedicated Nap section with a Nap button (`btn_nap`). Tapping **Nap** launches `NapDialogActivity` prefilled with previously used nap duration; if active, tapping **Cancel Nap** cancels the active nap alarm.
+  - Main Screen (`MainActivity`): Features a dedicated Nap section with a Nap button (`btn_nap`). Tapping **Nap** launches `NapDialogActivity` prefilled with previously used nap duration; if active, tapping **Cancel Nap** cancels the active nap alarm. `MainActivity` listens for preference changes so UI switches automatically synchronize when nap or DND states change.
   - Nap Dialog: Presented using standard system alert dialog styling with DurationInputView and standard positive ("Nap") / negative ("Cancel") buttons, styled consistently with all other dialogs.
   - Notification Shade: Features a **Nap** / **Cancel Nap** action button. Tapping **Nap** launches `NapDialogActivity` without pulling `MainActivity` or the main UI to the foreground; tapping **Cancel Nap** cancels the nap alarm.
 - **Nap Alarm & Reset Behavior**:

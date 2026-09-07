@@ -627,7 +627,10 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         return preferences.getBoolean("wake_alarm_enabled", preferences.getBoolean("wake_up_goal_enabled", false));
     }
 
-    private boolean hasActiveSleepSession() {
+    boolean shouldShowAwakeAction() {
+        if (isNapActive() || isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) {
+            return true;
+        }
         if (preferences == null) return false;
         long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
         long now = System.currentTimeMillis();
@@ -967,12 +970,11 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (preferences != null) {
             preferences.edit()
                     .remove(KEY_NAP_ALARM_ENDS_AT)
+                    .remove("nap_start_time_ms")
                     .apply();
-            if (showToast) {
-                preferences.edit().remove("nap_start_time_ms").apply();
-            }
         }
         setDndMode(false);
+        checkAndApplyDndAutoTimer();
         if (showToast) {
             setNapAlarmRinging(false);
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm cancelled");
@@ -1231,8 +1233,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (isWakeUpAlarmRinging) {
             builder.addAction(new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    getString(R.string.action_dismiss_alarm),
-                    dismissWakeUpAlarmIntent())
+                    getString(R.string.action_awake),
+                    awakeIntent())
                     .build());
             builder.addAction(new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
@@ -1242,8 +1244,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         } else if (isWakeUpAlarmSnoozed) {
             builder.addAction(new Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    getString(R.string.action_dismiss_alarm),
-                    dismissWakeUpAlarmIntent())
+                    getString(R.string.action_awake),
+                    awakeIntent())
                     .build());
         } else {
             Notification.Action toggleAction;
@@ -1263,13 +1265,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             builder.addAction(toggleAction);
 
             Notification.Action secondAction;
-            if (isNapActive()) {
-                secondAction = new Notification.Action.Builder(
-                        Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                        getString(R.string.action_cancel_nap),
-                        cancelNapIntent())
-                        .build();
-            } else if (hasActiveSleepSession() && isWakeAlarmEnabled()) {
+            if (shouldShowAwakeAction()) {
                 secondAction = new Notification.Action.Builder(
                         Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
                         getString(R.string.action_awake),
