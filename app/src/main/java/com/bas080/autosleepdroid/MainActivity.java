@@ -770,25 +770,34 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         return timeFormat.format(cal.getTime());
     }
 
+    private String getComputedDurationString(PreferenceManager pm, String key, int durationMinutes) {
+        if (pm == null) return DurationUtils.formatDurationString(durationMinutes);
+        return pm.getComputed("duration_" + key, new String[]{key}, () -> DurationUtils.formatDurationString(durationMinutes));
+    }
+
     private void loadPreferencesIntoUi() {
         isUpdatingUi = true;
-        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        SharedPreferences prefs = getSharedPreferences(PreferenceManager.PREFERENCES_NAME, MODE_PRIVATE);
+        PreferenceManager pm = isBound && boundService != null ? boundService.getPreferenceManager() : null;
 
-        boolean napDndEnabled = prefs.getBoolean("nap_dnd_enabled", false);
-        boolean active = prefs.getBoolean("active", true);
-        int durationMinutes = prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
-        boolean autoTimer = prefs.getBoolean("auto_timer_enabled", false);
-        boolean goalEnabled = prefs.getBoolean("wake_up_goal_enabled", false);
-        boolean healthConnectEnabled = prefs.getBoolean("health_connect_enabled", false);
-        int goalHour = prefs.getInt("wake_up_goal_hour", 6);
-        int goalMin = prefs.getInt("wake_up_goal_minute", 30);
-        int currentHour = prefs.getInt("current_wake_hour", goalHour);
-        int currentMin = prefs.getInt("current_wake_minute", goalMin);
-        int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
-        int hcMinDurationMin = prefs.getInt("hc_min_duration_minutes", 15);
-        int napDurationMinutes = prefs.getInt(MainService.KEY_NAP_DURATION_MINUTES, 20);
-        long napEndsAt = prefs.getLong("nap_alarm_ends_at", 0L);
-        boolean isNapActive = napEndsAt > System.currentTimeMillis();
+        boolean napDndEnabled = prefs.getBoolean(PreferenceManager.KEY_NAP_DND_ENABLED, false);
+        boolean active = prefs.getBoolean(PreferenceManager.KEY_ACTIVE, true);
+        int durationMinutes = prefs.getInt(PreferenceManager.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+        boolean autoTimer = prefs.getBoolean(PreferenceManager.KEY_AUTO_TIMER_ENABLED, false);
+        boolean goalEnabled = prefs.getBoolean(PreferenceManager.KEY_WAKE_UP_GOAL_ENABLED, false);
+        boolean healthConnectEnabled = prefs.getBoolean(PreferenceManager.KEY_HEALTH_CONNECT_ENABLED, false);
+        int goalHour = prefs.getInt(PreferenceManager.KEY_WAKE_UP_GOAL_HOUR, 6);
+        int goalMin = prefs.getInt(PreferenceManager.KEY_WAKE_UP_GOAL_MINUTE, 30);
+        int currentHour = prefs.getInt(PreferenceManager.KEY_CURRENT_WAKE_HOUR, goalHour);
+        int currentMin = prefs.getInt(PreferenceManager.KEY_CURRENT_WAKE_MINUTE, goalMin);
+        int minSleepMin = prefs.getInt(PreferenceManager.KEY_MIN_SLEEP_DURATION_MINUTES, 450);
+        int hcMinDurationMin = prefs.getInt(PreferenceManager.KEY_HC_MIN_DURATION_MINUTES, 15);
+        int napDurationMinutes = prefs.getInt(PreferenceManager.KEY_NAP_DURATION_MINUTES, 20);
+        long napEndsAt = prefs.getLong(PreferenceManager.KEY_NAP_ALARM_ENDS_AT, 0L);
+
+        boolean isNapActive = pm != null
+                ? Boolean.TRUE.equals(pm.getComputed("ui_isNapActive", new String[]{PreferenceManager.KEY_NAP_ALARM_ENDS_AT}, () -> napEndsAt > System.currentTimeMillis()))
+                : napEndsAt > System.currentTimeMillis();
 
         if (switchNapDnd != null) {
             switchNapDnd.setChecked(napDndEnabled);
@@ -797,7 +806,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             switchEnableTimer.setChecked(active);
         }
         if (textDurationValue != null) {
-            textDurationValue.setText(DurationUtils.formatDurationString(durationMinutes));
+            textDurationValue.setText(getComputedDurationString(pm, PreferenceManager.KEY_DURATION_MINUTES, durationMinutes));
         }
         if (switchAutoTimer != null) {
             switchAutoTimer.setChecked(autoTimer);
@@ -811,8 +820,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (healthConnectEnabled) {
             HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
                 if (!hasPermission) {
-                    SharedPreferences prefs1 = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-                    prefs1.edit().putBoolean("health_connect_enabled", false).apply();
+                    SharedPreferences prefs1 = getSharedPreferences(PreferenceManager.PREFERENCES_NAME, MODE_PRIVATE);
+                    prefs1.edit().putBoolean(PreferenceManager.KEY_HEALTH_CONNECT_ENABLED, false).apply();
                     if (switchHealthConnect != null) {
                         isUpdatingUi = true;
                         switchHealthConnect.setChecked(false);
@@ -825,17 +834,17 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         updateTargetTimeButtonText(goalHour, goalMin);
         updateCurrentWakeTimeButtonText(currentHour, currentMin);
         if (textMinSleepValue != null) {
-            textMinSleepValue.setText(DurationUtils.formatDurationString(minSleepMin));
+            textMinSleepValue.setText(getComputedDurationString(pm, PreferenceManager.KEY_MIN_SLEEP_DURATION_MINUTES, minSleepMin));
         }
         if (textHcMinDurationValue != null) {
-            textHcMinDurationValue.setText(DurationUtils.formatDurationString(hcMinDurationMin));
+            textHcMinDurationValue.setText(getComputedDurationString(pm, PreferenceManager.KEY_HC_MIN_DURATION_MINUTES, hcMinDurationMin));
         }
         if (btnNap != null && textNapStatus != null) {
             if (isNapActive) {
                 textNapStatus.setText(R.string.action_cancel_nap);
                 btnNap.setOnClickListener(v -> cancelNap());
             } else {
-                textNapStatus.setText(DurationUtils.formatDurationString(napDurationMinutes));
+                textNapStatus.setText(getComputedDurationString(pm, PreferenceManager.KEY_NAP_DURATION_MINUTES, napDurationMinutes));
                 btnNap.setOnClickListener(v -> openNapDialog());
             }
         }
