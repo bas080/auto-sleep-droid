@@ -152,6 +152,10 @@ Main Configuration Controls & Action Links:
 - Export Settings Action: Serializes current preferences into a Schema Version 1 JSON string, launches system share action (`ACTION_SEND`), and logs to `EventLogger`.
 - Import Settings Action: Prompts user with instructional `AlertDialog`, validates syntax and boundaries, applies valid values, sends `ACTION_REDRAW_NOTIFICATION` to `MainService`, refreshes UI controls, and logs to `EventLogger`.
 
+## Error Handling Philosophy
+
+Write code with the least amount of defensive null guards and `try-catch` blocks necessary. When the application reaches an invalid or unexpected state, code should fail fast and throw an exception rather than silently masking issues. Uncaught exceptions are intercepted by `AutoSleepApplication`'s global uncaught exception handler, which persists the crash report and stack trace to `SharedPreferences` so `MainActivity` can prompt the user to submit a detailed crash report upon next launch.
+
 ### `HealthConnectManager`
 
 File: `app/src/main/java/com/bas080/autosleepdroid/HealthConnectManager.kt`
