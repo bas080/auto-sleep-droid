@@ -103,17 +103,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     private SleepTimerStateMachine stateMachine;
     private PreferenceManager preferenceManager;
 
-    public class LocalBinder extends android.os.Binder {
-        public MainService getService() {
-            return MainService.this;
-        }
-    }
 
-    private final IBinder binder = new LocalBinder();
-
-    public PreferenceManager getPreferenceManager() {
-        return preferenceManager;
-    }
 
     @Override
     public void onCreate() {
@@ -1615,6 +1605,6 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
     @Override
     public IBinder onBind(Intent intent) {
-        return binder;
+        return null;
     }
 }

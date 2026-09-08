@@ -74,27 +74,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private final android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private PreferenceManager.EffectHandle uiEffectsHandle;
     private PreferenceManager preferenceManager;
-    private MainService boundService;
-    private boolean isBound = false;
     private boolean isUserInitiatedAutoTimer = false;
     private boolean isUserInitiatedHealthConnect = false;
     private boolean isRequestingHealthConnectPermission = false;
-
-    private final android.content.ServiceConnection serviceConnection = new android.content.ServiceConnection() {
-        @Override
-        public void onServiceConnected(android.content.ComponentName name, android.os.IBinder service) {
-            MainService.LocalBinder binder = (MainService.LocalBinder) service;
-            boundService = binder.getService();
-            isBound = true;
-            registerPreferenceListeners();
-        }
-
-        @Override
-        public void onServiceDisconnected(android.content.ComponentName name) {
-            boundService = null;
-            isBound = false;
-        }
-    };
 
     private interface OnDurationSavedListener {
         void onSaved(int minutes);
@@ -1031,8 +1013,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     @Override
     protected void onStart() {
         super.onStart();
-        Intent intent = new Intent(this, MainService.class);
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
@@ -1101,12 +1081,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     @Override
     protected void onStop() {
         super.onStop();
-        if (isBound) {
-            unregisterPreferenceListeners();
-            unbindService(serviceConnection);
-            isBound = false;
-            boundService = null;
-        }
+        unregisterPreferenceListeners();
     }
 
     @Override
