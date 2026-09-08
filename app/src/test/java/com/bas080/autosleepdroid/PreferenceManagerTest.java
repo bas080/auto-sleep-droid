@@ -65,7 +65,7 @@ public class PreferenceManagerTest {
         AtomicBoolean listenerFired = new AtomicBoolean(false);
         preferenceManager.registerListener("test_key", key -> listenerFired.set(true));
 
-        preferenceManager.putBoolean("test_key", true);
+        preferenceManager.edit().putBoolean("test_key", true).apply();
 
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
