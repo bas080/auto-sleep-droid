@@ -1020,7 +1020,7 @@ public class MainActivityTest {
         long sleepStart = System.currentTimeMillis() - 4 * 3600_000L;
         SharedPreferences prefs = ApplicationProvider.getApplicationContext().getSharedPreferences("sleep_timer", Context.MODE_PRIVATE);
         prefs.edit()
-                .putBoolean("wake_alarm_enabled", true)
+                .putBoolean("wake_up_goal_enabled", true)
                 .putLong("sleep_start_time_ms", sleepStart)
                 .commit();
 
