@@ -61,7 +61,7 @@ Responsibilities:
 - Create the low-importance ongoing notification (`setOngoing(true)`) representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`.
 - Display concise, directly visible text in the main notification body (`setContentText`). No content is hidden behind expanded shade views.
 - Set content intent targeting `MainActivity` so tapping the notification opens `MainActivity`.
-- Expose notification shade action buttons: toggle ("Disable" when enabled, or "Enable" when disabled) and "Nap" / "Cancel Nap" to quickly set or cancel nap timers.
+- Expose notification shade action buttons: toggle ("Disable" when enabled, or "Enable" when disabled) and "Nap" / "I'm Awake" to quickly set or cancel nap timers directly in the background.
 - Respect `show_notification` preference (default `false`); when `show_notification` is `false`, remove the ongoing service notification via `stopForeground(STOP_FOREGROUND_REMOVE)` and `manager.cancel(NOTIFICATION_ID)` across all timer states (`Off`, `Waiting`, `Active`, `Fading`).
 - Centralize state management and `SharedPreferences` observation via `PreferenceManager`, exposing `LocalBinder` to allow `MainActivity` to bind to `MainService` and register key-specific listeners.
 - Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), active timer start timestamp (`timer_start_time_ms`, updated when the timer starts or is reset via flip gesture, volume button, or duration update), show notification setting (`show_notification`), and wake-up goal settings in `SharedPreferences`.
@@ -89,7 +89,7 @@ Important constants:
 
 File: `app/src/main/java/com/bas080/autosleepdroid/NapDialogActivity.java`
 
-A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) launched from `MainActivity` or the status notification's "Nap" action when no nap is active:
+A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) launched from `MainActivity` when no nap is active:
 
 - Constructs an `AlertDialog` using `AlertDialog.Builder` wrapped with `ContextThemeWrapper(this, R.style.AppTheme)` containing `DurationInputView(dialogContext)` prefilled with previously used nap duration (`nap_duration_minutes`, default 20) and standard positive ("Nap") / negative ("Cancel") buttons, matching the exact dialog styling and theme of all duration configuration dialogs across `MainActivity`.
 - Confirming "Nap" persists the nap duration in `SharedPreferences` and sends `ACTION_START_NAP` with `EXTRA_NAP_DURATION_MINUTES` to `MainService`.
