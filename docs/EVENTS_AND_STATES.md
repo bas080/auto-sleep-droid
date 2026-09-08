@@ -2,7 +2,7 @@
 
 ## Overview
 
-Auto Sleep Droid is driven by an event-based state machine architecture (`SleepTimerStateMachine`) managed by `MainService` (renamed from `SleepTimerService`). The core state machine controls timer countdowns, audio volume fade-outs, media pausing, and background listener registrations, while communicating system side-effects back through a callback interface.
+Auto Sleep Droid is driven by an event-based state machine architecture integrated directly into `MainService`. The core state machine controls timer countdowns, audio volume fade-outs, media pausing, and background listener registrations.
 
 This document describes all possible system states, listener lifecycles, input and system events, transition rules, state-event matrix, and logged event messages.
 
@@ -10,7 +10,7 @@ This document describes all possible system states, listener lifecycles, input a
 
 ## System States
 
-The system operates in one of four mutually exclusive states defined in `SleepTimerStateMachine.State`:
+The system operates in one of four mutually exclusive states defined in `MainService.State`:
 
 ### 1. `OFF`
 

@@ -30,7 +30,13 @@ import android.text.TextUtils;
 import java.util.Calendar;
 import java.util.Date;
 
-public class MainService extends Service implements SensorEventListener, SleepTimerStateMachine.Callback {
+public class MainService extends Service implements SensorEventListener {
+    public enum State {
+        OFF,
+        WAITING,
+        ACTIVE,
+        FADING
+    }
     public static final String ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION";
     public static final String ACTION_TURN_OFF = "com.bas080.autosleepdroid.TURN_OFF";
     public static final String ACTION_TURN_ON = "com.bas080.autosleepdroid.TURN_ON";
@@ -55,7 +61,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
     private static final String CHANNEL_ID = "sleep_timer";
     private static final int NOTIFICATION_ID = 1001;
-    private static final long SNOOZE_DURATION_MS = 9 * 60_000L;
+    private static final long SNOOZE_DURATION_MS = AppDefaults.SNOOZE_DURATION_MS;
     private static final String PREFERENCES = PreferenceKeys.PREFERENCES_NAME;
     private static final String KEY_ENABLED = PreferenceKeys.KEY_ACTIVE;
     private static final String KEY_DURATION_MINUTES = PreferenceKeys.KEY_DURATION_MINUTES;
@@ -63,8 +69,8 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long PAUSE_RESET_DELAY_MS = 500L;
     private static final long SENSOR_THROTTLE_MS = 300L;
-    private static final long ALARM_CRESCENDO_DURATION_MS = 3 * 60_000L;
-    private static final long ALARM_CRESCENDO_INTERVAL_MS = 500L;
+    private static final long ALARM_CRESCENDO_DURATION_MS = AppDefaults.ALARM_CRESCENDO_DURATION_MS;
+    private static final long ALARM_CRESCENDO_INTERVAL_MS = AppDefaults.ALARM_CRESCENDO_INTERVAL_MS;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private AudioManager audioManager;
     private android.app.AlarmManager alarmManager;
@@ -100,8 +106,316 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     private boolean isNapAlarmRinging = false;
     private boolean isNapDndChanging = false;
 
-    private SleepTimerStateMachine stateMachine;
+    private State state = State.OFF;
+    private int configuredDurationMinutes = AppDefaults.DURATION_MINUTES;
+    private long timerEndsAt = 0L;
+    private int volumeBeforeFade = 0;
+    private int fadeStep = 0;
+    private int lastFadeVolume = 0;
+    private int lastObservedVolume = 0;
+    private boolean lastObservedMediaActive = false;
+    private boolean suppressVolumeReset = false;
+
     private PreferenceManager preferenceManager;
+
+    public State getState() {
+        return state;
+    }
+
+    public int getConfiguredDurationMinutes() {
+        return configuredDurationMinutes;
+    }
+
+    public long getTimerEndsAt() {
+        return timerEndsAt;
+    }
+
+    public boolean isEnabled() {
+        return state != State.OFF;
+    }
+
+    public boolean isActive() {
+        return state == State.ACTIVE || state == State.FADING;
+    }
+
+    public boolean isFading() {
+        return state == State.FADING;
+    }
+
+    public int getLastObservedVolume() {
+        return lastObservedVolume;
+    }
+
+    public static boolean isValidDuration(int minutes) {
+        return minutes >= AppDefaults.MINUTES_MIN && minutes <= AppDefaults.MINUTES_MAX;
+    }
+
+    private void transitionTo(State newState) {
+        this.state = newState;
+        onStateChanged(newState);
+    }
+
+    public void initializeTimerState(boolean savedEnabled, int savedDurationMinutes, long savedEndsAt, int initialVolume, boolean musicActive, long now) {
+        this.configuredDurationMinutes = isValidDuration(savedDurationMinutes) ? savedDurationMinutes : AppDefaults.DURATION_MINUTES;
+        this.lastObservedVolume = initialVolume;
+        this.lastObservedMediaActive = false;
+
+        if (savedEnabled && savedEndsAt > now) {
+            startTimer(configuredDurationMinutes, savedEndsAt, now, false);
+        } else if (savedEnabled && savedEndsAt > 0L && savedEndsAt <= now) {
+            beginFadeOut(initialVolume);
+        } else if (savedEnabled && musicActive) {
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true);
+        } else if (savedEnabled) {
+            transitionTo(State.WAITING);
+        } else {
+            transitionTo(State.OFF);
+        }
+    }
+
+    public void reloadTimerSettings(boolean savedEnabled, int savedDurationMinutes, boolean musicActive, long now) {
+        int newDuration = isValidDuration(savedDurationMinutes) ? savedDurationMinutes : AppDefaults.DURATION_MINUTES;
+
+        if (!savedEnabled) {
+            configuredDurationMinutes = newDuration;
+            if (state != State.OFF) {
+                handleTurnOff(false);
+            }
+            return;
+        }
+
+        if (state == State.OFF) {
+            configuredDurationMinutes = newDuration;
+            if (musicActive) {
+                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true);
+            } else {
+                onPersistState(true, configuredDurationMinutes, 0L);
+                transitionTo(State.WAITING);
+            }
+        } else if (state == State.WAITING) {
+            configuredDurationMinutes = newDuration;
+            if (musicActive) {
+                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true);
+            } else {
+                updateNotification();
+            }
+        } else if (state == State.ACTIVE) {
+            if (newDuration != configuredDurationMinutes) {
+                startTimer(newDuration, now + newDuration * 60_000L, now, true);
+            }
+        } else if (state == State.FADING) {
+            configuredDurationMinutes = newDuration;
+        }
+    }
+
+    public void handleTurnOff(boolean triggerVibration) {
+        if (triggerVibration) {
+            onTriggerVibration();
+        }
+        timerEndsAt = 0L;
+        onCancelAlarm();
+        onPersistState(false, configuredDurationMinutes, 0L);
+        transitionTo(State.OFF);
+    }
+
+    public void handleTurnOn(boolean musicActive, long now, boolean triggerVibration) {
+        if (triggerVibration) {
+            onTriggerVibration();
+        }
+        onPersistState(true, configuredDurationMinutes, timerEndsAt);
+        if (musicActive) {
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true);
+        } else {
+            transitionTo(State.WAITING);
+        }
+    }
+
+    public void handleDurationReplyState(int duration, boolean musicActive, long now, boolean triggerVibration) {
+        if (triggerVibration) {
+            onTriggerVibration();
+        }
+
+        if (isValidDuration(duration)) {
+            configuredDurationMinutes = duration;
+        } else if (!isValidDuration(configuredDurationMinutes)) {
+            configuredDurationMinutes = AppDefaults.DURATION_MINUTES;
+        }
+
+        if (musicActive) {
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true);
+        } else {
+            onPersistState(true, configuredDurationMinutes, 0L);
+            transitionTo(State.WAITING);
+        }
+    }
+
+    public void startTimer(int durationMinutes, long endsAt, long now, boolean persist) {
+        onCancelAlarm();
+        boolean wasActive = state == State.ACTIVE;
+        configuredDurationMinutes = isValidDuration(durationMinutes) ? durationMinutes : AppDefaults.DURATION_MINUTES;
+        timerEndsAt = endsAt;
+        if (persist) {
+            onPersistState(true, configuredDurationMinutes, timerEndsAt);
+        }
+        onScheduleAlarm(timerEndsAt);
+        if (wasActive) {
+            onTimerRescheduled();
+            updateNotification();
+        } else {
+            transitionTo(State.ACTIVE);
+        }
+    }
+
+    public void handleAlarmExpiryState(int currentVolume) {
+        handleAlarmExpiryState(currentVolume, System.currentTimeMillis());
+    }
+
+    public void handleAlarmExpiryState(int currentVolume, long now) {
+        if (isEnabled() && state == State.ACTIVE) {
+            if (timerEndsAt > 0L && now < timerEndsAt - 1000L) {
+                return;
+            }
+            beginFadeOut(currentVolume);
+        }
+    }
+
+    public void beginFadeOut(int currentVolume) {
+        if (!isEnabled() || state == State.FADING) {
+            return;
+        }
+        volumeBeforeFade = currentVolume;
+        lastFadeVolume = currentVolume;
+        lastObservedVolume = currentVolume;
+        fadeStep = 0;
+        transitionTo(State.FADING);
+    }
+
+    public boolean runFadeStep(int currentVolume, boolean flipDetected) {
+        if (state != State.FADING) {
+            return false;
+        }
+
+        if (flipDetected) {
+            cancelFadeForFlip();
+            return false;
+        }
+
+        if (currentVolume != lastFadeVolume) {
+            cancelFadeForVolumeChange(currentVolume);
+            return false;
+        }
+
+        fadeStep++;
+        int targetVolume = 0;
+        float progress = (float) fadeStep / AppDefaults.TOTAL_FADE_STEPS;
+        float fraction = 1.0f - (1.0f - progress) * (1.0f - progress);
+        int nextVolume = Math.round(volumeBeforeFade - (volumeBeforeFade - targetVolume) * fraction);
+
+        lastFadeVolume = nextVolume;
+        lastObservedVolume = nextVolume;
+
+        suppressVolumeReset = true;
+        onSetStreamVolume(nextVolume);
+        suppressVolumeReset = false;
+
+        if (fadeStep >= AppDefaults.TOTAL_FADE_STEPS) {
+            finishExpiry();
+            return false;
+        }
+        return true;
+    }
+
+    public void finishExpiry() {
+        onPauseMedia();
+    }
+
+    public void restoreVolumeAfterPause() {
+        suppressVolumeReset = true;
+        onSetStreamVolume(volumeBeforeFade);
+        suppressVolumeReset = false;
+        EventLogger.log("Restored pre-fade volume to " + volumeBeforeFade);
+        lastObservedVolume = volumeBeforeFade;
+        onPersistState(true, configuredDurationMinutes, 0L);
+        transitionTo(State.WAITING);
+    }
+
+    public void cancelFadeForVolumeChange(int currentVolume) {
+        cancelFadeForFlip();
+    }
+
+    public void cancelFadeForFlip() {
+        onTriggerVibration();
+        onCancelAlarm();
+        suppressVolumeReset = true;
+        onSetStreamVolume(volumeBeforeFade);
+        suppressVolumeReset = false;
+        EventLogger.log("Restored pre-fade volume to " + volumeBeforeFade);
+        lastObservedVolume = volumeBeforeFade;
+        if (isValidDuration(configuredDurationMinutes)) {
+            startTimer(configuredDurationMinutes, System.currentTimeMillis() + configuredDurationMinutes * 60_000L, System.currentTimeMillis(), true);
+        } else {
+            transitionTo(State.WAITING);
+        }
+    }
+
+    public void onPlaybackStateChanged(boolean musicActive, long now) {
+        boolean playbackStarted = musicActive && !lastObservedMediaActive;
+        boolean playbackStopped = !musicActive && lastObservedMediaActive;
+        lastObservedMediaActive = musicActive;
+
+        if (playbackStarted) {
+            EventLogger.log("Music playback started");
+        } else if (playbackStopped) {
+            EventLogger.log("Music playback stopped");
+        }
+
+        if (isEnabled()) {
+            if (state == State.WAITING && musicActive) {
+                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true);
+            }
+        }
+    }
+
+    public void onVolumeChanged(int currentVolume, long now) {
+        if (suppressVolumeReset || !isActive()) {
+            lastObservedVolume = currentVolume;
+            return;
+        }
+
+        int expectedVolume = state == State.FADING ? lastFadeVolume : lastObservedVolume;
+        boolean volumeChanged = currentVolume != expectedVolume;
+        lastObservedVolume = currentVolume;
+
+        if (volumeChanged) {
+            EventLogger.log("Volume changed to " + currentVolume);
+            if (state == State.FADING) {
+                cancelFadeForVolumeChange(currentVolume);
+            } else if (state == State.ACTIVE) {
+                resetTimerForVolumeChange(now);
+            }
+        }
+    }
+
+    public void onPhoneFlipped(long now) {
+        if (!isActive()) {
+            return;
+        }
+
+        EventLogger.log("Phone flip gesture detected");
+
+        if (state == State.FADING) {
+            cancelFadeForFlip();
+        } else if (state == State.ACTIVE) {
+            resetTimerForVolumeChange(now);
+        }
+    }
+
+    private void resetTimerForVolumeChange(long now) {
+        if (state != State.FADING && isValidDuration(configuredDurationMinutes)) {
+            onTriggerVibration();
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true);
+        }
+    }
 
 
 
@@ -116,7 +430,6 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         vibrator = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
         createNotificationChannel();
 
-        stateMachine = new SleepTimerStateMachine(this);
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         if (sensorManager != null) {
@@ -130,17 +443,17 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     private void setupPreferenceListeners() {
         preferenceManager.watchEffect(getter -> {
             boolean enabled = getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
-            int duration = getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+            int duration = getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES);
             onTimerConfigChanged(enabled, duration);
         });
 
         preferenceManager.watchEffect(getter -> {
             boolean goalEnabled = getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
-            getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
-            getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
-            getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, 6);
-            getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, 30);
-            getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450);
+            getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR);
+            getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE);
+            getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR);
+            getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE);
+            getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES);
             onWakeGoalConfigChanged(goalEnabled);
         });
 
@@ -164,20 +477,17 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     }
 
     private void onTimerConfigChanged(boolean enabled, int durationMinutes) {
-        if (stateMachine != null) {
-            boolean musicActive = audioManager != null && audioManager.isMusicActive();
-            stateMachine.reloadSettings(enabled, durationMinutes, musicActive, System.currentTimeMillis());
-            if (isWakeAlarmEnabled()) {
-                checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
-            }
-            updateNotification();
+        boolean musicActive = audioManager != null && audioManager.isMusicActive();
+        reloadTimerSettings(enabled, durationMinutes, musicActive, System.currentTimeMillis());
+        if (isWakeAlarmEnabled()) {
+            checkAndScheduleSmartWakeUpAlarm(getTimerEndsAt());
         }
+        updateNotification();
     }
 
     private void onWakeGoalConfigChanged(boolean goalEnabled) {
         if (goalEnabled) {
-            long timerEndsAt = stateMachine != null ? stateMachine.getTimerEndsAt() : 0L;
-            checkAndScheduleSmartWakeUpAlarm(timerEndsAt);
+            checkAndScheduleSmartWakeUpAlarm(getTimerEndsAt());
         } else {
             dismissAutoSleepAlarm();
         }
@@ -186,7 +496,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
     private void initializeStateAndNotification() {
         boolean savedEnabled = preferences.getBoolean(KEY_ENABLED, true);
-        int savedDuration = preferences.getInt(KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+        int savedDuration = preferences.getInt(KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES);
         long savedEndsAt = preferences.getLong(KEY_TIMER_ENDS_AT, 0L);
         napAlarmEndsAt = preferences.getLong(KEY_NAP_ALARM_ENDS_AT, 0L);
         isNapAlarmRinging = preferences.getBoolean(KEY_NAP_ALARM_RINGING, false);
@@ -195,7 +505,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
         EventLogger.log(this, "MainService state initialized (enabled: " + savedEnabled + ", duration: " + savedDuration + "m)");
 
-        stateMachine.initialize(savedEnabled, savedDuration, savedEndsAt, currentVolume, musicActive, System.currentTimeMillis());
+        initializeTimerState(savedEnabled, savedDuration, savedEndsAt, currentVolume, musicActive, System.currentTimeMillis());
 
         registerDndReceiver();
         checkAndApplyDndAutoTimer();
@@ -215,7 +525,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
                 public void onPlaybackConfigChanged(java.util.List<android.media.AudioPlaybackConfiguration> configs) {
                     super.onPlaybackConfigChanged(configs);
                     boolean musicActive = audioManager.isMusicActive();
-                    stateMachine.onPlaybackStateChanged(musicActive, System.currentTimeMillis());
+                    onPlaybackStateChanged(musicActive, System.currentTimeMillis());
                 }
             };
             audioManager.registerAudioPlaybackCallback(audioPlaybackCallback, handler);
@@ -256,7 +566,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     }
 
     private void checkAndApplyDndAutoTimer() {
-        if (isNapDndChanging || preferences == null || stateMachine == null) return;
+        if (isNapDndChanging || preferences == null) return;
         boolean autoTimerEnabled = preferences.getBoolean("auto_timer_enabled", false);
         if (!autoTimerEnabled) return;
 
@@ -268,13 +578,13 @@ public class MainService extends Service implements SensorEventListener, SleepTi
                 boolean musicActive = audioManager != null && audioManager.isMusicActive();
                 long now = System.currentTimeMillis();
 
-                if (dndActive && !stateMachine.isEnabled()) {
+                if (dndActive && !isEnabled()) {
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "DND active: turning ON sleep timer");
-                    stateMachine.handleTurnOn(musicActive, now, true);
+                    handleTurnOn(musicActive, now, true);
                     updateNotification();
-                } else if (!dndActive && stateMachine.isEnabled()) {
+                } else if (!dndActive && isEnabled()) {
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "DND inactive: turning OFF sleep timer");
-                    stateMachine.handleTurnOff(true);
+                    handleTurnOff(true);
                     updateNotification();
                 }
             }
@@ -294,7 +604,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
                             if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
                                 if (audioManager != null) {
                                     int currentVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-                                    stateMachine.onVolumeChanged(currentVol, System.currentTimeMillis());
+                                    onVolumeChanged(currentVol, System.currentTimeMillis());
                                 }
                             }
                         }
@@ -345,19 +655,19 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         if (intent != null) {
             if (ACTION_TURN_OFF.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer turned off");
-                stateMachine.handleTurnOff(true);
+                handleTurnOff(true);
                 android.widget.Toast.makeText(this, R.string.toast_timer_turned_off, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_TURN_ON.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer turned on");
                 boolean musicActive = audioManager != null && audioManager.isMusicActive();
-                stateMachine.handleTurnOn(musicActive, System.currentTimeMillis(), true);
+                handleTurnOn(musicActive, System.currentTimeMillis(), true);
                 android.widget.Toast.makeText(this, R.string.toast_timer_turned_on, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_SET_DURATION.equals(intent.getAction())) {
                 handleDurationReply(intent);
             } else if (ACTION_ALARM_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "AlarmManager trigger received");
                 int currentVol = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
-                stateMachine.handleAlarmExpiry(currentVol);
+                handleAlarmExpiryState(currentVol);
             } else if (ACTION_WAKEUP_ALARM_EXPIRY.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep wake-up alarm triggered");
                 if (!isNapAlarmRinging) {
@@ -372,7 +682,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
                     EventLogger.log(this, "Wake alarm disabled; skipping alarm tone");
                 }
                 updateNotification();
-                checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
+                checkAndScheduleSmartWakeUpAlarm(getTimerEndsAt());
             } else if (ACTION_DISMISS_WAKEUP_ALARM.equals(intent.getAction())) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed");
                 processSleepSessionOnAlarmDismissal();
@@ -386,7 +696,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
                 isWakeUpAlarmRinging = false;
                 isWakeUpAlarmSnoozed = false;
                 updateListenersRegistration();
-                checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
+                checkAndScheduleSmartWakeUpAlarm(getTimerEndsAt());
                 updateNotification();
                 android.widget.Toast.makeText(this, R.string.toast_alarm_dismissed, android.widget.Toast.LENGTH_SHORT).show();
             } else if (ACTION_SNOOZE_WAKEUP_ALARM.equals(intent.getAction())) {
@@ -450,9 +760,9 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
         if (duration > 0) {
             boolean musicActive = audioManager != null && audioManager.isMusicActive();
-            stateMachine.handleDurationReply(duration, musicActive, System.currentTimeMillis(), true);
-            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Duration set to " + stateMachine.getConfiguredDurationMinutes() + "m (input: '" + reply + "')");
-            String formattedStr = formatDurationString(stateMachine.getConfiguredDurationMinutes());
+            handleDurationReplyState(duration, musicActive, System.currentTimeMillis(), true);
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Duration set to " + getConfiguredDurationMinutes() + "m (input: '" + reply + "')");
+            String formattedStr = formatDurationString(getConfiguredDurationMinutes());
             android.widget.Toast.makeText(this, getString(R.string.toast_duration_set, formattedStr), android.widget.Toast.LENGTH_SHORT).show();
         } else {
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Invalid duration input: '" + reply + "'");
@@ -468,15 +778,15 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
     private void runFadeStep() {
         if (audioManager == null) {
-            stateMachine.finishExpiry();
+            finishExpiry();
             return;
         }
 
         int currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
 
-        boolean continues = stateMachine.runFadeStep(currentVolume, false);
+        boolean continues = runFadeStep(currentVolume, false);
         if (continues) {
-            handler.postDelayed(fadeRunnable, SleepTimerStateMachine.FADE_STEP_INTERVAL_MS);
+            handler.postDelayed(fadeRunnable, AppDefaults.FADE_STEP_INTERVAL_MS);
         }
     }
 
@@ -484,10 +794,10 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         if (expiryRunnable != null) {
             handler.removeCallbacks(expiryRunnable);
         }
-        long delay = Math.max(0L, stateMachine.getTimerEndsAt() - System.currentTimeMillis());
+        long delay = Math.max(0L, getTimerEndsAt() - System.currentTimeMillis());
         expiryRunnable = () -> {
             int vol = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
-            stateMachine.beginFadeOut(vol);
+            beginFadeOut(vol);
         };
         handler.postDelayed(expiryRunnable, delay);
     }
@@ -505,14 +815,14 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     }
 
     private void updateListenersRegistration() {
-        boolean needSensor = stateMachine.isActive() || isWakeUpAlarmRinging;
+        boolean needSensor = isActive() || isWakeUpAlarmRinging;
         if (needSensor) {
             registerSensorListener();
         } else {
             unregisterSensorListener();
         }
 
-        boolean needVolume = stateMachine.isActive() || isWakeUpAlarmRinging || isWakeUpAlarmSnoozed;
+        boolean needVolume = isActive() || isWakeUpAlarmRinging || isWakeUpAlarmSnoozed;
         if (needVolume) {
             registerVolumeObserver();
         } else {
@@ -520,10 +830,9 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         }
     }
 
-    @Override
-    public void onStateChanged(SleepTimerStateMachine.State newState) {
+    public void onStateChanged(State newState) {
         cancelTimerCallbacks();
-        if (newState == SleepTimerStateMachine.State.OFF) {
+        if (newState == State.OFF) {
             unregisterAudioPlaybackCallback();
             stopWakeUpAlarmSound();
             cancelSnoozeAlarm();
@@ -532,36 +841,34 @@ public class MainService extends Service implements SensorEventListener, SleepTi
             onCancelAlarm();
             updateListenersRegistration();
             showOrHideNotification();
-        } else if (newState == SleepTimerStateMachine.State.WAITING) {
+        } else if (newState == State.WAITING) {
             registerAudioPlaybackCallback();
             onCancelAlarm();
             updateListenersRegistration();
             showOrHideNotification();
-        } else if (newState == SleepTimerStateMachine.State.FADING) {
+        } else if (newState == State.FADING) {
             unregisterAudioPlaybackCallback();
             updateListenersRegistration();
             showOrHideNotification();
             startFadeRunnable();
-        } else if (newState == SleepTimerStateMachine.State.ACTIVE) {
+        } else if (newState == State.ACTIVE) {
             if (preferences != null) {
                 preferences.edit().putLong("timer_start_time_ms", System.currentTimeMillis()).apply();
             }
             unregisterAudioPlaybackCallback();
             updateListenersRegistration();
-            checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
+            checkAndScheduleSmartWakeUpAlarm(getTimerEndsAt());
             showOrHideNotification();
             scheduleExpiry();
         }
     }
 
-    @Override
     public void onSetStreamVolume(int volume) {
         if (audioManager != null) {
             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0);
         }
     }
 
-    @Override
     public void onScheduleAlarm(long triggerAtMillis) {
         if (alarmManager == null) {
             return;
@@ -588,7 +895,6 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         }
     }
 
-    @Override
     public void onCancelAlarm() {
         if (alarmManager == null) {
             return;
@@ -602,7 +908,6 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         }
     }
 
-    @Override
     public void onPauseMedia() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer expired: pausing media");
         long now = System.currentTimeMillis();
@@ -611,7 +916,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         }
         pauseMediaViaAudioFocus();
 
-        restoreVolumeRunnable = () -> stateMachine.restoreVolumeAfterPause();
+        restoreVolumeRunnable = this::restoreVolumeAfterPause;
         handler.postDelayed(restoreVolumeRunnable, PAUSE_RESET_DELAY_MS);
     }
 
@@ -678,7 +983,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
             return;
         }
 
-        if (stateMachine != null && stateMachine.isActive()) {
+        if (isActive()) {
             if (preferences != null) {
                 preferences.edit()
                         .remove("sleep_start_time_ms")
@@ -701,7 +1006,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
         dismissAutoSleepAlarm();
         updateNextWakeUpTimeOnDismissOrExpiry();
-        checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
+        checkAndScheduleSmartWakeUpAlarm(getTimerEndsAt());
 
         updateListenersRegistration();
         updateNotification();
@@ -754,7 +1059,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
         long scheduledAlarmMillis = calCurrent.getTimeInMillis();
 
-        int timerDuration = prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+        int timerDuration = prefs.getInt("duration_minutes", AppDefaults.DURATION_MINUTES);
         long sleepStartTime = prefs.getLong("sleep_start_time_ms", 0L);
         long minWakeTimeMillis = 0L;
         if (timerEndsAt > 0L) {
@@ -867,7 +1172,6 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         }
     }
 
-    @Override
     public void onTriggerVibration() {
         if (vibrator != null && vibrator.hasVibrator()) {
             if (android.os.Build.VERSION.SDK_INT >= 29) {
@@ -880,7 +1184,6 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         }
     }
 
-    @Override
     public void onPersistState(boolean enabled, int durationMinutes, long timerEndsAt) {
         if (preferences == null) {
             return;
@@ -896,12 +1199,6 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         editor.apply();
     }
 
-    @Override
-    public void onUpdateNotification() {
-        updateNotification();
-    }
-
-    @Override
     public void onTimerRescheduled() {
         long now = System.currentTimeMillis();
         if (preferences != null) {
@@ -909,12 +1206,12 @@ public class MainService extends Service implements SensorEventListener, SleepTi
             editor.putLong("timer_start_time_ms", now);
 
             if (isWakeAlarmEnabled()) {
-                int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
+                int minSleepMin = preferences.getInt("min_sleep_duration_minutes", AppDefaults.MIN_SLEEP_DURATION_MINUTES);
                 long minSleepMs = minSleepMin * 60_000L;
                 long windowMs = (long) (1.2 * minSleepMs);
 
-                int goalHour = preferences.getInt("wake_up_goal_hour", 6);
-                int goalMin = preferences.getInt("wake_up_goal_minute", 30);
+                int goalHour = preferences.getInt("wake_up_goal_hour", AppDefaults.WAKE_UP_GOAL_HOUR);
+                int goalMin = preferences.getInt("wake_up_goal_minute", AppDefaults.WAKE_UP_GOAL_MINUTE);
                 int currentHour = preferences.getInt("current_wake_hour", goalHour);
                 int currentMin = preferences.getInt("current_wake_minute", goalMin);
 
@@ -937,7 +1234,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
             }
             editor.apply();
         }
-        long newTimerEndsAt = stateMachine.getTimerEndsAt();
+        long newTimerEndsAt = getTimerEndsAt();
         if (lastTimerEndsAt > 0L && newTimerEndsAt > lastTimerEndsAt && isNapActive()) {
             long deltaMs = newTimerEndsAt - lastTimerEndsAt;
             napAlarmEndsAt += deltaMs;
@@ -951,8 +1248,8 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         scheduleExpiry();
 
         if (isWakeAlarmEnabled() && preferences != null) {
-            int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
-            int timerDuration = preferences.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+            int minSleepMin = preferences.getInt("min_sleep_duration_minutes", AppDefaults.MIN_SLEEP_DURATION_MINUTES);
+            int timerDuration = preferences.getInt("duration_minutes", AppDefaults.DURATION_MINUTES);
             long minSleepMs = minSleepMin * 60_000L;
             long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
             long requiredWakeTime;
@@ -970,8 +1267,8 @@ public class MainService extends Service implements SensorEventListener, SleepTi
                 requiredWakeTime = now + minSleepMs;
             }
 
-            int goalHour = preferences.getInt("wake_up_goal_hour", 6);
-            int goalMin = preferences.getInt("wake_up_goal_minute", 30);
+            int goalHour = preferences.getInt("wake_up_goal_hour", AppDefaults.WAKE_UP_GOAL_HOUR);
+            int goalMin = preferences.getInt("wake_up_goal_minute", AppDefaults.WAKE_UP_GOAL_MINUTE);
             int currentHour = preferences.getInt("current_wake_hour", goalHour);
             int currentMin = preferences.getInt("current_wake_minute", goalMin);
 
@@ -1027,7 +1324,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
             }
         }
 
-        checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
+        checkAndScheduleSmartWakeUpAlarm(getTimerEndsAt());
     }
 
     private boolean isNapActive() {
@@ -1312,12 +1609,12 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     private Notification buildNotification() {
         String title;
         String contentText;
-        String formattedDurationStr = formatDurationString(stateMachine.getConfiguredDurationMinutes());
+        String formattedDurationStr = formatDurationString(getConfiguredDurationMinutes());
 
         long now = System.currentTimeMillis();
-        Calendar scheduledAlarm = calculateScheduledAlarm(this, now, stateMachine.getTimerEndsAt());
+        Calendar scheduledAlarm = calculateScheduledAlarm(this, now, getTimerEndsAt());
         boolean showWakeAlarm = isWakeAlarmEnabled() && scheduledAlarm != null &&
-                (scheduledAlarm.getTimeInMillis() - now) >= (long) (stateMachine.getConfiguredDurationMinutes() * 1.5 * 60_000L);
+                (scheduledAlarm.getTimeInMillis() - now) >= (long) (getConfiguredDurationMinutes() * 1.5 * 60_000L);
 
         if (isWakeUpAlarmRinging) {
             title = getString(R.string.wakeup_alarm_title);
@@ -1325,7 +1622,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         } else if (isWakeUpAlarmSnoozed) {
             title = getString(R.string.wakeup_alarm_title);
             contentText = getString(R.string.wakeup_alarm_snoozed_text);
-        } else if (!stateMachine.isEnabled()) {
+        } else if (!isEnabled()) {
             title = getString(R.string.timer_off);
             if (showWakeAlarm) {
                 String formattedAlarmTime = formatTime(scheduledAlarm.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE));
@@ -1333,10 +1630,10 @@ public class MainService extends Service implements SensorEventListener, SleepTi
             } else {
                 contentText = getString(R.string.timer_off_collapsed, formattedDurationStr);
             }
-        } else if (stateMachine.isFading()) {
+        } else if (isFading()) {
             title = getString(R.string.fading_title);
             contentText = getString(R.string.fading_collapsed);
-        } else if (stateMachine.isActive()) {
+        } else if (isActive()) {
             String targetTimeStr = formatTargetTime();
             title = getString(R.string.active_title);
 
@@ -1396,7 +1693,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
                     .build());
         } else {
             Notification.Action toggleAction;
-            if (stateMachine.isEnabled()) {
+            if (isEnabled()) {
                 toggleAction = new Notification.Action.Builder(
                         Icon.createWithResource(this, android.R.drawable.ic_media_pause),
                         getString(R.string.action_turn_off),
@@ -1432,21 +1729,21 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     }
 
     private void reloadSettingsAndUpdate() {
-        if (preferences == null || stateMachine == null) {
+        if (preferences == null) {
             updateNotification();
             return;
         }
 
         boolean savedEnabled = preferences.getBoolean(KEY_ENABLED, true);
-        int savedDuration = preferences.getInt(KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+        int savedDuration = preferences.getInt(KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES);
         long now = System.currentTimeMillis();
         boolean musicActive = audioManager != null && audioManager.isMusicActive();
 
-        stateMachine.reloadSettings(savedEnabled, savedDuration, musicActive, now);
+        reloadTimerSettings(savedEnabled, savedDuration, musicActive, now);
 
         boolean goalEnabled = preferences.getBoolean("wake_up_goal_enabled", false);
         if (goalEnabled) {
-            checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
+            checkAndScheduleSmartWakeUpAlarm(getTimerEndsAt());
         } else {
             dismissAutoSleepAlarm();
         }
@@ -1518,7 +1815,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     }
 
     private String formatTargetTime() {
-        long endsAt = stateMachine.getTimerEndsAt();
+        long endsAt = getTimerEndsAt();
         if (endsAt <= 0L) {
             return "";
         }
@@ -1572,7 +1869,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
                         if (isWakeUpAlarmRinging) {
                             snoozeWakeUpAlarmViaFlip();
                         } else {
-                            stateMachine.onPhoneFlipped(now);
+                            onPhoneFlipped(now);
                         }
                     });
                 }

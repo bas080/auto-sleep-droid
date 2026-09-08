@@ -111,13 +111,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     };
 
     private static final IntPrefSpec[] EXPORTED_INT_PREFS = new IntPrefSpec[]{
-            new IntPrefSpec(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES, 1, 1440),
-            new IntPrefSpec(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6, 0, 23),
-            new IntPrefSpec(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30, 0, 59),
-            new IntPrefSpec(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, 6, 0, 23),
-            new IntPrefSpec(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, 30, 0, 59),
-            new IntPrefSpec(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450, 1, 1440),
-            new IntPrefSpec(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15, 0, 1440)
+            new IntPrefSpec(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES, AppDefaults.MINUTES_MIN, AppDefaults.MINUTES_MAX),
+            new IntPrefSpec(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR, 0, 23),
+            new IntPrefSpec(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE, 0, 59),
+            new IntPrefSpec(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR, 0, 23),
+            new IntPrefSpec(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE, 0, 59),
+            new IntPrefSpec(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES, AppDefaults.MINUTES_MIN, AppDefaults.MINUTES_MAX),
+            new IntPrefSpec(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, AppDefaults.HC_MIN_DURATION_MINUTES, 0, AppDefaults.MINUTES_MAX)
     };
 
     private interface OnDurationSavedListener {
@@ -460,7 +460,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             inputDuration.setOnClickListener(v -> showDurationDialog(
                     R.string.label_duration,
                     PreferenceKeys.KEY_DURATION_MINUTES,
-                    SleepTimerStateMachine.DEFAULT_DURATION_MINUTES,
+                    AppDefaults.DURATION_MINUTES,
                     0, 12, 5,
                     minutes -> {
                         if (textDurationValue != null) {
@@ -534,7 +534,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             inputMinSleep.setOnClickListener(v -> showDurationDialog(
                     R.string.label_min_sleep,
                     PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
-                    450,
+                    AppDefaults.MIN_SLEEP_DURATION_MINUTES,
                     0, 16, 15,
                     minutes -> {
                         preferenceManager.edit().remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
@@ -600,7 +600,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             inputHcMinDuration.setOnClickListener(v -> showDurationDialog(
                     R.string.label_hc_min_duration,
                     PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES,
-                    15,
+                    AppDefaults.HC_MIN_DURATION_MINUTES,
                     0, 2, 5,
                     minutes -> {
                         if (textHcMinDurationValue != null) {
@@ -719,8 +719,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void showTargetTimeDialog() {
-        int goalHour = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
-        int goalMin = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+        int goalHour = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR);
+        int goalMin = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE);
 
         showTimePickerDialog(goalHour, goalMin, (view, hourOfDay, minute) -> {
             SharedPreferences.Editor editor = preferenceManager.getSharedPreferences().edit();
@@ -739,8 +739,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void showCurrentWakeTimeDialog() {
-        int goalHour = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
-        int goalMin = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+        int goalHour = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR);
+        int goalMin = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE);
         int currentHour = preferenceManager.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
         int currentMin = preferenceManager.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
 
@@ -782,7 +782,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private void updateNapUi(PreferenceGetter getter) {
         boolean napDndEnabled = getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false);
-        int napDurationMinutes = getter.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, 20);
+        int napDurationMinutes = getter.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, AppDefaults.NAP_DURATION_MINUTES);
         long napEndsAt = getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L);
 
         boolean isNapActive = preferenceManager != null
@@ -805,7 +805,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private void updateTimerUi(PreferenceGetter getter) {
         boolean active = getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
-        int durationMinutes = getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+        int durationMinutes = getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES);
         boolean autoTimer = getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false);
 
         if (switchEnableTimer != null) {
@@ -823,11 +823,11 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         boolean active = getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
         boolean goalEnabled = getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
         boolean healthConnectEnabled = getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
-        int goalHour = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
-        int goalMin = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+        int goalHour = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR);
+        int goalMin = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE);
         int currentHour = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
         int currentMin = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
-        int minSleepMin = getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450);
+        int minSleepMin = getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES);
 
         if (switchEnableGoal != null) {
             switchEnableGoal.setChecked(goalEnabled);
@@ -842,7 +842,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     private void updateHealthConnectUi(PreferenceGetter getter) {
         boolean healthConnectEnabled = getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
-        int hcMinDurationMin = getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15);
+        int hcMinDurationMin = getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, AppDefaults.HC_MIN_DURATION_MINUTES);
 
         if (switchHealthConnect != null) {
             switchHealthConnect.setChecked(healthConnectEnabled);
@@ -889,8 +889,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             for (BoolPrefSpec spec : EXPORTED_BOOL_PREFS) {
                 json.put(spec.key, preferenceManager.getBoolean(spec.key, spec.defaultValue));
             }
-            int goalHour = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
-            int goalMin = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+            int goalHour = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR);
+            int goalMin = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE);
             for (IntPrefSpec spec : EXPORTED_INT_PREFS) {
                 int def = spec.defaultValue;
                 if (PreferenceKeys.KEY_CURRENT_WAKE_HOUR.equals(spec.key)) def = goalHour;
@@ -962,8 +962,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 editor.putBoolean(spec.key, json.optBoolean(spec.key, spec.defaultValue));
             }
 
-            int importedGoalHour = json.optInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
-            int importedGoalMin = json.optInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+            int importedGoalHour = json.optInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR);
+            int importedGoalMin = json.optInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE);
 
             for (IntPrefSpec spec : EXPORTED_INT_PREFS) {
                 int def = spec.defaultValue;
