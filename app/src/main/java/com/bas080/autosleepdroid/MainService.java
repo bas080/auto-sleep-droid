@@ -100,6 +100,19 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     private boolean isNapAlarmRinging = false;
 
     private SleepTimerStateMachine stateMachine;
+    private PreferenceManager preferenceManager;
+
+    public class LocalBinder extends android.os.Binder {
+        public MainService getService() {
+            return MainService.this;
+        }
+    }
+
+    private final IBinder binder = new LocalBinder();
+
+    public PreferenceManager getPreferenceManager() {
+        return preferenceManager;
+    }
 
     @Override
     public void onCreate() {
@@ -107,7 +120,8 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         EventLogger.log(this, EventLogger.LEVEL_LOW, "MainService created");
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         alarmManager = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
-        preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
+        preferenceManager = new PreferenceManager(this, PREFERENCES);
+        preferences = preferenceManager.getSharedPreferences();
         vibrator = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
         createNotificationChannel();
 
@@ -118,7 +132,21 @@ public class MainService extends Service implements SensorEventListener, SleepTi
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         }
 
+        setupPreferenceListeners();
         initializeStateAndNotification();
+    }
+
+    private void setupPreferenceListeners() {
+        PreferenceManager.OnPreferenceChangeListener stateChangeListener = key -> handler.post(this::reloadSettingsAndUpdate);
+        preferenceManager.registerListener(KEY_ENABLED, stateChangeListener);
+        preferenceManager.registerListener(KEY_DURATION_MINUTES, stateChangeListener);
+        preferenceManager.registerListener("wake_up_goal_enabled", stateChangeListener);
+        preferenceManager.registerListener("wake_up_goal_hour", stateChangeListener);
+        preferenceManager.registerListener("wake_up_goal_minute", stateChangeListener);
+        preferenceManager.registerListener("current_wake_hour", stateChangeListener);
+        preferenceManager.registerListener("current_wake_minute", stateChangeListener);
+        preferenceManager.registerListener(KEY_NAP_ALARM_ENDS_AT, key -> handler.post(this::updateNotification));
+        preferenceManager.registerListener("auto_timer_enabled", key -> preferenceManager.executeAsync(this::checkAndApplyDndAutoTimer));
     }
 
     private void initializeStateAndNotification() {
@@ -1524,11 +1552,14 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         unregisterDndReceiver();
         unregisterAudioPlaybackCallback();
         cancelTimerCallbacks();
+        if (preferenceManager != null) {
+            preferenceManager.shutdown();
+        }
         super.onDestroy();
     }
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return binder;
     }
 }

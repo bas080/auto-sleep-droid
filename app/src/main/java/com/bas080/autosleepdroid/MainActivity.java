@@ -72,10 +72,28 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView eventLogText;
 
     private final android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener;
+    private PreferenceManager.OnPreferenceChangeListener prefListener;
+    private MainService boundService;
+    private boolean isBound = false;
     private boolean isUpdatingUi = false;
     private boolean isUserInitiatedAutoTimer = false;
     private boolean isUserInitiatedHealthConnect = false;
+
+    private final android.content.ServiceConnection serviceConnection = new android.content.ServiceConnection() {
+        @Override
+        public void onServiceConnected(android.content.ComponentName name, android.os.IBinder service) {
+            MainService.LocalBinder binder = (MainService.LocalBinder) service;
+            boundService = binder.getService();
+            isBound = true;
+            registerPreferenceListeners();
+        }
+
+        @Override
+        public void onServiceDisconnected(android.content.ComponentName name) {
+            boundService = null;
+            isBound = false;
+        }
+    };
 
     private interface OnDurationSavedListener {
         void onSaved(int minutes);
@@ -1014,6 +1032,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        Intent intent = new Intent(this, MainService.class);
+        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
@@ -1028,25 +1053,28 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         refreshEventLog();
         loadPreferencesIntoUi();
         redrawNotification();
-        registerPreferenceListener();
+        registerPreferenceListeners();
     }
 
-    private void registerPreferenceListener() {
-        if (preferenceChangeListener == null) {
-            preferenceChangeListener = (sharedPreferences, key) -> {
-                if ("active".equals(key) || "nap_alarm_ends_at".equals(key) || "auto_timer_enabled".equals(key)) {
-                    mainHandler.post(this::loadPreferencesIntoUi);
-                }
-            };
+    private void registerPreferenceListeners() {
+        if (!isBound || boundService == null) return;
+        PreferenceManager pm = boundService.getPreferenceManager();
+        if (pm == null) return;
+
+        if (prefListener == null) {
+            prefListener = key -> mainHandler.post(this::loadPreferencesIntoUi);
         }
-        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-        prefs.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
+        pm.registerListener("active", prefListener);
+        pm.registerListener("nap_alarm_ends_at", prefListener);
+        pm.registerListener("auto_timer_enabled", prefListener);
     }
 
-    private void unregisterPreferenceListener() {
-        if (preferenceChangeListener != null) {
-            SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-            prefs.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
+    private void unregisterPreferenceListeners() {
+        if (isBound && boundService != null) {
+            PreferenceManager pm = boundService.getPreferenceManager();
+            if (pm != null && prefListener != null) {
+                pm.unregisterListener(prefListener);
+            }
         }
     }
 
@@ -1054,7 +1082,18 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     protected void onPause() {
         super.onPause();
         EventLogger.setListener(null);
-        unregisterPreferenceListener();
+        unregisterPreferenceListeners();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (isBound) {
+            unregisterPreferenceListeners();
+            unbindService(serviceConnection);
+            isBound = false;
+            boundService = null;
+        }
     }
 
     private void refreshEventLog() {

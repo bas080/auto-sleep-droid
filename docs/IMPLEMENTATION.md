@@ -63,6 +63,7 @@ Responsibilities:
 - Set content intent targeting `MainActivity` so tapping the notification opens `MainActivity`.
 - Expose notification shade action buttons: toggle ("Disable" when enabled, or "Enable" when disabled) and "Nap" / "Cancel Nap" to quickly set or cancel nap timers.
 - Respect `show_notification` preference (default `false`); when `show_notification` is `false`, remove the ongoing service notification via `stopForeground(STOP_FOREGROUND_REMOVE)` and `manager.cancel(NOTIFICATION_ID)` across all timer states (`Off`, `Waiting`, `Active`, `Fading`).
+- Centralize state management and `SharedPreferences` observation via `PreferenceManager`, exposing `LocalBinder` to allow `MainActivity` to bind to `MainService` and register key-specific listeners.
 - Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), active timer start timestamp (`timer_start_time_ms`, updated when the timer starts or is reset via flip gesture, volume button, or duration update), show notification setting (`show_notification`), and wake-up goal settings in `SharedPreferences`.
 - Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
 - Listen for media playback state changes using `AudioManager.AudioPlaybackCallback` (API 26+) dynamically only during `Waiting` state instead of periodic polling.
@@ -103,6 +104,17 @@ A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) la
 - Confirming "I'm Awake" sends `ACTION_AWAKE` to `MainService` to log the sleep session (preserving `current_wake_hour` and `current_wake_minute` if triggered during a nap), then finishes.
 - Canceling or dismissing the dialog finishes without modifying alarm schedules or logging sleep sessions.
 
+### `PreferenceManager`
+
+File: `app/src/main/java/com/bas080/autosleepdroid/PreferenceManager.java`
+
+Java-friendly optimization layer for key-specific `SharedPreferences` observation and async execution:
+
+- Encapsulates `SharedPreferences.OnSharedPreferenceChangeListener` to map specific preference keys to custom callbacks (`OnPreferenceChangeListener`) using thread-safe data structures (`ConcurrentHashMap`, `CopyOnWriteArraySet`).
+- Ensures callbacks fire strictly when their target key changes, avoiding unnecessary UI redraws and overhead.
+- Provides explicit registration/unregistration methods (`registerListener`, `unregisterListener`).
+- Offloads asynchronous preference write operations and background computations using a single-threaded `ExecutorService`.
+
 ### `SettingRowView`
 
 File: `app/src/main/java/com/bas080/autosleepdroid/SettingRowView.java`
@@ -122,6 +134,7 @@ The launcher activity starts `MainService`, requests `POST_NOTIFICATIONS` on And
 
 Main Configuration Controls & Action Links:
 
+- Service Binding & Lifecycle Safety: Binds to `MainService` (`BIND_AUTO_CREATE`) via `ServiceConnection` on `onStart()`, registers key-specific preference listeners via `PreferenceManager` on service connection or `onResume()`, and explicitly unregisters all listeners and unbinds in `onPause()` / `onStop()` to prevent memory leaks.
 - Single-screen configuration UI:
   - Section headings (`headerNap`, `headerTimer`, `headerAlarm`, `headerAbout`) remain enabled (`true`) with full opacity (`1.0f`) at all times.
   - Nap alarm section at top (`btn_nap` button launching `NapDialogActivity` or canceling active nap).
