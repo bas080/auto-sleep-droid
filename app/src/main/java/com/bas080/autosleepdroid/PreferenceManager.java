@@ -220,6 +220,7 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
     private final Map<String, Set<OnPreferenceChangeListener>> listenersMap = new ConcurrentHashMap<>();
     private final Map<Object, CachedComputation> computedCache = new ConcurrentHashMap<>();
     private final Set<WatchEffectRegistration> activeEffects = new CopyOnWriteArraySet<>();
+    private final Map<Object, Set<EffectHandle>> taggedEffects = new ConcurrentHashMap<>();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService asyncExecutor = Executors.newSingleThreadExecutor();
 
@@ -264,6 +265,39 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
         activeEffects.add(reg);
         reg.runEffect();
         return reg;
+    }
+
+    public EffectHandle watchEffect(Object tag, PreferenceEffect effect) {
+        EffectHandle handle = watchEffect(effect);
+        if (tag != null) {
+            taggedEffects.computeIfAbsent(tag, k -> new CopyOnWriteArraySet<>()).add(handle);
+        }
+        return handle;
+    }
+
+    public EffectHandle watchEffects(PreferenceEffect... effects) {
+        if (effects == null || effects.length == 0) return () -> {};
+        java.util.List<EffectHandle> handles = new java.util.ArrayList<>();
+        for (PreferenceEffect effect : effects) {
+            handles.add(watchEffect(effect));
+        }
+        return () -> {
+            for (EffectHandle handle : handles) {
+                handle.dispose();
+            }
+            handles.clear();
+        };
+    }
+
+    public void disposeEffects(Object tag) {
+        if (tag == null) return;
+        Set<EffectHandle> handles = taggedEffects.remove(tag);
+        if (handles != null) {
+            for (EffectHandle handle : handles) {
+                handle.dispose();
+            }
+            handles.clear();
+        }
     }
 
     public <T> T getComputed(ComputedValue<T> computer) {
@@ -322,12 +356,6 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
         }
     }
 
-    public void executeAsync(Runnable task) {
-        if (task != null) {
-            asyncExecutor.execute(task);
-        }
-    }
-
     public void putBoolean(String key, boolean value) {
         preferences.edit().putBoolean(key, value).apply();
     }
@@ -346,26 +374,6 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
 
     public void remove(String key) {
         preferences.edit().remove(key).apply();
-    }
-
-    public void putBooleanAsync(String key, boolean value) {
-        putBoolean(key, value);
-    }
-
-    public void putIntAsync(String key, int value) {
-        putInt(key, value);
-    }
-
-    public void putLongAsync(String key, long value) {
-        putLong(key, value);
-    }
-
-    public void putStringAsync(String key, String value) {
-        putString(key, value);
-    }
-
-    public void removeAsync(String key) {
-        remove(key);
     }
 
     public boolean getBoolean(String key, boolean defValue) {
