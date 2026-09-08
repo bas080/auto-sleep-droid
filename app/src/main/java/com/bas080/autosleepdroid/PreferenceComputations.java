@@ -16,6 +16,15 @@ public class PreferenceComputations {
                 || (timerStartTime > 0L && (now - timerStartTime < 14 * 3600_000L));
     };
 
+    public static final PreferenceManager.ComputedValue<Boolean> IS_AUTO_TIMER_ENABLED =
+            getter -> getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false);
+
+    public static final PreferenceManager.ComputedValue<Boolean> IS_HEALTH_CONNECT_ENABLED =
+            getter -> getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+
+    public static final PreferenceManager.ComputedValue<Boolean> IS_NAP_DND_ENABLED =
+            getter -> getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false);
+
     public static PreferenceManager.ComputedValue<String> formatDuration(String key, int defaultMinutes) {
         return getter -> DurationUtils.formatDurationString(getter.getInt(key, defaultMinutes));
     }

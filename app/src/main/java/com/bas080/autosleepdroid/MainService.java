@@ -512,7 +512,7 @@ public class MainService extends Service implements SensorEventListener {
 
         showOrHideNotification();
 
-        boolean goalEnabled = preferences != null && preferences.getBoolean("wake_up_goal_enabled", false);
+        boolean goalEnabled = isWakeAlarmEnabled();
         if (goalEnabled) {
             checkAndScheduleSmartWakeUpAlarm(savedEndsAt);
         }
@@ -566,8 +566,8 @@ public class MainService extends Service implements SensorEventListener {
     }
 
     private void checkAndApplyDndAutoTimer() {
-        if (isNapDndChanging || preferences == null) return;
-        boolean autoTimerEnabled = preferences.getBoolean("auto_timer_enabled", false);
+        if (isNapDndChanging || preferenceManager == null) return;
+        boolean autoTimerEnabled = Boolean.TRUE.equals(preferenceManager.getComputed(PreferenceComputations.IS_AUTO_TIMER_ENABLED));
         if (!autoTimerEnabled) return;
 
         if (android.os.Build.VERSION.SDK_INT >= 23) {
@@ -713,7 +713,7 @@ public class MainService extends Service implements SensorEventListener {
             } else if (ACTION_CLEAR_GOAL.equals(intent.getAction())) {
                 if (preferences != null) {
                     preferences.edit()
-                            .putBoolean("wake_up_goal_enabled", false)
+                            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false)
                             .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
                             .apply();
                 }
@@ -853,7 +853,7 @@ public class MainService extends Service implements SensorEventListener {
             startFadeRunnable();
         } else if (newState == State.ACTIVE) {
             if (preferences != null) {
-                preferences.edit().putLong("timer_start_time_ms", System.currentTimeMillis()).apply();
+                preferences.edit().putLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, System.currentTimeMillis()).apply();
             }
             unregisterAudioPlaybackCallback();
             updateListenersRegistration();
@@ -912,7 +912,7 @@ public class MainService extends Service implements SensorEventListener {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer expired: pausing media");
         long now = System.currentTimeMillis();
         if (preferences != null) {
-            preferences.edit().putLong("sleep_start_time_ms", now).apply();
+            preferences.edit().putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now).apply();
         }
         pauseMediaViaAudioFocus();
 
@@ -922,12 +922,12 @@ public class MainService extends Service implements SensorEventListener {
 
     private void processSleepSession() {
         if (preferences == null) return;
-        boolean healthConnectEnabled = preferences.getBoolean("health_connect_enabled", false);
-        int hcMinDurationMinutes = preferences.getInt("hc_min_duration_minutes", 15);
+        boolean healthConnectEnabled = preferenceManager != null && Boolean.TRUE.equals(preferenceManager.getComputed(PreferenceComputations.IS_HEALTH_CONNECT_ENABLED));
+        int hcMinDurationMinutes = preferences.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, AppDefaults.HC_MIN_DURATION_MINUTES);
 
-        long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
-        long timerStartTime = preferences.getLong("timer_start_time_ms", 0L);
-        long napStartTime = preferences.getLong("nap_start_time_ms", 0L);
+        long sleepStartTime = preferences.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L);
+        long timerStartTime = preferences.getLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, 0L);
+        long napStartTime = preferences.getLong(PreferenceKeys.KEY_NAP_START_TIME_MS, 0L);
         long wakeTime = System.currentTimeMillis();
 
         if (napStartTime > 0L && wakeTime > napStartTime) {
@@ -935,7 +935,7 @@ public class MainService extends Service implements SensorEventListener {
             if (healthConnectEnabled && (wakeTime - napStartTime < 14 * 3600_000L) && durationMinutes >= hcMinDurationMinutes) {
                 HealthConnectManager.writeSleepSession(this, napStartTime, wakeTime, null);
             }
-            preferences.edit().remove("nap_start_time_ms").apply();
+            preferences.edit().remove(PreferenceKeys.KEY_NAP_START_TIME_MS).apply();
         } else {
             long startTime = 0L;
             if (timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)) {
@@ -943,7 +943,7 @@ public class MainService extends Service implements SensorEventListener {
             } else if (sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
                 startTime = sleepStartTime;
             } else if (isWakeAlarmEnabled()) {
-                int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
+                int minSleepMin = preferences.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES);
                 startTime = wakeTime - (minSleepMin * 60_000L);
             }
 
@@ -954,8 +954,8 @@ public class MainService extends Service implements SensorEventListener {
                 }
             }
             preferences.edit()
-                    .remove("sleep_start_time_ms")
-                    .remove("timer_start_time_ms")
+                    .remove(PreferenceKeys.KEY_SLEEP_START_TIME_MS)
+                    .remove(PreferenceKeys.KEY_TIMER_START_TIME_MS)
                     .apply();
         }
     }
@@ -986,8 +986,8 @@ public class MainService extends Service implements SensorEventListener {
         if (isActive()) {
             if (preferences != null) {
                 preferences.edit()
-                        .remove("sleep_start_time_ms")
-                        .remove("timer_start_time_ms")
+                        .remove(PreferenceKeys.KEY_SLEEP_START_TIME_MS)
+                        .remove(PreferenceKeys.KEY_TIMER_START_TIME_MS)
                         .apply();
             }
             updateNotification();
@@ -1035,16 +1035,16 @@ public class MainService extends Service implements SensorEventListener {
             return null;
         }
         SharedPreferences prefs = context.getSharedPreferences(PREFERENCES, MODE_PRIVATE);
-        boolean wakeAlarmEnabled = prefs.getBoolean("wake_up_goal_enabled", false);
+        boolean wakeAlarmEnabled = prefs.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
         if (!wakeAlarmEnabled) {
             return null;
         }
 
-        int goalHour = prefs.getInt("wake_up_goal_hour", 6);
-        int goalMin = prefs.getInt("wake_up_goal_minute", 30);
-        int currentHour = prefs.getInt("current_wake_hour", goalHour);
-        int currentMin = prefs.getInt("current_wake_minute", goalMin);
-        int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
+        int goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR);
+        int goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE);
+        int currentHour = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
+        int currentMin = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
+        int minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES);
 
         Calendar calCurrent = Calendar.getInstance();
         calCurrent.setTimeInMillis(now);
@@ -1059,8 +1059,8 @@ public class MainService extends Service implements SensorEventListener {
 
         long scheduledAlarmMillis = calCurrent.getTimeInMillis();
 
-        int timerDuration = prefs.getInt("duration_minutes", AppDefaults.DURATION_MINUTES);
-        long sleepStartTime = prefs.getLong("sleep_start_time_ms", 0L);
+        int timerDuration = prefs.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES);
+        long sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L);
         long minWakeTimeMillis = 0L;
         if (timerEndsAt > 0L) {
             long effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L);
@@ -1081,12 +1081,12 @@ public class MainService extends Service implements SensorEventListener {
 
     private void updateNextWakeUpTimeOnDismissOrExpiry() {
         if (preferences == null) return;
-        int goalHour = preferences.getInt("wake_up_goal_hour", 6);
-        int goalMin = preferences.getInt("wake_up_goal_minute", 30);
+        int goalHour = preferences.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR);
+        int goalMin = preferences.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE);
 
         preferences.edit()
-                .putInt("current_wake_hour", goalHour)
-                .putInt("current_wake_minute", goalMin)
+                .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)
+                .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
                 .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
                 .apply();
     }
@@ -1203,17 +1203,17 @@ public class MainService extends Service implements SensorEventListener {
         long now = System.currentTimeMillis();
         if (preferences != null) {
             SharedPreferences.Editor editor = preferences.edit();
-            editor.putLong("timer_start_time_ms", now);
+            editor.putLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, now);
 
             if (isWakeAlarmEnabled()) {
-                int minSleepMin = preferences.getInt("min_sleep_duration_minutes", AppDefaults.MIN_SLEEP_DURATION_MINUTES);
+                int minSleepMin = preferences.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES);
                 long minSleepMs = minSleepMin * 60_000L;
                 long windowMs = (long) (1.2 * minSleepMs);
 
-                int goalHour = preferences.getInt("wake_up_goal_hour", AppDefaults.WAKE_UP_GOAL_HOUR);
-                int goalMin = preferences.getInt("wake_up_goal_minute", AppDefaults.WAKE_UP_GOAL_MINUTE);
-                int currentHour = preferences.getInt("current_wake_hour", goalHour);
-                int currentMin = preferences.getInt("current_wake_minute", goalMin);
+                int goalHour = preferences.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR);
+                int goalMin = preferences.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE);
+                int currentHour = preferences.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
+                int currentMin = preferences.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
 
                 Calendar calCurrent = Calendar.getInstance();
                 calCurrent.setTimeInMillis(now);
@@ -1226,10 +1226,10 @@ public class MainService extends Service implements SensorEventListener {
                 }
 
                 long currentAlarmMs = calCurrent.getTimeInMillis();
-                long existingSleepStart = preferences.getLong("sleep_start_time_ms", 0L);
+                long existingSleepStart = preferences.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L);
                 if ((existingSleepStart == 0L || now - existingSleepStart >= 14 * 3600_000L)
                         && now >= currentAlarmMs - windowMs && now <= currentAlarmMs) {
-                    editor.putLong("sleep_start_time_ms", now);
+                    editor.putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now);
                 }
             }
             editor.apply();
@@ -1248,10 +1248,10 @@ public class MainService extends Service implements SensorEventListener {
         scheduleExpiry();
 
         if (isWakeAlarmEnabled() && preferences != null) {
-            int minSleepMin = preferences.getInt("min_sleep_duration_minutes", AppDefaults.MIN_SLEEP_DURATION_MINUTES);
-            int timerDuration = preferences.getInt("duration_minutes", AppDefaults.DURATION_MINUTES);
+            int minSleepMin = preferences.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES);
+            int timerDuration = preferences.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES);
             long minSleepMs = minSleepMin * 60_000L;
-            long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
+            long sleepStartTime = preferences.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L);
             long requiredWakeTime;
             long baseTime;
             if (newTimerEndsAt > 0L) {
@@ -1267,10 +1267,10 @@ public class MainService extends Service implements SensorEventListener {
                 requiredWakeTime = now + minSleepMs;
             }
 
-            int goalHour = preferences.getInt("wake_up_goal_hour", AppDefaults.WAKE_UP_GOAL_HOUR);
-            int goalMin = preferences.getInt("wake_up_goal_minute", AppDefaults.WAKE_UP_GOAL_MINUTE);
-            int currentHour = preferences.getInt("current_wake_hour", goalHour);
-            int currentMin = preferences.getInt("current_wake_minute", goalMin);
+            int goalHour = preferences.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR);
+            int goalMin = preferences.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE);
+            int currentHour = preferences.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
+            int currentMin = preferences.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
 
             Calendar calCurrent = Calendar.getInstance();
             calCurrent.setTimeInMillis(now);
@@ -1302,8 +1302,8 @@ public class MainService extends Service implements SensorEventListener {
                 int pushedHour = calRequired.get(Calendar.HOUR_OF_DAY);
                 int pushedMin = calRequired.get(Calendar.MINUTE);
                 preferences.edit()
-                        .putInt("current_wake_hour", pushedHour)
-                        .putInt("current_wake_minute", pushedMin)
+                        .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, pushedHour)
+                        .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, pushedMin)
                         .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
                         .apply();
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Pushed wake alarm forward to " + formatTime(pushedHour, pushedMin) + " due to min sleep safeguard");
@@ -1315,8 +1315,8 @@ public class MainService extends Service implements SensorEventListener {
                     int earlierHour = calEarlier.get(Calendar.HOUR_OF_DAY);
                     int earlierMin = calEarlier.get(Calendar.MINUTE);
                     preferences.edit()
-                            .putInt("current_wake_hour", earlierHour)
-                            .putInt("current_wake_minute", earlierMin)
+                            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, earlierHour)
+                            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, earlierMin)
                             .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
                             .apply();
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Moved wake alarm earlier to " + formatTime(earlierHour, earlierMin) + " (within 1.2x min sleep window)");
@@ -1333,7 +1333,7 @@ public class MainService extends Service implements SensorEventListener {
     }
 
     private void setDndMode(boolean enable) {
-        if (preferences != null && !preferences.getBoolean("nap_dnd_enabled", false)) {
+        if (preferenceManager != null && !Boolean.TRUE.equals(preferenceManager.getComputed(PreferenceComputations.IS_NAP_DND_ENABLED))) {
             return;
         }
         if (android.os.Build.VERSION.SDK_INT >= 23) {
@@ -1362,7 +1362,7 @@ public class MainService extends Service implements SensorEventListener {
             preferences.edit()
                     .putInt(KEY_NAP_DURATION_MINUTES, durationMinutes)
                     .putLong(KEY_NAP_ALARM_ENDS_AT, napAlarmEndsAt)
-                    .putLong("nap_start_time_ms", now)
+                    .putLong(PreferenceKeys.KEY_NAP_START_TIME_MS, now)
                     .apply();
         }
         scheduleNapAlarm(napAlarmEndsAt);
@@ -1415,7 +1415,7 @@ public class MainService extends Service implements SensorEventListener {
         if (preferences != null) {
             preferences.edit()
                     .remove(KEY_NAP_ALARM_ENDS_AT)
-                    .remove("nap_start_time_ms")
+                    .remove(PreferenceKeys.KEY_NAP_START_TIME_MS)
                     .apply();
         }
         setDndMode(false);
@@ -1741,7 +1741,7 @@ public class MainService extends Service implements SensorEventListener {
 
         reloadTimerSettings(savedEnabled, savedDuration, musicActive, now);
 
-        boolean goalEnabled = preferences.getBoolean("wake_up_goal_enabled", false);
+        boolean goalEnabled = isWakeAlarmEnabled();
         if (goalEnabled) {
             checkAndScheduleSmartWakeUpAlarm(getTimerEndsAt());
         } else {
