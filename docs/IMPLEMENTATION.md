@@ -136,7 +136,7 @@ The launcher activity starts `MainService`, requests `POST_NOTIFICATIONS` on And
 
 Main Configuration Controls & Action Links:
 
-- Service Binding & Lifecycle Safety: Binds to `MainService` (`BIND_AUTO_CREATE`) via `ServiceConnection` on `onStart()`, registers key-specific preference listeners via `PreferenceManager` on service connection or `onResume()`, and explicitly unregisters all listeners and unbinds in `onPause()` / `onStop()` to prevent memory leaks.
+- Service Binding & Lifecycle Safety: Binds to `MainService` (`BIND_AUTO_CREATE`) via `ServiceConnection` on `onStart()`, registers key-specific preference listeners via `PreferenceManager` on service connection or `onResume()`, uses `PreferenceManager.getComputed` for memoized UI string formatting and state evaluations, and explicitly unregisters all listeners and unbinds in `onPause()` / `onStop()` to prevent memory leaks.
 - Single-screen configuration UI:
   - Section headings (`headerNap`, `headerTimer`, `headerAlarm`, `headerAbout`) remain enabled (`true`) with full opacity (`1.0f`) at all times.
   - Nap alarm section at top (`btn_nap` button launching `NapDialogActivity` or canceling active nap).
