@@ -78,6 +78,48 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private boolean isUserInitiatedHealthConnect = false;
     private boolean isRequestingHealthConnectPermission = false;
 
+    private static class BoolPrefSpec {
+        final String key;
+        final boolean defaultValue;
+
+        BoolPrefSpec(String key, boolean defaultValue) {
+            this.key = key;
+            this.defaultValue = defaultValue;
+        }
+    }
+
+    private static class IntPrefSpec {
+        final String key;
+        final int defaultValue;
+        final int min;
+        final int max;
+
+        IntPrefSpec(String key, int defaultValue, int min, int max) {
+            this.key = key;
+            this.defaultValue = defaultValue;
+            this.min = min;
+            this.max = max;
+        }
+    }
+
+    private static final BoolPrefSpec[] EXPORTED_BOOL_PREFS = new BoolPrefSpec[]{
+            new BoolPrefSpec(PreferenceKeys.KEY_NAP_DND_ENABLED, false),
+            new BoolPrefSpec(PreferenceKeys.KEY_ACTIVE, true),
+            new BoolPrefSpec(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false),
+            new BoolPrefSpec(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false),
+            new BoolPrefSpec(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)
+    };
+
+    private static final IntPrefSpec[] EXPORTED_INT_PREFS = new IntPrefSpec[]{
+            new IntPrefSpec(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES, 1, 1440),
+            new IntPrefSpec(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6, 0, 23),
+            new IntPrefSpec(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30, 0, 59),
+            new IntPrefSpec(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, 6, 0, 23),
+            new IntPrefSpec(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, 30, 0, 59),
+            new IntPrefSpec(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450, 1, 1440),
+            new IntPrefSpec(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15, 0, 1440)
+    };
+
     private interface OnDurationSavedListener {
         void onSaved(int minutes);
     }
@@ -853,20 +895,17 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         try {
             JSONObject json = new JSONObject();
             json.put("version", 1);
-            json.put("nap_dnd_enabled", preferenceManager.getBoolean("nap_dnd_enabled", false));
-            json.put("duration_minutes", preferenceManager.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES));
-            json.put("active", preferenceManager.getBoolean("active", true));
-            json.put("auto_timer_enabled", preferenceManager.getBoolean("auto_timer_enabled", false));
-            json.put("wake_up_goal_enabled", preferenceManager.getBoolean("wake_up_goal_enabled", false));
-            json.put("wake_up_goal_hour", preferenceManager.getInt("wake_up_goal_hour", 6));
-            json.put("wake_up_goal_minute", preferenceManager.getInt("wake_up_goal_minute", 30));
-            int goalHour = preferenceManager.getInt("wake_up_goal_hour", 6);
-            int goalMin = preferenceManager.getInt("wake_up_goal_minute", 30);
-            json.put("current_wake_hour", preferenceManager.getInt("current_wake_hour", goalHour));
-            json.put("current_wake_minute", preferenceManager.getInt("current_wake_minute", goalMin));
-            json.put("min_sleep_duration_minutes", preferenceManager.getInt("min_sleep_duration_minutes", 450));
-            json.put("health_connect_enabled", preferenceManager.getBoolean("health_connect_enabled", false));
-            json.put("hc_min_duration_minutes", preferenceManager.getInt("hc_min_duration_minutes", 15));
+            for (BoolPrefSpec spec : EXPORTED_BOOL_PREFS) {
+                json.put(spec.key, preferenceManager.getBoolean(spec.key, spec.defaultValue));
+            }
+            int goalHour = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
+            int goalMin = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+            for (IntPrefSpec spec : EXPORTED_INT_PREFS) {
+                int def = spec.defaultValue;
+                if (PreferenceKeys.KEY_CURRENT_WAKE_HOUR.equals(spec.key)) def = goalHour;
+                else if (PreferenceKeys.KEY_CURRENT_WAKE_MINUTE.equals(spec.key)) def = goalMin;
+                json.put(spec.key, preferenceManager.getInt(spec.key, def));
+            }
 
             String exportStr = json.toString();
             Intent sendIntent = new Intent(Intent.ACTION_SEND);
@@ -927,61 +966,27 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 throw new JSONException("Unsupported schema version");
             }
 
-            boolean napDndEnabled = json.optBoolean("nap_dnd_enabled", false);
-            int durationMinutes = json.getInt("duration_minutes");
-            if (durationMinutes < 1 || durationMinutes > 1440) {
-                throw new JSONException("duration_minutes out of range");
+            SharedPreferences.Editor editor = preferenceManager.getSharedPreferences().edit();
+            for (BoolPrefSpec spec : EXPORTED_BOOL_PREFS) {
+                editor.putBoolean(spec.key, json.optBoolean(spec.key, spec.defaultValue));
             }
 
-            boolean active = json.optBoolean("active", false);
-            boolean autoTimerEnabled = json.optBoolean("auto_timer_enabled", false);
-            boolean wakeUpGoalEnabled = json.getBoolean("wake_up_goal_enabled");
-            int wakeUpGoalHour = json.getInt("wake_up_goal_hour");
-            if (wakeUpGoalHour < 0 || wakeUpGoalHour > 23) {
-                throw new JSONException("wake_up_goal_hour out of range");
+            int importedGoalHour = json.optInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
+            int importedGoalMin = json.optInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+
+            for (IntPrefSpec spec : EXPORTED_INT_PREFS) {
+                int def = spec.defaultValue;
+                if (PreferenceKeys.KEY_CURRENT_WAKE_HOUR.equals(spec.key)) def = importedGoalHour;
+                else if (PreferenceKeys.KEY_CURRENT_WAKE_MINUTE.equals(spec.key)) def = importedGoalMin;
+
+                int val = json.optInt(spec.key, def);
+                if (val < spec.min || val > spec.max) {
+                    throw new JSONException(spec.key + " out of range");
+                }
+                editor.putInt(spec.key, val);
             }
 
-            int wakeUpGoalMinute = json.getInt("wake_up_goal_minute");
-            if (wakeUpGoalMinute < 0 || wakeUpGoalMinute > 59) {
-                throw new JSONException("wake_up_goal_minute out of range");
-            }
-
-            int currentWakeHour = json.optInt("current_wake_hour", wakeUpGoalHour);
-            if (currentWakeHour < 0 || currentWakeHour > 23) {
-                throw new JSONException("current_wake_hour out of range");
-            }
-
-            int currentWakeMinute = json.optInt("current_wake_minute", wakeUpGoalMinute);
-            if (currentWakeMinute < 0 || currentWakeMinute > 59) {
-                throw new JSONException("current_wake_minute out of range");
-            }
-
-            int minSleepMinutes = json.getInt("min_sleep_duration_minutes");
-            if (minSleepMinutes < 1 || minSleepMinutes > 1440) {
-                throw new JSONException("min_sleep_duration_minutes out of range");
-            }
-
-            boolean healthConnectEnabled = json.optBoolean("health_connect_enabled", false);
-            int hcMinDurationMinutes = json.optInt("hc_min_duration_minutes", 15);
-            if (hcMinDurationMinutes < 0 || hcMinDurationMinutes > 1440) {
-                throw new JSONException("hc_min_duration_minutes out of range");
-            }
-
-            preferenceManager.getSharedPreferences().edit()
-                    .putBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, napDndEnabled)
-                    .putInt(PreferenceKeys.KEY_DURATION_MINUTES, durationMinutes)
-                    .putBoolean(PreferenceKeys.KEY_ACTIVE, active)
-                    .putBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, autoTimerEnabled)
-                    .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, wakeUpGoalEnabled)
-                    .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, wakeUpGoalHour)
-                    .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, wakeUpGoalMinute)
-                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, currentWakeHour)
-                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, currentWakeMinute)
-                    .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, minSleepMinutes)
-                    .putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, healthConnectEnabled)
-                    .putInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, hcMinDurationMinutes)
-                    .remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
-                    .apply();
+            editor.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
 
             Toast.makeText(this, R.string.toast_import_success, Toast.LENGTH_SHORT).show();
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Imported settings from string");
