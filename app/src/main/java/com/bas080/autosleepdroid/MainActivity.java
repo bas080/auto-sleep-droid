@@ -812,7 +812,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             switchEnableTimer.setChecked(active);
         }
         if (textDurationValue != null) {
-            textDurationValue.setText(getComputedDurationString(preferenceManager, PreferenceManager.KEY_DURATION_MINUTES, durationMinutes));
+            textDurationValue.setText(getComputedDurationString(preferenceManager, PreferenceKeys.KEY_DURATION_MINUTES, durationMinutes));
         }
         if (switchAutoTimer != null) {
             switchAutoTimer.setChecked(autoTimer);
