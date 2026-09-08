@@ -1007,6 +1007,102 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testWakeUpAlarmHappyPathFullLifecycle() {
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 7)
+                .putInt("current_wake_minute", 0)
+                .putInt("min_sleep_duration_minutes", 450)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        long now = System.currentTimeMillis();
+        Calendar cal = SleepTimerService.calculateScheduledAlarm(context, now, 0L);
+        assertNotNull("Scheduled alarm calendar must not be null when goal is enabled", cal);
+        assertTrue("Scheduled alarm time must be in the future", cal.getTimeInMillis() > now);
+
+        // 1. Alarm triggers
+        Intent triggerIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_WAKEUP_ALARM_EXPIRY);
+        service.onStartCommand(triggerIntent, 0, 1);
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+        android.app.Notification ringingNotification = shadowNotificationManager.getNotification(1001);
+        assertNotNull("Ringing notification must be displayed when wake alarm triggers", ringingNotification);
+        assertEquals(context.getString(R.string.wakeup_alarm_title), ringingNotification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE));
+
+        // 2. User dismisses alarm
+        Intent dismissIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_DISMISS_WAKEUP_ALARM);
+        service.onStartCommand(dismissIntent, 0, 1);
+
+        // Verify current wake time resets back to goal time (6:30)
+        assertEquals("Current wake hour must reset to target goal hour 6 after dismissal",
+                6, preferences.getInt("current_wake_hour", -1));
+        assertEquals("Current wake minute must reset to target goal minute 30 after dismissal",
+                30, preferences.getInt("current_wake_minute", -1));
+
+        // Verify next daily alarm is scheduled
+        assertTrue("Next daily alarm timestamp must be saved in preferences",
+                preferences.contains(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS));
+    }
+
+    @Test
+    public void testNapAlarmHappyPathFullLifecycle() {
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 7)
+                .putInt("current_wake_minute", 30)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        // 1. Start nap alarm for 20 minutes
+        Intent startNapIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_START_NAP)
+                .putExtra(SleepTimerService.EXTRA_NAP_DURATION_MINUTES, 20);
+        service.onStartCommand(startNapIntent, 0, 1);
+
+        assertTrue("Nap alarm expiration timestamp must be saved in preferences",
+                preferences.getLong(SleepTimerService.KEY_NAP_ALARM_ENDS_AT, 0L) > System.currentTimeMillis());
+
+        // 2. Nap alarm expires / triggers
+        Intent napExpiryIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_NAP_EXPIRY);
+        service.onStartCommand(napExpiryIntent, 0, 1);
+
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        ShadowNotificationManager shadowNotificationManager = Shadows.shadowOf(notificationManager);
+        android.app.Notification ringingNotification = shadowNotificationManager.getNotification(1001);
+        assertNotNull(ringingNotification);
+        assertEquals(context.getString(R.string.wakeup_alarm_title), ringingNotification.extras.getCharSequence(android.app.Notification.EXTRA_TITLE));
+
+        // 3. User dismisses nap alarm
+        Intent dismissIntent = new Intent(context, SleepTimerService.class)
+                .setAction(SleepTimerService.ACTION_DISMISS_WAKEUP_ALARM);
+        service.onStartCommand(dismissIntent, 0, 1);
+
+        assertFalse("Nap alarm ends at timestamp must be cleared on dismiss",
+                preferences.contains(SleepTimerService.KEY_NAP_ALARM_ENDS_AT));
+
+        // Current wake time for nightly alarm must remain unchanged (7:30)
+        assertEquals("Current wake hour must remain unchanged when dismissing nap alarm",
+                7, preferences.getInt("current_wake_hour", -1));
+        assertEquals("Current wake minute must remain unchanged when dismissing nap alarm",
+                30, preferences.getInt("current_wake_minute", -1));
+    }
+
+    @Test
     public void testWakeUpAlarmTriggersNextDailyAlarm() {
         preferences.edit()
                 .putBoolean("wake_up_goal_enabled", true)
