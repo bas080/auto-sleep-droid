@@ -1,6 +1,8 @@
 package com.bas080.autosleepdroid
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -9,8 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import android.app.Activity
-import android.content.Intent
 import java.time.Instant
 import java.time.ZoneId
 
@@ -22,8 +22,6 @@ object HealthConnectManager {
     @Volatile
     private var testSdkAvailable: Boolean? = null
 
-    @JvmStatic
-    @JvmOverloads
     fun setClientForTesting(client: HealthConnectClient?, isSdkAvailable: Boolean? = true) {
         this.testClient = client
         this.testSdkAvailable = isSdkAvailable
@@ -33,7 +31,6 @@ object HealthConnectManager {
         return testClient ?: HealthConnectClient.getOrCreate(context)
     }
 
-    @JvmStatic
     fun openHealthConnectPermissions(activity: Activity) {
         if (!isHealthConnectAvailable(activity)) {
             android.widget.Toast.makeText(activity, R.string.toast_health_connect_not_available, android.widget.Toast.LENGTH_SHORT).show()
@@ -78,7 +75,6 @@ object HealthConnectManager {
         HealthPermission.getWritePermission(SleepSessionRecord::class)
     )
 
-    @JvmStatic
     fun isHealthConnectAvailable(context: Context): Boolean {
         testSdkAvailable?.let { return it }
         return try {
@@ -89,8 +85,6 @@ object HealthConnectManager {
         }
     }
 
-    @JvmStatic
-    @JvmOverloads
     fun revokeAllPermissions(context: Context, callback: Callback? = null) {
         if (!isHealthConnectAvailable(context)) {
             callback?.onResult(false, "Health Connect SDK unavailable")
@@ -114,7 +108,6 @@ object HealthConnectManager {
         }
     }
 
-    @JvmStatic
     fun hasSleepWritePermission(context: Context, callback: PermissionCallback) {
         if (!isHealthConnectAvailable(context)) {
             callback.onPermissionResult(false)
@@ -151,8 +144,6 @@ object HealthConnectManager {
         }
     }
 
-    @JvmStatic
-    @JvmOverloads
     fun writeSleepSession(
         context: Context,
         startTimeMs: Long,

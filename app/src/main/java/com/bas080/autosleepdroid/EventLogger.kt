@@ -1,7 +1,6 @@
 package com.bas080.autosleepdroid
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
@@ -35,13 +34,11 @@ object EventLogger {
     }
 
     @Synchronized
-    @JvmStatic
     fun setListener(l: Listener?) {
         listener = l
     }
 
     @Synchronized
-    @JvmStatic
     fun log(context: Context?, level: Int, message: String) {
         if (context != null) {
             appContext = context.applicationContext
@@ -78,31 +75,26 @@ object EventLogger {
     }
 
     @Synchronized
-    @JvmStatic
     fun log(context: Context?, message: String) {
         log(context, LEVEL_NORMAL, message)
     }
 
     @Synchronized
-    @JvmStatic
     fun log(level: Int, message: String) {
         log(null, level, message)
     }
 
     @Synchronized
-    @JvmStatic
     fun log(message: String) {
         log(null, LEVEL_NORMAL, message)
     }
 
     @Synchronized
-    @JvmStatic
     fun getEvents(context: Context?): List<String> {
         ensureLoaded(context)
         return Collections.unmodifiableList(ArrayList(events))
     }
 
-    @JvmStatic
     fun isDarkMode(context: Context?): Boolean {
         val ctx = context ?: appContext ?: return false
         val resources = ctx.resources ?: return false
@@ -111,12 +103,10 @@ object EventLogger {
         return currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
     }
 
-    @JvmStatic
     fun formatColoredEvent(line: String?): CharSequence {
         return formatColoredEvent(null, line)
     }
 
-    @JvmStatic
     fun formatColoredEvent(context: Context?, line: String?): CharSequence {
         if (line.isNullOrEmpty()) {
             return ""
@@ -187,7 +177,6 @@ object EventLogger {
     }
 
     @Synchronized
-    @JvmStatic
     fun clear(context: Context?) {
         events.clear()
         appContext = null

@@ -10,7 +10,6 @@ object DurationUtils {
         HOURS
     }
 
-    @JvmStatic
     fun formatDurationString(totalMinutes: Int): String {
         if (totalMinutes < 60) {
             return "${totalMinutes}m"
@@ -24,8 +23,6 @@ object DurationUtils {
         }
     }
 
-    @JvmStatic
-    @JvmOverloads
     fun parseDurationMinutes(input: String?, defaultUnit: DefaultUnit = DefaultUnit.MINUTES): Int {
         if (input == null) {
             return -1

@@ -14,7 +14,6 @@ object AlarmAudioUtils {
      *
      * @param ringtone the Ringtone instance to configure
      */
-    @JvmStatic
     fun configureAlarmAudioAttributes(ringtone: Ringtone?) {
         if (ringtone == null) {
             return
