@@ -1358,6 +1358,58 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testOnTimerRescheduledPushesWakeAlarmForwardToSafeguardMinSleep() throws Exception {
+        long now = System.currentTimeMillis();
+        int minSleepMin = 450; // 7.5 hours = 450m
+        int timerDurationMin = 30; // 30m
+        long timerEndsAt = now + timerDurationMin * 60_000L;
+
+        // Target goal = 6:30 AM, current wake time = 6:30 AM
+        // If user goes to sleep late at 1:00 AM, required wake time = 1:00 AM + 30m + (450m - 30m) = 1:00 AM + 450m = 8:30 AM
+        // Since required wake time (8:30 AM) > current alarm (6:30 AM), alarm must be pushed forward to 8:30 AM.
+        Calendar calTarget = Calendar.getInstance();
+        calTarget.setTimeInMillis(now);
+        calTarget.set(Calendar.HOUR_OF_DAY, 6);
+        calTarget.set(Calendar.MINUTE, 30);
+        calTarget.set(Calendar.SECOND, 0);
+        calTarget.set(Calendar.MILLISECOND, 0);
+
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 6)
+                .putInt("current_wake_minute", 30)
+                .putInt("min_sleep_duration_minutes", minSleepMin)
+                .putInt("duration_minutes", timerDurationMin)
+                .commit();
+
+        ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
+        SleepTimerService service = controller.create().get();
+
+        java.lang.reflect.Field stateMachineField = SleepTimerService.class.getDeclaredField("stateMachine");
+        stateMachineField.setAccessible(true);
+        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
+
+        stateMachine.startTimer(timerDurationMin, timerEndsAt, now, true);
+
+        // Invoke onTimerRescheduled to trigger safeguard push-forward calculation
+        service.onTimerRescheduled();
+
+        long requiredWakeTimeMs = timerEndsAt + Math.max(0L, (minSleepMin - timerDurationMin) * 60_000L);
+        Calendar calRequired = Calendar.getInstance();
+        calRequired.setTimeInMillis(requiredWakeTimeMs);
+
+        int expectedPushedHour = calRequired.get(Calendar.HOUR_OF_DAY);
+        int expectedPushedMin = calRequired.get(Calendar.MINUTE);
+
+        assertEquals("Current wake hour must be pushed forward to safeguard minimum sleep duration",
+                expectedPushedHour, preferences.getInt("current_wake_hour", -1));
+        assertEquals("Current wake minute must be pushed forward to safeguard minimum sleep duration",
+                expectedPushedMin, preferences.getInt("current_wake_minute", -1));
+    }
+
+    @Test
     public void testOnTimerRescheduledMovesWakeAlarmEarlierWhenGoingToBedEarlyWithinWindow() {
         long now = System.currentTimeMillis();
         int minSleepMin = 450; // 7.5h -> 1.2x = 9h
