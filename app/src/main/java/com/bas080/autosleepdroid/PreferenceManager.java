@@ -351,24 +351,8 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
         }
     }
 
-    public void putBoolean(String key, boolean value) {
-        preferences.edit().putBoolean(key, value).apply();
-    }
-
-    public void putInt(String key, int value) {
-        preferences.edit().putInt(key, value).apply();
-    }
-
-    public void putLong(String key, long value) {
-        preferences.edit().putLong(key, value).apply();
-    }
-
-    public void putString(String key, String value) {
-        preferences.edit().putString(key, value).apply();
-    }
-
-    public void remove(String key) {
-        preferences.edit().remove(key).apply();
+    public SharedPreferences.Editor edit() {
+        return preferences.edit();
     }
 
     public boolean getBoolean(String key, boolean defValue) {

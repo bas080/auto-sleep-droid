@@ -382,7 +382,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         builder.setPositiveButton(R.string.dialog_ok, (dialog, which) -> {
             int minutes = durationInputView.getTotalMinutes();
             if (minutes > 0) {
-                preferenceManager.putInt(prefKey, minutes);
+                preferenceManager.edit().putInt(prefKey, minutes).apply();
                 if (listener != null) {
                     listener.onSaved(minutes);
                 }
@@ -406,7 +406,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (switchNapDnd != null) {
             switchNapDnd.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
-                preferenceManager.putBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, isChecked);
+                preferenceManager.edit().putBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, isChecked).apply();
                 boolean isUserInitiated = buttonView.isPressed();
                 if (isChecked && isUserInitiated && !isDndPermissionGranted()) {
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap DND enabled; DND policy permission missing, opening settings");
@@ -428,7 +428,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (switchEnableTimer != null) {
             switchEnableTimer.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
-                preferenceManager.putBoolean(PreferenceKeys.KEY_ACTIVE, isChecked);
+                preferenceManager.edit().putBoolean(PreferenceKeys.KEY_ACTIVE, isChecked).apply();
                 boolean goalEnabled = preferenceManager.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
                 updateInputEnabledStates(isChecked, goalEnabled);
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Timer enabled from UI" : "Timer disabled from UI");
@@ -461,12 +461,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (switchAutoTimer != null) {
             switchAutoTimer.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
-                preferenceManager.putBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, isChecked);
+                SharedPreferences.Editor editor = preferenceManager.edit();
+                editor.putBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, isChecked);
                 boolean isUserInitiated = buttonView.isPressed() || isUserInitiatedAutoTimer;
                 isUserInitiatedAutoTimer = false;
                 if (isChecked) {
                     boolean dndActive = isDndActive();
-                    preferenceManager.putBoolean(PreferenceKeys.KEY_ACTIVE, dndActive);
+                    editor.putBoolean(PreferenceKeys.KEY_ACTIVE, dndActive);
                     if (switchEnableTimer != null) {
                         switchEnableTimer.setChecked(dndActive);
                     }
@@ -474,6 +475,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                         openDndSettings();
                     }
                 }
+                editor.apply();
                 if (isChecked) {
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, isUserInitiated ? "Auto sleep timer (DND) enabled; opening DND settings" : "Auto sleep timer (DND) enabled");
                 } else {
@@ -518,7 +520,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     450,
                     0, 16, 15,
                     minutes -> {
-                        preferenceManager.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS);
+                        preferenceManager.edit().remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
                         if (textMinSleepValue != null) {
                             textMinSleepValue.setText(DurationUtils.formatDurationString(minutes));
                         }
@@ -549,7 +551,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect requested but SDK is unavailable");
                         return;
                     }
-                    preferenceManager.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true);
+                    preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true).apply();
                     Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show();
                     if (isUserInitiated) {
                         isRequestingHealthConnectPermission = true;
@@ -568,12 +570,12 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 } else {
                     if (isUserInitiated) {
                         isRequestingHealthConnectPermission = false;
-                        preferenceManager.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+                        preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
                         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled; revoking permissions");
                         Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show();
                         HealthConnectManager.revokeAllPermissions(this);
                     } else {
-                        preferenceManager.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+                        preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
                     }
                 }
                 boolean active = preferenceManager.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
@@ -849,7 +851,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             if (!isRequestingHealthConnectPermission) {
                 HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
                     if (!hasPermission) {
-                        preferenceManager.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+                        preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
                         if (switchHealthConnect != null) {
                             isUpdatingUi = true;
                             switchHealthConnect.setChecked(false);
@@ -868,7 +870,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void cancelNap() {
-        preferenceManager.remove(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT);
+        preferenceManager.edit().remove(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT).apply();
 
         Intent serviceIntent = new Intent(this, MainService.class);
         serviceIntent.setAction(MainService.ACTION_CANCEL_NAP);
@@ -1064,7 +1066,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
                 isRequestingHealthConnectPermission = false;
                 if (hasPermission) {
-                    preferenceManager.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true);
+                    preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true).apply();
                     if (switchHealthConnect != null) {
                         isUpdatingUi = true;
                         switchHealthConnect.setChecked(true);
@@ -1072,7 +1074,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     }
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled and permission granted");
                 } else {
-                    preferenceManager.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+                    preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
                     if (switchHealthConnect != null) {
                         isUpdatingUi = true;
                         switchHealthConnect.setChecked(false);
