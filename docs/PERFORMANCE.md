@@ -22,8 +22,8 @@ This document provides a technical evaluation of the performance characteristics
 - **Mechanism**: Target expiration is stored as a wall-clock Unix timestamp (`timer_ends_at`). Expiry is backed by `AlarmManager.setExactAndAllowWhileIdle()`.
 - **Performance Impact**: The system kernel can put the application and CPU into low-power deep sleep (Doze mode) during active timer countdowns. The app does not maintain an active sub-second countdown thread or CPU wake lock.
 
-### 1.5 Decoupled State Machine Architecture
-- **Mechanism**: Core state transitions, duration validation, and fade-out calculations are isolated in `SleepTimerStateMachine.java` using pure Java primitives.
+### 1.5 Integrated State Machine Architecture
+- **Mechanism**: Core state transitions, duration validation, and fade-out calculations are integrated directly in `MainService.java` using pure Java primitives.
 - **Performance Impact**: State evaluations run synchronously in microseconds with zero Android framework IPC overhead and minimal garbage collection (GC) allocation.
 
 ### 1.6 Notification Channel Importance Optimization

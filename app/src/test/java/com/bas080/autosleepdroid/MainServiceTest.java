@@ -232,12 +232,8 @@ public class MainServiceTest {
         ServiceController<MainService> controller = Robolectric.buildService(MainService.class);
         MainService service = controller.create().get();
 
-        java.lang.reflect.Field stateMachineField = MainService.class.getDeclaredField("stateMachine");
-        stateMachineField.setAccessible(true);
-        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
-
-        assertEquals(20, stateMachine.getConfiguredDurationMinutes());
-        assertTrue(stateMachine.isEnabled());
+        assertEquals(20, service.getConfiguredDurationMinutes());
+        assertTrue(service.isEnabled());
 
         preferences.edit()
                 .putBoolean("active", false)
@@ -253,8 +249,8 @@ public class MainServiceTest {
 
         service.onStartCommand(redrawIntent, 0, 1);
 
-        assertFalse(stateMachine.isEnabled());
-        assertEquals(45, stateMachine.getConfiguredDurationMinutes());
+        assertFalse(service.isEnabled());
+        assertEquals(45, service.getConfiguredDurationMinutes());
 
         preferences.edit()
                 .putBoolean("active", true)
@@ -263,8 +259,8 @@ public class MainServiceTest {
 
         service.onStartCommand(redrawIntent, 0, 1);
 
-        assertTrue(stateMachine.isEnabled());
-        assertEquals(60, stateMachine.getConfiguredDurationMinutes());
+        assertTrue(service.isEnabled());
+        assertEquals(60, service.getConfiguredDurationMinutes());
 
         NotificationManager notificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -338,17 +334,13 @@ public class MainServiceTest {
         ServiceController<MainService> controller = Robolectric.buildService(MainService.class);
         MainService service = controller.create().get();
 
-        java.lang.reflect.Field stateMachineField = MainService.class.getDeclaredField("stateMachine");
-        stateMachineField.setAccessible(true);
-        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
-
-        assertFalse(stateMachine.isEnabled());
+        assertFalse(service.isEnabled());
 
         Intent redrawIntent = new Intent(context, MainService.class)
                 .setAction(MainService.ACTION_REDRAW_NOTIFICATION);
         service.onStartCommand(redrawIntent, 0, 1);
 
-        assertFalse("Reloading settings must not force timer ON when user explicitly disabled it", stateMachine.isEnabled());
+        assertFalse("Reloading settings must not force timer ON when user explicitly disabled it", service.isEnabled());
     }
 
     @Test
@@ -402,18 +394,14 @@ public class MainServiceTest {
         long initialNapEndsAt = preferences.getLong("nap_alarm_ends_at", 0L);
         assertTrue(initialNapEndsAt > 0L);
 
-        java.lang.reflect.Field stateMachineField = MainService.class.getDeclaredField("stateMachine");
-        stateMachineField.setAccessible(true);
-        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
-
         long now = System.currentTimeMillis();
-        stateMachine.initialize(true, 20, now + 10000L, 10, true, now);
+        service.initializeTimerState(true, 20, now + 10000L, 10, true, now);
 
         java.lang.reflect.Field lastTimerEndsAtField = MainService.class.getDeclaredField("lastTimerEndsAt");
         lastTimerEndsAtField.setAccessible(true);
         lastTimerEndsAtField.setLong(service, now + 10000L);
 
-        stateMachine.startTimer(20, now + 10000L + 15 * 60_000L, now, true);
+        service.startTimer(20, now + 10000L + 15 * 60_000L, now, true);
 
         long shiftedNapEndsAt = preferences.getLong("nap_alarm_ends_at", 0L);
         assertEquals(initialNapEndsAt + 15 * 60_000L, shiftedNapEndsAt);
@@ -439,13 +427,9 @@ public class MainServiceTest {
         ServiceController<MainService> controller = Robolectric.buildService(MainService.class);
         MainService service = controller.create().get();
 
-        java.lang.reflect.Field stateMachineField = MainService.class.getDeclaredField("stateMachine");
-        stateMachineField.setAccessible(true);
-        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
-
         long now = System.currentTimeMillis();
-        stateMachine.initialize(true, 10, now + 60000L, 10, true, now);
-        assertEquals(SleepTimerStateMachine.State.ACTIVE, stateMachine.getState());
+        service.initializeTimerState(true, 10, now + 60000L, 10, true, now);
+        assertEquals(MainService.State.ACTIVE, service.getState());
 
         java.lang.reflect.Constructor<android.hardware.SensorEvent> constructor =
                 android.hardware.SensorEvent.class.getDeclaredConstructor(int.class);
@@ -479,7 +463,7 @@ public class MainServiceTest {
 
         service.onSensorChanged(faceDownEvent);
 
-        assertEquals(SleepTimerStateMachine.State.ACTIVE, stateMachine.getState());
+        assertEquals(MainService.State.ACTIVE, service.getState());
     }
 
     @Test
@@ -518,18 +502,14 @@ public class MainServiceTest {
         android.media.AudioManager audioManager = (android.media.AudioManager) audioManagerField.get(service);
         audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, 10, 0);
 
-        java.lang.reflect.Field stateMachineField = MainService.class.getDeclaredField("stateMachine");
-        stateMachineField.setAccessible(true);
-        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
-
-        stateMachine.beginFadeOut(10);
+        service.beginFadeOut(10);
 
         java.lang.reflect.Method runFadeStepMethod = MainService.class.getDeclaredMethod("runFadeStep");
         runFadeStepMethod.setAccessible(true);
 
         runFadeStepMethod.invoke(service);
 
-        assertTrue(stateMachine.isFading());
+        assertTrue(service.isFading());
     }
 
     @Test
@@ -821,11 +801,7 @@ public class MainServiceTest {
         android.media.AudioManager audioManager = (android.media.AudioManager) audioManagerField.get(service);
         audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, 10, 0);
 
-        java.lang.reflect.Field stateMachineField = MainService.class.getDeclaredField("stateMachine");
-        stateMachineField.setAccessible(true);
-        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
-
-        stateMachine.beginFadeOut(10);
+        service.beginFadeOut(10);
 
         java.lang.reflect.Method runFadeStepMethod = MainService.class.getDeclaredMethod("runFadeStep");
         runFadeStepMethod.setAccessible(true);
@@ -834,8 +810,8 @@ public class MainServiceTest {
 
         int currentVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
 
-        assertEquals("lastObservedVolume must match updated stream volume", currentVolume, stateMachine.getLastObservedVolume());
-        assertTrue("Fade should not be cancelled during fade step volume update", stateMachine.isFading());
+        assertEquals("lastObservedVolume must match updated stream volume", currentVolume, service.getLastObservedVolume());
+        assertTrue("Fade should not be cancelled during fade step volume update", service.isFading());
     }
 
     @Test
@@ -1269,15 +1245,11 @@ public class MainServiceTest {
         ServiceController<MainService> controller = Robolectric.buildService(MainService.class);
         MainService service = controller.create().get();
 
-        java.lang.reflect.Field stateMachineField = MainService.class.getDeclaredField("stateMachine");
-        stateMachineField.setAccessible(true);
-        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
-
-        stateMachine.startTimer(30, System.currentTimeMillis() + 1800_000L, System.currentTimeMillis(), true);
+        service.startTimer(30, System.currentTimeMillis() + 1800_000L, System.currentTimeMillis(), true);
 
         assertTrue("timer_start_time_ms should be recorded when timer is active", preferences.contains("timer_start_time_ms"));
 
-        stateMachine.handleTurnOff(false);
+        service.handleTurnOff(false);
 
         assertTrue("timer_start_time_ms should be preserved when timer expires and turns off", preferences.contains("timer_start_time_ms"));
     }
@@ -1293,16 +1265,13 @@ public class MainServiceTest {
         ServiceController<MainService> controller = Robolectric.buildService(MainService.class);
         MainService service = controller.create().get();
 
-        java.lang.reflect.Field stateMachineField = MainService.class.getDeclaredField("stateMachine");
-        stateMachineField.setAccessible(true);
-        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
-        stateMachine.startTimer(30, System.currentTimeMillis() + 1500_000L, System.currentTimeMillis(), true);
+        service.startTimer(30, System.currentTimeMillis() + 1500_000L, System.currentTimeMillis(), true);
 
         Intent awakeIntent = new Intent(context, MainService.class)
                 .setAction(MainService.ACTION_AWAKE);
         service.onStartCommand(awakeIntent, 0, 1);
 
-        assertTrue("Timer state machine should remain active when marking awake during countdown", stateMachine.isActive());
+        assertTrue("Timer state machine should remain active when marking awake during countdown", service.isActive());
         assertFalse("timer_start_time_ms should be cleared when marking awake during countdown", preferences.contains("timer_start_time_ms"));
     }
 
@@ -1374,11 +1343,7 @@ public class MainServiceTest {
         ServiceController<MainService> controller = Robolectric.buildService(MainService.class);
         MainService service = controller.create().get();
 
-        java.lang.reflect.Field stateMachineField = MainService.class.getDeclaredField("stateMachine");
-        stateMachineField.setAccessible(true);
-        SleepTimerStateMachine stateMachine = (SleepTimerStateMachine) stateMachineField.get(service);
-
-        stateMachine.startTimer(timerDurationMin, timerEndsAt, now, true);
+        service.startTimer(timerDurationMin, timerEndsAt, now, true);
 
         service.onTimerRescheduled();
 
