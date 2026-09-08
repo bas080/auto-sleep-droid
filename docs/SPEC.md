@@ -44,7 +44,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
   - The notification features primary toggle actions ("Disable" when enabled, or "Enable" when disabled) and a secondary action button ("Nap" or "I'm Awake").
-  - Tapping "Nap" in the notification shade starts a nap with the previously used duration directly in the background without opening the main UI. Starting a nap schedules a nap wake alarm and switches the notification action to "I'm Awake".
+  - Tapping "Nap" opens a duration dialog prefilled with the previously used nap duration. Starting a nap schedules a nap wake alarm and switches the notification action to "I'm Awake".
   - The secondary action displays "I'm Awake" whenever a nap is active, an alarm is ringing or snoozed, or an active night sleep session exists (`sleep_start_time_ms` recorded upon timer expiration within the last 14 hours). When no sleep session, nap, or alarm is active, it displays "Nap".
   - Tapping "I'm Awake" stops any active alarm or nap, completes/logs the active sleep session to Health Connect (if enabled), steps night wake-up time 15 minutes back toward target goal time (for night sleep), reschedules the wake alarm for tomorrow, and reverts the notification action back to "Nap".
   - Tapping/clicking the notification body opens `MainActivity`.
@@ -128,7 +128,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - **UI & Notification Actions**:
   - Main Screen (`MainActivity`): Features a dedicated Nap section with a Nap button (`btn_nap`). Tapping **Nap** launches `NapDialogActivity` prefilled with previously used nap duration; if active, tapping **Cancel Nap** cancels the active nap alarm. `MainActivity` listens for preference changes so UI switches automatically synchronize when nap or DND states change.
   - Nap Dialog: Presented using standard system alert dialog styling with DurationInputView and standard positive ("Nap") / negative ("Cancel") buttons, styled consistently with all other dialogs.
-  - Notification Shade: Features a **Nap** / **I'm Awake** action button. Tapping **Nap** starts a nap with previously used nap duration directly in the background without opening the main UI; tapping **Cancel Nap** or **I'm Awake** cancels the active nap alarm.
+  - Notification Shade: Features a **Nap** / **Cancel Nap** action button. Tapping **Nap** launches `NapDialogActivity` without pulling `MainActivity` or the main UI to the foreground; tapping **Cancel Nap** cancels the nap alarm.
 - **Nap Alarm & Reset Behavior**:
   - Uses existing wake alarm behavior (alarm tone with 3-minute volume crescendo, flip gesture snooze, volume button dismiss).
   - Feature toggle: An optional "Do Not Disturb (DND)" toggle row under the Nap section on `MainActivity` controls whether DND mode is automatically turned on when a nap starts and turned off when the nap ends or is cancelled (when notification policy access permission is granted).
