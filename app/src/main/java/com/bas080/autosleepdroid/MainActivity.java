@@ -106,7 +106,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        preferenceManager = new PreferenceManager(this, PreferenceKeys.PREFERENCES_NAME);
+        preferenceManager = new PreferenceManager(getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE));
 
         bindViews();
         setupHeaderAndLinks();

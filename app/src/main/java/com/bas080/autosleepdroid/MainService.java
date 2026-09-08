@@ -121,7 +121,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         EventLogger.log(this, EventLogger.LEVEL_LOW, "MainService created");
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         alarmManager = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
-        preferenceManager = new PreferenceManager(this, PREFERENCES);
+        preferenceManager = new PreferenceManager(getSharedPreferences(PREFERENCES, MODE_PRIVATE));
         preferences = preferenceManager.getSharedPreferences();
         vibrator = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
         createNotificationChannel();
