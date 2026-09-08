@@ -328,24 +328,44 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
         }
     }
 
+    public void putBoolean(String key, boolean value) {
+        preferences.edit().putBoolean(key, value).apply();
+    }
+
+    public void putInt(String key, int value) {
+        preferences.edit().putInt(key, value).apply();
+    }
+
+    public void putLong(String key, long value) {
+        preferences.edit().putLong(key, value).apply();
+    }
+
+    public void putString(String key, String value) {
+        preferences.edit().putString(key, value).apply();
+    }
+
+    public void remove(String key) {
+        preferences.edit().remove(key).apply();
+    }
+
     public void putBooleanAsync(String key, boolean value) {
-        executeAsync(() -> preferences.edit().putBoolean(key, value).apply());
+        putBoolean(key, value);
     }
 
     public void putIntAsync(String key, int value) {
-        executeAsync(() -> preferences.edit().putInt(key, value).apply());
+        putInt(key, value);
     }
 
     public void putLongAsync(String key, long value) {
-        executeAsync(() -> preferences.edit().putLong(key, value).apply());
+        putLong(key, value);
     }
 
     public void putStringAsync(String key, String value) {
-        executeAsync(() -> preferences.edit().putString(key, value).apply());
+        putString(key, value);
     }
 
     public void removeAsync(String key) {
-        executeAsync(() -> preferences.edit().remove(key).apply());
+        remove(key);
     }
 
     public boolean getBoolean(String key, boolean defValue) {
