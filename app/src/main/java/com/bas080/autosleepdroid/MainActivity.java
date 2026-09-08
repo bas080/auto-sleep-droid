@@ -493,8 +493,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (switchEnableGoal != null) {
             switchEnableGoal.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
-                preferenceManager.putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, isChecked);
-                preferenceManager.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS);
+                preferenceManager.getSharedPreferences().edit()
+                        .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, isChecked)
+                        .remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                        .apply();
                 boolean timerActive = preferenceManager.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
                 updateInputEnabledStates(timerActive, isChecked);
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Wake-up goal enabled" : "Wake-up goal disabled");
@@ -712,13 +714,15 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         TimePickerDialog timePickerDialog = new TimePickerDialog(this,
                 (view, hourOfDay, minute) -> {
-                    preferenceManager.putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, hourOfDay);
-                    preferenceManager.putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, minute);
+                    SharedPreferences.Editor editor = preferenceManager.getSharedPreferences().edit();
+                    editor.putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, hourOfDay);
+                    editor.putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, minute);
                     if (!preferenceManager.contains(PreferenceKeys.KEY_CURRENT_WAKE_HOUR)) {
-                        preferenceManager.putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay);
-                        preferenceManager.putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute);
+                        editor.putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay);
+                        editor.putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute);
                     }
-                    preferenceManager.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS);
+                    editor.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS);
+                    editor.apply();
                     updateTargetTimeButtonText(hourOfDay, minute);
                     updateCurrentWakeTimeButtonText(preferenceManager.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay), preferenceManager.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute));
                     redrawNotification();
@@ -735,9 +739,11 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         TimePickerDialog timePickerDialog = new TimePickerDialog(this,
                 (view, hourOfDay, minute) -> {
-                    preferenceManager.putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay);
-                    preferenceManager.putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute);
-                    preferenceManager.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS);
+                    preferenceManager.getSharedPreferences().edit()
+                            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay)
+                            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute)
+                            .remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                            .apply();
                     updateCurrentWakeTimeButtonText(hourOfDay, minute);
                     redrawNotification();
                 }, currentHour, currentMin, is24Hour);
