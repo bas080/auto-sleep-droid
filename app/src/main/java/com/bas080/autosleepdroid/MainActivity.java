@@ -659,32 +659,24 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         return false;
     }
 
-    private void openDndPermissionSettings() {
+    private void openSettingsWithFallback(String primaryAction, String fallbackAction) {
         try {
-            Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
-            startActivity(intent);
+            startActivity(new Intent(primaryAction));
         } catch (Exception e) {
             try {
-                Intent intent = new Intent(Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS);
-                startActivity(intent);
+                startActivity(new Intent(fallbackAction));
             } catch (Exception ex) {
                 Toast.makeText(this, "Could not open DND settings", Toast.LENGTH_SHORT).show();
             }
         }
     }
 
+    private void openDndPermissionSettings() {
+        openSettingsWithFallback(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS, Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS);
+    }
+
     private void openDndSettings() {
-        try {
-            Intent intent = new Intent(Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS);
-            startActivity(intent);
-        } catch (Exception e) {
-            try {
-                Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
-                startActivity(intent);
-            } catch (Exception ex) {
-                Toast.makeText(this, "Could not open DND settings", Toast.LENGTH_SHORT).show();
-            }
-        }
+        openSettingsWithFallback(Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS, Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
     }
 
     private void setRowEnabled(View view, boolean enabled) {
@@ -721,27 +713,29 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
     }
 
+    private void showTimePickerDialog(int initialHour, int initialMin, TimePickerDialog.OnTimeSetListener listener) {
+        boolean is24Hour = android.text.format.DateFormat.is24HourFormat(this);
+        new TimePickerDialog(this, listener, initialHour, initialMin, is24Hour).show();
+    }
+
     private void showTargetTimeDialog() {
         int goalHour = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
         int goalMin = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
-        boolean is24Hour = android.text.format.DateFormat.is24HourFormat(this);
 
-        TimePickerDialog timePickerDialog = new TimePickerDialog(this,
-                (view, hourOfDay, minute) -> {
-                    SharedPreferences.Editor editor = preferenceManager.getSharedPreferences().edit();
-                    editor.putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, hourOfDay);
-                    editor.putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, minute);
-                    if (!preferenceManager.contains(PreferenceKeys.KEY_CURRENT_WAKE_HOUR)) {
-                        editor.putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay);
-                        editor.putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute);
-                    }
-                    editor.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS);
-                    editor.apply();
-                    updateTargetTimeButtonText(hourOfDay, minute);
-                    updateCurrentWakeTimeButtonText(preferenceManager.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay), preferenceManager.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute));
-                    redrawNotification();
-                }, goalHour, goalMin, is24Hour);
-        timePickerDialog.show();
+        showTimePickerDialog(goalHour, goalMin, (view, hourOfDay, minute) -> {
+            SharedPreferences.Editor editor = preferenceManager.getSharedPreferences().edit();
+            editor.putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, hourOfDay);
+            editor.putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, minute);
+            if (!preferenceManager.contains(PreferenceKeys.KEY_CURRENT_WAKE_HOUR)) {
+                editor.putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay);
+                editor.putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute);
+            }
+            editor.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS);
+            editor.apply();
+            updateTargetTimeButtonText(hourOfDay, minute);
+            updateCurrentWakeTimeButtonText(preferenceManager.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay), preferenceManager.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute));
+            redrawNotification();
+        });
     }
 
     private void showCurrentWakeTimeDialog() {
@@ -749,19 +743,16 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         int goalMin = preferenceManager.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
         int currentHour = preferenceManager.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
         int currentMin = preferenceManager.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
-        boolean is24Hour = android.text.format.DateFormat.is24HourFormat(this);
 
-        TimePickerDialog timePickerDialog = new TimePickerDialog(this,
-                (view, hourOfDay, minute) -> {
-                    preferenceManager.getSharedPreferences().edit()
-                            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay)
-                            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute)
-                            .remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
-                            .apply();
-                    updateCurrentWakeTimeButtonText(hourOfDay, minute);
-                    redrawNotification();
-                }, currentHour, currentMin, is24Hour);
-        timePickerDialog.show();
+        showTimePickerDialog(currentHour, currentMin, (view, hourOfDay, minute) -> {
+            preferenceManager.getSharedPreferences().edit()
+                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay)
+                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute)
+                    .remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                    .apply();
+            updateCurrentWakeTimeButtonText(hourOfDay, minute);
+            redrawNotification();
+        });
     }
 
     private void updateTargetTimeButtonText(int hour, int minute) {
