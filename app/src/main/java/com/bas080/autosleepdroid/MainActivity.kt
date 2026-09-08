@@ -213,7 +213,6 @@ class MainActivity : Activity(), EventLogger.Listener {
         builder.show()
     }
 
-    @JvmOverloads
     fun sendFeedbackEmail(crashReport: String? = null) {
         val subject = "Auto Sleep Droid Feedback (v${BuildConfig.VERSION_NAME})"
         val bodyBuilder = StringBuilder()
@@ -304,7 +303,6 @@ class MainActivity : Activity(), EventLogger.Listener {
         super.onBackPressed()
     }
 
-    @JvmOverloads
     fun showDurationDialog(
         titleResId: Int,
         prefKey: String,
@@ -312,7 +310,7 @@ class MainActivity : Activity(), EventLogger.Listener {
         minHours: Int = 0,
         maxHours: Int = 24,
         minuteStep: Int = 1,
-        listener: OnDurationSavedListener?
+        listener: OnDurationSavedListener? = null
     ) {
         val currentMinutes = preferenceManager?.getInt(prefKey, defaultMinutes) ?: defaultMinutes
 
