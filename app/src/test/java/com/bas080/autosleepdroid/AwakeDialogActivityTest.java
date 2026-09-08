@@ -49,7 +49,7 @@ public class AwakeDialogActivityTest {
         ShadowApplication shadowApp = Shadows.shadowOf(activity.getApplication());
         Intent startedIntent = shadowApp.getNextStartedService();
         assertNotNull(startedIntent);
-        assertEquals(SleepTimerService.ACTION_AWAKE, startedIntent.getAction());
+        assertEquals(MainService.ACTION_AWAKE, startedIntent.getAction());
         assertTrue(activity.isFinishing());
     }
 

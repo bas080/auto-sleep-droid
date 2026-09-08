@@ -56,7 +56,7 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <service
-            android:name=".SleepTimerService"
+            android:name=".MainService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 

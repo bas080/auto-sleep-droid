@@ -18,8 +18,8 @@ public class AwakeDialogActivity extends Activity {
         builder.setTitle(R.string.dialog_awake_title);
         builder.setMessage(R.string.dialog_awake_message);
         builder.setPositiveButton(R.string.action_awake, (dialog, which) -> {
-            Intent serviceIntent = new Intent(AwakeDialogActivity.this, SleepTimerService.class);
-            serviceIntent.setAction(SleepTimerService.ACTION_AWAKE);
+            Intent serviceIntent = new Intent(AwakeDialogActivity.this, MainService.class);
+            serviceIntent.setAction(MainService.ACTION_AWAKE);
             if (android.os.Build.VERSION.SDK_INT >= 26) {
                 startForegroundService(serviceIntent);
             } else {

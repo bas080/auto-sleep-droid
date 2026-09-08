@@ -600,7 +600,7 @@ public class MainActivityTest {
 
         Intent serviceIntent = shadowApp.getNextStartedService();
         assertNotNull(serviceIntent);
-        assertEquals(SleepTimerService.ACTION_CANCEL_NAP, serviceIntent.getAction());
+        assertEquals(MainService.ACTION_CANCEL_NAP, serviceIntent.getAction());
     }
 
     @Test
@@ -618,8 +618,8 @@ public class MainActivityTest {
         boolean foundRedrawIntent = false;
         Intent intent;
         while ((intent = shadowApp.getNextStartedService()) != null) {
-            if (SleepTimerService.ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())
-                    && SleepTimerService.class.getName().equals(intent.getComponent().getClassName())) {
+            if (MainService.ACTION_REDRAW_NOTIFICATION.equals(intent.getAction())
+                    && MainService.class.getName().equals(intent.getComponent().getClassName())) {
                 foundRedrawIntent = true;
                 break;
             }
@@ -805,9 +805,9 @@ public class MainActivityTest {
 
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
-        org.robolectric.android.controller.ServiceController<SleepTimerService> serviceController =
-                Robolectric.buildService(SleepTimerService.class);
-        SleepTimerService service = serviceController.create().get();
+        org.robolectric.android.controller.ServiceController<MainService> serviceController =
+                Robolectric.buildService(MainService.class);
+        MainService service = serviceController.create().get();
 
         ShadowApplication shadowApp = Shadows.shadowOf(activity.getApplication());
         Intent serviceIntent;
@@ -818,7 +818,7 @@ public class MainActivityTest {
         assertEquals(targetHour, prefs.getInt("current_wake_hour", -1));
         assertEquals(targetMin, prefs.getInt("current_wake_minute", -1));
         assertTrue("Wake alarm timestamp must be registered after setting current wake time",
-                prefs.contains(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS));
+                prefs.contains(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS));
 
         android.app.NotificationManager notificationManager =
                 (android.app.NotificationManager) activity.getSystemService(android.content.Context.NOTIFICATION_SERVICE);

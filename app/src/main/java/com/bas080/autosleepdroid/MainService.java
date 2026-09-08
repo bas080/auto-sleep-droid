@@ -30,7 +30,7 @@ import android.text.TextUtils;
 import java.util.Calendar;
 import java.util.Date;
 
-public class SleepTimerService extends Service implements SensorEventListener, SleepTimerStateMachine.Callback {
+public class MainService extends Service implements SensorEventListener, SleepTimerStateMachine.Callback {
     public static final String ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION";
     public static final String ACTION_TURN_OFF = "com.bas080.autosleepdroid.TURN_OFF";
     public static final String ACTION_TURN_ON = "com.bas080.autosleepdroid.TURN_ON";
@@ -104,7 +104,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     @Override
     public void onCreate() {
         super.onCreate();
-        EventLogger.log(this, EventLogger.LEVEL_LOW, "SleepTimerService created");
+        EventLogger.log(this, EventLogger.LEVEL_LOW, "MainService created");
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         alarmManager = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
         preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
@@ -130,7 +130,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         int currentVolume = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
         boolean musicActive = audioManager != null && audioManager.isMusicActive();
 
-        EventLogger.log(this, "SleepTimerService state initialized (enabled: " + savedEnabled + ", duration: " + savedDuration + "m)");
+        EventLogger.log(this, "MainService state initialized (enabled: " + savedEnabled + ", duration: " + savedDuration + "m)");
 
         stateMachine.initialize(savedEnabled, savedDuration, savedEndsAt, currentVolume, musicActive, System.currentTimeMillis());
 
@@ -480,7 +480,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             showOrHideNotification();
             startFadeRunnable();
         } else if (newState == SleepTimerStateMachine.State.ACTIVE) {
-            if (preferences != null && !preferences.contains("timer_start_time_ms")) {
+            if (preferences != null) {
                 preferences.edit().putLong("timer_start_time_ms", System.currentTimeMillis()).apply();
             }
             unregisterAudioPlaybackCallback();
@@ -503,7 +503,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (alarmManager == null) {
             return;
         }
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_ALARM_EXPIRY);
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_ALARM_EXPIRY);
         PendingIntent pendingIntent = PendingIntent.getService(this, 100, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
@@ -530,7 +530,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         if (alarmManager == null) {
             return;
         }
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_ALARM_EXPIRY);
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_ALARM_EXPIRY);
         PendingIntent pendingIntent = PendingIntent.getService(this, 100, intent,
                 PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
         if (pendingIntent != null) {
@@ -746,7 +746,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
 
         if (alarmManager != null) {
-            Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
+            Intent intent = new Intent(this, MainService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
             PendingIntent pendingIntent = PendingIntent.getService(this, 101, intent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
@@ -770,7 +770,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private void dismissAutoSleepAlarm() {
         if (alarmManager != null) {
-            Intent alarmTriggerIntent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
+            Intent alarmTriggerIntent = new Intent(this, MainService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
             PendingIntent operationIntent = PendingIntent.getService(this, 101, alarmTriggerIntent,
                     PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
             if (operationIntent != null) {
@@ -786,7 +786,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private void cancelSnoozeAlarm() {
         if (alarmManager != null) {
-            Intent snoozeTriggerIntent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
+            Intent snoozeTriggerIntent = new Intent(this, MainService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
             PendingIntent snoozeOperation = PendingIntent.getService(this, 106, snoozeTriggerIntent,
                     PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
             if (snoozeOperation != null) {
@@ -832,6 +832,9 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     @Override
     public void onTimerRescheduled() {
+        if (preferences != null) {
+            preferences.edit().putLong("timer_start_time_ms", System.currentTimeMillis()).apply();
+        }
         long newTimerEndsAt = stateMachine.getTimerEndsAt();
         if (lastTimerEndsAt > 0L && newTimerEndsAt > lastTimerEndsAt && isNapActive()) {
             long deltaMs = newTimerEndsAt - lastTimerEndsAt;
@@ -969,7 +972,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private void scheduleNapAlarm(long triggerAtMs) {
         if (alarmManager == null) return;
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_NAP_EXPIRY);
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_NAP_EXPIRY);
         PendingIntent pendingIntent = PendingIntent.getService(this, 107, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
@@ -998,7 +1001,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private void cancelNapAlarm(boolean showToast) {
         if (alarmManager != null) {
-            Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_NAP_EXPIRY);
+            Intent intent = new Intent(this, MainService.class).setAction(ACTION_NAP_EXPIRY);
             PendingIntent pendingIntent = PendingIntent.getService(this, 107, intent,
                     PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
             if (pendingIntent != null) {
@@ -1136,7 +1139,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         }
         long snoozeTimeMs = System.currentTimeMillis() + SNOOZE_DURATION_MS;
 
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_WAKEUP_ALARM_EXPIRY);
         PendingIntent pendingIntent = PendingIntent.getService(this, 106, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
@@ -1357,25 +1360,25 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private PendingIntent durationIntent() {
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_SET_DURATION);
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_SET_DURATION);
         return PendingIntent.getService(this, 3, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
     }
 
     private PendingIntent clearGoalIntent() {
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_CLEAR_GOAL);
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_CLEAR_GOAL);
         return PendingIntent.getService(this, 11, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private PendingIntent turnOffIntent() {
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_TURN_OFF);
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_TURN_OFF);
         return PendingIntent.getService(this, 5, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private PendingIntent turnOnIntent() {
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_TURN_ON);
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_TURN_ON);
         return PendingIntent.getService(this, 7, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
@@ -1388,25 +1391,25 @@ public class SleepTimerService extends Service implements SensorEventListener, S
     }
 
     private PendingIntent cancelNapIntent() {
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_CANCEL_NAP);
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_CANCEL_NAP);
         return PendingIntent.getService(this, 13, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private PendingIntent dismissWakeUpAlarmIntent() {
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_DISMISS_WAKEUP_ALARM);
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_DISMISS_WAKEUP_ALARM);
         return PendingIntent.getService(this, 14, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private PendingIntent snoozeWakeUpAlarmIntent() {
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_SNOOZE_WAKEUP_ALARM);
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_SNOOZE_WAKEUP_ALARM);
         return PendingIntent.getService(this, 15, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private PendingIntent awakeIntent() {
-        Intent intent = new Intent(this, SleepTimerService.class).setAction(ACTION_AWAKE);
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_AWAKE);
         return PendingIntent.getService(this, 16, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
@@ -1481,7 +1484,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     @Override
     public void onDestroy() {
-        EventLogger.log(this, EventLogger.LEVEL_LOW, "SleepTimerService destroyed");
+        EventLogger.log(this, EventLogger.LEVEL_LOW, "MainService destroyed");
         stopWakeUpAlarmSound();
         isWakeUpAlarmRinging = false;
         isWakeUpAlarmSnoozed = false;

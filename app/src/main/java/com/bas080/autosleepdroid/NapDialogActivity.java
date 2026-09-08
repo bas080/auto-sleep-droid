@@ -15,7 +15,7 @@ public class NapDialogActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-        int savedDuration = prefs.getInt(SleepTimerService.KEY_NAP_DURATION_MINUTES, 20);
+        int savedDuration = prefs.getInt(MainService.KEY_NAP_DURATION_MINUTES, 20);
 
         android.view.ContextThemeWrapper dialogContext = new android.view.ContextThemeWrapper(this, R.style.AppTheme);
 
@@ -30,11 +30,11 @@ public class NapDialogActivity extends Activity {
         builder.setPositiveButton(R.string.action_nap, (dialog, which) -> {
             int minutes = durationInputView.getTotalMinutes();
             if (minutes > 0) {
-                prefs.edit().putInt(SleepTimerService.KEY_NAP_DURATION_MINUTES, minutes).apply();
+                prefs.edit().putInt(MainService.KEY_NAP_DURATION_MINUTES, minutes).apply();
 
-                Intent serviceIntent = new Intent(NapDialogActivity.this, SleepTimerService.class);
-                serviceIntent.setAction(SleepTimerService.ACTION_START_NAP);
-                serviceIntent.putExtra(SleepTimerService.EXTRA_NAP_DURATION_MINUTES, minutes);
+                Intent serviceIntent = new Intent(NapDialogActivity.this, MainService.class);
+                serviceIntent.setAction(MainService.ACTION_START_NAP);
+                serviceIntent.putExtra(MainService.EXTRA_NAP_DURATION_MINUTES, minutes);
                 if (android.os.Build.VERSION.SDK_INT >= 26) {
                     startForegroundService(serviceIntent);
                 } else {

@@ -28,7 +28,7 @@ public class BootReceiverTest {
 
         Intent nextService = ShadowApplication.getInstance().getNextStartedService();
         assertNotNull(nextService);
-        assertEquals(SleepTimerService.class.getName(), nextService.getComponent().getClassName());
+        assertEquals(MainService.class.getName(), nextService.getComponent().getClassName());
     }
 
     @Test

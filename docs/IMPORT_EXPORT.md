@@ -105,7 +105,7 @@ The Import/Export control section is located on `MainActivity` (`activity_main.x
    - Checks that numerical parameters fall within valid ranges (`duration_minutes` 1-1440, `wake_up_goal_hour` 0-23, `wake_up_goal_minute` 0-59, `min_sleep_duration_minutes` 1-1440).
 5. **On Valid Import**:
    - Updates settings in `SharedPreferences`.
-   - Sends an intent (`ACTION_REDRAW_NOTIFICATION`) to `SleepTimerService` to immediately apply new timer/goal settings and redraw the notification shade.
+   - Sends an intent (`ACTION_REDRAW_NOTIFICATION`) to `MainService` to immediately apply new timer/goal settings and redraw the notification shade.
    - Displays a Toast confirmation message ("Settings imported successfully").
    - Logs the event to `EventLogger` (`"Imported settings from string"`).
 6. **On Invalid Import**:

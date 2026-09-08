@@ -482,7 +482,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
                 prefs.edit()
                         .putBoolean("wake_up_goal_enabled", isChecked)
-                        .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                        .remove(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS)
                         .apply();
                 boolean timerActive = prefs.getBoolean("active", true);
                 updateInputEnabledStates(timerActive, isChecked);
@@ -507,7 +507,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     0, 16, 15,
                     minutes -> {
                         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
-                        prefs.edit().remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
+                        prefs.edit().remove(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
                         if (textMinSleepValue != null) {
                             textMinSleepValue.setText(DurationUtils.formatDurationString(minutes));
                         }
@@ -707,7 +707,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                         editor.putInt("current_wake_hour", hourOfDay)
                               .putInt("current_wake_minute", minute);
                     }
-                    editor.remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
+                    editor.remove(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
                     updateTargetTimeButtonText(hourOfDay, minute);
                     updateCurrentWakeTimeButtonText(prefs1.getInt("current_wake_hour", hourOfDay), prefs1.getInt("current_wake_minute", minute));
                     redrawNotification();
@@ -729,7 +729,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     prefs1.edit()
                             .putInt("current_wake_hour", hourOfDay)
                             .putInt("current_wake_minute", minute)
-                            .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                            .remove(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS)
                             .apply();
                     updateCurrentWakeTimeButtonText(hourOfDay, minute);
                     redrawNotification();
@@ -773,7 +773,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         int currentMin = prefs.getInt("current_wake_minute", goalMin);
         int minSleepMin = prefs.getInt("min_sleep_duration_minutes", 450);
         int hcMinDurationMin = prefs.getInt("hc_min_duration_minutes", 15);
-        int napDurationMinutes = prefs.getInt(SleepTimerService.KEY_NAP_DURATION_MINUTES, 20);
+        int napDurationMinutes = prefs.getInt(MainService.KEY_NAP_DURATION_MINUTES, 20);
         long napEndsAt = prefs.getLong("nap_alarm_ends_at", 0L);
         boolean isNapActive = napEndsAt > System.currentTimeMillis();
 
@@ -839,8 +839,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
         prefs.edit().remove("nap_alarm_ends_at").apply();
 
-        Intent serviceIntent = new Intent(this, SleepTimerService.class);
-        serviceIntent.setAction(SleepTimerService.ACTION_CANCEL_NAP);
+        Intent serviceIntent = new Intent(this, MainService.class);
+        serviceIntent.setAction(MainService.ACTION_CANCEL_NAP);
         if (Build.VERSION.SDK_INT >= 26) {
             startForegroundService(serviceIntent);
         } else {
@@ -982,7 +982,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     .putInt("min_sleep_duration_minutes", minSleepMinutes)
                     .putBoolean("health_connect_enabled", healthConnectEnabled)
                     .putInt("hc_min_duration_minutes", hcMinDurationMinutes)
-                    .remove(SleepTimerService.KEY_WAKEUP_LAST_SCHEDULED_MS)
+                    .remove(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS)
                     .apply();
 
             Toast.makeText(this, R.string.toast_import_success, Toast.LENGTH_SHORT).show();
@@ -1085,8 +1085,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void redrawNotification() {
-        Intent serviceIntent = new Intent(this, SleepTimerService.class);
-        serviceIntent.setAction(SleepTimerService.ACTION_REDRAW_NOTIFICATION);
+        Intent serviceIntent = new Intent(this, MainService.class);
+        serviceIntent.setAction(MainService.ACTION_REDRAW_NOTIFICATION);
         if (Build.VERSION.SDK_INT >= 26) {
             startForegroundService(serviceIntent);
         } else {
@@ -1108,7 +1108,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void startTimerService() {
-        Intent serviceIntent = new Intent(this, SleepTimerService.class);
+        Intent serviceIntent = new Intent(this, MainService.class);
         if (Build.VERSION.SDK_INT >= 26) {
             startForegroundService(serviceIntent);
         } else {

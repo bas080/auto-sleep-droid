@@ -14,7 +14,7 @@ After evaluating available Android System UI mechanisms, **the Dialog Activity O
 Auto Sleep Droid includes a Smart Wake-Up Goal feature ("Auto Sleep") designed to automatically set a daily wake-up alarm while protecting the user's sleep duration:
 - **Target Goal Time**: The user's desired daily wake-up clock time (e.g., `06:30 AM`).
 - **Minimum Sleep Duration**: A minimum sleep safeguard duration in hours (default 7.5 hours / 450 minutes).
-- **Dynamic Alarm Calculation**: When the sleep timer starts, is reset, or when the current alarm rings, `SleepTimerService` calculates the wake-up alarm timestamp as `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` and schedules a daily recurring system alarm via `AlarmManager.setAlarmClock`.
+- **Dynamic Alarm Calculation**: When the sleep timer starts, is reset, or when the current alarm rings, `MainService` calculates the wake-up alarm timestamp as `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` and schedules a daily recurring system alarm via `AlarmManager.setAlarmClock`.
 
 ### Current Goal UI Location
 Currently, setting or clearing the wake-up goal requires opening the main app screen (`MainActivity`):
@@ -91,7 +91,7 @@ Standard Android notification layouts render up to **3 visible action buttons** 
 ## 5. Detailed Architectural Specification for the Dialog Approach
 
 ### 1. Notification Action Integration
-In `SleepTimerService.buildNotification()`, allocate **Action Slot 3** for Goal Alarm management across all service states (`Off`, `Waiting`, `Active`, `Fading`):
+In `MainService.buildNotification()`, allocate **Action Slot 3** for Goal Alarm management across all service states (`Off`, `Waiting`, `Active`, `Fading`):
 
 - **Action Title**:
   - When Goal is Disabled: `"Set Goal"`
@@ -113,7 +113,7 @@ In `SleepTimerService.buildNotification()`, allocate **Action Slot 3** for Goal 
 2. System UI fires the `PendingIntent` and opens `GoalSettingsDialogActivity` as a lightweight overlay over the foreground app.
 3. User selects target wake-up time on the `TimePicker` wheel and taps "Save".
 4. `GoalSettingsDialogActivity` writes values to `SharedPreferences` (`wake_up_goal_enabled`, `wake_up_goal_hour`, `wake_up_goal_minute`, `min_sleep_duration_minutes`).
-5. `GoalSettingsDialogActivity` sends an intent to `SleepTimerService` (`ACTION_REDRAW_NOTIFICATION` / `ACTION_UPDATE_GOAL`) to recalculate the `"Auto Sleep"` system alarm and redraw the notification shade immediately.
+5. `GoalSettingsDialogActivity` sends an intent to `MainService` (`ACTION_REDRAW_NOTIFICATION` / `ACTION_UPDATE_GOAL`) to recalculate the `"Auto Sleep"` system alarm and redraw the notification shade immediately.
 6. `GoalSettingsDialogActivity` calls `finish()` and closes, returning the user instantly to their active app.
 
 ---

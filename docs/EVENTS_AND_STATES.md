@@ -2,7 +2,7 @@
 
 ## Overview
 
-Auto Sleep Droid is driven by an event-based state machine architecture (`SleepTimerStateMachine`) managed by `SleepTimerService`. The core state machine controls timer countdowns, audio volume fade-outs, media pausing, and background listener registrations, while communicating system side-effects back through a callback interface.
+Auto Sleep Droid is driven by an event-based state machine architecture (`SleepTimerStateMachine`) managed by `MainService` (renamed from `SleepTimerService`). The core state machine controls timer countdowns, audio volume fade-outs, media pausing, and background listener registrations, while communicating system side-effects back through a callback interface.
 
 This document describes all possible system states, listener lifecycles, input and system events, transition rules, state-event matrix, and logged event messages.
 
@@ -109,23 +109,23 @@ To minimize battery consumption and avoid unnecessary CPU wakeups, listeners in 
 ### Detailed Registration Details
 
 1. **`AudioManager.AudioPlaybackCallback` (API 26+)**:
-   * **Registration Point**: Registered dynamically when entering `WAITING` state via `SleepTimerService.onStateChanged()`.
+   * **Registration Point**: Registered dynamically when entering `WAITING` state via `MainService.onStateChanged()`.
    * **Active Lifetime**: **`WAITING` state only**.
    * **Purpose**: Passively listens for active music playback changes (`isMusicActive()`). When in `WAITING` state, active playback triggers timer start (`ACTIVE`). Unnecessary in `OFF` (timer disabled), `ACTIVE` (countdown running towards expiration), and `FADING` states.
-   * **Removal Point**: Unregistered immediately upon transition to `OFF`, `ACTIVE`, or `FADING` state, or when `SleepTimerService.onDestroy()` is called.
+   * **Removal Point**: Unregistered immediately upon transition to `OFF`, `ACTIVE`, or `FADING` state, or when `MainService.onDestroy()` is called.
 
 2. **Motion Sensor Listener (`TYPE_ACCELEROMETER`)**:
-   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`, or when `ACTION_WAKEUP_ALARM_EXPIRY` triggers the wake-up alarm.
+   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `MainService.onStateChanged()`, or when `ACTION_WAKEUP_ALARM_EXPIRY` triggers the wake-up alarm.
    * **Background Threading**: Registered on a dedicated `HandlerThread` (`SensorThread`) with `SensorManager.SENSOR_DELAY_NORMAL` and 300ms temporal throttling to preserve battery.
    * **Active Lifetime**: **`ACTIVE` and `FADING` states, or while Wake-Up Alarm is Ringing**.
    * **Purpose**: Detects phone flip gestures (face-up to face-down or face-down to face-up). Flips during `ACTIVE` reset countdown timer; flips during `FADING` cancel fade-out, restore pre-fade volume, and reset countdown timer; flips while wake-up alarm is ringing snooze the wake-up alarm for 9 minutes.
-   * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing), when wake-up alarm stops ringing in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked. The background `HandlerThread` is safely terminated (`quitSafely()`).
+   * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing), when wake-up alarm stops ringing in `OFF`/`WAITING`, or when `MainService.onDestroy()` is invoked. The background `HandlerThread` is safely terminated (`quitSafely()`).
 
 3. **Volume Observer (`VOLUME_CHANGED_ACTION` BroadcastReceiver)**:
-   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `SleepTimerService.onStateChanged()`, or when wake-up alarm is ringing / snoozed.
+   * **Registration Point**: Dynamically registered when entering `ACTIVE` or `FADING` state via `MainService.onStateChanged()`, or when wake-up alarm is ringing / snoozed.
    * **Active Lifetime**: **`ACTIVE` and `FADING` states, or while Wake-Up Alarm is Ringing / Snoozed**.
    * **Purpose**: Detects manual volume button presses. Volume changes during `ACTIVE` reset countdown timer; volume changes during `FADING` cancel fade-out, restore pre-fade volume, and reset countdown timer; volume changes while wake-up alarm is ringing or snoozed dismiss the wake-up alarm.
-   * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing or snoozed), when wake-up alarm is dismissed in `OFF`/`WAITING`, or when `SleepTimerService.onDestroy()` is invoked.
+   * **Removal Point**: Unregistered immediately when entering `OFF` or `WAITING` state (unless wake-up alarm is currently ringing or snoozed), when wake-up alarm is dismissed in `OFF`/`WAITING`, or when `MainService.onDestroy()` is invoked.
 
 4. **Event Logger Listener (`EventLogger.Listener`)**:
    * **Registration Point**: Registered in `MainActivity.onResume()`.
@@ -209,8 +209,8 @@ All system state changes and input triggers are logged to `EventLogger` with a t
 
 | Event / Trigger | Log Message Format |
 |---|---|
-| Service Created | `SleepTimerService created` |
-| State Initialized | `SleepTimerService state initialized (enabled: <bool>, duration: <X>m)` |
+| Service Created | `MainService created` |
+| State Initialized | `MainService state initialized (enabled: <bool>, duration: <X>m)` |
 | Turn On Action | `Timer turned on` |
 | Turn Off Action | `Timer turned off` |
 | Set Duration Action | `Duration set to <X>m (input: '<raw_input>')` |
@@ -231,4 +231,4 @@ All system state changes and input triggers are logged to `EventLogger` with a t
 | Wake-Up Alarm Snoozed via Flip | `Wake-Up Goal alarm snoozed via flip gesture` |
 | Wake-Up Alarm Snoozed | `Wake-Up Goal alarm snoozed for 9m` |
 | Wake-Up Alarm Dismissed via Vol | `Wake-Up Goal alarm dismissed via volume button` |
-| Service Destroyed | `SleepTimerService destroyed` |
+| Service Destroyed | `MainService destroyed` |
