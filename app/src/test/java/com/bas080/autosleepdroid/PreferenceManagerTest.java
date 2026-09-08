@@ -121,4 +121,37 @@ public class PreferenceManagerTest {
         assertEquals(30, result4);
         assertEquals("Compute count should increment to 2 after tracked preference update", 2, computeCount.get());
     }
+
+    @Test
+    public void testFunctionKeyedComputedValueMemoization() {
+        AtomicInteger computeCount = new AtomicInteger(0);
+        rawPreferences.edit().putInt(PreferenceKeys.KEY_DURATION_MINUTES, 45).commit();
+
+        PreferenceManager.ComputedValue<String> comp = getter -> {
+            computeCount.incrementAndGet();
+            return DurationUtils.formatDurationString(getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, 0));
+        };
+
+        String val1 = preferenceManager.getComputed(comp);
+        assertEquals("45m", val1);
+        assertEquals(1, computeCount.get());
+
+        String val2 = preferenceManager.getComputed(comp);
+        assertEquals("45m", val2);
+        assertEquals("Compute count should remain 1 when using function reference key", 1, computeCount.get());
+
+        rawPreferences.edit().putInt(PreferenceKeys.KEY_DURATION_MINUTES, 60).commit();
+
+        String val3 = preferenceManager.getComputed(comp);
+        assertEquals("1h", val3);
+        assertEquals("Compute count should increment to 2 after tracked preference update", 2, computeCount.get());
+    }
+
+    @Test
+    public void testPreferenceComputationsIsWakeAlarmEnabled() {
+        assertFalse(preferenceManager.getComputed(PreferenceComputations.IS_WAKE_ALARM_ENABLED));
+
+        rawPreferences.edit().putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true).commit();
+        assertTrue(preferenceManager.getComputed(PreferenceComputations.IS_WAKE_ALARM_ENABLED));
+    }
 }

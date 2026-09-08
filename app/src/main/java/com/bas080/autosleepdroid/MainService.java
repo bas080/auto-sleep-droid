@@ -48,18 +48,18 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
     public static final String EXTRA_NAP_DURATION_MINUTES = "extra_nap_duration_minutes";
     public static final String ALARM_SEARCH_NAME = "Auto Sleep";
-    public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = PreferenceManager.KEY_WAKEUP_LAST_SCHEDULED_MS;
-    public static final String KEY_NAP_DURATION_MINUTES = PreferenceManager.KEY_NAP_DURATION_MINUTES;
-    public static final String KEY_NAP_ALARM_ENDS_AT = PreferenceManager.KEY_NAP_ALARM_ENDS_AT;
-    public static final String KEY_NAP_ALARM_RINGING = PreferenceManager.KEY_NAP_ALARM_RINGING;
+    public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS;
+    public static final String KEY_NAP_DURATION_MINUTES = PreferenceKeys.KEY_NAP_DURATION_MINUTES;
+    public static final String KEY_NAP_ALARM_ENDS_AT = PreferenceKeys.KEY_NAP_ALARM_ENDS_AT;
+    public static final String KEY_NAP_ALARM_RINGING = PreferenceKeys.KEY_NAP_ALARM_RINGING;
 
     private static final String CHANNEL_ID = "sleep_timer";
     private static final int NOTIFICATION_ID = 1001;
     private static final long SNOOZE_DURATION_MS = 9 * 60_000L;
-    private static final String PREFERENCES = PreferenceManager.PREFERENCES_NAME;
-    private static final String KEY_ENABLED = PreferenceManager.KEY_ACTIVE;
-    private static final String KEY_DURATION_MINUTES = PreferenceManager.KEY_DURATION_MINUTES;
-    private static final String KEY_TIMER_ENDS_AT = PreferenceManager.KEY_TIMER_ENDS_AT;
+    private static final String PREFERENCES = PreferenceKeys.PREFERENCES_NAME;
+    private static final String KEY_ENABLED = PreferenceKeys.KEY_ACTIVE;
+    private static final String KEY_DURATION_MINUTES = PreferenceKeys.KEY_DURATION_MINUTES;
+    private static final String KEY_TIMER_ENDS_AT = PreferenceKeys.KEY_TIMER_ENDS_AT;
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long PAUSE_RESET_DELAY_MS = 500L;
     private static final long SENSOR_THROTTLE_MS = 300L;
@@ -671,9 +671,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
     private boolean isWakeAlarmEnabled() {
         if (preferenceManager == null) return false;
-        return Boolean.TRUE.equals(preferenceManager.getComputed(
-                "isWakeAlarmEnabled",
-                getter -> getter.getBoolean(PreferenceManager.KEY_WAKE_UP_GOAL_ENABLED, false)));
+        return Boolean.TRUE.equals(preferenceManager.getComputed(PreferenceComputations.IS_WAKE_ALARM_ENABLED));
     }
 
     boolean shouldShowAwakeAction() {
@@ -681,15 +679,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
             return true;
         }
         if (preferenceManager == null) return false;
-        return Boolean.TRUE.equals(preferenceManager.getComputed(
-                "shouldShowAwakeAction",
-                getter -> {
-                    long sleepStartTime = getter.getLong(PreferenceManager.KEY_SLEEP_START_TIME_MS, 0L);
-                    long timerStartTime = getter.getLong(PreferenceManager.KEY_TIMER_START_TIME_MS, 0L);
-                    long now = System.currentTimeMillis();
-                    return (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L))
-                            || (timerStartTime > 0L && (now - timerStartTime < 14 * 3600_000L));
-                }));
+        return Boolean.TRUE.equals(preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION));
     }
 
     public static Calendar calculateScheduledAlarm(Context context, long now, long timerEndsAt) {
@@ -999,9 +989,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
     private boolean isNapActive() {
         if (preferenceManager == null) return napAlarmEndsAt > System.currentTimeMillis();
-        return Boolean.TRUE.equals(preferenceManager.getComputed(
-                "isNapActive",
-                getter -> getter.getLong(PreferenceManager.KEY_NAP_ALARM_ENDS_AT, 0L) > System.currentTimeMillis()));
+        return Boolean.TRUE.equals(preferenceManager.getComputed(PreferenceComputations.IS_NAP_ACTIVE));
     }
 
     private void setDndMode(boolean enable) {
