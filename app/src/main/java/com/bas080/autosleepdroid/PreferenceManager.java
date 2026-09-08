@@ -36,12 +36,29 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
     public static final String KEY_HC_MIN_DURATION_MINUTES = "hc_min_duration_minutes";
     public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = "wakeup_last_scheduled_ms";
 
+    @FunctionalInterface
     public interface OnPreferenceChangeListener {
         void onPreferenceChanged(String key);
     }
 
+    @FunctionalInterface
+    public interface ComputedValue<T> {
+        T compute();
+    }
+
+    private static class CachedComputation {
+        final Object value;
+        final String[] dependencyKeys;
+
+        CachedComputation(Object value, String[] dependencyKeys) {
+            this.value = value;
+            this.dependencyKeys = dependencyKeys;
+        }
+    }
+
     private final SharedPreferences preferences;
     private final Map<String, Set<OnPreferenceChangeListener>> listenersMap = new ConcurrentHashMap<>();
+    private final Map<String, CachedComputation> computedCache = new ConcurrentHashMap<>();
     private final ExecutorService asyncExecutor = Executors.newSingleThreadExecutor();
 
     public PreferenceManager(Context context, String preferenceName) {
@@ -78,9 +95,46 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public <T> T getComputed(String computeKey, String[] dependencyKeys, ComputedValue<T> computer) {
+        if (computeKey == null || computer == null) return null;
+        CachedComputation cached = computedCache.get(computeKey);
+        if (cached != null) {
+            return (T) cached.value;
+        }
+        T result = computer.compute();
+        computedCache.put(computeKey, new CachedComputation(result, dependencyKeys != null ? dependencyKeys : new String[0]));
+        return result;
+    }
+
+    public void invalidateComputed(String computeKey) {
+        if (computeKey != null) {
+            computedCache.remove(computeKey);
+        }
+    }
+
+    public void invalidateAllComputed() {
+        computedCache.clear();
+    }
+
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         if (key == null) return;
+
+        if (!computedCache.isEmpty()) {
+            for (Map.Entry<String, CachedComputation> entry : computedCache.entrySet()) {
+                String[] deps = entry.getValue().dependencyKeys;
+                if (deps != null) {
+                    for (String depKey : deps) {
+                        if (key.equals(depKey)) {
+                            computedCache.remove(entry.getKey());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         Set<OnPreferenceChangeListener> listeners = listenersMap.get(key);
         if (listeners != null && !listeners.isEmpty()) {
             for (OnPreferenceChangeListener listener : listeners) {
@@ -138,6 +192,7 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
     public void shutdown() {
         preferences.unregisterOnSharedPreferenceChangeListener(this);
         listenersMap.clear();
+        computedCache.clear();
         asyncExecutor.shutdown();
     }
 }

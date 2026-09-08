@@ -670,20 +670,28 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     }
 
     private boolean isWakeAlarmEnabled() {
-        if (preferences == null) return false;
-        return preferences.getBoolean("wake_up_goal_enabled", false);
+        if (preferenceManager == null) return false;
+        return Boolean.TRUE.equals(preferenceManager.getComputed(
+                "isWakeAlarmEnabled",
+                new String[]{PreferenceManager.KEY_WAKE_UP_GOAL_ENABLED},
+                () -> preferences.getBoolean(PreferenceManager.KEY_WAKE_UP_GOAL_ENABLED, false)));
     }
 
     boolean shouldShowAwakeAction() {
         if (isNapActive() || isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) {
             return true;
         }
-        if (preferences == null) return false;
-        long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
-        long timerStartTime = preferences.getLong("timer_start_time_ms", 0L);
-        long now = System.currentTimeMillis();
-        return (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L))
-                || (timerStartTime > 0L && (now - timerStartTime < 14 * 3600_000L));
+        if (preferenceManager == null) return false;
+        return Boolean.TRUE.equals(preferenceManager.getComputed(
+                "shouldShowAwakeAction",
+                new String[]{PreferenceManager.KEY_SLEEP_START_TIME_MS, PreferenceManager.KEY_TIMER_START_TIME_MS},
+                () -> {
+                    long sleepStartTime = preferences.getLong(PreferenceManager.KEY_SLEEP_START_TIME_MS, 0L);
+                    long timerStartTime = preferences.getLong(PreferenceManager.KEY_TIMER_START_TIME_MS, 0L);
+                    long now = System.currentTimeMillis();
+                    return (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L))
+                            || (timerStartTime > 0L && (now - timerStartTime < 14 * 3600_000L));
+                }));
     }
 
     public static Calendar calculateScheduledAlarm(Context context, long now, long timerEndsAt) {
@@ -992,7 +1000,11 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     }
 
     private boolean isNapActive() {
-        return napAlarmEndsAt > System.currentTimeMillis();
+        if (preferenceManager == null) return napAlarmEndsAt > System.currentTimeMillis();
+        return Boolean.TRUE.equals(preferenceManager.getComputed(
+                "isNapActive",
+                new String[]{PreferenceManager.KEY_NAP_ALARM_ENDS_AT},
+                () -> napAlarmEndsAt > System.currentTimeMillis()));
     }
 
     private void setDndMode(boolean enable) {
