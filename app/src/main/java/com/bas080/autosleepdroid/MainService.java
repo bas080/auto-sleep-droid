@@ -832,8 +832,39 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
     @Override
     public void onTimerRescheduled() {
+        long now = System.currentTimeMillis();
         if (preferences != null) {
-            preferences.edit().putLong("timer_start_time_ms", System.currentTimeMillis()).apply();
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putLong("timer_start_time_ms", now);
+
+            if (isWakeAlarmEnabled()) {
+                int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
+                long minSleepMs = minSleepMin * 60_000L;
+                long windowMs = (long) (1.2 * minSleepMs);
+
+                int goalHour = preferences.getInt("wake_up_goal_hour", 6);
+                int goalMin = preferences.getInt("wake_up_goal_minute", 30);
+                int currentHour = preferences.getInt("current_wake_hour", goalHour);
+                int currentMin = preferences.getInt("current_wake_minute", goalMin);
+
+                Calendar calCurrent = Calendar.getInstance();
+                calCurrent.setTimeInMillis(now);
+                calCurrent.set(Calendar.HOUR_OF_DAY, currentHour);
+                calCurrent.set(Calendar.MINUTE, currentMin);
+                calCurrent.set(Calendar.SECOND, 0);
+                calCurrent.set(Calendar.MILLISECOND, 0);
+                if (calCurrent.getTimeInMillis() <= now) {
+                    calCurrent.add(Calendar.DAY_OF_YEAR, 1);
+                }
+
+                long currentAlarmMs = calCurrent.getTimeInMillis();
+                long existingSleepStart = preferences.getLong("sleep_start_time_ms", 0L);
+                if ((existingSleepStart == 0L || now - existingSleepStart >= 14 * 3600_000L)
+                        && now >= currentAlarmMs - windowMs && now <= currentAlarmMs) {
+                    editor.putLong("sleep_start_time_ms", now);
+                }
+            }
+            editor.apply();
         }
         long newTimerEndsAt = stateMachine.getTimerEndsAt();
         if (lastTimerEndsAt > 0L && newTimerEndsAt > lastTimerEndsAt && isNapActive()) {
@@ -852,7 +883,6 @@ public class MainService extends Service implements SensorEventListener, SleepTi
             int minSleepMin = preferences.getInt("min_sleep_duration_minutes", 450);
             int timerDuration = preferences.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
             long minSleepMs = minSleepMin * 60_000L;
-            long now = System.currentTimeMillis();
             long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
             long requiredWakeTime;
             long baseTime;

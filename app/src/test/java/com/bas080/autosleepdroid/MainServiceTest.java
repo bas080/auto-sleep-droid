@@ -1121,10 +1121,14 @@ public class MainServiceTest {
 
     @Test
     public void testCalculateScheduledAlarmPrioritizesActiveTimerEndsAtForMinimumSleepSafeguard() {
-        long now = System.currentTimeMillis();
+        Calendar fixedNowCal = Calendar.getInstance();
+        fixedNowCal.set(2025, Calendar.JANUARY, 1, 22, 0, 0); // 10:00 PM
+        fixedNowCal.set(Calendar.MILLISECOND, 0);
+        long now = fixedNowCal.getTimeInMillis();
+
         int minSleepMin = 450;
         int timerDurationMin = 30;
-        long timerEndsAt = now + 30 * 60_000L;
+        long timerEndsAt = now + 3 * 3600_000L; // 1:00 AM next day
 
         preferences.edit()
                 .putBoolean("wake_up_goal_enabled", true)
@@ -1225,6 +1229,36 @@ public class MainServiceTest {
     }
 
     @Test
+    public void testResettingSleepTimerWithinWindowUpdatesSleepStartTimeMs() {
+        long now = System.currentTimeMillis();
+        int minSleepMin = 450; // 7.5 hours
+
+        // Goal/Current wake alarm set to 5 hours from now (within 1.2 * 7.5h = 9h window)
+        Calendar calCurrent = Calendar.getInstance();
+        calCurrent.setTimeInMillis(now + 5 * 3600_000L);
+        int currentHour = calCurrent.get(Calendar.HOUR_OF_DAY);
+        int currentMin = calCurrent.get(Calendar.MINUTE);
+
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", currentHour)
+                .putInt("wake_up_goal_minute", currentMin)
+                .putInt("current_wake_hour", currentHour)
+                .putInt("current_wake_minute", currentMin)
+                .putInt("min_sleep_duration_minutes", minSleepMin)
+                .commit();
+
+        ServiceController<MainService> controller = Robolectric.buildService(MainService.class);
+        MainService service = controller.create().get();
+
+        service.onTimerRescheduled();
+
+        long updatedSleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
+        assertTrue("sleep_start_time_ms must be updated to current time when reset within 1.2x min sleep window",
+                updatedSleepStartTime >= now);
+    }
+
+    @Test
     public void testTimerActivationRecordsTimerStartTimeMsAndPreservesItOnExpiry() throws Exception {
         preferences.edit()
                 .putBoolean("active", true)
@@ -1316,23 +1350,22 @@ public class MainServiceTest {
     @Test
     public void testOnTimerRescheduledPushesWakeAlarmForwardToSafeguardMinSleep() throws Exception {
         long now = System.currentTimeMillis();
-        int minSleepMin = 450;
+        int minSleepMin = 450; // 7.5 hours
         int timerDurationMin = 30;
-        long timerEndsAt = now + timerDurationMin * 60_000L;
+        long timerEndsAt = now + 2 * 3600_000L; // Timer ends 2 hours from now
 
-        Calendar calTarget = Calendar.getInstance();
-        calTarget.setTimeInMillis(now);
-        calTarget.set(Calendar.HOUR_OF_DAY, 6);
-        calTarget.set(Calendar.MINUTE, 30);
-        calTarget.set(Calendar.SECOND, 0);
-        calTarget.set(Calendar.MILLISECOND, 0);
+        // Current wake alarm set to 1 hour from now (earlier than requiredWakeTime = now + 2h + 7h = now + 9h)
+        Calendar calCurrent = Calendar.getInstance();
+        calCurrent.setTimeInMillis(now + 3600_000L);
+        int currentHour = calCurrent.get(Calendar.HOUR_OF_DAY);
+        int currentMin = calCurrent.get(Calendar.MINUTE);
 
         preferences.edit()
                 .putBoolean("wake_up_goal_enabled", true)
-                .putInt("wake_up_goal_hour", 6)
-                .putInt("wake_up_goal_minute", 30)
-                .putInt("current_wake_hour", 6)
-                .putInt("current_wake_minute", 30)
+                .putInt("wake_up_goal_hour", currentHour)
+                .putInt("wake_up_goal_minute", currentMin)
+                .putInt("current_wake_hour", currentHour)
+                .putInt("current_wake_minute", currentMin)
                 .putInt("min_sleep_duration_minutes", minSleepMin)
                 .putInt("duration_minutes", timerDurationMin)
                 .commit();
@@ -1364,25 +1397,29 @@ public class MainServiceTest {
     @Test
     public void testOnTimerRescheduledMovesWakeAlarmEarlierWhenGoingToBedEarlyWithinWindow() {
         long now = System.currentTimeMillis();
-        int minSleepMin = 450;
-        Calendar calCurrent = Calendar.getInstance();
-        calCurrent.setTimeInMillis(now);
-        calCurrent.set(Calendar.HOUR_OF_DAY, 7);
-        calCurrent.set(Calendar.MINUTE, 30);
-        calCurrent.set(Calendar.SECOND, 0);
-        calCurrent.set(Calendar.MILLISECOND, 0);
-        if (calCurrent.getTimeInMillis() <= now) {
-            calCurrent.add(Calendar.DAY_OF_YEAR, 1);
-        }
+        int minSleepMin = 450; // 7.5 hours
 
-        long bedtimeMs = calCurrent.getTimeInMillis() - (8 * 3600_000L + 30 * 60_000L);
+        // Current wake alarm: 8 hours from now
+        Calendar calCurrent = Calendar.getInstance();
+        calCurrent.setTimeInMillis(now + 8 * 3600_000L);
+        int currentHour = calCurrent.get(Calendar.HOUR_OF_DAY);
+        int currentMin = calCurrent.get(Calendar.MINUTE);
+
+        // Goal wake alarm: 7.5 hours from now
+        Calendar calGoal = Calendar.getInstance();
+        calGoal.setTimeInMillis(now + (7 * 3600_000L + 30 * 60_000L));
+        int goalHour = calGoal.get(Calendar.HOUR_OF_DAY);
+        int goalMin = calGoal.get(Calendar.MINUTE);
+
+        // Bedtime in the recent past (e.g. 10 minutes ago) so baseTime = now - 10m
+        long bedtimeMs = now - 10 * 60_000L;
 
         preferences.edit()
                 .putBoolean("wake_up_goal_enabled", true)
-                .putInt("wake_up_goal_hour", 6)
-                .putInt("wake_up_goal_minute", 30)
-                .putInt("current_wake_hour", 7)
-                .putInt("current_wake_minute", 30)
+                .putInt("wake_up_goal_hour", goalHour)
+                .putInt("wake_up_goal_minute", goalMin)
+                .putInt("current_wake_hour", currentHour)
+                .putInt("current_wake_minute", currentMin)
                 .putInt("min_sleep_duration_minutes", minSleepMin)
                 .putLong("sleep_start_time_ms", bedtimeMs)
                 .commit();
@@ -1392,8 +1429,8 @@ public class MainServiceTest {
 
         service.onTimerRescheduled();
 
-        assertEquals(6, preferences.getInt("current_wake_hour", -1));
-        assertEquals(30, preferences.getInt("current_wake_minute", -1));
+        assertEquals(goalHour, preferences.getInt("current_wake_hour", -1));
+        assertEquals(goalMin, preferences.getInt("current_wake_minute", -1));
     }
 
     @Test
@@ -1570,14 +1607,23 @@ public class MainServiceTest {
     @Test
     public void testSessionAnchoredMinimumSleepDoesNotPushAlarmWhenSleepDurationSatisfied() {
         long now = System.currentTimeMillis();
-        long sleepStart = now - (6 * 3600_000L + 45 * 60_000L);
+        int minSleepMin = 450; // 7.5 hours
+
+        // Setup wake alarm to 7:30 AM tomorrow (or far enough in future so now is outside window)
+        Calendar calCurrent = Calendar.getInstance();
+        calCurrent.setTimeInMillis(now + 12 * 3600_000L); // 12 hours from now
+        int currentHour = calCurrent.get(Calendar.HOUR_OF_DAY);
+        int currentMin = calCurrent.get(Calendar.MINUTE);
+
+        long sleepStart = calCurrent.getTimeInMillis() - 8 * 3600_000L; // 8 hours of sleep relative to alarm
+
         preferences.edit()
                 .putBoolean("wake_up_goal_enabled", true)
-                .putInt("wake_up_goal_hour", 7)
-                .putInt("wake_up_goal_minute", 30)
-                .putInt("current_wake_hour", 7)
-                .putInt("current_wake_minute", 30)
-                .putInt("min_sleep_duration_minutes", 450)
+                .putInt("wake_up_goal_hour", currentHour)
+                .putInt("wake_up_goal_minute", currentMin)
+                .putInt("current_wake_hour", currentHour)
+                .putInt("current_wake_minute", currentMin)
+                .putInt("min_sleep_duration_minutes", minSleepMin)
                 .putLong("sleep_start_time_ms", sleepStart)
                 .commit();
 
@@ -1586,10 +1632,10 @@ public class MainServiceTest {
 
         service.onTimerRescheduled();
 
-        assertEquals("Current wake hour should remain 7 when session-anchored min sleep is satisfied",
-                7, preferences.getInt("current_wake_hour", -1));
-        assertEquals("Current wake minute should remain 30 when session-anchored min sleep is satisfied",
-                30, preferences.getInt("current_wake_minute", -1));
+        assertEquals("Current wake hour should remain unchanged when session-anchored min sleep is satisfied",
+                currentHour, preferences.getInt("current_wake_hour", -1));
+        assertEquals("Current wake minute should remain unchanged when session-anchored min sleep is satisfied",
+                currentMin, preferences.getInt("current_wake_minute", -1));
     }
 
 }
