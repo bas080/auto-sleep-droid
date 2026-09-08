@@ -137,20 +137,29 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     }
 
     private void setupPreferenceListeners() {
-        PreferenceManager.OnPreferenceChangeListener stateChangeListener = key -> handler.post(this::reloadSettingsAndUpdate);
-        preferenceManager.registerListener(PreferenceManager.KEY_ACTIVE, stateChangeListener);
-        preferenceManager.registerListener(PreferenceManager.KEY_DURATION_MINUTES, stateChangeListener);
-        preferenceManager.registerListener(PreferenceManager.KEY_WAKE_UP_GOAL_ENABLED, stateChangeListener);
-        preferenceManager.registerListener(PreferenceManager.KEY_WAKE_UP_GOAL_HOUR, stateChangeListener);
-        preferenceManager.registerListener(PreferenceManager.KEY_WAKE_UP_GOAL_MINUTE, stateChangeListener);
-        preferenceManager.registerListener(PreferenceManager.KEY_CURRENT_WAKE_HOUR, stateChangeListener);
-        preferenceManager.registerListener(PreferenceManager.KEY_CURRENT_WAKE_MINUTE, stateChangeListener);
-        preferenceManager.registerListener(PreferenceManager.KEY_MIN_SLEEP_DURATION_MINUTES, stateChangeListener);
-        preferenceManager.registerListener(PreferenceManager.KEY_HEALTH_CONNECT_ENABLED, stateChangeListener);
-        preferenceManager.registerListener(PreferenceManager.KEY_HC_MIN_DURATION_MINUTES, stateChangeListener);
-        preferenceManager.registerListener(PreferenceManager.KEY_NAP_DND_ENABLED, stateChangeListener);
-        preferenceManager.registerListener(PreferenceManager.KEY_NAP_ALARM_ENDS_AT, key -> handler.post(this::updateNotification));
-        preferenceManager.registerListener(PreferenceManager.KEY_AUTO_TIMER_ENABLED, key -> preferenceManager.executeAsync(this::checkAndApplyDndAutoTimer));
+        preferenceManager.watchEffect(getter -> {
+            getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
+            getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+            getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
+            getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
+            getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+            getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, 6);
+            getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, 30);
+            getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450);
+            getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+            getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15);
+            getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false);
+            reloadSettingsAndUpdate();
+        });
+        preferenceManager.watchEffect(getter -> {
+            getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L);
+            updateNotification();
+        });
+        preferenceManager.watchEffect(getter -> {
+            if (getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false)) {
+                checkAndApplyDndAutoTimer();
+            }
+        });
     }
 
     private void initializeStateAndNotification() {

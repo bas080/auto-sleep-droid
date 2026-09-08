@@ -154,4 +154,35 @@ public class PreferenceManagerTest {
         rawPreferences.edit().putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true).commit();
         assertTrue(preferenceManager.getComputed(PreferenceComputations.IS_WAKE_ALARM_ENABLED));
     }
+
+    @Test
+    public void testWatchEffectInitialAndReactiveExecutionAndDispose() {
+        AtomicInteger runCount = new AtomicInteger(0);
+        AtomicInteger lastValue = new AtomicInteger(0);
+
+        rawPreferences.edit().putInt("watched_key", 5).commit();
+
+        PreferenceManager.EffectHandle handle = preferenceManager.watchEffect(getter -> {
+            runCount.incrementAndGet();
+            lastValue.set(getter.getInt("watched_key", 0));
+        });
+
+        // Effect runs immediately on registration
+        assertEquals("Effect must run once immediately upon watchEffect", 1, runCount.get());
+        assertEquals(5, lastValue.get());
+
+        // Modifying unrelated key does not re-trigger effect
+        rawPreferences.edit().putBoolean("unrelated_key", true).commit();
+        assertEquals("Unrelated key change should not trigger watchEffect", 1, runCount.get());
+
+        // Modifying watched key re-triggers effect
+        rawPreferences.edit().putInt("watched_key", 12).commit();
+        assertEquals("Watched key change must re-trigger watchEffect", 2, runCount.get());
+        assertEquals(12, lastValue.get());
+
+        // Disposing handle stops future executions
+        handle.dispose();
+        rawPreferences.edit().putInt("watched_key", 20).commit();
+        assertEquals("Disposed watchEffect must not re-run on preference change", 2, runCount.get());
+    }
 }
