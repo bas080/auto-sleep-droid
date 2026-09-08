@@ -1035,4 +1035,47 @@ public class MainActivityTest {
             nextIntent = Shadows.shadowOf(activity).getNextStartedActivity();
         }
     }
+
+    @Test
+    public void testPreferenceChangesUpdateUiViaWatchEffect() {
+        ActivityController<MainActivity> controller = Robolectric.buildActivity(MainActivity.class);
+        MainActivity activity = controller.create().resume().get();
+
+        TextView textDurationValue = activity.findViewById(R.id.text_duration_value);
+        TextView textMinSleepValue = activity.findViewById(R.id.text_min_sleep_value);
+        TextView textHcMinDurationValue = activity.findViewById(R.id.text_hc_min_duration_value);
+        TextView textTargetTimeValue = activity.findViewById(R.id.text_target_time_value);
+        TextView textCurrentWakeTimeValue = activity.findViewById(R.id.text_current_wake_time_value);
+
+        assertNotNull(textDurationValue);
+        assertNotNull(textMinSleepValue);
+        assertNotNull(textHcMinDurationValue);
+        assertNotNull(textTargetTimeValue);
+        assertNotNull(textCurrentWakeTimeValue);
+
+        SharedPreferences prefs = activity.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE);
+        prefs.edit()
+                .putInt(PreferenceKeys.KEY_DURATION_MINUTES, 45)
+                .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 360)
+                .putInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 30)
+                .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 8)
+                .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 15)
+                .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, 8)
+                .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, 15)
+                .apply();
+
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+
+        assertEquals("45m", textDurationValue.getText().toString());
+        assertEquals("6h", textMinSleepValue.getText().toString());
+        assertEquals("30m", textHcMinDurationValue.getText().toString());
+
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, 8);
+        cal.set(Calendar.MINUTE, 15);
+        String expectedTimeStr = android.text.format.DateFormat.getTimeFormat(activity).format(cal.getTime());
+
+        assertEquals(expectedTimeStr, textTargetTimeValue.getText().toString());
+        assertEquals(expectedTimeStr, textCurrentWakeTimeValue.getText().toString());
+    }
 }

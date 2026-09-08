@@ -462,11 +462,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     PreferenceKeys.KEY_DURATION_MINUTES,
                     AppDefaults.DURATION_MINUTES,
                     0, 12, 5,
-                    minutes -> {
-                        if (textDurationValue != null) {
-                            textDurationValue.setText(DurationUtils.formatDurationString(minutes));
-                        }
-                    }
+                    null
             ));
         }
 
@@ -536,12 +532,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
                     AppDefaults.MIN_SLEEP_DURATION_MINUTES,
                     0, 16, 15,
-                    minutes -> {
-                        preferenceManager.edit().remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
-                        if (textMinSleepValue != null) {
-                            textMinSleepValue.setText(DurationUtils.formatDurationString(minutes));
-                        }
-                    }
+                    minutes -> preferenceManager.edit().remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS).apply()
             ));
         }
 
@@ -602,11 +593,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES,
                     AppDefaults.HC_MIN_DURATION_MINUTES,
                     0, 2, 5,
-                    minutes -> {
-                        if (textHcMinDurationValue != null) {
-                            textHcMinDurationValue.setText(DurationUtils.formatDurationString(minutes));
-                        }
-                    }
+                    null
             ));
         }
     }
@@ -732,8 +719,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             }
             editor.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS);
             editor.apply();
-            updateTargetTimeButtonText(hourOfDay, minute);
-            updateCurrentWakeTimeButtonText(preferenceManager.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay), preferenceManager.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute));
             redrawNotification();
         });
     }
@@ -750,7 +735,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute)
                     .remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
                     .apply();
-            updateCurrentWakeTimeButtonText(hourOfDay, minute);
             redrawNotification();
         });
     }
