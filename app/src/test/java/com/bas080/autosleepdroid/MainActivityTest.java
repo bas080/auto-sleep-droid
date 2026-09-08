@@ -1035,4 +1035,5 @@ public class MainActivityTest {
             nextIntent = Shadows.shadowOf(activity).getNextStartedActivity();
         }
     }
+
 }

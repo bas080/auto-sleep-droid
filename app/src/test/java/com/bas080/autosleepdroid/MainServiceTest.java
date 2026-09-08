@@ -1,5 +1,6 @@
 package com.bas080.autosleepdroid;
 
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.RemoteInput;
 import android.content.Context;
@@ -1636,6 +1637,71 @@ public class MainServiceTest {
                 currentHour, preferences.getInt("current_wake_hour", -1));
         assertEquals("Current wake minute should remain unchanged when session-anchored min sleep is satisfied",
                 currentMin, preferences.getInt("current_wake_minute", -1));
+    }
+
+    @Test
+    public void testStartNapIntentTargetsMainServiceWithStartNapAction() {
+        ServiceController<MainService> controller = Robolectric.buildService(MainService.class);
+        MainService service = controller.create().get();
+
+        ShadowNotificationManager shadowNM = Shadows.shadowOf(
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE));
+        Notification notification = shadowNM.getAllNotifications().get(0);
+
+        boolean foundNapAction = false;
+        for (Notification.Action action : notification.actions) {
+            if (context.getString(R.string.action_nap).equals(action.title.toString())) {
+                foundNapAction = true;
+                Intent intent = Shadows.shadowOf(action.actionIntent).getSavedIntent();
+                assertEquals(MainService.class.getName(), intent.getComponent().getClassName());
+                assertEquals(MainService.ACTION_START_NAP, intent.getAction());
+                break;
+            }
+        }
+        assertTrue("Notification should contain a Nap action", foundNapAction);
+    }
+
+    @Test
+    public void testAwakeActionDuringActiveNapCancelsNap() {
+        ServiceController<MainService> controller = Robolectric.buildService(MainService.class);
+        MainService service = controller.create().get();
+
+        long now = System.currentTimeMillis();
+        preferences.edit()
+                .putLong(MainService.KEY_NAP_ALARM_ENDS_AT, now + 1200_000L)
+                .putLong("nap_start_time_ms", now)
+                .commit();
+
+        Intent awakeIntent = new Intent(context, MainService.class).setAction(MainService.ACTION_AWAKE);
+        service.onStartCommand(awakeIntent, 0, 1);
+
+        assertFalse("Nap alarm ends at preference should be removed after awake action",
+                preferences.contains(MainService.KEY_NAP_ALARM_ENDS_AT));
+        assertFalse("Nap start time preference should be removed after awake action",
+                preferences.contains("nap_start_time_ms"));
+    }
+
+    @Test
+    public void testCancellingNapWithNapDndDoesNotToggleOffSleepTimer() {
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        Shadows.shadowOf(nm).setNotificationPolicyAccessGranted(true);
+        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY);
+
+        preferences.edit()
+                .putBoolean("nap_dnd_enabled", true)
+                .putBoolean("auto_timer_enabled", true)
+                .putBoolean("active", true)
+                .putLong(MainService.KEY_NAP_ALARM_ENDS_AT, System.currentTimeMillis() + 1200_000L)
+                .commit();
+
+        ServiceController<MainService> controller = Robolectric.buildService(MainService.class);
+        MainService service = controller.create().get();
+
+        Intent cancelNapIntent = new Intent(context, MainService.class).setAction(MainService.ACTION_CANCEL_NAP);
+        service.onStartCommand(cancelNapIntent, 0, 1);
+
+        assertTrue("Sleep timer active preference should remain true after nap cancellation",
+                preferences.getBoolean("active", false));
     }
 
 }

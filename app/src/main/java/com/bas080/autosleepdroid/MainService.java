@@ -98,6 +98,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     private long napAlarmEndsAt = 0L;
     private long lastTimerEndsAt = 0L;
     private boolean isNapAlarmRinging = false;
+    private boolean isNapDndChanging = false;
 
     private SleepTimerStateMachine stateMachine;
     private PreferenceManager preferenceManager;
@@ -265,7 +266,7 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     }
 
     private void checkAndApplyDndAutoTimer() {
-        if (preferences == null || stateMachine == null) return;
+        if (isNapDndChanging || preferences == null || stateMachine == null) return;
         boolean autoTimerEnabled = preferences.getBoolean("auto_timer_enabled", false);
         if (!autoTimerEnabled) return;
 
@@ -671,6 +672,22 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     private void handleAwakeAction() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "User marked as awake explicitly");
 
+        boolean wasNap = isNapAlarmRinging || isNapActive();
+
+        if (wasNap) {
+            processSleepSession();
+            stopWakeUpAlarmSound();
+            cancelSnoozeAlarm();
+            cancelNapAlarm(false);
+            setNapAlarmRinging(false);
+            isWakeUpAlarmRinging = false;
+            isWakeUpAlarmSnoozed = false;
+            updateListenersRegistration();
+            updateNotification();
+            android.widget.Toast.makeText(this, R.string.toast_awake_registered, android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (stateMachine != null && stateMachine.isActive()) {
             if (preferences != null) {
                 preferences.edit()
@@ -683,8 +700,6 @@ public class MainService extends Service implements SensorEventListener, SleepTi
             return;
         }
 
-        boolean wasNap = isNapAlarmRinging || isNapActive();
-
         processSleepSession();
 
         stopWakeUpAlarmSound();
@@ -694,11 +709,9 @@ public class MainService extends Service implements SensorEventListener, SleepTi
         isWakeUpAlarmRinging = false;
         isWakeUpAlarmSnoozed = false;
 
-        if (!wasNap) {
-            dismissAutoSleepAlarm();
-            updateNextWakeUpTimeOnDismissOrExpiry();
-            checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
-        }
+        dismissAutoSleepAlarm();
+        updateNextWakeUpTimeOnDismissOrExpiry();
+        checkAndScheduleSmartWakeUpAlarm(stateMachine != null ? stateMachine.getTimerEndsAt() : 0L);
 
         updateListenersRegistration();
         updateNotification();
@@ -1043,9 +1056,12 @@ public class MainService extends Service implements SensorEventListener, SleepTi
                     int targetFilter = enable
                             ? NotificationManager.INTERRUPTION_FILTER_PRIORITY
                             : NotificationManager.INTERRUPTION_FILTER_ALL;
+                    isNapDndChanging = true;
                     nm.setInterruptionFilter(targetFilter);
+                    handler.postDelayed(() -> isNapDndChanging = false, 1000L);
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, enable ? "DND enabled for nap" : "DND disabled after nap");
                 } catch (Exception e) {
+                    isNapDndChanging = false;
                     EventLogger.log(this, "Failed to set DND mode: " + e.getMessage());
                 }
             }
@@ -1116,7 +1132,6 @@ public class MainService extends Service implements SensorEventListener, SleepTi
                     .apply();
         }
         setDndMode(false);
-        checkAndApplyDndAutoTimer();
         if (showToast) {
             setNapAlarmRinging(false);
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm cancelled");
@@ -1483,9 +1498,8 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     }
 
     private PendingIntent startNapIntent() {
-        Intent intent = new Intent(this, NapDialogActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        return PendingIntent.getActivity(this, 12, intent,
+        Intent intent = new Intent(this, MainService.class).setAction(ACTION_START_NAP);
+        return PendingIntent.getService(this, 12, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 

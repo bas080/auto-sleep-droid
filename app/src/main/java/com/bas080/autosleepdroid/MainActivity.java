@@ -78,6 +78,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private boolean isUpdatingUi = false;
     private boolean isUserInitiatedAutoTimer = false;
     private boolean isUserInitiatedHealthConnect = false;
+    private boolean isRequestingHealthConnectPermission = false;
 
     private final android.content.ServiceConnection serviceConnection = new android.content.ServiceConnection() {
         @Override
@@ -555,11 +556,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     prefs.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true).apply();
                     Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show();
                     if (isUserInitiated) {
+                        isRequestingHealthConnectPermission = true;
                         HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
                             if (!hasPermission) {
                                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled; opening permissions settings");
                                 HealthConnectManager.openHealthConnectPermissions(this);
                             } else {
+                                isRequestingHealthConnectPermission = false;
                                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled");
                             }
                         });
@@ -567,6 +570,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled");
                     }
                 } else {
+                    isRequestingHealthConnectPermission = false;
                     prefs.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled; revoking permissions");
                     Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show();
@@ -822,18 +826,20 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             switchHealthConnect.setChecked(healthConnectEnabled);
         }
         if (healthConnectEnabled) {
-            HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
-                if (!hasPermission) {
-                    SharedPreferences prefs1 = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-                    prefs1.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
-                    if (switchHealthConnect != null) {
-                        isUpdatingUi = true;
-                        switchHealthConnect.setChecked(false);
-                        isUpdatingUi = false;
+            if (!isRequestingHealthConnectPermission) {
+                HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
+                    if (!hasPermission) {
+                        SharedPreferences prefs1 = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
+                        prefs1.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
+                        if (switchHealthConnect != null) {
+                            isUpdatingUi = true;
+                            switchHealthConnect.setChecked(false);
+                            isUpdatingUi = false;
+                        }
+                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission revoked; disabling sync");
                     }
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission revoked; disabling sync");
-                }
-            });
+                });
+            }
         }
         updateTargetTimeButtonText(goalHour, goalMin);
         updateCurrentWakeTimeButtonText(currentHour, currentMin);
@@ -1059,7 +1065,33 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         super.onResume();
         EventLogger.setListener(this);
         refreshEventLog();
-        loadPreferencesIntoUi();
+        if (isRequestingHealthConnectPermission) {
+            HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
+                isRequestingHealthConnectPermission = false;
+                SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
+                if (hasPermission) {
+                    prefs.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true).apply();
+                    if (switchHealthConnect != null) {
+                        isUpdatingUi = true;
+                        switchHealthConnect.setChecked(true);
+                        isUpdatingUi = false;
+                    }
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled and permission granted");
+                } else {
+                    prefs.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
+                    if (switchHealthConnect != null) {
+                        isUpdatingUi = true;
+                        switchHealthConnect.setChecked(false);
+                        isUpdatingUi = false;
+                    }
+                    Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show();
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission not granted; disabling sync");
+                }
+                loadPreferencesIntoUi();
+            });
+        } else {
+            loadPreferencesIntoUi();
+        }
         redrawNotification();
         registerPreferenceListeners();
     }
