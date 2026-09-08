@@ -14,7 +14,7 @@ public class NapDialogActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        SharedPreferences prefs = getSharedPreferences("sleep_timer", MODE_PRIVATE);
+        SharedPreferences prefs = getSharedPreferences(PreferenceManager.PREFERENCES_NAME, MODE_PRIVATE);
         int savedDuration = prefs.getInt(MainService.KEY_NAP_DURATION_MINUTES, 20);
 
         android.view.ContextThemeWrapper dialogContext = new android.view.ContextThemeWrapper(this, R.style.AppTheme);

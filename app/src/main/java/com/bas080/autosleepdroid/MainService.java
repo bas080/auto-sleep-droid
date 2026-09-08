@@ -48,18 +48,18 @@ public class MainService extends Service implements SensorEventListener, SleepTi
     public static final String EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION";
     public static final String EXTRA_NAP_DURATION_MINUTES = "extra_nap_duration_minutes";
     public static final String ALARM_SEARCH_NAME = "Auto Sleep";
-    public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = "wakeup_last_scheduled_ms";
-    public static final String KEY_NAP_DURATION_MINUTES = "nap_duration_minutes";
-    public static final String KEY_NAP_ALARM_ENDS_AT = "nap_alarm_ends_at";
-    public static final String KEY_NAP_ALARM_RINGING = "is_nap_alarm_ringing";
+    public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = PreferenceManager.KEY_WAKEUP_LAST_SCHEDULED_MS;
+    public static final String KEY_NAP_DURATION_MINUTES = PreferenceManager.KEY_NAP_DURATION_MINUTES;
+    public static final String KEY_NAP_ALARM_ENDS_AT = PreferenceManager.KEY_NAP_ALARM_ENDS_AT;
+    public static final String KEY_NAP_ALARM_RINGING = PreferenceManager.KEY_NAP_ALARM_RINGING;
 
     private static final String CHANNEL_ID = "sleep_timer";
     private static final int NOTIFICATION_ID = 1001;
     private static final long SNOOZE_DURATION_MS = 9 * 60_000L;
-    private static final String PREFERENCES = "sleep_timer";
-    private static final String KEY_ENABLED = "active";
-    private static final String KEY_DURATION_MINUTES = "duration_minutes";
-    private static final String KEY_TIMER_ENDS_AT = "timer_ends_at";
+    private static final String PREFERENCES = PreferenceManager.PREFERENCES_NAME;
+    private static final String KEY_ENABLED = PreferenceManager.KEY_ACTIVE;
+    private static final String KEY_DURATION_MINUTES = PreferenceManager.KEY_DURATION_MINUTES;
+    private static final String KEY_TIMER_ENDS_AT = PreferenceManager.KEY_TIMER_ENDS_AT;
     private static final String REMOTE_INPUT_KEY = "duration_minutes";
     private static final long PAUSE_RESET_DELAY_MS = 500L;
     private static final long SENSOR_THROTTLE_MS = 300L;
@@ -138,15 +138,19 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
     private void setupPreferenceListeners() {
         PreferenceManager.OnPreferenceChangeListener stateChangeListener = key -> handler.post(this::reloadSettingsAndUpdate);
-        preferenceManager.registerListener(KEY_ENABLED, stateChangeListener);
-        preferenceManager.registerListener(KEY_DURATION_MINUTES, stateChangeListener);
-        preferenceManager.registerListener("wake_up_goal_enabled", stateChangeListener);
-        preferenceManager.registerListener("wake_up_goal_hour", stateChangeListener);
-        preferenceManager.registerListener("wake_up_goal_minute", stateChangeListener);
-        preferenceManager.registerListener("current_wake_hour", stateChangeListener);
-        preferenceManager.registerListener("current_wake_minute", stateChangeListener);
-        preferenceManager.registerListener(KEY_NAP_ALARM_ENDS_AT, key -> handler.post(this::updateNotification));
-        preferenceManager.registerListener("auto_timer_enabled", key -> preferenceManager.executeAsync(this::checkAndApplyDndAutoTimer));
+        preferenceManager.registerListener(PreferenceManager.KEY_ACTIVE, stateChangeListener);
+        preferenceManager.registerListener(PreferenceManager.KEY_DURATION_MINUTES, stateChangeListener);
+        preferenceManager.registerListener(PreferenceManager.KEY_WAKE_UP_GOAL_ENABLED, stateChangeListener);
+        preferenceManager.registerListener(PreferenceManager.KEY_WAKE_UP_GOAL_HOUR, stateChangeListener);
+        preferenceManager.registerListener(PreferenceManager.KEY_WAKE_UP_GOAL_MINUTE, stateChangeListener);
+        preferenceManager.registerListener(PreferenceManager.KEY_CURRENT_WAKE_HOUR, stateChangeListener);
+        preferenceManager.registerListener(PreferenceManager.KEY_CURRENT_WAKE_MINUTE, stateChangeListener);
+        preferenceManager.registerListener(PreferenceManager.KEY_MIN_SLEEP_DURATION_MINUTES, stateChangeListener);
+        preferenceManager.registerListener(PreferenceManager.KEY_HEALTH_CONNECT_ENABLED, stateChangeListener);
+        preferenceManager.registerListener(PreferenceManager.KEY_HC_MIN_DURATION_MINUTES, stateChangeListener);
+        preferenceManager.registerListener(PreferenceManager.KEY_NAP_DND_ENABLED, stateChangeListener);
+        preferenceManager.registerListener(PreferenceManager.KEY_NAP_ALARM_ENDS_AT, key -> handler.post(this::updateNotification));
+        preferenceManager.registerListener(PreferenceManager.KEY_AUTO_TIMER_ENABLED, key -> preferenceManager.executeAsync(this::checkAndApplyDndAutoTimer));
     }
 
     private void initializeStateAndNotification() {
