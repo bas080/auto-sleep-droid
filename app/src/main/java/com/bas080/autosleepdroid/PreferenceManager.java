@@ -2,6 +2,8 @@ package com.bas080.autosleepdroid;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 
 import java.util.Map;
 import java.util.Set;
@@ -52,6 +54,16 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
     @FunctionalInterface
     public interface ComputedValue<T> {
         T compute(PreferenceGetter getter);
+    }
+
+    @FunctionalInterface
+    public interface PreferenceEffect {
+        void run(PreferenceGetter getter);
+    }
+
+    @FunctionalInterface
+    public interface EffectHandle {
+        void dispose();
     }
 
     private static class TrackingPreferenceGetter implements PreferenceGetter {
@@ -159,9 +171,61 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
         }
     }
 
+    private static class WatchEffectRegistration implements EffectHandle {
+        final PreferenceManager preferenceManager;
+        final PreferenceEffect effect;
+        final boolean isMainThread;
+        final Set<String> trackedKeys = ConcurrentHashMap.newKeySet();
+        volatile boolean isDisposed = false;
+
+        WatchEffectRegistration(PreferenceManager preferenceManager, PreferenceEffect effect, boolean isMainThread) {
+            this.preferenceManager = preferenceManager;
+            this.effect = effect;
+            this.isMainThread = isMainThread;
+        }
+
+        void runEffect() {
+            if (isDisposed) return;
+            Runnable runnable = () -> {
+                if (isDisposed) return;
+                TrackingPreferenceGetter getter = new TrackingPreferenceGetter(preferenceManager);
+                effect.run(getter);
+                trackedKeys.clear();
+                for (String key : getter.getAccessedValues().keySet()) {
+                    if (key.startsWith("contains:")) {
+                        trackedKeys.add(key.substring("contains:".length()));
+                    } else {
+                        trackedKeys.add(key);
+                    }
+                }
+            };
+            dispatch(runnable);
+        }
+
+        void dispatch(Runnable runnable) {
+            if (isMainThread) {
+                if (Looper.myLooper() == Looper.getMainLooper()) {
+                    runnable.run();
+                } else {
+                    preferenceManager.mainHandler.post(runnable);
+                }
+            } else {
+                preferenceManager.asyncExecutor.execute(runnable);
+            }
+        }
+
+        @Override
+        public void dispose() {
+            isDisposed = true;
+            preferenceManager.activeEffects.remove(this);
+        }
+    }
+
     private final SharedPreferences preferences;
     private final Map<String, Set<OnPreferenceChangeListener>> listenersMap = new ConcurrentHashMap<>();
     private final Map<Object, CachedComputation> computedCache = new ConcurrentHashMap<>();
+    private final Set<WatchEffectRegistration> activeEffects = new CopyOnWriteArraySet<>();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService asyncExecutor = Executors.newSingleThreadExecutor();
 
     public PreferenceManager(Context context, String preferenceName) {
@@ -196,6 +260,15 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
         if (listeners != null) {
             listeners.remove(listener);
         }
+    }
+
+    public EffectHandle watchEffect(PreferenceEffect effect) {
+        if (effect == null) return () -> {};
+        boolean isMainThread = Looper.myLooper() == Looper.getMainLooper();
+        WatchEffectRegistration reg = new WatchEffectRegistration(this, effect, isMainThread);
+        activeEffects.add(reg);
+        reg.runEffect();
+        return reg;
     }
 
     public <T> T getComputed(ComputedValue<T> computer) {
@@ -234,6 +307,14 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
                 CachedComputation cached = entry.getValue();
                 if (cached.trackedValues != null && (cached.trackedValues.containsKey(key) || cached.trackedValues.containsKey("contains:" + key))) {
                     computedCache.remove(entry.getKey());
+                }
+            }
+        }
+
+        if (!activeEffects.isEmpty()) {
+            for (WatchEffectRegistration reg : activeEffects) {
+                if (!reg.isDisposed && reg.trackedKeys.contains(key)) {
+                    reg.runEffect();
                 }
             }
         }
@@ -296,6 +377,10 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
         preferences.unregisterOnSharedPreferenceChangeListener(this);
         listenersMap.clear();
         computedCache.clear();
+        for (WatchEffectRegistration reg : activeEffects) {
+            reg.dispose();
+        }
+        activeEffects.clear();
         asyncExecutor.shutdown();
     }
 }

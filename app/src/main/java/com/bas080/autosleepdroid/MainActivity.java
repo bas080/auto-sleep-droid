@@ -72,7 +72,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView eventLogText;
 
     private final android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private PreferenceManager.OnPreferenceChangeListener prefListener;
+    private PreferenceManager.EffectHandle uiEffectHandle;
     private MainService boundService;
     private boolean isBound = false;
     private boolean isUpdatingUi = false;
@@ -776,24 +776,28 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void loadPreferencesIntoUi() {
+        loadPreferencesIntoUi(null);
+    }
+
+    private void loadPreferencesIntoUi(PreferenceManager.PreferenceGetter getter) {
         isUpdatingUi = true;
-        SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = getter == null ? getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE) : null;
         PreferenceManager pm = isBound && boundService != null ? boundService.getPreferenceManager() : null;
 
-        boolean napDndEnabled = prefs.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false);
-        boolean active = prefs.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
-        int durationMinutes = prefs.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
-        boolean autoTimer = prefs.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false);
-        boolean goalEnabled = prefs.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
-        boolean healthConnectEnabled = prefs.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
-        int goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
-        int goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
-        int currentHour = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
-        int currentMin = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
-        int minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450);
-        int hcMinDurationMin = prefs.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15);
-        int napDurationMinutes = prefs.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, 20);
-        long napEndsAt = prefs.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L);
+        boolean napDndEnabled = getter != null ? getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false) : prefs.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false);
+        boolean active = getter != null ? getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true) : prefs.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
+        int durationMinutes = getter != null ? getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES) : prefs.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+        boolean autoTimer = getter != null ? getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false) : prefs.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false);
+        boolean goalEnabled = getter != null ? getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) : prefs.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
+        boolean healthConnectEnabled = getter != null ? getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) : prefs.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+        int goalHour = getter != null ? getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6) : prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
+        int goalMin = getter != null ? getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30) : prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+        int currentHour = getter != null ? getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour) : prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
+        int currentMin = getter != null ? getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin) : prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
+        int minSleepMin = getter != null ? getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450) : prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450);
+        int hcMinDurationMin = getter != null ? getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15) : prefs.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15);
+        int napDurationMinutes = getter != null ? getter.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, 20) : prefs.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, 20);
+        long napEndsAt = getter != null ? getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L) : prefs.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L);
 
         boolean isNapActive = pm != null
                 ? Boolean.TRUE.equals(pm.getComputed(PreferenceComputations.IS_NAP_ACTIVE))
@@ -1065,31 +1069,15 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         PreferenceManager pm = boundService.getPreferenceManager();
         if (pm == null) return;
 
-        if (prefListener == null) {
-            prefListener = key -> mainHandler.post(this::loadPreferencesIntoUi);
+        if (uiEffectHandle == null) {
+            uiEffectHandle = pm.watchEffect(this::loadPreferencesIntoUi);
         }
-        pm.registerListener(PreferenceKeys.KEY_ACTIVE, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_DURATION_MINUTES, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_NAP_DND_ENABLED, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_NAP_DURATION_MINUTES, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, prefListener);
-        pm.registerListener(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, prefListener);
     }
 
     private void unregisterPreferenceListeners() {
-        if (isBound && boundService != null) {
-            PreferenceManager pm = boundService.getPreferenceManager();
-            if (pm != null && prefListener != null) {
-                pm.unregisterListener(prefListener);
-            }
+        if (uiEffectHandle != null) {
+            uiEffectHandle.dispose();
+            uiEffectHandle = null;
         }
     }
 
