@@ -770,9 +770,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         return timeFormat.format(cal.getTime());
     }
 
-    private String getComputedDurationString(PreferenceManager pm, String key, int durationMinutes) {
-        if (pm == null) return DurationUtils.formatDurationString(durationMinutes);
-        return pm.getComputed("duration_" + key, new String[]{key}, () -> DurationUtils.formatDurationString(durationMinutes));
+    private String getComputedDurationString(PreferenceManager pm, String key, int defaultMinutes) {
+        if (pm == null) return DurationUtils.formatDurationString(defaultMinutes);
+        return pm.getComputed("duration_" + key, getter -> DurationUtils.formatDurationString(getter.getInt(key, defaultMinutes)));
     }
 
     private void loadPreferencesIntoUi() {
@@ -796,7 +796,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         long napEndsAt = prefs.getLong(PreferenceManager.KEY_NAP_ALARM_ENDS_AT, 0L);
 
         boolean isNapActive = pm != null
-                ? Boolean.TRUE.equals(pm.getComputed("ui_isNapActive", new String[]{PreferenceManager.KEY_NAP_ALARM_ENDS_AT}, () -> napEndsAt > System.currentTimeMillis()))
+                ? Boolean.TRUE.equals(pm.getComputed("ui_isNapActive", getter -> getter.getLong(PreferenceManager.KEY_NAP_ALARM_ENDS_AT, 0L) > System.currentTimeMillis()))
                 : napEndsAt > System.currentTimeMillis();
 
         if (switchNapDnd != null) {

@@ -36,6 +36,14 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
     public static final String KEY_HC_MIN_DURATION_MINUTES = "hc_min_duration_minutes";
     public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = "wakeup_last_scheduled_ms";
 
+    public interface PreferenceGetter {
+        boolean getBoolean(String key, boolean defValue);
+        int getInt(String key, int defValue);
+        long getLong(String key, long defValue);
+        String getString(String key, String defValue);
+        boolean contains(String key);
+    }
+
     @FunctionalInterface
     public interface OnPreferenceChangeListener {
         void onPreferenceChanged(String key);
@@ -43,16 +51,111 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
 
     @FunctionalInterface
     public interface ComputedValue<T> {
-        T compute();
+        T compute(PreferenceGetter getter);
     }
+
+    private static class TrackingPreferenceGetter implements PreferenceGetter {
+        private final PreferenceManager preferenceManager;
+        private final Map<String, Object> accessedValues = new ConcurrentHashMap<>();
+
+        TrackingPreferenceGetter(PreferenceManager preferenceManager) {
+            this.preferenceManager = preferenceManager;
+        }
+
+        Map<String, Object> getAccessedValues() {
+            return accessedValues;
+        }
+
+        @Override
+        public boolean getBoolean(String key, boolean defValue) {
+            boolean value = preferenceManager.getBoolean(key, defValue);
+            accessedValues.put(key, value);
+            return value;
+        }
+
+        @Override
+        public int getInt(String key, int defValue) {
+            int value = preferenceManager.getInt(key, defValue);
+            accessedValues.put(key, value);
+            return value;
+        }
+
+        @Override
+        public long getLong(String key, long defValue) {
+            long value = preferenceManager.getLong(key, defValue);
+            accessedValues.put(key, value);
+            return value;
+        }
+
+        @Override
+        public String getString(String key, String defValue) {
+            String value = preferenceManager.getString(key, defValue);
+            if (value != null) {
+                accessedValues.put(key, value);
+            } else {
+                accessedValues.put(key, NULL_SENTINEL);
+            }
+            return value;
+        }
+
+        @Override
+        public boolean contains(String key) {
+            boolean value = preferenceManager.contains(key);
+            accessedValues.put("contains:" + key, value);
+            return value;
+        }
+    }
+
+    private static final Object NULL_SENTINEL = new Object();
 
     private static class CachedComputation {
         final Object value;
-        final String[] dependencyKeys;
+        final Map<String, Object> trackedValues;
 
-        CachedComputation(Object value, String[] dependencyKeys) {
+        CachedComputation(Object value, Map<String, Object> trackedValues) {
             this.value = value;
-            this.dependencyKeys = dependencyKeys;
+            this.trackedValues = trackedValues;
+        }
+
+        boolean isStale(PreferenceManager preferenceManager) {
+            if (trackedValues == null || trackedValues.isEmpty()) {
+                return false;
+            }
+            for (Map.Entry<String, Object> entry : trackedValues.entrySet()) {
+                String key = entry.getKey();
+                Object trackedValue = entry.getValue();
+                if (key.startsWith("contains:")) {
+                    String actualKey = key.substring("contains:".length());
+                    boolean currentContains = preferenceManager.contains(actualKey);
+                    if (!trackedValue.equals(currentContains)) {
+                        return true;
+                    }
+                } else {
+                    if (trackedValue instanceof Boolean) {
+                        if ((Boolean) trackedValue != preferenceManager.getBoolean(key, !(Boolean) trackedValue)) {
+                            return true;
+                        }
+                    } else if (trackedValue instanceof Integer) {
+                        if ((Integer) trackedValue != preferenceManager.getInt(key, (Integer) trackedValue + 1)) {
+                            return true;
+                        }
+                    } else if (trackedValue instanceof Long) {
+                        if ((Long) trackedValue != preferenceManager.getLong(key, (Long) trackedValue + 1L)) {
+                            return true;
+                        }
+                    } else if (trackedValue == NULL_SENTINEL) {
+                        if (preferenceManager.contains(key)) {
+                            return true;
+                        }
+                    } else if (trackedValue instanceof String) {
+                        String current = preferenceManager.getString(key, null);
+                        if (!trackedValue.equals(current)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
         }
     }
 
@@ -96,14 +199,15 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T getComputed(String computeKey, String[] dependencyKeys, ComputedValue<T> computer) {
+    public <T> T getComputed(String computeKey, ComputedValue<T> computer) {
         if (computeKey == null || computer == null) return null;
         CachedComputation cached = computedCache.get(computeKey);
-        if (cached != null) {
+        if (cached != null && !cached.isStale(this)) {
             return (T) cached.value;
         }
-        T result = computer.compute();
-        computedCache.put(computeKey, new CachedComputation(result, dependencyKeys != null ? dependencyKeys : new String[0]));
+        TrackingPreferenceGetter getter = new TrackingPreferenceGetter(this);
+        T result = computer.compute(getter);
+        computedCache.put(computeKey, new CachedComputation(result, getter.getAccessedValues()));
         return result;
     }
 
@@ -123,14 +227,9 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
 
         if (!computedCache.isEmpty()) {
             for (Map.Entry<String, CachedComputation> entry : computedCache.entrySet()) {
-                String[] deps = entry.getValue().dependencyKeys;
-                if (deps != null) {
-                    for (String depKey : deps) {
-                        if (key.equals(depKey)) {
-                            computedCache.remove(entry.getKey());
-                            break;
-                        }
-                    }
+                CachedComputation cached = entry.getValue();
+                if (cached.trackedValues != null && (cached.trackedValues.containsKey(key) || cached.trackedValues.containsKey("contains:" + key))) {
+                    computedCache.remove(entry.getKey());
                 }
             }
         }

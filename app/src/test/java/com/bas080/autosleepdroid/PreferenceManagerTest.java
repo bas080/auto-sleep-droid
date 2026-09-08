@@ -76,26 +76,24 @@ public class PreferenceManagerTest {
     }
 
     @Test
-    public void testComputedValueMemoizationAndDependencyInvalidation() {
+    public void testAutoTrackingComputedValueMemoizationAndInvalidation() {
         AtomicInteger computeCount = new AtomicInteger(0);
 
         rawPreferences.edit().putInt("dep_key_1", 10).commit();
 
-        String[] deps = new String[]{"dep_key_1"};
-
-        // First call evaluates the computation
-        int result1 = preferenceManager.getComputed("testComp", deps, () -> {
+        // First call evaluates the computation and automatically tracks accessed keys
+        int result1 = preferenceManager.getComputed("testComp", getter -> {
             computeCount.incrementAndGet();
-            return preferenceManager.getInt("dep_key_1", 0) * 2;
+            return getter.getInt("dep_key_1", 0) * 2;
         });
 
         assertEquals(20, result1);
         assertEquals(1, computeCount.get());
 
         // Second call uses cached result without re-evaluating
-        int result2 = preferenceManager.getComputed("testComp", deps, () -> {
+        int result2 = preferenceManager.getComputed("testComp", getter -> {
             computeCount.incrementAndGet();
-            return preferenceManager.getInt("dep_key_1", 0) * 2;
+            return getter.getInt("dep_key_1", 0) * 2;
         });
 
         assertEquals(20, result2);
@@ -104,23 +102,23 @@ public class PreferenceManagerTest {
         // Modifying unrelated key does not invalidate computation
         rawPreferences.edit().putBoolean("unrelated_key", true).commit();
 
-        int result3 = preferenceManager.getComputed("testComp", deps, () -> {
+        int result3 = preferenceManager.getComputed("testComp", getter -> {
             computeCount.incrementAndGet();
-            return preferenceManager.getInt("dep_key_1", 0) * 2;
+            return getter.getInt("dep_key_1", 0) * 2;
         });
 
         assertEquals(20, result3);
         assertEquals("Compute count should remain 1 after unrelated key change", 1, computeCount.get());
 
-        // Modifying dependent key invalidates computation
+        // Modifying tracked preference key invalidates computation automatically
         rawPreferences.edit().putInt("dep_key_1", 15).commit();
 
-        int result4 = preferenceManager.getComputed("testComp", deps, () -> {
+        int result4 = preferenceManager.getComputed("testComp", getter -> {
             computeCount.incrementAndGet();
-            return preferenceManager.getInt("dep_key_1", 0) * 2;
+            return getter.getInt("dep_key_1", 0) * 2;
         });
 
         assertEquals(30, result4);
-        assertEquals("Compute count should increment to 2 after dependency key update", 2, computeCount.get());
+        assertEquals("Compute count should increment to 2 after tracked preference update", 2, computeCount.get());
     }
 }
