@@ -879,16 +879,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         }
     }
 
-    private void loadPreferencesIntoUi() {
-        PreferenceManager pm = getPreferenceManager();
-        isUpdatingUi = true;
-        updateNapUi(pm);
-        updateTimerUi(pm);
-        updateGoalUi(pm);
-        updateHealthConnectUi(pm);
-        isUpdatingUi = false;
-    }
-
     private void openNapDialog() {
         Intent intent = new Intent(this, NapDialogActivity.class);
         startActivity(intent);
@@ -905,7 +895,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         } else {
             startService(serviceIntent);
         }
-        loadPreferencesIntoUi();
     }
 
     private void exportSettings() {
@@ -1047,7 +1036,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             Toast.makeText(this, R.string.toast_import_success, Toast.LENGTH_SHORT).show();
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Imported settings from string");
 
-            loadPreferencesIntoUi();
             redrawNotification();
         } catch (JSONException e) {
             Toast.makeText(this, R.string.toast_import_invalid, Toast.LENGTH_SHORT).show();
@@ -1114,10 +1102,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show();
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission not granted; disabling sync");
                 }
-                loadPreferencesIntoUi();
             });
-        } else {
-            loadPreferencesIntoUi();
         }
         redrawNotification();
         registerPreferenceListeners();

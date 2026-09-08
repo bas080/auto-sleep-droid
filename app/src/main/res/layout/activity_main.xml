@@ -267,6 +267,7 @@
             android:layout_alignParentTop="true"
             android:layout_alignParentStart="true"
             android:text="@string/link_manual"
+            android:textColor="?android:attr/textColorPrimary"
             android:textSize="20sp"
             android:textStyle="bold"
             android:paddingBottom="12dp" />
@@ -290,6 +291,7 @@
                 android:id="@+id/manual_text_content"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textColor="?android:attr/textColorPrimary"
                 android:textSize="14sp"
                 android:lineSpacingExtra="2dp" />
         </ScrollView>
@@ -311,6 +313,7 @@
             android:layout_alignParentTop="true"
             android:layout_alignParentStart="true"
             android:text="@string/title_activity_log"
+            android:textColor="?android:attr/textColorPrimary"
             android:textSize="20sp"
             android:textStyle="bold"
             android:paddingBottom="12dp" />
@@ -335,6 +338,7 @@
                 android:id="@+id/event_log_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textColor="?android:attr/textColorPrimary"
                 android:fontFamily="monospace"
                 android:textSize="12sp"
                 android:textIsSelectable="true" />
