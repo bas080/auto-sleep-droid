@@ -12,29 +12,29 @@ import java.util.concurrent.Executors;
 
 public class PreferenceManager implements SharedPreferences.OnSharedPreferenceChangeListener {
 
-    public static final String PREFERENCES_NAME = "sleep_timer";
+    public static final String PREFERENCES_NAME = PreferenceKeys.PREFERENCES_NAME;
 
-    public static final String KEY_ACTIVE = "active";
-    public static final String KEY_DURATION_MINUTES = "duration_minutes";
-    public static final String KEY_SHOW_NOTIFICATION = "show_notification";
-    public static final String KEY_TIMER_ENDS_AT = "timer_ends_at";
-    public static final String KEY_TIMER_START_TIME_MS = "timer_start_time_ms";
-    public static final String KEY_SLEEP_START_TIME_MS = "sleep_start_time_ms";
-    public static final String KEY_AUTO_TIMER_ENABLED = "auto_timer_enabled";
-    public static final String KEY_WAKE_UP_GOAL_ENABLED = "wake_up_goal_enabled";
-    public static final String KEY_WAKE_UP_GOAL_HOUR = "wake_up_goal_hour";
-    public static final String KEY_WAKE_UP_GOAL_MINUTE = "wake_up_goal_minute";
-    public static final String KEY_CURRENT_WAKE_HOUR = "current_wake_hour";
-    public static final String KEY_CURRENT_WAKE_MINUTE = "current_wake_minute";
-    public static final String KEY_MIN_SLEEP_DURATION_MINUTES = "min_sleep_duration_minutes";
-    public static final String KEY_NAP_DND_ENABLED = "nap_dnd_enabled";
-    public static final String KEY_NAP_DURATION_MINUTES = "nap_duration_minutes";
-    public static final String KEY_NAP_ALARM_ENDS_AT = "nap_alarm_ends_at";
-    public static final String KEY_NAP_START_TIME_MS = "nap_start_time_ms";
-    public static final String KEY_NAP_ALARM_RINGING = "is_nap_alarm_ringing";
-    public static final String KEY_HEALTH_CONNECT_ENABLED = "health_connect_enabled";
-    public static final String KEY_HC_MIN_DURATION_MINUTES = "hc_min_duration_minutes";
-    public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = "wakeup_last_scheduled_ms";
+    public static final String KEY_ACTIVE = PreferenceKeys.KEY_ACTIVE;
+    public static final String KEY_DURATION_MINUTES = PreferenceKeys.KEY_DURATION_MINUTES;
+    public static final String KEY_SHOW_NOTIFICATION = PreferenceKeys.KEY_SHOW_NOTIFICATION;
+    public static final String KEY_TIMER_ENDS_AT = PreferenceKeys.KEY_TIMER_ENDS_AT;
+    public static final String KEY_TIMER_START_TIME_MS = PreferenceKeys.KEY_TIMER_START_TIME_MS;
+    public static final String KEY_SLEEP_START_TIME_MS = PreferenceKeys.KEY_SLEEP_START_TIME_MS;
+    public static final String KEY_AUTO_TIMER_ENABLED = PreferenceKeys.KEY_AUTO_TIMER_ENABLED;
+    public static final String KEY_WAKE_UP_GOAL_ENABLED = PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED;
+    public static final String KEY_WAKE_UP_GOAL_HOUR = PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR;
+    public static final String KEY_WAKE_UP_GOAL_MINUTE = PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE;
+    public static final String KEY_CURRENT_WAKE_HOUR = PreferenceKeys.KEY_CURRENT_WAKE_HOUR;
+    public static final String KEY_CURRENT_WAKE_MINUTE = PreferenceKeys.KEY_CURRENT_WAKE_MINUTE;
+    public static final String KEY_MIN_SLEEP_DURATION_MINUTES = PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES;
+    public static final String KEY_NAP_DND_ENABLED = PreferenceKeys.KEY_NAP_DND_ENABLED;
+    public static final String KEY_NAP_DURATION_MINUTES = PreferenceKeys.KEY_NAP_DURATION_MINUTES;
+    public static final String KEY_NAP_ALARM_ENDS_AT = PreferenceKeys.KEY_NAP_ALARM_ENDS_AT;
+    public static final String KEY_NAP_START_TIME_MS = PreferenceKeys.KEY_NAP_START_TIME_MS;
+    public static final String KEY_NAP_ALARM_RINGING = PreferenceKeys.KEY_NAP_ALARM_RINGING;
+    public static final String KEY_HEALTH_CONNECT_ENABLED = PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED;
+    public static final String KEY_HC_MIN_DURATION_MINUTES = PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES;
+    public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS;
 
     public interface PreferenceGetter {
         boolean getBoolean(String key, boolean defValue);
@@ -161,7 +161,7 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
 
     private final SharedPreferences preferences;
     private final Map<String, Set<OnPreferenceChangeListener>> listenersMap = new ConcurrentHashMap<>();
-    private final Map<String, CachedComputation> computedCache = new ConcurrentHashMap<>();
+    private final Map<Object, CachedComputation> computedCache = new ConcurrentHashMap<>();
     private final ExecutorService asyncExecutor = Executors.newSingleThreadExecutor();
 
     public PreferenceManager(Context context, String preferenceName) {
@@ -198,22 +198,26 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
         }
     }
 
+    public <T> T getComputed(ComputedValue<T> computer) {
+        return getComputed(computer, computer);
+    }
+
     @SuppressWarnings("unchecked")
-    public <T> T getComputed(String computeKey, ComputedValue<T> computer) {
-        if (computeKey == null || computer == null) return null;
-        CachedComputation cached = computedCache.get(computeKey);
+    public <T> T getComputed(Object cacheKey, ComputedValue<T> computer) {
+        if (cacheKey == null || computer == null) return null;
+        CachedComputation cached = computedCache.get(cacheKey);
         if (cached != null && !cached.isStale(this)) {
             return (T) cached.value;
         }
         TrackingPreferenceGetter getter = new TrackingPreferenceGetter(this);
         T result = computer.compute(getter);
-        computedCache.put(computeKey, new CachedComputation(result, getter.getAccessedValues()));
+        computedCache.put(cacheKey, new CachedComputation(result, getter.getAccessedValues()));
         return result;
     }
 
-    public void invalidateComputed(String computeKey) {
-        if (computeKey != null) {
-            computedCache.remove(computeKey);
+    public void invalidateComputed(Object cacheKey) {
+        if (cacheKey != null) {
+            computedCache.remove(cacheKey);
         }
     }
 
@@ -226,7 +230,7 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
         if (key == null) return;
 
         if (!computedCache.isEmpty()) {
-            for (Map.Entry<String, CachedComputation> entry : computedCache.entrySet()) {
+            for (Map.Entry<Object, CachedComputation> entry : computedCache.entrySet()) {
                 CachedComputation cached = entry.getValue();
                 if (cached.trackedValues != null && (cached.trackedValues.containsKey(key) || cached.trackedValues.containsKey("contains:" + key))) {
                     computedCache.remove(entry.getKey());
