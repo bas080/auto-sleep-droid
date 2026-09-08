@@ -138,28 +138,59 @@ public class MainService extends Service implements SensorEventListener, SleepTi
 
     private void setupPreferenceListeners() {
         preferenceManager.watchEffect(getter -> {
-            getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
-            getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
-            getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
+            boolean enabled = getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
+            int duration = getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+            onTimerConfigChanged(enabled, duration);
+        });
+
+        preferenceManager.watchEffect(getter -> {
+            boolean goalEnabled = getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
             getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
             getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
             getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, 6);
             getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, 30);
             getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450);
-            getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
-            getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15);
-            getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false);
-            reloadSettingsAndUpdate();
+            onWakeGoalConfigChanged(goalEnabled);
         });
+
         preferenceManager.watchEffect(getter -> {
+            getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false);
             getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L);
             updateNotification();
         });
+
         preferenceManager.watchEffect(getter -> {
             if (getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false)) {
                 checkAndApplyDndAutoTimer();
             }
         });
+
+        preferenceManager.watchEffect(getter -> {
+            getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+            getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15);
+            updateNotification();
+        });
+    }
+
+    private void onTimerConfigChanged(boolean enabled, int durationMinutes) {
+        if (stateMachine != null) {
+            boolean musicActive = audioManager != null && audioManager.isMusicActive();
+            stateMachine.reloadSettings(enabled, durationMinutes, musicActive, System.currentTimeMillis());
+            if (isWakeAlarmEnabled()) {
+                checkAndScheduleSmartWakeUpAlarm(stateMachine.getTimerEndsAt());
+            }
+            updateNotification();
+        }
+    }
+
+    private void onWakeGoalConfigChanged(boolean goalEnabled) {
+        if (goalEnabled) {
+            long timerEndsAt = stateMachine != null ? stateMachine.getTimerEndsAt() : 0L;
+            checkAndScheduleSmartWakeUpAlarm(timerEndsAt);
+        } else {
+            dismissAutoSleepAlarm();
+        }
+        updateNotification();
     }
 
     private void initializeStateAndNotification() {
