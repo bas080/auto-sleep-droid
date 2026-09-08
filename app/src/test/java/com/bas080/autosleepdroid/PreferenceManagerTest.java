@@ -61,18 +61,16 @@ public class PreferenceManagerTest {
     }
 
     @Test
-    public void testAsyncWriteOperationsAndGetters() throws Exception {
+    public void testWriteOperationsAndGetters() throws Exception {
         AtomicBoolean listenerFired = new AtomicBoolean(false);
-        preferenceManager.registerListener("async_key", key -> listenerFired.set(true));
+        preferenceManager.registerListener("test_key", key -> listenerFired.set(true));
 
-        preferenceManager.putBooleanAsync("async_key", true);
+        preferenceManager.putBoolean("test_key", true);
 
-        // Allow async executor thread to finish writing and flush looper for listener callback
-        Thread.sleep(100);
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
 
-        assertTrue("Async write must trigger preference listener callback", listenerFired.get());
-        assertTrue("Getter must return written preference value", preferenceManager.getBoolean("async_key", false));
+        assertTrue("Write must trigger preference listener callback", listenerFired.get());
+        assertTrue("Getter must return written preference value", preferenceManager.getBoolean("test_key", false));
     }
 
     @Test
