@@ -224,11 +224,6 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService asyncExecutor = Executors.newSingleThreadExecutor();
 
-    public PreferenceManager(Context context, String preferenceName) {
-        this.preferences = context.getApplicationContext().getSharedPreferences(preferenceName, Context.MODE_PRIVATE);
-        this.preferences.registerOnSharedPreferenceChangeListener(this);
-    }
-
     public PreferenceManager(SharedPreferences sharedPreferences) {
         this.preferences = sharedPreferences;
         this.preferences.registerOnSharedPreferenceChangeListener(this);
