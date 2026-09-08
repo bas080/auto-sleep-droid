@@ -551,7 +551,7 @@ public class SleepTimerServiceTest {
 
     @Test
     public void testWakeUpAlarmSnoozeKeepsNotificationOpen() {
-        preferences.edit().putBoolean("show_notification", true).putBoolean("wake_alarm_enabled", true).commit();
+        preferences.edit().putBoolean("show_notification", true).putBoolean("wake_up_goal_enabled", true).commit();
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
@@ -591,7 +591,7 @@ public class SleepTimerServiceTest {
 
     @Test
     public void testWakeUpAlarmFlipSnoozeKeepsNotificationOpen() throws Exception {
-        preferences.edit().putBoolean("show_notification", true).putBoolean("wake_alarm_enabled", true).commit();
+        preferences.edit().putBoolean("show_notification", true).putBoolean("wake_up_goal_enabled", true).commit();
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
@@ -1075,8 +1075,49 @@ public class SleepTimerServiceTest {
     }
 
     @Test
+    public void testCalculateScheduledAlarmReturnsNullWhenWakeUpGoalDisabledEvenIfAutoTimerEnabled() {
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", false)
+                .putBoolean("auto_timer_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .commit();
+
+        long now = System.currentTimeMillis();
+        java.util.Calendar cal = SleepTimerService.calculateScheduledAlarm(context, now, 0L);
+        assertEquals("calculateScheduledAlarm must return null when wake_up_goal_enabled is false", null, cal);
+    }
+
+    @Test
+    public void testCalculateScheduledAlarmPrioritizesActiveTimerEndsAtForMinimumSleepSafeguard() {
+        long now = System.currentTimeMillis();
+        int minSleepMin = 450; // 7.5 hours = 450m
+        int timerDurationMin = 30; // 30m
+        long timerEndsAt = now + 30 * 60_000L;
+
+        preferences.edit()
+                .putBoolean("wake_up_goal_enabled", true)
+                .putInt("wake_up_goal_hour", 6)
+                .putInt("wake_up_goal_minute", 30)
+                .putInt("current_wake_hour", 6)
+                .putInt("current_wake_minute", 30)
+                .putInt("min_sleep_duration_minutes", minSleepMin)
+                .putInt("duration_minutes", timerDurationMin)
+                .putLong("sleep_start_time_ms", now - 2 * 3600_000L) // Stale sleep start time
+                .commit();
+
+        java.util.Calendar cal = SleepTimerService.calculateScheduledAlarm(context, now, timerEndsAt);
+        assertNotNull(cal);
+
+        // Required wake time = timerEndsAt + (450m - 30m) = timerEndsAt + 420m = now + 450m
+        long expectedWakeMs = timerEndsAt + (minSleepMin - timerDurationMin) * 60_000L;
+        assertTrue("Scheduled alarm time must match active timer expiration safeguard",
+                Math.abs(expectedWakeMs - cal.getTimeInMillis()) < 1000L);
+    }
+
+    @Test
     public void testWakeUpAlarmRingingNotificationShowsSnoozeAndDismissActionsAndInstructions() {
-        preferences.edit().putBoolean("show_notification", true).putBoolean("wake_alarm_enabled", true).commit();
+        preferences.edit().putBoolean("show_notification", true).putBoolean("wake_up_goal_enabled", true).commit();
         ServiceController<SleepTimerService> controller = Robolectric.buildService(SleepTimerService.class);
         SleepTimerService service = controller.create().get();
 
@@ -1106,7 +1147,7 @@ public class SleepTimerServiceTest {
         preferences.edit()
                 .putBoolean("active", false)
                 .putBoolean("show_notification", true)
-                .putBoolean("wake_alarm_enabled", true)
+                .putBoolean("wake_up_goal_enabled", true)
                 .putInt("wake_up_goal_hour", 6)
                 .putInt("wake_up_goal_minute", 30)
                 .putInt("current_wake_hour", 6)
@@ -1200,7 +1241,7 @@ public class SleepTimerServiceTest {
     public void testAwakeActionRegistersSleepAndUpdatesAlarmSchedule() {
         long sleepStart = System.currentTimeMillis() - 8 * 3600_000L;
         preferences.edit()
-                .putBoolean("wake_alarm_enabled", true)
+                .putBoolean("wake_up_goal_enabled", true)
                 .putInt("wake_up_goal_hour", 6)
                 .putInt("wake_up_goal_minute", 30)
                 .putInt("current_wake_hour", 7)
@@ -1239,7 +1280,7 @@ public class SleepTimerServiceTest {
         long bedtimeMs = calCurrent.getTimeInMillis() - (8 * 3600_000L + 30 * 60_000L);
 
         preferences.edit()
-                .putBoolean("wake_alarm_enabled", true)
+                .putBoolean("wake_up_goal_enabled", true)
                 .putInt("wake_up_goal_hour", 6)
                 .putInt("wake_up_goal_minute", 30)
                 .putInt("current_wake_hour", 7)
@@ -1261,7 +1302,7 @@ public class SleepTimerServiceTest {
     public void testAwakeActionDuringActiveNapPreservesCurrentWakeTime() {
         long napEndsAt = System.currentTimeMillis() + 1200_000L;
         preferences.edit()
-                .putBoolean("wake_alarm_enabled", true)
+                .putBoolean("wake_up_goal_enabled", true)
                 .putInt("wake_up_goal_hour", 6)
                 .putInt("wake_up_goal_minute", 30)
                 .putInt("current_wake_hour", 7)
@@ -1291,7 +1332,7 @@ public class SleepTimerServiceTest {
         long sleepStart = System.currentTimeMillis() - 4 * 3600_000L;
         preferences.edit()
                 .putBoolean("show_notification", true)
-                .putBoolean("wake_alarm_enabled", true)
+                .putBoolean("wake_up_goal_enabled", true)
                 .putLong("sleep_start_time_ms", sleepStart)
                 .commit();
 
@@ -1320,7 +1361,7 @@ public class SleepTimerServiceTest {
     public void testNotificationShowsNapWhenNoActiveSleepSessionEvenIfWakeAlarmEnabled() {
         preferences.edit()
                 .putBoolean("show_notification", true)
-                .putBoolean("wake_alarm_enabled", true)
+                .putBoolean("wake_up_goal_enabled", true)
                 .remove("sleep_start_time_ms")
                 .commit();
 
@@ -1350,7 +1391,7 @@ public class SleepTimerServiceTest {
         long sleepStart = System.currentTimeMillis() - 4 * 3600_000L;
         preferences.edit()
                 .putBoolean("show_notification", true)
-                .putBoolean("wake_alarm_enabled", true)
+                .putBoolean("wake_up_goal_enabled", true)
                 .putLong("sleep_start_time_ms", sleepStart)
                 .commit();
 
@@ -1389,7 +1430,7 @@ public class SleepTimerServiceTest {
         preferences.edit()
                 .putBoolean("active", true)
                 .putBoolean("show_notification", true)
-                .putBoolean("wake_alarm_enabled", true)
+                .putBoolean("wake_up_goal_enabled", true)
                 .putInt("duration_minutes", 30)
                 .putInt("min_sleep_duration_minutes", 450)
                 .putInt("wake_up_goal_hour", 6)
@@ -1434,7 +1475,7 @@ public class SleepTimerServiceTest {
         long now = System.currentTimeMillis();
         long sleepStart = now - (6 * 3600_000L + 45 * 60_000L); // 6 hours 45 mins ago
         preferences.edit()
-                .putBoolean("wake_alarm_enabled", true)
+                .putBoolean("wake_up_goal_enabled", true)
                 .putInt("wake_up_goal_hour", 7)
                 .putInt("wake_up_goal_minute", 30)
                 .putInt("current_wake_hour", 7)

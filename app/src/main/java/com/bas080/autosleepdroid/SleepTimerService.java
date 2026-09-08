@@ -639,7 +639,7 @@ public class SleepTimerService extends Service implements SensorEventListener, S
 
     private boolean isWakeAlarmEnabled() {
         if (preferences == null) return false;
-        return preferences.getBoolean("wake_alarm_enabled", preferences.getBoolean("wake_up_goal_enabled", false));
+        return preferences.getBoolean("wake_up_goal_enabled", false);
     }
 
     boolean shouldShowAwakeAction() {
@@ -659,9 +659,8 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             return null;
         }
         SharedPreferences prefs = context.getSharedPreferences(PREFERENCES, MODE_PRIVATE);
-        boolean wakeAlarmEnabled = prefs.getBoolean("wake_alarm_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
-        boolean autoTimerEnabled = prefs.getBoolean("auto_timer_enabled", false);
-        if (!wakeAlarmEnabled && !autoTimerEnabled) {
+        boolean wakeAlarmEnabled = prefs.getBoolean("wake_up_goal_enabled", false);
+        if (!wakeAlarmEnabled) {
             return null;
         }
 
@@ -687,12 +686,12 @@ public class SleepTimerService extends Service implements SensorEventListener, S
         int timerDuration = prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
         long sleepStartTime = prefs.getLong("sleep_start_time_ms", 0L);
         long minWakeTimeMillis = 0L;
-        if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
-            long effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L);
-            minWakeTimeMillis = sleepStartTime + effectiveMinSleepMs;
-        } else if (timerEndsAt > 0L) {
+        if (timerEndsAt > 0L) {
             long effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L);
             minWakeTimeMillis = timerEndsAt + effectiveMinSleepMs;
+        } else if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
+            long effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L);
+            minWakeTimeMillis = sleepStartTime + effectiveMinSleepMs;
         }
 
         if (minWakeTimeMillis > scheduledAlarmMillis) {
@@ -854,14 +853,17 @@ public class SleepTimerService extends Service implements SensorEventListener, S
             long sleepStartTime = preferences.getLong("sleep_start_time_ms", 0L);
             long requiredWakeTime;
             long baseTime;
-            if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
+            if (newTimerEndsAt > 0L) {
+                baseTime = newTimerEndsAt;
+                long effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L);
+                requiredWakeTime = newTimerEndsAt + effectiveMinSleepMs;
+            } else if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
                 baseTime = sleepStartTime;
                 long effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L);
                 requiredWakeTime = sleepStartTime + effectiveMinSleepMs;
             } else {
-                baseTime = newTimerEndsAt > 0L ? newTimerEndsAt : now;
-                long effectiveMinSleepMs = newTimerEndsAt > 0L ? Math.max(0L, (minSleepMin - timerDuration) * 60_000L) : minSleepMs;
-                requiredWakeTime = baseTime + effectiveMinSleepMs;
+                baseTime = now;
+                requiredWakeTime = now + minSleepMs;
             }
 
             int goalHour = preferences.getInt("wake_up_goal_hour", 6);
