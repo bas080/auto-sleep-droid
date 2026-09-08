@@ -115,7 +115,7 @@ Java-friendly optimization layer for centralized preference key constants, key-s
 - Provides lazy evaluation and memoization of computed values via `getComputed(computeKey, computer)` using self-tracking `PreferenceGetter`. Computed values automatically record their preference key dependencies during execution and automatically invalidate cached results when any accessed preference key changes.
 - Ensures callbacks fire strictly when their target key changes, providing reactive state synchronization between `MainService` and `MainActivity` without requiring manual `redrawNotification()` intent calls.
 - Provides explicit registration/unregistration methods (`registerListener`, `unregisterListener`) and manual cache invalidation (`invalidateComputed`, `invalidateAllComputed`).
-- Offloads asynchronous preference write operations and background computations using a single-threaded `ExecutorService`. Prefers off-thread asynchronous preference writes (`putBooleanAsync`, `putIntAsync`, `putLongAsync`, `removeAsync`) for UI controls in `MainActivity`, which update `SharedPreferences` off the main UI thread and automatically trigger reactive `watchEffect` UI section updates upon completion.
+- Offloads background computations using a single-threaded `ExecutorService`.
 
 ### `SettingRowView`
 

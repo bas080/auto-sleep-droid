@@ -564,11 +564,15 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled");
                     }
                 } else {
-                    isRequestingHealthConnectPermission = false;
-                    preferenceManager.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled; revoking permissions");
-                    Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show();
-                    HealthConnectManager.revokeAllPermissions(this);
+                    if (isUserInitiated) {
+                        isRequestingHealthConnectPermission = false;
+                        preferenceManager.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled; revoking permissions");
+                        Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show();
+                        HealthConnectManager.revokeAllPermissions(this);
+                    } else {
+                        preferenceManager.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+                    }
                 }
                 boolean active = preferenceManager.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
                 boolean goalEnabled = preferenceManager.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
