@@ -13,7 +13,9 @@ import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLooper;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -71,5 +73,54 @@ public class PreferenceManagerTest {
 
         assertTrue("Async write must trigger preference listener callback", listenerFired.get());
         assertTrue("Getter must return written preference value", preferenceManager.getBoolean("async_key", false));
+    }
+
+    @Test
+    public void testComputedValueMemoizationAndDependencyInvalidation() {
+        AtomicInteger computeCount = new AtomicInteger(0);
+
+        rawPreferences.edit().putInt("dep_key_1", 10).commit();
+
+        String[] deps = new String[]{"dep_key_1"};
+
+        // First call evaluates the computation
+        int result1 = preferenceManager.getComputed("testComp", deps, () -> {
+            computeCount.incrementAndGet();
+            return preferenceManager.getInt("dep_key_1", 0) * 2;
+        });
+
+        assertEquals(20, result1);
+        assertEquals(1, computeCount.get());
+
+        // Second call uses cached result without re-evaluating
+        int result2 = preferenceManager.getComputed("testComp", deps, () -> {
+            computeCount.incrementAndGet();
+            return preferenceManager.getInt("dep_key_1", 0) * 2;
+        });
+
+        assertEquals(20, result2);
+        assertEquals("Compute count should remain 1 due to memoization", 1, computeCount.get());
+
+        // Modifying unrelated key does not invalidate computation
+        rawPreferences.edit().putBoolean("unrelated_key", true).commit();
+
+        int result3 = preferenceManager.getComputed("testComp", deps, () -> {
+            computeCount.incrementAndGet();
+            return preferenceManager.getInt("dep_key_1", 0) * 2;
+        });
+
+        assertEquals(20, result3);
+        assertEquals("Compute count should remain 1 after unrelated key change", 1, computeCount.get());
+
+        // Modifying dependent key invalidates computation
+        rawPreferences.edit().putInt("dep_key_1", 15).commit();
+
+        int result4 = preferenceManager.getComputed("testComp", deps, () -> {
+            computeCount.incrementAndGet();
+            return preferenceManager.getInt("dep_key_1", 0) * 2;
+        });
+
+        assertEquals(30, result4);
+        assertEquals("Compute count should increment to 2 after dependency key update", 2, computeCount.get());
     }
 }

@@ -112,8 +112,9 @@ Java-friendly optimization layer for centralized preference key constants, key-s
 
 - Centralizes public static final constants for all application preference keys (`KEY_ACTIVE`, `KEY_DURATION_MINUTES`, `KEY_AUTO_TIMER_ENABLED`, `KEY_WAKE_UP_GOAL_ENABLED`, `KEY_WAKE_UP_GOAL_HOUR`, `KEY_WAKE_UP_GOAL_MINUTE`, `KEY_CURRENT_WAKE_HOUR`, `KEY_CURRENT_WAKE_MINUTE`, `KEY_MIN_SLEEP_DURATION_MINUTES`, `KEY_NAP_DND_ENABLED`, `KEY_NAP_DURATION_MINUTES`, `KEY_NAP_ALARM_ENDS_AT`, `KEY_HEALTH_CONNECT_ENABLED`, `KEY_HC_MIN_DURATION_MINUTES`, `KEY_WAKEUP_LAST_SCHEDULED_MS`, etc.).
 - Encapsulates `SharedPreferences.OnSharedPreferenceChangeListener` to map specific preference keys to custom callbacks (`OnPreferenceChangeListener`) using thread-safe data structures (`ConcurrentHashMap`, `CopyOnWriteArraySet`).
+- Provides lazy evaluation and memoization of computed values via `getComputed(computeKey, dependencyKeys, computer)` using thread-safe caching (`computedCache`). Memoized values are automatically invalidated when any dependent preference key in `dependencyKeys` changes.
 - Ensures callbacks fire strictly when their target key changes, providing reactive state synchronization between `MainService` and `MainActivity` without requiring manual `redrawNotification()` intent calls.
-- Provides explicit registration/unregistration methods (`registerListener`, `unregisterListener`).
+- Provides explicit registration/unregistration methods (`registerListener`, `unregisterListener`) and manual cache invalidation (`invalidateComputed`, `invalidateAllComputed`).
 - Offloads asynchronous preference write operations and background computations using a single-threaded `ExecutorService`.
 
 ### `SettingRowView`
