@@ -15,11 +15,12 @@ The app is an Android sleep timer app configured directly from a single main UI 
 │   └── src/main/
 │       ├── AndroidManifest.xml
 │       ├── java/com/bas080/autosleepdroid/
-│       │   ├── BootReceiver.java
-│       │   ├── EventLogger.java
-│       │   ├── MainActivity.java
-│       │   ├── MainService.java
-│       │   └── SettingRowView.java
+│       │   ├── BootReceiver.kt
+│       │   ├── EventLogger.kt
+│       │   ├── HealthConnectManager.kt
+│       │   ├── MainActivity.kt
+│       │   ├── MainService.kt
+│       │   └── SettingRowView.kt
 │       └── res/
 │           ├── layout/
 │           │   ├── activity_main.xml
@@ -52,7 +53,7 @@ The app is an Android sleep timer app configured directly from a single main UI 
 
 ### `MainService` (renamed from `SleepTimerService`)
 
-File: `app/src/main/java/com/bas080/autosleepdroid/MainService.java`
+File: `app/src/main/java/com/bas080/autosleepdroid/MainService.kt`
 
 This is the main application component. It is a foreground service with the `mediaPlayback` foreground-service type.
 
@@ -87,7 +88,7 @@ Important constants:
 
 ### `NapDialogActivity`
 
-File: `app/src/main/java/com/bas080/autosleepdroid/NapDialogActivity.java`
+File: `app/src/main/java/com/bas080/autosleepdroid/NapDialogActivity.kt`
 
 A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) launched from `MainActivity` or the status notification's "Nap" action when no nap is active:
 
@@ -96,7 +97,7 @@ A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) la
 
 ### `AwakeDialogActivity`
 
-File: `app/src/main/java/com/bas080/autosleepdroid/AwakeDialogActivity.java`
+File: `app/src/main/java/com/bas080/autosleepdroid/AwakeDialogActivity.kt`
 
 A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) launched automatically when opening `MainActivity` during an active sleep session (active timer or `sleep_start_time_ms` within 14 hours) or from the status notification's "I'm Awake" action (shown strictly during active sleep sessions when wake alarms are enabled):
 
@@ -106,9 +107,9 @@ A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) la
 
 ### `PreferenceManager`
 
-File: `app/src/main/java/com/bas080/autosleepdroid/PreferenceManager.java`
+File: `app/src/main/java/com/bas080/autosleepdroid/PreferenceManager.kt`
 
-Java-friendly optimization layer for centralized preference key constants, key-specific `SharedPreferences` observation, and async execution:
+Centralized preference key constants, key-specific `SharedPreferences` observation, and async execution:
 
 - Centralizes public static final constants for all application preference keys (`KEY_ACTIVE`, `KEY_DURATION_MINUTES`, `KEY_AUTO_TIMER_ENABLED`, `KEY_WAKE_UP_GOAL_ENABLED`, `KEY_WAKE_UP_GOAL_HOUR`, `KEY_WAKE_UP_GOAL_MINUTE`, `KEY_CURRENT_WAKE_HOUR`, `KEY_CURRENT_WAKE_MINUTE`, `KEY_MIN_SLEEP_DURATION_MINUTES`, `KEY_NAP_DND_ENABLED`, `KEY_NAP_DURATION_MINUTES`, `KEY_NAP_ALARM_ENDS_AT`, `KEY_HEALTH_CONNECT_ENABLED`, `KEY_HC_MIN_DURATION_MINUTES`, `KEY_WAKEUP_LAST_SCHEDULED_MS`, etc.).
 - Encapsulates `SharedPreferences.OnSharedPreferenceChangeListener` to map specific preference keys to custom callbacks (`OnPreferenceChangeListener`) using thread-safe data structures (`ConcurrentHashMap`, `CopyOnWriteArraySet`).
@@ -119,7 +120,7 @@ Java-friendly optimization layer for centralized preference key constants, key-s
 
 ### `SettingRowView`
 
-File: `app/src/main/java/com/bas080/autosleepdroid/SettingRowView.java`
+File: `app/src/main/java/com/bas080/autosleepdroid/SettingRowView.kt`
 
 Custom compound `ViewGroup` extending `LinearLayout` that encapsulates settings row layout, styling, and enablement logic:
 
@@ -130,7 +131,7 @@ Custom compound `ViewGroup` extending `LinearLayout` that encapsulates settings 
 
 ### `MainActivity`
 
-File: `app/src/main/java/com/bas080/autosleepdroid/MainActivity.java`
+File: `app/src/main/java/com/bas080/autosleepdroid/MainActivity.kt`
 
 The launcher activity starts `MainService`, requests `POST_NOTIFICATIONS` on Android 13+, prompts for exact alarm permissions on Android 12+, and presents the main configuration UI (`activity_main.xml`).
 
@@ -170,13 +171,13 @@ Utility object managing integration with Android Health Connect (`androidx.healt
 
 ### `EventLogger`
 
-File: `app/src/main/java/com/bas080/autosleepdroid/EventLogger.java`
+File: `app/src/main/java/com/bas080/autosleepdroid/EventLogger.kt`
 
 Centralized logging utility that formats event lines with timestamps (`yyyy-MM-dd HH:mm:ss - <message>`). Keeps logs bounded up to 500 lines in memory and `SharedPreferences`, notifying UI listeners of new events.
 
 ### `BootReceiver`
 
-File: `app/src/main/java/com/bas080/autosleepdroid/BootReceiver.java`
+File: `app/src/main/java/com/bas080/autosleepdroid/BootReceiver.kt`
 
 Receives `BOOT_COMPLETED`, logs the reboot event, and starts the foreground service. `MainService` then reads persisted state. If previously in an enabled/running state (`Waiting`, `Active`, `Fading`), it restores to the `Waiting` state using the configured duration; if explicitly in `Off` state, it remains `Off`.
 
