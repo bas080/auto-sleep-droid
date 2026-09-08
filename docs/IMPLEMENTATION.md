@@ -108,10 +108,11 @@ A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) la
 
 File: `app/src/main/java/com/bas080/autosleepdroid/PreferenceManager.java`
 
-Java-friendly optimization layer for key-specific `SharedPreferences` observation and async execution:
+Java-friendly optimization layer for centralized preference key constants, key-specific `SharedPreferences` observation, and async execution:
 
+- Centralizes public static final constants for all application preference keys (`KEY_ACTIVE`, `KEY_DURATION_MINUTES`, `KEY_AUTO_TIMER_ENABLED`, `KEY_WAKE_UP_GOAL_ENABLED`, `KEY_WAKE_UP_GOAL_HOUR`, `KEY_WAKE_UP_GOAL_MINUTE`, `KEY_CURRENT_WAKE_HOUR`, `KEY_CURRENT_WAKE_MINUTE`, `KEY_MIN_SLEEP_DURATION_MINUTES`, `KEY_NAP_DND_ENABLED`, `KEY_NAP_DURATION_MINUTES`, `KEY_NAP_ALARM_ENDS_AT`, `KEY_HEALTH_CONNECT_ENABLED`, `KEY_HC_MIN_DURATION_MINUTES`, `KEY_WAKEUP_LAST_SCHEDULED_MS`, etc.).
 - Encapsulates `SharedPreferences.OnSharedPreferenceChangeListener` to map specific preference keys to custom callbacks (`OnPreferenceChangeListener`) using thread-safe data structures (`ConcurrentHashMap`, `CopyOnWriteArraySet`).
-- Ensures callbacks fire strictly when their target key changes, avoiding unnecessary UI redraws and overhead.
+- Ensures callbacks fire strictly when their target key changes, providing reactive state synchronization between `MainService` and `MainActivity` without requiring manual `redrawNotification()` intent calls.
 - Provides explicit registration/unregistration methods (`registerListener`, `unregisterListener`).
 - Offloads asynchronous preference write operations and background computations using a single-threaded `ExecutorService`.
 
