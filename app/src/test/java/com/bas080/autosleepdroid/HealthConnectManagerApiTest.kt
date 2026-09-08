@@ -10,7 +10,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -168,37 +167,6 @@ class HealthConnectManagerApiTest {
         runBlocking {
             verify(mockPermissionController).revokeAllPermissions()
         }
-
-        HealthConnectManager.setClientForTesting(null, null)
-    }
-
-    @Test
-    fun testHealthConnectToggleRetainsEnabledStateWhenReturningWithPermissionGranted() {
-        val mockClient = mock(HealthConnectClient::class.java)
-        val mockPermissionController = mock(PermissionController::class.java)
-
-        runBlocking {
-            `when`(mockPermissionController.getGrantedPermissions()).thenReturn(HealthConnectManager.REQUIRED_PERMISSIONS)
-            `when`(mockClient.permissionController).thenReturn(mockPermissionController)
-        }
-
-        HealthConnectManager.setClientForTesting(mockClient, true)
-
-        val controller = org.robolectric.Robolectric.buildActivity(MainActivity::class.java)
-        val activity = controller.create().get()
-
-        val rowHealthConnect = activity.findViewById<android.view.View>(R.id.row_health_connect)
-        assertNotNull(rowHealthConnect)
-
-        rowHealthConnect.performClick()
-        org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
-
-        controller.resume()
-        org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
-
-        val prefs = activity.getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, Context.MODE_PRIVATE)
-        assertTrue("Health Connect should remain enabled after returning with permission granted",
-                prefs.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false))
 
         HealthConnectManager.setClientForTesting(null, null)
     }

@@ -72,13 +72,24 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private TextView eventLogText;
 
     private final android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private PreferenceManager.EffectHandle uiEffectHandle;
+    private final List<PreferenceManager.EffectHandle> uiEffectHandles = new java.util.ArrayList<>();
+    private PreferenceManager preferenceManager;
     private MainService boundService;
     private boolean isBound = false;
     private boolean isUpdatingUi = false;
     private boolean isUserInitiatedAutoTimer = false;
     private boolean isUserInitiatedHealthConnect = false;
     private boolean isRequestingHealthConnectPermission = false;
+
+    private PreferenceManager getPreferenceManager() {
+        if (isBound && boundService != null && boundService.getPreferenceManager() != null) {
+            return boundService.getPreferenceManager();
+        }
+        if (preferenceManager == null) {
+            preferenceManager = new PreferenceManager(this, PreferenceKeys.PREFERENCES_NAME);
+        }
+        return preferenceManager;
+    }
 
     private final android.content.ServiceConnection serviceConnection = new android.content.ServiceConnection() {
         @Override
@@ -366,8 +377,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void showDurationDialog(int titleResId, String prefKey, int defaultMinutes, int minHours, int maxHours, int minuteStep, OnDurationSavedListener listener) {
-        SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-        int currentMinutes = prefs.getInt(prefKey, defaultMinutes);
+        PreferenceManager pm = getPreferenceManager();
+        int currentMinutes = pm.getInt(prefKey, defaultMinutes);
 
         final DurationInputView durationInputView = new DurationInputView(this);
         durationInputView.configure(minHours, maxHours, minuteStep);
@@ -380,7 +391,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         builder.setPositiveButton(R.string.dialog_ok, (dialog, which) -> {
             int minutes = durationInputView.getTotalMinutes();
             if (minutes > 0) {
-                prefs.edit().putInt(prefKey, minutes).apply();
+                pm.putIntAsync(prefKey, minutes);
                 if (listener != null) {
                     listener.onSaved(minutes);
                 }
@@ -404,8 +415,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (switchNapDnd != null) {
             switchNapDnd.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
-                SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-                prefs.edit().putBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, isChecked).apply();
+                PreferenceManager pm = getPreferenceManager();
+                pm.putBooleanAsync(PreferenceKeys.KEY_NAP_DND_ENABLED, isChecked);
                 boolean isUserInitiated = buttonView.isPressed();
                 if (isChecked && isUserInitiated && !isDndPermissionGranted()) {
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap DND enabled; DND policy permission missing, opening settings");
@@ -427,9 +438,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (switchEnableTimer != null) {
             switchEnableTimer.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
-                SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-                prefs.edit().putBoolean(PreferenceKeys.KEY_ACTIVE, isChecked).apply();
-                boolean goalEnabled = prefs.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
+                PreferenceManager pm = getPreferenceManager();
+                pm.putBooleanAsync(PreferenceKeys.KEY_ACTIVE, isChecked);
+                boolean goalEnabled = pm.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
                 updateInputEnabledStates(isChecked, goalEnabled);
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Timer enabled from UI" : "Timer disabled from UI");
             });
@@ -461,13 +472,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (switchAutoTimer != null) {
             switchAutoTimer.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
-                SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-                prefs.edit().putBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, isChecked).apply();
+                PreferenceManager pm = getPreferenceManager();
+                pm.putBooleanAsync(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, isChecked);
                 boolean isUserInitiated = buttonView.isPressed() || isUserInitiatedAutoTimer;
                 isUserInitiatedAutoTimer = false;
                 if (isChecked) {
                     boolean dndActive = isDndActive();
-                    prefs.edit().putBoolean(PreferenceKeys.KEY_ACTIVE, dndActive).apply();
+                    pm.putBooleanAsync(PreferenceKeys.KEY_ACTIVE, dndActive);
                     if (switchEnableTimer != null) {
                         switchEnableTimer.setChecked(dndActive);
                     }
@@ -494,12 +505,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (switchEnableGoal != null) {
             switchEnableGoal.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
-                SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-                prefs.edit()
-                        .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, isChecked)
-                        .remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
-                        .apply();
-                boolean timerActive = prefs.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
+                PreferenceManager pm = getPreferenceManager();
+                pm.putBooleanAsync(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, isChecked);
+                pm.removeAsync(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS);
+                boolean timerActive = pm.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
                 updateInputEnabledStates(timerActive, isChecked);
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, isChecked ? "Wake-up goal enabled" : "Wake-up goal disabled");
             });
@@ -520,8 +529,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     450,
                     0, 16, 15,
                     minutes -> {
-                        SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-                        prefs.edit().remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
+                        PreferenceManager pm = getPreferenceManager();
+                        pm.removeAsync(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS);
                         if (textMinSleepValue != null) {
                             textMinSleepValue.setText(DurationUtils.formatDurationString(minutes));
                         }
@@ -541,7 +550,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (switchHealthConnect != null) {
             switchHealthConnect.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingUi) return;
-                SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
+                PreferenceManager pm = getPreferenceManager();
                 boolean isUserInitiated = buttonView.isPressed() || isUserInitiatedHealthConnect;
                 isUserInitiatedHealthConnect = false;
                 if (isChecked) {
@@ -553,7 +562,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect requested but SDK is unavailable");
                         return;
                     }
-                    prefs.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true).apply();
+                    pm.putBooleanAsync(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true);
                     Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show();
                     if (isUserInitiated) {
                         isRequestingHealthConnectPermission = true;
@@ -571,13 +580,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     }
                 } else {
                     isRequestingHealthConnectPermission = false;
-                    prefs.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
+                    pm.putBooleanAsync(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled; revoking permissions");
                     Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show();
                     HealthConnectManager.revokeAllPermissions(this);
                 }
-                boolean active = prefs.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
-                boolean goalEnabled = prefs.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
+                boolean active = pm.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
+                boolean goalEnabled = pm.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
                 updateInputEnabledStates(active, goalEnabled, isChecked);
             });
         }
@@ -598,8 +607,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void updateInputEnabledStates(boolean active, boolean goalEnabled) {
-        SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-        boolean healthConnectEnabled = prefs.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+        PreferenceManager pm = getPreferenceManager();
+        boolean healthConnectEnabled = pm.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
         updateInputEnabledStates(active, goalEnabled, healthConnectEnabled);
     }
 
@@ -709,45 +718,42 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void showTargetTimeDialog() {
-        SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-        int goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
-        int goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+        PreferenceManager pm = getPreferenceManager();
+        int goalHour = pm.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
+        int goalMin = pm.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
         boolean is24Hour = android.text.format.DateFormat.is24HourFormat(this);
 
         TimePickerDialog timePickerDialog = new TimePickerDialog(this,
                 (view, hourOfDay, minute) -> {
-                    SharedPreferences prefs1 = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-                    SharedPreferences.Editor editor = prefs1.edit()
-                            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, hourOfDay)
-                            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, minute);
-                    if (!prefs1.contains(PreferenceKeys.KEY_CURRENT_WAKE_HOUR)) {
-                        editor.putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay)
-                              .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute);
+                    PreferenceManager pm1 = getPreferenceManager();
+                    pm1.putIntAsync(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, hourOfDay);
+                    pm1.putIntAsync(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, minute);
+                    if (!pm1.contains(PreferenceKeys.KEY_CURRENT_WAKE_HOUR)) {
+                        pm1.putIntAsync(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay);
+                        pm1.putIntAsync(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute);
                     }
-                    editor.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS).apply();
+                    pm1.removeAsync(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS);
                     updateTargetTimeButtonText(hourOfDay, minute);
-                    updateCurrentWakeTimeButtonText(prefs1.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay), prefs1.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute));
+                    updateCurrentWakeTimeButtonText(pm1.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay), pm1.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute));
                     redrawNotification();
                 }, goalHour, goalMin, is24Hour);
         timePickerDialog.show();
     }
 
     private void showCurrentWakeTimeDialog() {
-        SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-        int goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
-        int goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
-        int currentHour = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
-        int currentMin = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
+        PreferenceManager pm = getPreferenceManager();
+        int goalHour = pm.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
+        int goalMin = pm.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+        int currentHour = pm.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
+        int currentMin = pm.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
         boolean is24Hour = android.text.format.DateFormat.is24HourFormat(this);
 
         TimePickerDialog timePickerDialog = new TimePickerDialog(this,
                 (view, hourOfDay, minute) -> {
-                    SharedPreferences prefs1 = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-                    prefs1.edit()
-                            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay)
-                            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute)
-                            .remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
-                            .apply();
+                    PreferenceManager pm1 = getPreferenceManager();
+                    pm1.putIntAsync(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay);
+                    pm1.putIntAsync(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute);
+                    pm1.removeAsync(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS);
                     updateCurrentWakeTimeButtonText(hourOfDay, minute);
                     redrawNotification();
                 }, currentHour, currentMin, is24Hour);
@@ -779,75 +785,18 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         return pm.getComputed(key, PreferenceComputations.formatDuration(key, defaultMinutes));
     }
 
-    private void loadPreferencesIntoUi() {
-        loadPreferencesIntoUi(null);
-    }
+    private void updateNapUi(PreferenceGetter getter) {
+        boolean napDndEnabled = getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false);
+        int napDurationMinutes = getter.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, 20);
+        long napEndsAt = getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L);
 
-    private void loadPreferencesIntoUi(PreferenceManager.PreferenceGetter getter) {
-        isUpdatingUi = true;
-        SharedPreferences prefs = getter == null ? getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE) : null;
-        PreferenceManager pm = isBound && boundService != null ? boundService.getPreferenceManager() : null;
-
-        boolean napDndEnabled = getter != null ? getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false) : prefs.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false);
-        boolean active = getter != null ? getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true) : prefs.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
-        int durationMinutes = getter != null ? getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES) : prefs.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
-        boolean autoTimer = getter != null ? getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false) : prefs.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false);
-        boolean goalEnabled = getter != null ? getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) : prefs.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
-        boolean healthConnectEnabled = getter != null ? getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) : prefs.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
-        int goalHour = getter != null ? getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6) : prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
-        int goalMin = getter != null ? getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30) : prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
-        int currentHour = getter != null ? getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour) : prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
-        int currentMin = getter != null ? getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin) : prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
-        int minSleepMin = getter != null ? getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450) : prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450);
-        int hcMinDurationMin = getter != null ? getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15) : prefs.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15);
-        int napDurationMinutes = getter != null ? getter.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, 20) : prefs.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, 20);
-        long napEndsAt = getter != null ? getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L) : prefs.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L);
-
+        PreferenceManager pm = getPreferenceManager();
         boolean isNapActive = pm != null
                 ? Boolean.TRUE.equals(pm.getComputed(PreferenceComputations.IS_NAP_ACTIVE))
                 : napEndsAt > System.currentTimeMillis();
 
         if (switchNapDnd != null) {
             switchNapDnd.setChecked(napDndEnabled);
-        }
-        if (switchEnableTimer != null) {
-            switchEnableTimer.setChecked(active);
-        }
-        if (textDurationValue != null) {
-            textDurationValue.setText(getComputedDurationString(pm, PreferenceManager.KEY_DURATION_MINUTES, durationMinutes));
-        }
-        if (switchAutoTimer != null) {
-            switchAutoTimer.setChecked(autoTimer);
-        }
-        if (switchEnableGoal != null) {
-            switchEnableGoal.setChecked(goalEnabled);
-        }
-        if (switchHealthConnect != null) {
-            switchHealthConnect.setChecked(healthConnectEnabled);
-        }
-        if (healthConnectEnabled) {
-            if (!isRequestingHealthConnectPermission) {
-                HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
-                    if (!hasPermission) {
-                        SharedPreferences prefs1 = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-                        prefs1.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
-                        if (switchHealthConnect != null) {
-                            isUpdatingUi = true;
-                            switchHealthConnect.setChecked(false);
-                            isUpdatingUi = false;
-                        }
-                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission revoked; disabling sync");
-                    }
-                });
-            }
-        }
-        updateTargetTimeButtonText(goalHour, goalMin);
-        updateCurrentWakeTimeButtonText(currentHour, currentMin);
-        if (textMinSleepValue != null) {
-            textMinSleepValue.setText(getComputedDurationString(pm, PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, minSleepMin));
-        }
-        if (textHcMinDurationValue != null) {
-            textHcMinDurationValue.setText(getComputedDurationString(pm, PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, hcMinDurationMin));
         }
         if (btnNap != null && textNapStatus != null) {
             if (isNapActive) {
@@ -858,7 +807,85 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 btnNap.setOnClickListener(v -> openNapDialog());
             }
         }
+    }
+
+    private void updateTimerUi(PreferenceGetter getter) {
+        boolean active = getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
+        int durationMinutes = getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+        boolean autoTimer = getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false);
+
+        PreferenceManager pm = getPreferenceManager();
+
+        if (switchEnableTimer != null) {
+            switchEnableTimer.setChecked(active);
+        }
+        if (textDurationValue != null) {
+            textDurationValue.setText(getComputedDurationString(pm, PreferenceManager.KEY_DURATION_MINUTES, durationMinutes));
+        }
+        if (switchAutoTimer != null) {
+            switchAutoTimer.setChecked(autoTimer);
+        }
+    }
+
+    private void updateGoalUi(PreferenceGetter getter) {
+        boolean active = getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
+        boolean goalEnabled = getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
+        boolean healthConnectEnabled = getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+        int goalHour = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
+        int goalMin = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+        int currentHour = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
+        int currentMin = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
+        int minSleepMin = getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450);
+
+        PreferenceManager pm = getPreferenceManager();
+
+        if (switchEnableGoal != null) {
+            switchEnableGoal.setChecked(goalEnabled);
+        }
+        updateTargetTimeButtonText(goalHour, goalMin);
+        updateCurrentWakeTimeButtonText(currentHour, currentMin);
+        if (textMinSleepValue != null) {
+            textMinSleepValue.setText(getComputedDurationString(pm, PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, minSleepMin));
+        }
         updateInputEnabledStates(active, goalEnabled, healthConnectEnabled);
+    }
+
+    private void updateHealthConnectUi(PreferenceGetter getter) {
+        boolean healthConnectEnabled = getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+        int hcMinDurationMin = getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15);
+
+        PreferenceManager pm = getPreferenceManager();
+
+        if (switchHealthConnect != null) {
+            switchHealthConnect.setChecked(healthConnectEnabled);
+        }
+        if (textHcMinDurationValue != null) {
+            textHcMinDurationValue.setText(getComputedDurationString(pm, PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, hcMinDurationMin));
+        }
+        if (healthConnectEnabled) {
+            if (!isRequestingHealthConnectPermission) {
+                HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
+                    if (!hasPermission) {
+                        pm.putBooleanAsync(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+                        if (switchHealthConnect != null) {
+                            isUpdatingUi = true;
+                            switchHealthConnect.setChecked(false);
+                            isUpdatingUi = false;
+                        }
+                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission revoked; disabling sync");
+                    }
+                });
+            }
+        }
+    }
+
+    private void loadPreferencesIntoUi() {
+        PreferenceManager pm = getPreferenceManager();
+        isUpdatingUi = true;
+        updateNapUi(pm);
+        updateTimerUi(pm);
+        updateGoalUi(pm);
+        updateHealthConnectUi(pm);
         isUpdatingUi = false;
     }
 
@@ -868,8 +895,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void cancelNap() {
-        SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-        prefs.edit().remove(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT).apply();
+        PreferenceManager pm = getPreferenceManager();
+        pm.removeAsync(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT);
 
         Intent serviceIntent = new Intent(this, MainService.class);
         serviceIntent.setAction(MainService.ACTION_CANCEL_NAP);
@@ -882,24 +909,24 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void exportSettings() {
-        SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
+        PreferenceManager pm = getPreferenceManager();
         try {
             JSONObject json = new JSONObject();
             json.put("version", 1);
-            json.put("nap_dnd_enabled", prefs.getBoolean("nap_dnd_enabled", false));
-            json.put("duration_minutes", prefs.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES));
-            json.put("active", prefs.getBoolean("active", true));
-            json.put("auto_timer_enabled", prefs.getBoolean("auto_timer_enabled", false));
-            json.put("wake_up_goal_enabled", prefs.getBoolean("wake_up_goal_enabled", false));
-            json.put("wake_up_goal_hour", prefs.getInt("wake_up_goal_hour", 6));
-            json.put("wake_up_goal_minute", prefs.getInt("wake_up_goal_minute", 30));
-            int goalHour = prefs.getInt("wake_up_goal_hour", 6);
-            int goalMin = prefs.getInt("wake_up_goal_minute", 30);
-            json.put("current_wake_hour", prefs.getInt("current_wake_hour", goalHour));
-            json.put("current_wake_minute", prefs.getInt("current_wake_minute", goalMin));
-            json.put("min_sleep_duration_minutes", prefs.getInt("min_sleep_duration_minutes", 450));
-            json.put("health_connect_enabled", prefs.getBoolean("health_connect_enabled", false));
-            json.put("hc_min_duration_minutes", prefs.getInt("hc_min_duration_minutes", 15));
+            json.put("nap_dnd_enabled", pm.getBoolean("nap_dnd_enabled", false));
+            json.put("duration_minutes", pm.getInt("duration_minutes", SleepTimerStateMachine.DEFAULT_DURATION_MINUTES));
+            json.put("active", pm.getBoolean("active", true));
+            json.put("auto_timer_enabled", pm.getBoolean("auto_timer_enabled", false));
+            json.put("wake_up_goal_enabled", pm.getBoolean("wake_up_goal_enabled", false));
+            json.put("wake_up_goal_hour", pm.getInt("wake_up_goal_hour", 6));
+            json.put("wake_up_goal_minute", pm.getInt("wake_up_goal_minute", 30));
+            int goalHour = pm.getInt("wake_up_goal_hour", 6);
+            int goalMin = pm.getInt("wake_up_goal_minute", 30);
+            json.put("current_wake_hour", pm.getInt("current_wake_hour", goalHour));
+            json.put("current_wake_minute", pm.getInt("current_wake_minute", goalMin));
+            json.put("min_sleep_duration_minutes", pm.getInt("min_sleep_duration_minutes", 450));
+            json.put("health_connect_enabled", pm.getBoolean("health_connect_enabled", false));
+            json.put("hc_min_duration_minutes", pm.getInt("hc_min_duration_minutes", 15));
 
             String exportStr = json.toString();
             Intent sendIntent = new Intent(Intent.ACTION_SEND);
@@ -1000,8 +1027,8 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 throw new JSONException("hc_min_duration_minutes out of range");
             }
 
-            SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
-            prefs.edit()
+            PreferenceManager pm = getPreferenceManager();
+            pm.getSharedPreferences().edit()
                     .putBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, napDndEnabled)
                     .putInt(PreferenceKeys.KEY_DURATION_MINUTES, durationMinutes)
                     .putBoolean(PreferenceKeys.KEY_ACTIVE, active)
@@ -1068,9 +1095,9 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         if (isRequestingHealthConnectPermission) {
             HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
                 isRequestingHealthConnectPermission = false;
-                SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
+                PreferenceManager pm = getPreferenceManager();
                 if (hasPermission) {
-                    prefs.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true).apply();
+                    pm.putBooleanAsync(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true);
                     if (switchHealthConnect != null) {
                         isUpdatingUi = true;
                         switchHealthConnect.setChecked(true);
@@ -1078,7 +1105,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     }
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled and permission granted");
                 } else {
-                    prefs.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
+                    pm.putBooleanAsync(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
                     if (switchHealthConnect != null) {
                         isUpdatingUi = true;
                         switchHealthConnect.setChecked(false);
@@ -1097,20 +1124,38 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     }
 
     private void registerPreferenceListeners() {
-        if (!isBound || boundService == null) return;
-        PreferenceManager pm = boundService.getPreferenceManager();
+        PreferenceManager pm = getPreferenceManager();
         if (pm == null) return;
 
-        if (uiEffectHandle == null) {
-            uiEffectHandle = pm.watchEffect(this::loadPreferencesIntoUi);
+        if (uiEffectHandles.isEmpty()) {
+            uiEffectHandles.add(pm.watchEffect(getter -> {
+                isUpdatingUi = true;
+                updateNapUi(getter);
+                isUpdatingUi = false;
+            }));
+            uiEffectHandles.add(pm.watchEffect(getter -> {
+                isUpdatingUi = true;
+                updateTimerUi(getter);
+                isUpdatingUi = false;
+            }));
+            uiEffectHandles.add(pm.watchEffect(getter -> {
+                isUpdatingUi = true;
+                updateGoalUi(getter);
+                isUpdatingUi = false;
+            }));
+            uiEffectHandles.add(pm.watchEffect(getter -> {
+                isUpdatingUi = true;
+                updateHealthConnectUi(getter);
+                isUpdatingUi = false;
+            }));
         }
     }
 
     private void unregisterPreferenceListeners() {
-        if (uiEffectHandle != null) {
-            uiEffectHandle.dispose();
-            uiEffectHandle = null;
+        for (PreferenceManager.EffectHandle handle : uiEffectHandles) {
+            handle.dispose();
         }
+        uiEffectHandles.clear();
     }
 
     @Override
@@ -1129,6 +1174,15 @@ public class MainActivity extends Activity implements EventLogger.Listener {
             isBound = false;
             boundService = null;
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (preferenceManager != null && !isBound) {
+            preferenceManager.shutdown();
+            preferenceManager = null;
+        }
+        super.onDestroy();
     }
 
     private void refreshEventLog() {
