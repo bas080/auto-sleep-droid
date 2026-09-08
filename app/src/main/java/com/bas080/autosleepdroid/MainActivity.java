@@ -76,7 +76,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private PreferenceManager preferenceManager;
     private MainService boundService;
     private boolean isBound = false;
-    private boolean isUpdatingUi = false;
     private boolean isUserInitiatedAutoTimer = false;
     private boolean isUserInitiatedHealthConnect = false;
     private boolean isRequestingHealthConnectPermission = false;
@@ -405,7 +404,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         if (switchNapDnd != null) {
             switchNapDnd.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isUpdatingUi) return;
                 preferenceManager.edit().putBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, isChecked).apply();
                 boolean isUserInitiated = buttonView.isPressed();
                 if (isChecked && isUserInitiated && !isDndPermissionGranted()) {
@@ -427,7 +425,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         if (switchEnableTimer != null) {
             switchEnableTimer.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isUpdatingUi) return;
                 preferenceManager.edit().putBoolean(PreferenceKeys.KEY_ACTIVE, isChecked).apply();
                 boolean goalEnabled = preferenceManager.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
                 updateInputEnabledStates(isChecked, goalEnabled);
@@ -460,20 +457,17 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         if (switchAutoTimer != null) {
             switchAutoTimer.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isUpdatingUi) return;
                 SharedPreferences.Editor editor = preferenceManager.edit();
                 editor.putBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, isChecked);
                 boolean isUserInitiated = buttonView.isPressed() || isUserInitiatedAutoTimer;
                 isUserInitiatedAutoTimer = false;
-                if (isChecked) {
+                if (isChecked && isUserInitiated) {
                     boolean dndActive = isDndActive();
                     editor.putBoolean(PreferenceKeys.KEY_ACTIVE, dndActive);
                     if (switchEnableTimer != null) {
                         switchEnableTimer.setChecked(dndActive);
                     }
-                    if (isUserInitiated) {
-                        openDndSettings();
-                    }
+                    openDndSettings();
                 }
                 editor.apply();
                 if (isChecked) {
@@ -494,7 +488,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         if (switchEnableGoal != null) {
             switchEnableGoal.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isUpdatingUi) return;
                 preferenceManager.getSharedPreferences().edit()
                         .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, isChecked)
                         .remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
@@ -539,21 +532,18 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         if (switchHealthConnect != null) {
             switchHealthConnect.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isUpdatingUi) return;
                 boolean isUserInitiated = buttonView.isPressed() || isUserInitiatedHealthConnect;
                 isUserInitiatedHealthConnect = false;
                 if (isChecked) {
                     if (!HealthConnectManager.isHealthConnectAvailable(this)) {
-                        isUpdatingUi = true;
                         switchHealthConnect.setChecked(false);
-                        isUpdatingUi = false;
                         Toast.makeText(this, R.string.toast_health_connect_not_available, Toast.LENGTH_SHORT).show();
                         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect requested but SDK is unavailable");
                         return;
                     }
                     preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true).apply();
-                    Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show();
                     if (isUserInitiated) {
+                        Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show();
                         isRequestingHealthConnectPermission = true;
                         HealthConnectManager.hasSleepWritePermission(this, hasPermission -> {
                             if (!hasPermission) {
@@ -568,14 +558,12 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled");
                     }
                 } else {
+                    preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
                     if (isUserInitiated) {
                         isRequestingHealthConnectPermission = false;
-                        preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
                         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled; revoking permissions");
                         Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show();
                         HealthConnectManager.revokeAllPermissions(this);
-                    } else {
-                        preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
                     }
                 }
                 boolean active = preferenceManager.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
@@ -853,9 +841,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                     if (!hasPermission) {
                         preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
                         if (switchHealthConnect != null) {
-                            isUpdatingUi = true;
                             switchHealthConnect.setChecked(false);
-                            isUpdatingUi = false;
                         }
                         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission revoked; disabling sync");
                     }
@@ -1068,17 +1054,13 @@ public class MainActivity extends Activity implements EventLogger.Listener {
                 if (hasPermission) {
                     preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true).apply();
                     if (switchHealthConnect != null) {
-                        isUpdatingUi = true;
                         switchHealthConnect.setChecked(true);
-                        isUpdatingUi = false;
                     }
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled and permission granted");
                 } else {
                     preferenceManager.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false).apply();
                     if (switchHealthConnect != null) {
-                        isUpdatingUi = true;
                         switchHealthConnect.setChecked(false);
-                        isUpdatingUi = false;
                     }
                     Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show();
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission not granted; disabling sync");
@@ -1094,26 +1076,10 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
         if (uiEffectsHandle == null) {
             uiEffectsHandle = preferenceManager.watchEffects(
-                getter -> {
-                    isUpdatingUi = true;
-                    updateNapUi(getter);
-                    isUpdatingUi = false;
-                },
-                getter -> {
-                    isUpdatingUi = true;
-                    updateTimerUi(getter);
-                    isUpdatingUi = false;
-                },
-                getter -> {
-                    isUpdatingUi = true;
-                    updateGoalUi(getter);
-                    isUpdatingUi = false;
-                },
-                getter -> {
-                    isUpdatingUi = true;
-                    updateHealthConnectUi(getter);
-                    isUpdatingUi = false;
-                }
+                this::updateNapUi,
+                this::updateTimerUi,
+                this::updateGoalUi,
+                this::updateHealthConnectUi
             );
         }
     }
