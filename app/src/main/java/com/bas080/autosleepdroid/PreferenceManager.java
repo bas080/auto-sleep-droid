@@ -14,30 +14,6 @@ import java.util.concurrent.Executors;
 
 public class PreferenceManager implements SharedPreferences.OnSharedPreferenceChangeListener, com.bas080.autosleepdroid.PreferenceGetter {
 
-    public static final String PREFERENCES_NAME = PreferenceKeys.PREFERENCES_NAME;
-
-    public static final String KEY_ACTIVE = PreferenceKeys.KEY_ACTIVE;
-    public static final String KEY_DURATION_MINUTES = PreferenceKeys.KEY_DURATION_MINUTES;
-    public static final String KEY_SHOW_NOTIFICATION = PreferenceKeys.KEY_SHOW_NOTIFICATION;
-    public static final String KEY_TIMER_ENDS_AT = PreferenceKeys.KEY_TIMER_ENDS_AT;
-    public static final String KEY_TIMER_START_TIME_MS = PreferenceKeys.KEY_TIMER_START_TIME_MS;
-    public static final String KEY_SLEEP_START_TIME_MS = PreferenceKeys.KEY_SLEEP_START_TIME_MS;
-    public static final String KEY_AUTO_TIMER_ENABLED = PreferenceKeys.KEY_AUTO_TIMER_ENABLED;
-    public static final String KEY_WAKE_UP_GOAL_ENABLED = PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED;
-    public static final String KEY_WAKE_UP_GOAL_HOUR = PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR;
-    public static final String KEY_WAKE_UP_GOAL_MINUTE = PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE;
-    public static final String KEY_CURRENT_WAKE_HOUR = PreferenceKeys.KEY_CURRENT_WAKE_HOUR;
-    public static final String KEY_CURRENT_WAKE_MINUTE = PreferenceKeys.KEY_CURRENT_WAKE_MINUTE;
-    public static final String KEY_MIN_SLEEP_DURATION_MINUTES = PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES;
-    public static final String KEY_NAP_DND_ENABLED = PreferenceKeys.KEY_NAP_DND_ENABLED;
-    public static final String KEY_NAP_DURATION_MINUTES = PreferenceKeys.KEY_NAP_DURATION_MINUTES;
-    public static final String KEY_NAP_ALARM_ENDS_AT = PreferenceKeys.KEY_NAP_ALARM_ENDS_AT;
-    public static final String KEY_NAP_START_TIME_MS = PreferenceKeys.KEY_NAP_START_TIME_MS;
-    public static final String KEY_NAP_ALARM_RINGING = PreferenceKeys.KEY_NAP_ALARM_RINGING;
-    public static final String KEY_HEALTH_CONNECT_ENABLED = PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED;
-    public static final String KEY_HC_MIN_DURATION_MINUTES = PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES;
-    public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS;
-
     public interface PreferenceGetter extends com.bas080.autosleepdroid.PreferenceGetter {
     }
 
