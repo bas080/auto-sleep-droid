@@ -82,9 +82,6 @@ public class MainActivity extends Activity implements EventLogger.Listener {
     private boolean isRequestingHealthConnectPermission = false;
 
     private PreferenceManager getPreferenceManager() {
-        if (isBound && boundService != null && boundService.getPreferenceManager() != null) {
-            return boundService.getPreferenceManager();
-        }
         if (preferenceManager == null) {
             preferenceManager = new PreferenceManager(this, PreferenceKeys.PREFERENCES_NAME);
         }
@@ -1163,7 +1160,7 @@ public class MainActivity extends Activity implements EventLogger.Listener {
 
     @Override
     protected void onDestroy() {
-        if (preferenceManager != null && !isBound) {
+        if (preferenceManager != null) {
             preferenceManager.shutdown();
             preferenceManager = null;
         }
