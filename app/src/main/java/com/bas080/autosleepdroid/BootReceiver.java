@@ -15,7 +15,7 @@ public class BootReceiver extends BroadcastReceiver {
 
         EventLogger.log(context, "Boot completed");
 
-        Intent serviceIntent = new Intent(context, SleepTimerService.class);
+        Intent serviceIntent = new Intent(context, MainService.class);
         if (Build.VERSION.SDK_INT >= 26) {
             context.startForegroundService(serviceIntent);
         } else {

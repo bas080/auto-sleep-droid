@@ -89,7 +89,7 @@ When configuring a wake-up goal (e.g. `6:30 AM` for day workers or `4:30 PM` for
 +-----------------------------------------------------------------------------------+
 | 1. PRE-SLEEP / BEDTIME (Nighttime or Post-Nightshift)                             |
 | User starts media playback (podcast/music/audiobook) in their favorite app.       |
-| SleepTimerService detects audio start and automatically enters ACTIVE state.      |
+| MainService detects audio start and automatically enters ACTIVE state.      |
 +-----------------------------------------------------------------------------------+
                                          |
                                          v

@@ -18,8 +18,8 @@ The app is an Android sleep timer app configured directly from a single main UI 
 │       │   ├── BootReceiver.java
 │       │   ├── EventLogger.java
 │       │   ├── MainActivity.java
-│       │   ├── SettingRowView.java
-│       │   └── SleepTimerService.java
+│       │   ├── MainService.java
+│       │   └── SettingRowView.java
 │       └── res/
 │           ├── layout/
 │           │   ├── activity_main.xml
@@ -50,9 +50,9 @@ The app is an Android sleep timer app configured directly from a single main UI 
 
 ## Main components
 
-### `SleepTimerService`
+### `MainService` (renamed from `SleepTimerService`)
 
-File: `app/src/main/java/com/bas080/autosleepdroid/SleepTimerService.java`
+File: `app/src/main/java/com/bas080/autosleepdroid/MainService.java`
 
 This is the main application component. It is a foreground service with the `mediaPlayback` foreground-service type.
 
@@ -63,14 +63,14 @@ Responsibilities:
 - Set content intent targeting `MainActivity` so tapping the notification opens `MainActivity`.
 - Expose notification shade action buttons: toggle ("Disable" when enabled, or "Enable" when disabled) and "Nap" / "Cancel Nap" to quickly set or cancel nap timers.
 - Respect `show_notification` preference (default `false`); when `show_notification` is `false`, remove the ongoing service notification via `stopForeground(STOP_FOREGROUND_REMOVE)` and `manager.cancel(NOTIFICATION_ID)` across all timer states (`Off`, `Waiting`, `Active`, `Fading`).
-- Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), show notification setting (`show_notification`), and wake-up goal settings in `SharedPreferences`.
+- Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), active timer start timestamp (`timer_start_time_ms`, updated when the timer starts or is reset via flip gesture, volume button, or duration update), show notification setting (`show_notification`), and wake-up goal settings in `SharedPreferences`.
 - Schedule exact timer expiry using `AlarmManager.setExactAndAllowWhileIdle()` and handler callbacks on the main looper, falling back to `setAndAllowWhileIdle()` or foreground service callbacks if exact alarm permission is denied.
 - Listen for media playback state changes using `AudioManager.AudioPlaybackCallback` (API 26+) dynamically only during `Waiting` state instead of periodic polling.
 - Register accelerometer sensor listener on a dedicated background `HandlerThread` (with 300ms temporal throttling) and `VOLUME_CHANGED_ACTION` broadcast receiver dynamically during `Active` and `Fading` states, or while the wake-up alarm is ringing.
 - Transition from `Waiting` to `Active` when playback callback detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused (after a short 500ms delay), and revert to the `Waiting` state.
-- Upon sleep timer start/reschedule or when the current alarm rings, schedule/update the daily recurring `"Auto Sleep"` wake-up alarm via `AlarmManager.setAlarmClock` if Smart Wake-Up Goal is enabled in the background. When triggered (`ACTION_WAKEUP_ALARM_EXPIRY`), `SleepTimerService` automatically schedules the next day's alarm for the same goal time, ensures `STREAM_ALARM` is set to an audible baseline level, plays the default system alarm tone using `RingtoneManager` with a 3-minute gentle volume crescendo, and updates the ongoing status notification to display the alarm status.
+- Upon sleep timer start/reschedule or when the current alarm rings, schedule/update the daily recurring `"Auto Sleep"` wake-up alarm via `AlarmManager.setAlarmClock` if Smart Wake-Up Goal is enabled in the background. When triggered (`ACTION_WAKEUP_ALARM_EXPIRY`), `MainService` automatically schedules the next day's alarm for the same goal time, ensures `STREAM_ALARM` is set to an audible baseline level, plays the default system alarm tone using `RingtoneManager` with a 3-minute gentle volume crescendo, and updates the ongoing status notification to display the alarm status.
 - Support nap timer alarm scheduling (`ACTION_START_NAP`, `ACTION_CANCEL_NAP`, `ACTION_NAP_EXPIRY`). When the sleep timer is reset or rescheduled, active nap alarms are pushed forward by the same reset increment. Dismissing a nap alarm does not adjust or affect the current scheduled wake-up time.
 - Cancel/dismiss the `"Auto Sleep"` wake-up alarm via `AlarmManager.cancel` on stop or smart alarm cancel in the background.
 - Trigger a short, faint haptic feedback pulse (`Vibrator`) upon turning off/on, volume button resets, and flip gestures.
@@ -91,7 +91,7 @@ File: `app/src/main/java/com/bas080/autosleepdroid/NapDialogActivity.java`
 A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) launched from `MainActivity` or the status notification's "Nap" action when no nap is active:
 
 - Constructs an `AlertDialog` using `AlertDialog.Builder` wrapped with `ContextThemeWrapper(this, R.style.AppTheme)` containing `DurationInputView(dialogContext)` prefilled with previously used nap duration (`nap_duration_minutes`, default 20) and standard positive ("Nap") / negative ("Cancel") buttons, matching the exact dialog styling and theme of all duration configuration dialogs across `MainActivity`.
-- Confirming "Nap" persists the nap duration in `SharedPreferences` and sends `ACTION_START_NAP` with `EXTRA_NAP_DURATION_MINUTES` to `SleepTimerService`.
+- Confirming "Nap" persists the nap duration in `SharedPreferences` and sends `ACTION_START_NAP` with `EXTRA_NAP_DURATION_MINUTES` to `MainService`.
 
 ### `AwakeDialogActivity`
 
@@ -100,7 +100,7 @@ File: `app/src/main/java/com/bas080/autosleepdroid/AwakeDialogActivity.java`
 A translucent-themed activity (`@android:style/Theme.Translucent.NoTitleBar`) launched automatically when opening `MainActivity` during an active sleep session (active timer or `sleep_start_time_ms` within 14 hours) or from the status notification's "I'm Awake" action (shown strictly during active sleep sessions when wake alarms are enabled):
 
 - Constructs an `AlertDialog` using `AlertDialog.Builder` wrapped with `ContextThemeWrapper(this, R.style.AppTheme)` presenting a cancelable "Are you awake?" confirmation dialog.
-- Confirming "I'm Awake" sends `ACTION_AWAKE` to `SleepTimerService` to log the sleep session (preserving `current_wake_hour` and `current_wake_minute` if triggered during a nap), then finishes.
+- Confirming "I'm Awake" sends `ACTION_AWAKE` to `MainService` to log the sleep session (preserving `current_wake_hour` and `current_wake_minute` if triggered during a nap), then finishes.
 - Canceling or dismissing the dialog finishes without modifying alarm schedules or logging sleep sessions.
 
 ### `SettingRowView`
@@ -118,7 +118,7 @@ Custom compound `ViewGroup` extending `LinearLayout` that encapsulates settings 
 
 File: `app/src/main/java/com/bas080/autosleepdroid/MainActivity.java`
 
-The launcher activity starts `SleepTimerService`, requests `POST_NOTIFICATIONS` on Android 13+, prompts for exact alarm permissions on Android 12+, and presents the main configuration UI (`activity_main.xml`).
+The launcher activity starts `MainService`, requests `POST_NOTIFICATIONS` on Android 13+, prompts for exact alarm permissions on Android 12+, and presents the main configuration UI (`activity_main.xml`).
 
 Main Configuration Controls & Action Links:
 
@@ -135,7 +135,7 @@ Main Configuration Controls & Action Links:
 - Full-screen Manual & Event Logs Views: Overlay `RelativeLayout` views in `activity_main.xml` with a Back button pinned to the bottom-right corner (`alignParentBottom="true"`, `alignParentEnd="true"`), displaying formatted HTML manual text or real-time monospace event logs and closing upon Back button tap or hardware back button press.
 - Crash Reporting: Prompts user on launch via `AlertDialog` if a pending uncaught exception was saved in `SharedPreferences` by `AutoSleepApplication`. Choosing to send report opens the email client prefilled with the crash stack trace, recent event logs (`EventLogger.getEvents`), and app/device version metadata.
 - Export Settings Action: Serializes current preferences into a Schema Version 1 JSON string, launches system share action (`ACTION_SEND`), and logs to `EventLogger`.
-- Import Settings Action: Prompts user with instructional `AlertDialog`, validates syntax and boundaries, applies valid values, sends `ACTION_REDRAW_NOTIFICATION` to `SleepTimerService`, refreshes UI controls, and logs to `EventLogger`.
+- Import Settings Action: Prompts user with instructional `AlertDialog`, validates syntax and boundaries, applies valid values, sends `ACTION_REDRAW_NOTIFICATION` to `MainService`, refreshes UI controls, and logs to `EventLogger`.
 
 ### `HealthConnectManager`
 
@@ -159,7 +159,7 @@ Centralized logging utility that formats event lines with timestamps (`yyyy-MM-d
 
 File: `app/src/main/java/com/bas080/autosleepdroid/BootReceiver.java`
 
-Receives `BOOT_COMPLETED`, logs the reboot event, and starts the foreground service. `SleepTimerService` then reads persisted state. If previously in an enabled/running state (`Waiting`, `Active`, `Fading`), it restores to the `Waiting` state using the configured duration; if explicitly in `Off` state, it remains `Off`.
+Receives `BOOT_COMPLETED`, logs the reboot event, and starts the foreground service. `MainService` then reads persisted state. If previously in an enabled/running state (`Waiting`, `Active`, `Fading`), it restores to the `Waiting` state using the configured duration; if explicitly in `Off` state, it remains `Off`.
 
 ## State and persistence
 
