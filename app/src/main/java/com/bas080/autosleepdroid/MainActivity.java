@@ -775,29 +775,43 @@ public class MainActivity extends Activity implements EventLogger.Listener {
         return pm.getComputed(key, PreferenceComputations.formatDuration(key, defaultMinutes));
     }
 
-    private void loadPreferencesIntoUi() {
-        loadPreferencesIntoUi(null);
+    private PreferenceGetter getRawPreferenceGetter() {
+        SharedPreferences prefs = getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE);
+        return new PreferenceGetter() {
+            @Override public boolean getBoolean(String key, boolean defValue) { return prefs.getBoolean(key, defValue); }
+            @Override public int getInt(String key, int defValue) { return prefs.getInt(key, defValue); }
+            @Override public long getLong(String key, long defValue) { return prefs.getLong(key, defValue); }
+            @Override public String getString(String key, String defValue) { return prefs.getString(key, defValue); }
+            @Override public boolean contains(String key) { return prefs.contains(key); }
+        };
     }
 
-    private void loadPreferencesIntoUi(PreferenceManager.PreferenceGetter getter) {
+    private void loadPreferencesIntoUi() {
+        if (isBound && boundService != null && boundService.getPreferenceManager() != null) {
+            loadPreferencesIntoUi(boundService.getPreferenceManager());
+        } else {
+            loadPreferencesIntoUi(getRawPreferenceGetter());
+        }
+    }
+
+    private void loadPreferencesIntoUi(PreferenceGetter getter) {
         isUpdatingUi = true;
-        SharedPreferences prefs = getter == null ? getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE) : null;
         PreferenceManager pm = isBound && boundService != null ? boundService.getPreferenceManager() : null;
 
-        boolean napDndEnabled = getter != null ? getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false) : prefs.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false);
-        boolean active = getter != null ? getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true) : prefs.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
-        int durationMinutes = getter != null ? getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES) : prefs.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
-        boolean autoTimer = getter != null ? getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false) : prefs.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false);
-        boolean goalEnabled = getter != null ? getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) : prefs.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
-        boolean healthConnectEnabled = getter != null ? getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) : prefs.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
-        int goalHour = getter != null ? getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6) : prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
-        int goalMin = getter != null ? getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30) : prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
-        int currentHour = getter != null ? getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour) : prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
-        int currentMin = getter != null ? getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin) : prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
-        int minSleepMin = getter != null ? getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450) : prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450);
-        int hcMinDurationMin = getter != null ? getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15) : prefs.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15);
-        int napDurationMinutes = getter != null ? getter.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, 20) : prefs.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, 20);
-        long napEndsAt = getter != null ? getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L) : prefs.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L);
+        boolean napDndEnabled = getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false);
+        boolean active = getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true);
+        int durationMinutes = getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, SleepTimerStateMachine.DEFAULT_DURATION_MINUTES);
+        boolean autoTimer = getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false);
+        boolean goalEnabled = getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false);
+        boolean healthConnectEnabled = getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false);
+        int goalHour = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 6);
+        int goalMin = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 30);
+        int currentHour = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour);
+        int currentMin = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin);
+        int minSleepMin = getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450);
+        int hcMinDurationMin = getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15);
+        int napDurationMinutes = getter.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, 20);
+        long napEndsAt = getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L);
 
         boolean isNapActive = pm != null
                 ? Boolean.TRUE.equals(pm.getComputed(PreferenceComputations.IS_NAP_ACTIVE))

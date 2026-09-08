@@ -12,7 +12,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class PreferenceManager implements SharedPreferences.OnSharedPreferenceChangeListener {
+public class PreferenceManager implements SharedPreferences.OnSharedPreferenceChangeListener, PreferenceGetter {
 
     public static final String PREFERENCES_NAME = PreferenceKeys.PREFERENCES_NAME;
 
@@ -38,13 +38,7 @@ public class PreferenceManager implements SharedPreferences.OnSharedPreferenceCh
     public static final String KEY_HC_MIN_DURATION_MINUTES = PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES;
     public static final String KEY_WAKEUP_LAST_SCHEDULED_MS = PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS;
 
-    public interface PreferenceGetter {
-        boolean getBoolean(String key, boolean defValue);
-        int getInt(String key, int defValue);
-        long getLong(String key, long defValue);
-        String getString(String key, String defValue);
-        boolean contains(String key);
-    }
+    public interface PreferenceGetter extends com.bas080.autosleepdroid.PreferenceGetter {}
 
     @FunctionalInterface
     public interface OnPreferenceChangeListener {
