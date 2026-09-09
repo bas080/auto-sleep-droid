@@ -12,19 +12,30 @@ import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
 
-class SettingRowView @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0,
-    defStyleRes: Int = 0
-) : LinearLayout(context, attrs, defStyleAttr, defStyleRes) {
+class SettingRowView : LinearLayout {
 
-    private val titleTextView: TextView
-    private val descriptionTextView: TextView
-    private val valueTextView: TextView
-    private val switchView: Switch
+    private lateinit var titleTextView: TextView
+    private lateinit var descriptionTextView: TextView
+    private lateinit var valueTextView: TextView
+    private lateinit var switchView: Switch
 
-    init {
+    constructor(context: Context) : super(context) {
+        initView(context, null, 0, 0)
+    }
+
+    constructor(context: Context, attrs: AttributeSet?) : super(context, attrs) {
+        initView(context, attrs, 0, 0)
+    }
+
+    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
+        initView(context, attrs, defStyleAttr, 0)
+    }
+
+    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int) : super(context, attrs, defStyleAttr, defStyleRes) {
+        initView(context, attrs, defStyleAttr, defStyleRes)
+    }
+
+    private fun initView(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int) {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
 
