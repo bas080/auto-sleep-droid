@@ -38,34 +38,35 @@ now >= currentWakeTime - (minSleepDuration * 0.5) && now < currentWakeTime
 
 - **Description**: Current time enters the early wake window preceding `currentWakeTime`.
 - **Nap Option**: Disabled.
-- **"I'm Awake" Action**: Visible in notification shade. Tapping **I'm Awake** completes the session, logs to Health Connect, resets wake time to target goal time, and reschedules for tomorrow.
+- **"I'm Awake" Action**: Visible in notification shade. Tapping **I'm Awake** completes the session, logs to Health Connect, sets current wake time to the moment it was pressed, and reschedules for tomorrow.
 
 ### 4. Alarm Phase
 
 ```text
-isSessionOngoing && now >= currentWakeTime
+isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime)
 ```
 
-- **Description**: Current time reaches or passes `currentWakeTime` during an ongoing session. Snoozing advances `currentWakeTime` to the snoozed alarm time.
-- **Actions**: Notification shade offers **I'm Awake** (as the dismiss action) and **Snooze**. Tapping **I'm Awake** dismisses the alarm, completes and logs the session, resets wake time to target goal time, and reverts to the Idle Phase.
+- **Description**: Current time reaches or passes `currentWakeTime` during an ongoing session, or an alarm is ringing or snoozed.
+- **Actions**: Notification shade offers **I'm Awake** (as the dismiss action) and **Snooze**. Tapping **I'm Awake** dismisses the alarm, completes and logs the session, sets current wake time to the moment it was pressed, and reverts to the Idle Phase.
 
 ## Phase Calculation Pseudocode
 
-The session phase can be determined cleanly using early returns and a fallback return:
+The session phase is evaluated in `PreferenceComputations.kt` using early returns and a fallback return:
 
 ```kotlin
 fun getSessionPhase(
     now: Long,
     currentWakeTime: Long,
     minSleepDuration: Long,
-    isSessionOngoing: Boolean
+    isSessionOngoing: Boolean,
+    isAlarmRingingOrSnoozed: Boolean = false
 ): SessionPhase {
-    val windowStart = currentWakeTime - (minSleepDuration * 1.2)
-    val preAlarmStart = currentWakeTime - (minSleepDuration * 0.5)
-
-    if (isSessionOngoing && now >= currentWakeTime) {
+    if (isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime)) {
         return SessionPhase.ALARM
     }
+
+    val windowStart = currentWakeTime - (minSleepDuration * 1.2)
+    val preAlarmStart = currentWakeTime - (minSleepDuration * 0.5)
 
     if (now >= preAlarmStart && now < currentWakeTime) {
         return SessionPhase.PRE_ALARM_WINDOW

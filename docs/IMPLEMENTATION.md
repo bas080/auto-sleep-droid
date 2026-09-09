@@ -20,7 +20,6 @@ The app is an Android sleep timer app configured directly from a single main UI 
 │       │   ├── HealthConnectManager.kt
 │       │   ├── MainActivity.kt
 │       │   ├── MainService.kt
-│       │   ├── SessionPhase.kt
 │       │   └── SettingRowView.kt
 │       └── res/
 │           ├── layout/
@@ -122,9 +121,9 @@ Centralized preference key constants, key-specific `SharedPreferences` observati
 
 ### `SessionPhase`
 
-File: `app/src/main/java/com/bas080/autosleepdroid/SessionPhase.kt`
+File: `app/src/main/java/com/bas080/autosleepdroid/PreferenceComputations.kt`
 
-Defines the `SessionPhase` enum (`IDLE`, `INITIATION_AND_ACTIVE_SLEEP`, `PRE_ALARM_WINDOW`, `ALARM`) and top-level `getSessionPhase(now, currentWakeTime, minSleepDuration, isSessionOngoing)` evaluation function that determines the lifecycle phase relative to scheduled wake alarm time. Detailed session phase workflow is documented in `docs/SLEEP_SESSION.md`.
+Defines the `SessionPhase` enum (`IDLE`, `INITIATION_AND_ACTIVE_SLEEP`, `PRE_ALARM_WINDOW`, `ALARM`) and top-level `getSessionPhase(now, currentWakeTime, minSleepDuration, isSessionOngoing, isAlarmRingingOrSnoozed)` evaluation function that determines the lifecycle phase relative to scheduled wake alarm time. Detailed session phase workflow is documented in `docs/SLEEP_SESSION.md`.
 
 ### `SettingRowView`
 
