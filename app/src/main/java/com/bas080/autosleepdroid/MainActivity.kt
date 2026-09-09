@@ -671,17 +671,9 @@ class MainActivity : Activity(), EventLogger.Listener {
     private fun updateNapUi(getter: PreferenceGetter) {
         val napDndEnabled = getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false)
         val napDurationMinutes = getter.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, AppDefaults.NAP_DURATION_MINUTES)
-        val napEndsAt = getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L)
 
-        val isNapActive = if (preferenceManager != null)
-            true == preferenceManager?.getComputed(PreferenceComputations.IS_NAP_ACTIVE)
-        else
-            napEndsAt > System.currentTimeMillis()
-
-        val isNapAllowed = if (preferenceManager != null)
-            true == preferenceManager?.getComputed(PreferenceComputations.IS_NAP_ALLOWED)
-        else
-            true
+        val isNapActive = getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L) > System.currentTimeMillis()
+        val isNapAllowed = true == preferenceManager?.getComputed(PreferenceComputations.IS_NAP_ALLOWED)
 
         switchNapDnd?.isChecked = napDndEnabled
         if (btnNap != null && textNapStatus != null) {
