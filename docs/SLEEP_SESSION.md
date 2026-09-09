@@ -8,39 +8,29 @@ Auto Sleep Droid uses these sessions to track rest intervals and automatically l
 
 ## Session Phases Relative to Alarm Time
 
-A sleep session progresses through five concise lifecycle phases computed exclusively from current time (`now`), `currentWakeTime`, and `minSleepDuration`:
+A sleep session progresses through concise lifecycle phases evaluated by predicates on current time (`now`), `currentWakeTime`, and `minSleepDuration`:
 
 ### 1. Idle Phase
 
 ```text
-now < currentWakeTime - (minSleepDuration * 1.2) || now >= currentWakeTime
+!isSessionOngoing && (now < currentWakeTime - (minSleepDuration * 1.2) || now >= currentWakeTime)
 ```
 
 - **Description**: Current time is outside the sleep session window (prior to bedtime or after wake time).
 - **Nap Option**: Fully enabled on the main UI and notification shade.
 - **"I'm Awake" Action**: Hidden.
 
-### 2. Initiation Phase
+### 2. Initiation & Active Sleep Phase
 
 ```text
-isTimerActive && (now >= currentWakeTime - (minSleepDuration * 1.2) && now < currentWakeTime)
+now >= currentWakeTime - (minSleepDuration * 1.2) && now < currentWakeTime - (minSleepDuration * 0.5)
 ```
 
-- **Description**: Sleep timer is active while going to bed within the sleep window before `currentWakeTime`.
+- **Description**: Sleep window when going to bed or actively sleeping (evaluated purely by time range, regardless of whether the sleep timer is active or expired).
 - **Nap Option**: Disabled on main UI and omitted from notifications.
-- **"I'm Awake" Action**: Hidden during active countdown.
+- **"I'm Awake" Action**: Hidden during early sleep.
 
-### 3. Active Sleep Phase
-
-```text
-isTimerExpired && (now >= currentWakeTime - (minSleepDuration * 1.2) && now < currentWakeTime - (minSleepDuration * 0.5))
-```
-
-- **Description**: Sleep timer has expired and media paused, user is asleep during the main sleep window.
-- **Nap Option**: Disabled on main UI and omitted from notifications.
-- **"I'm Awake" Action**: Hidden until early wake window.
-
-### 4. Pre-Alarm Window Phase
+### 3. Pre-Alarm Window Phase
 
 ```text
 now >= currentWakeTime - (minSleepDuration * 0.5) && now < currentWakeTime
@@ -50,14 +40,14 @@ now >= currentWakeTime - (minSleepDuration * 0.5) && now < currentWakeTime
 - **Nap Option**: Disabled.
 - **"I'm Awake" Action**: Visible in notification shade. Tapping **I'm Awake** completes the session, logs to Health Connect, resets wake time to target goal time, and reschedules for tomorrow.
 
-### 5. Alarm Ringing / Snoozed Phase
+### 4. Alarm / Ringing Phase
 
 ```text
-now == currentWakeTime || isAlarmRinging || isAlarmSnoozed
+(isSessionOngoing && now >= currentWakeTime) || isAlarmRinging || isAlarmSnoozed
 ```
 
-- **Description**: Scheduled wake alarm triggers at `currentWakeTime` or is snoozed.
-- **Actions**: Notification shade offers **I'm Awake** (as the dismiss action) and **Snooze**. Tapping **I'm Awake** dismisses the alarm, completes and logs the session, and reverts to the Idle Phase.
+- **Description**: Current time reaches or passes `currentWakeTime` during an ongoing session, or the alarm is actively ringing/snoozed.
+- **Actions**: Notification shade offers **I'm Awake** (as the dismiss action) and **Snooze**. Tapping **I'm Awake** dismisses the alarm, completes and logs the session, resets wake time to target goal time, and reverts to the Idle Phase.
 
 ## How Sleep Sessions Work
 
