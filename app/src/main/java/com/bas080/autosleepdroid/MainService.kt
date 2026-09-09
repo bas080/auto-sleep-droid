@@ -62,6 +62,7 @@ class MainService : Service(), SensorEventListener {
     private var sensorHandler: Handler? = null
     private var vibrator: Vibrator? = null
     private var lastScheduledWakeupAlarmTimeMs = 0L
+    private var alarmMediaPlayer: android.media.MediaPlayer? = null
     private var currentAlarmRingtone: Ringtone? = null
     private var alarmCrescendoRunnable: Runnable? = null
     private var alarmCrescendoStartTimeMs = 0L
@@ -1320,18 +1321,58 @@ class MainService : Service(), SensorEventListener {
         stopWakeUpAlarmSound()
         try {
             ensureAudibleAlarmStreamVolume()
-            var alarmUri: Uri? = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            if (alarmUri == null) {
-                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            }
-            currentAlarmRingtone = getRingtone(applicationContext, alarmUri)
-            if (currentAlarmRingtone != null) {
-                AlarmAudioUtils.configureAlarmAudioAttributes(currentAlarmRingtone)
-                if (Build.VERSION.SDK_INT >= 28) {
-                    currentAlarmRingtone?.setVolume(0.05f)
+            val urisToTry = arrayOf(
+                RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM),
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+                RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_NOTIFICATION),
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            )
+
+            var started = false
+            for (uri in urisToTry) {
+                if (uri == null) continue
+                try {
+                    val player = android.media.MediaPlayer().apply {
+                        if (Build.VERSION.SDK_INT >= 21) {
+                            setAudioAttributes(
+                                AudioAttributes.Builder()
+                                    .setUsage(AudioAttributes.USAGE_ALARM)
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                    .build()
+                            )
+                        } else {
+                            @Suppress("DEPRECATION")
+                            setAudioStreamType(AudioManager.STREAM_ALARM)
+                        }
+                        setDataSource(applicationContext, uri)
+                        isLooping = true
+                        prepare()
+                        start()
+                    }
+                    alarmMediaPlayer = player
+                    started = true
+                    EventLogger.log(this, "Wake-Up Goal alarm sound started playing (MediaPlayer)")
+                    break
+                } catch (e: Exception) {
+                    EventLogger.log(this, "MediaPlayer failed for URI $uri: ${e.message}")
                 }
-                currentAlarmRingtone?.play()
-                EventLogger.log(this, "Wake-Up Goal alarm tone started playing")
+            }
+
+            if (!started) {
+                val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                val ringtone = getRingtone(applicationContext, alarmUri)
+                if (ringtone != null) {
+                    AlarmAudioUtils.configureAlarmAudioAttributes(ringtone)
+                    ringtone.play()
+                    currentAlarmRingtone = ringtone
+                    EventLogger.log(this, "Wake-Up Goal alarm sound started playing (Ringtone fallback)")
+                    started = true
+                }
+            }
+
+            if (started) {
                 startWakeUpAlarmCrescendo()
             }
         } catch (e: Exception) {
@@ -1347,22 +1388,29 @@ class MainService : Service(), SensorEventListener {
     }
 
     private fun runWakeUpAlarmCrescendoStep() {
-        val ringtone = currentAlarmRingtone ?: return
         val elapsedTimeMs = System.currentTimeMillis() - alarmCrescendoStartTimeMs
-        val linearProgress = Math.min(1.0f, elapsedTimeMs.toFloat() / ALARM_CRESCENDO_DURATION_MS)
-        val rawGain = linearProgress * linearProgress
-        val gain = Math.max(0.05f, rawGain)
-
-        if (Build.VERSION.SDK_INT >= 28) {
-            try {
-                ringtone.setVolume(gain)
-            } catch (ignored: Exception) {
-            }
-        }
 
         if (elapsedTimeMs < ALARM_CRESCENDO_DURATION_MS && isWakeUpAlarmRinging) {
+            val progress = Math.min(1.0f, elapsedTimeMs.toFloat() / ALARM_CRESCENDO_DURATION_MS)
+            val gain = progress * progress
+
+            if (Build.VERSION.SDK_INT >= 28) {
+                currentAlarmRingtone?.volume = gain
+            }
+            try {
+                alarmMediaPlayer?.setVolume(gain, gain)
+            } catch (ignored: Exception) {
+            }
+
             alarmCrescendoRunnable?.let { handler.postDelayed(it, ALARM_CRESCENDO_INTERVAL_MS) }
         } else {
+            if (Build.VERSION.SDK_INT >= 28) {
+                currentAlarmRingtone?.volume = 1.0f
+            }
+            try {
+                alarmMediaPlayer?.setVolume(1.0f, 1.0f)
+            } catch (ignored: Exception) {
+            }
             alarmCrescendoRunnable = null
         }
     }
@@ -1384,6 +1432,16 @@ class MainService : Service(), SensorEventListener {
         alarmCrescendoRunnable?.let {
             handler.removeCallbacks(it)
             alarmCrescendoRunnable = null
+        }
+        alarmMediaPlayer?.let {
+            try {
+                if (it.isPlaying) {
+                    it.stop()
+                }
+                it.release()
+            } catch (ignored: Exception) {
+            }
+            alarmMediaPlayer = null
         }
         currentAlarmRingtone?.let {
             try {
