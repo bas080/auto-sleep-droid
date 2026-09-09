@@ -628,19 +628,25 @@ class MainActivityTest {
         val activity = controller.create().resume().get()
 
         val headerNap = activity.findViewById<TextView>(R.id.header_nap)
-        val headerDnd = activity.findViewById<TextView>(R.id.header_dnd)
         val headerTimer = activity.findViewById<TextView>(R.id.header_timer)
         val headerAlarm = activity.findViewById<TextView>(R.id.header_alarm)
+        val headerHealthConnect = activity.findViewById<TextView>(R.id.header_health_connect)
+        val headerDnd = activity.findViewById<TextView>(R.id.header_dnd)
+        val headerAbout = activity.findViewById<TextView>(R.id.header_about)
 
         assertNotNull(headerNap)
-        assertNotNull(headerDnd)
         assertNotNull(headerTimer)
         assertNotNull(headerAlarm)
+        assertNotNull(headerHealthConnect)
+        assertNotNull(headerDnd)
+        assertNotNull(headerAbout)
 
         assertEquals(activity.getString(R.string.heading_nap), headerNap.text.toString())
-        assertEquals(activity.getString(R.string.heading_dnd), headerDnd.text.toString())
         assertEquals(activity.getString(R.string.heading_timer), headerTimer.text.toString())
         assertEquals(activity.getString(R.string.heading_alarm), headerAlarm.text.toString())
+        assertEquals(activity.getString(R.string.heading_health_connect), headerHealthConnect.text.toString())
+        assertEquals(activity.getString(R.string.heading_dnd), headerDnd.text.toString())
+        assertEquals(activity.getString(R.string.heading_about), headerAbout.text.toString())
 
         val switchEnable = activity.findViewById<Switch>(R.id.switch_enable_timer)
         val switchGoal = activity.findViewById<Switch>(R.id.switch_enable_goal)

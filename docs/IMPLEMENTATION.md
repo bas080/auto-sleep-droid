@@ -139,14 +139,14 @@ Main Configuration Controls & Action Links:
 
 - Service Binding & Lifecycle Safety: Binds to `MainService` (`BIND_AUTO_CREATE`) via `ServiceConnection` on `onStart()`, registers key-specific preference listeners via `PreferenceManager` on service connection or `onResume()`, uses `PreferenceManager.getComputed` for memoized UI string formatting and state evaluations, and explicitly unregisters all listeners and unbinds in `onPause()` / `onStop()` to prevent memory leaks.
 - Single-screen configuration UI:
-  - Section headings (`headerNap`, `headerDnd`, `headerTimer`, `headerAlarm`, `headerHealthConnect`, `headerAbout`) remain enabled (`true`) with full opacity (`1.0f`) at all times.
+  - Section headings (`headerNap`, `headerTimer`, `headerAlarm`, `headerHealthConnect`, `headerDnd`, `headerAbout`) remain enabled (`true`) with full opacity (`1.0f`) at all times.
   - Nap alarm section at top (`btn_nap` button launching `NapDialogActivity` or canceling active nap).
-  - Do Not Disturb section featuring Nap DND Switch (`row_nap_dnd`) and Auto sleep timer (DND) Switch (`row_auto_timer`).
   - Sleep timer enable/disable Switch (`active` preference).
   - Sleep timer duration input using custom `DurationInputView` (`input_duration`, incorporating `NumberPicker` hour and minute wheel pickers configured via `configure(minHours, maxHours, minuteStep)`, saving `duration_minutes` preference, displaying formatted duration value on `text_duration_value`). Timer duration controls remain enabled when the sleep timer switch is OFF.
   - Wake-up alarm enable Switch (`wake_up_goal_enabled` preference, labeled "Wake-up alarm").
   - Target wake-up goal time Button (`btn_target_time`, displaying formatted system time and opening `TimePickerDialog` on click).
   - Minimum sleep duration input using custom `DurationInputView` (`input_min_sleep`, saving `min_sleep_duration_minutes` preference).
+  - Do Not Disturb section featuring Nap DND Switch (`row_nap_dnd`) and Auto sleep timer Switch (`row_auto_timer`).
 - Links header & action link list at the bottom of the form: Manual, Logs, Feedback, Donate, Export, and Import rendered inside custom `FlowLayout` wrapping inline with light font weight (`sans-serif-light`) separated by middle dots (`·`).
 - Full-screen Manual & Event Logs Views: Overlay `RelativeLayout` views in `activity_main.xml` with a Back button pinned to the bottom-right corner (`alignParentBottom="true"`, `alignParentEnd="true"`), displaying formatted HTML manual text or real-time monospace event logs and closing upon Back button tap or hardware back button press.
 - Crash Reporting: Prompts user on launch via `AlertDialog` if a pending uncaught exception was saved in `SharedPreferences` by `AutoSleepApplication`. Choosing to send report opens the email client prefilled with the crash stack trace, recent event logs (`EventLogger.getEvents`), and app/device version metadata.

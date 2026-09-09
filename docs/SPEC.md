@@ -35,10 +35,11 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - Main Application Screen (`MainActivity`):
   - Provides a complete single-screen configuration UI for all settings:
     - Nap alarm section at top featuring a Nap button ("Nap" or "Cancel Nap" when active).
-    - Do Not Disturb section featuring Nap DND switch and Auto sleep timer (DND) switch.
     - Sleep timer enable/disable switch and timer duration input (0-12h with 5m steps using hour and minute wheel pickers). Timer duration controls remain enabled when the sleep timer switch is OFF.
     - Wake-up alarm enable switch ("Wake-up alarm"), target wake-up time picker button, and minimum sleep duration input.
-    - Section headings (Nap, Do Not Disturb, Timer, Alarm, Health Connect, About) remain fully visible and opaque at all times.
+    - Health Connect synchronization switch and minimum session duration input.
+    - Do Not Disturb section featuring Nap DND switch and Auto sleep timer switch.
+    - Section headings (Nap, Timer, Alarm, Health Connect, Do Not Disturb, About) remain fully visible and opaque at all times.
   - Action links at the bottom of the form under a "Links" header: Manual, Logs, Feedback, Donate, Export, and Import arranged in a FlowLayout inline wrapping layout separated by middle dots.
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
