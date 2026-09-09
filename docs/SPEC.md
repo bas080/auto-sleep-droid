@@ -44,8 +44,8 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
   - The notification features primary toggle actions ("Disable" when enabled, or "Enable" when disabled) and a secondary action button ("Nap" or "I'm Awake").
-  - Tapping "Nap" opens a duration dialog prefilled with the previously used nap duration. Starting a nap schedules a nap wake alarm and switches the notification action to "I'm Awake".
-  - The secondary action displays "I'm Awake" whenever a nap is active, an alarm is ringing or snoozed, or an active night sleep session exists (`sleep_start_time_ms` recorded upon timer expiration within the last 14 hours). When no sleep session, nap, or alarm is active, it displays "Nap".
+  - Starting a nap is disabled on `MainActivity` and unavailable in notifications while a sleep session is in progress (`timer_start_time_ms` or `sleep_start_time_ms` recorded within the last 14 hours).
+  - The secondary action displays **I'm Awake** during the pre-alarm window before a scheduled wake alarm (or during active naps or ringing/snoozed alarms). When no sleep session is in progress, it displays **Nap**. During active sleep sessions prior to the pre-alarm window, the Nap action is omitted.
   - Tapping "I'm Awake" stops any active alarm or nap, completes/logs the active sleep session to Health Connect (if enabled), steps night wake-up time 15 minutes back toward target goal time (for night sleep), reschedules the wake alarm for tomorrow, and reverts the notification action back to "Nap".
   - Tapping/clicking the notification body opens `MainActivity`.
 
@@ -125,6 +125,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 
 ## Nap Timer
 - **Purpose**: A minimal, quick way to start or cancel a nap directly from the main screen or status notification shade.
+- **Session Restriction**: Nap cannot be started while a sleep session is in progress. When a sleep session is active, the Nap button on `MainActivity` is disabled (`setEnabled(false)`), and the Nap action is omitted from the notification shade.
 - **UI & Notification Actions**:
   - Main Screen (`MainActivity`): Features a dedicated Nap section with a Nap button (`btn_nap`). Tapping **Nap** launches `NapDialogActivity` prefilled with previously used nap duration; if active, tapping **Cancel Nap** cancels the active nap alarm. `MainActivity` listens for preference changes so UI switches automatically synchronize when nap or DND states change.
   - Nap Dialog: Presented using standard system alert dialog styling with DurationInputView and standard positive ("Nap") / negative ("Cancel") buttons, styled consistently with all other dialogs.
