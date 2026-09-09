@@ -588,7 +588,7 @@ class MainActivityTest {
         val textNapStatus = activity.findViewById<TextView>(R.id.text_nap_status)
         assertNotNull(btnNap)
         assertNotNull(textNapStatus)
-        assertEquals(activity.getString(R.string.action_cancel_nap), textNapStatus.text.toString())
+        assertEquals(activity.getString(R.string.action_awake), textNapStatus.text.toString())
 
         btnNap.performClick()
 

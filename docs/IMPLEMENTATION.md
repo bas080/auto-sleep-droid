@@ -147,7 +147,7 @@ Main Configuration Controls & Action Links:
 - Service Binding & Lifecycle Safety: Binds to `MainService` (`BIND_AUTO_CREATE`) via `ServiceConnection` on `onStart()`, registers key-specific preference listeners via `PreferenceManager` on service connection or `onResume()`, uses `PreferenceManager.getComputed` for memoized UI string formatting and state evaluations, and explicitly unregisters all listeners and unbinds in `onPause()` / `onStop()` to prevent memory leaks.
 - Single-screen configuration UI:
   - Section headings (`headerNap`, `headerTimer`, `headerAlarm`, `headerHealthConnect`, `headerDnd`, `headerAbout`) remain enabled (`true`) with full opacity (`1.0f`) at all times.
-  - Nap alarm section at top (`btn_nap` button launching `NapDialogActivity` or canceling active nap).
+  - Nap alarm section at top (`btn_nap` button launching `NapDialogActivity` or displaying "I'm Awake" to cancel active nap).
   - Sleep timer enable/disable Switch (`active` preference).
   - Sleep timer duration input using custom `DurationInputView` (`input_duration`, incorporating `NumberPicker` hour and minute wheel pickers configured via `configure(minHours, maxHours, minuteStep)`, saving `duration_minutes` preference, displaying formatted duration value on `text_duration_value`). Timer duration controls remain enabled when the sleep timer switch is OFF.
   - Wake-up alarm enable Switch (`wake_up_goal_enabled` preference, labeled "Wake-up alarm").

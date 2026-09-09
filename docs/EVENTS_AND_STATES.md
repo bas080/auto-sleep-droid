@@ -147,7 +147,7 @@ Events in Auto Sleep Droid originate from user interactions, hardware sensors, s
 * **`SET_WAKE_UP_GOAL`**: User configures target wake-up goal time and minimum sleep duration safeguard in `MainActivity`.
 * **`TOGGLE_SHOW_NOTIFICATION`**: User toggles ongoing notification visibility in `MainActivity`.
 * **`START_NAP`**: User taps `"Nap"` on `MainActivity` or in notification shade and confirms nap duration dialog (`ACTION_START_NAP`).
-* **`CANCEL_NAP`**: User taps `"Cancel Nap"` on `MainActivity` or in notification shade (`ACTION_CANCEL_NAP`).
+* **`CANCEL_NAP`**: User taps `"I'm Awake"` on `MainActivity` or `"Cancel Nap"` in notification shade (`ACTION_CANCEL_NAP`).
 
 ### System & Sensor Events
 
