@@ -146,6 +146,36 @@ class PreferenceManagerTest {
     }
 
     @Test
+    fun testGetSessionPhasePhases() {
+        val minSleepDurationMs = 8 * 3600_000L
+        val wakeTime = 1_000_000_000_000L
+
+        val windowStart = wakeTime - (minSleepDurationMs * 1.2).toLong()
+        val preAlarmStart = wakeTime - (minSleepDurationMs * 0.5).toLong()
+
+        assertEquals(SessionPhase.IDLE, getSessionPhase(windowStart - 1000L, wakeTime, minSleepDurationMs, false))
+        assertEquals(SessionPhase.IDLE, getSessionPhase(wakeTime + 1000L, wakeTime, minSleepDurationMs, false))
+
+        assertEquals(SessionPhase.INITIATION_AND_ACTIVE_SLEEP, getSessionPhase(windowStart, wakeTime, minSleepDurationMs, true))
+        assertEquals(SessionPhase.INITIATION_AND_ACTIVE_SLEEP, getSessionPhase(windowStart + 1000L, wakeTime, minSleepDurationMs, true))
+
+        assertEquals(SessionPhase.PRE_ALARM_WINDOW, getSessionPhase(preAlarmStart, wakeTime, minSleepDurationMs, true))
+        assertEquals(SessionPhase.PRE_ALARM_WINDOW, getSessionPhase(preAlarmStart + 1000L, wakeTime, minSleepDurationMs, true))
+
+        assertEquals(SessionPhase.ALARM, getSessionPhase(wakeTime, wakeTime, minSleepDurationMs, true))
+        assertEquals(SessionPhase.ALARM, getSessionPhase(wakeTime + 5000L, wakeTime, minSleepDurationMs, true))
+    }
+
+    @Test
+    fun testPreferenceComputationsGetSessionPhaseAndIsNapAllowed() {
+        val phase = preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE)
+        assertEquals(SessionPhase.IDLE, phase)
+
+        val napAllowed = preferenceManager.getComputed(PreferenceComputations.IS_NAP_ALLOWED)
+        assertTrue(napAllowed!!)
+    }
+
+    @Test
     fun testWatchEffectInitialAndReactiveExecutionAndDispose() {
         val runCount = AtomicInteger(0)
         val lastValue = AtomicInteger(0)

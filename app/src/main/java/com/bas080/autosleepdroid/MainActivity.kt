@@ -681,14 +681,25 @@ class MainActivity : Activity(), EventLogger.Listener {
         else
             napEndsAt > System.currentTimeMillis()
 
+        val isNapAllowed = if (preferenceManager != null)
+            true == preferenceManager?.getComputed(PreferenceComputations.IS_NAP_ALLOWED)
+        else
+            true
+
         switchNapDnd?.isChecked = napDndEnabled
         if (btnNap != null && textNapStatus != null) {
             if (isNapActive) {
+                btnNap?.isEnabled = true
                 textNapStatus?.setText(R.string.action_cancel_nap)
                 btnNap?.setOnClickListener { cancelNap() }
-            } else {
+            } else if (isNapAllowed) {
+                btnNap?.isEnabled = true
                 textNapStatus?.text = getComputedDurationString(preferenceManager, PreferenceKeys.KEY_NAP_DURATION_MINUTES, napDurationMinutes)
                 btnNap?.setOnClickListener { openNapDialog() }
+            } else {
+                btnNap?.isEnabled = false
+                textNapStatus?.text = getComputedDurationString(preferenceManager, PreferenceKeys.KEY_NAP_DURATION_MINUTES, napDurationMinutes)
+                btnNap?.setOnClickListener(null)
             }
         }
     }

@@ -20,6 +20,7 @@ The app is an Android sleep timer app configured directly from a single main UI 
 │       │   ├── HealthConnectManager.kt
 │       │   ├── MainActivity.kt
 │       │   ├── MainService.kt
+│       │   ├── SessionPhase.kt
 │       │   └── SettingRowView.kt
 │       └── res/
 │           ├── layout/
@@ -41,6 +42,7 @@ The app is an Android sleep timer app configured directly from a single main UI 
 │   ├── NOTIFICATION_GOAL_INPUT_OPTIONS.md
 │   ├── NOTIFICATION_INPUT_OPTIONS.md
 │   ├── PERFORMANCE.md
+│   ├── SLEEP_SESSION.md
 │   ├── SPEC.md
 │   └── UPDATE_NOTIFICATIONS.md
 ├── build.gradle
@@ -117,6 +119,12 @@ Centralized preference key constants, key-specific `SharedPreferences` observati
 - Ensures callbacks fire strictly when their target key changes, providing reactive state synchronization between `MainService` and `MainActivity` without requiring manual `redrawNotification()` intent calls.
 - Provides explicit registration/unregistration methods (`registerListener`, `unregisterListener`) and manual cache invalidation (`invalidateComputed`, `invalidateAllComputed`).
 - Offloads background computations using a single-threaded `ExecutorService`.
+
+### `SessionPhase`
+
+File: `app/src/main/java/com/bas080/autosleepdroid/SessionPhase.kt`
+
+Defines the `SessionPhase` enum (`IDLE`, `INITIATION_AND_ACTIVE_SLEEP`, `PRE_ALARM_WINDOW`, `ALARM`) and top-level `getSessionPhase(now, currentWakeTime, minSleepDuration, isSessionOngoing)` evaluation function that determines the lifecycle phase relative to scheduled wake alarm time. Detailed session phase workflow is documented in `docs/SLEEP_SESSION.md`.
 
 ### `SettingRowView`
 
