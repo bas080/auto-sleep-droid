@@ -1193,6 +1193,11 @@ class MainService : Service(), SensorEventListener {
         return true == pm.getComputed(PreferenceComputations.IS_NAP_ACTIVE)
     }
 
+    private fun isNapAllowed(): Boolean {
+        val pm = preferenceManager ?: return true
+        return true == pm.getComputed(PreferenceComputations.IS_NAP_ALLOWED)
+    }
+
     private fun setDndMode(enable: Boolean) {
         if (preferenceManager != null && true != preferenceManager?.getComputed(PreferenceComputations.IS_NAP_DND_ENABLED)) {
             return
@@ -1573,20 +1578,24 @@ class MainService : Service(), SensorEventListener {
             }
             builder.addAction(toggleAction)
 
-            val secondAction: Notification.Action = if (shouldShowAwakeAction()) {
+            val secondAction: Notification.Action? = if (shouldShowAwakeAction()) {
                 Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
                     getString(R.string.action_awake),
                     awakeIntent()
                 ).build()
-            } else {
+            } else if (isNapAllowed()) {
                 Notification.Action.Builder(
                     Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
                     getString(R.string.action_nap),
                     startNapIntent()
                 ).build()
+            } else {
+                null
             }
-            builder.addAction(secondAction)
+            if (secondAction != null) {
+                builder.addAction(secondAction)
+            }
         }
 
         return builder.build()

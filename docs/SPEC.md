@@ -134,6 +134,11 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - Feature toggle: An optional "Do Not Disturb (DND)" toggle row under the Nap section on `MainActivity` controls whether DND mode is automatically turned on when a nap starts and turned off when the nap ends or is cancelled (when notification policy access permission is granted).
   - When the sleep timer is reset (via flip gesture, volume button press, or duration update), an active nap alarm is pushed forward by the same reset increment. Dismissing or marking awake from a nap alarm records the nap session without affecting or adjusting the current wake-up time.
 
+## Sleep Sessions & Workflow
+- Tracked rest intervals bounded by start and end timestamps.
+- Lifecycle phases relative to alarm time: Idle Phase, Initiation & Active Sleep Phase, Pre-Alarm Window Phase, and Alarm Phase.
+- Detailed concept, phase predicates, start/end time capture, and Health Connect sync workflow are documented in `docs/SLEEP_SESSION.md`.
+
 ## Health Connect Integration
 - **Purpose**: Automatically save sleep and wake timestamps as sleep sessions (both nightly sleep and naps) to Health Connect when enabled.
 - **Behavior**:

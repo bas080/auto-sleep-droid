@@ -1410,10 +1410,20 @@ class MainServiceTest {
 
     @Test
     fun testAwakeActionNotificationActionWhenWakeAlarmIsEnabledAndActiveSleepSession() {
-        val sleepStart = System.currentTimeMillis() - 4 * 3600_000L
+        val now = System.currentTimeMillis()
+        val calWake = Calendar.getInstance()
+        calWake.timeInMillis = now + 2 * 3600_000L
+        val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = calWake.get(Calendar.MINUTE)
+
+        val sleepStart = now - 4 * 3600_000L
         preferences.edit()
             .putBoolean("show_notification", true)
             .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", wakeHour)
+            .putInt("wake_up_goal_minute", wakeMin)
+            .putInt("current_wake_hour", wakeHour)
+            .putInt("current_wake_minute", wakeMin)
             .putLong("sleep_start_time_ms", sleepStart)
             .commit()
 
@@ -1434,7 +1444,7 @@ class MainServiceTest {
                 }
             }
         }
-        assertTrue("Ongoing notification should feature 'I\'m Awake' action button during active sleep session", foundAwakeAction)
+        assertTrue("Ongoing notification should feature 'I\'m Awake' action button during pre-alarm window or alarm phase", foundAwakeAction)
     }
 
     @Test
