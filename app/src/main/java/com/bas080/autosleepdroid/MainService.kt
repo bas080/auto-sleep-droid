@@ -933,12 +933,13 @@ class MainService : Service(), SensorEventListener {
 
     private fun updateNextWakeUpTimeOnDismissOrExpiry() {
         val prefs = preferences ?: return
-        val goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
-        val goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
+        val cal = Calendar.getInstance()
+        val hour = cal.get(Calendar.HOUR_OF_DAY)
+        val min = cal.get(Calendar.MINUTE)
 
         prefs.edit()
-            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)
-            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, min)
             .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
             .apply()
     }

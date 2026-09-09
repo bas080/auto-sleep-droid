@@ -675,7 +675,7 @@ class MainServiceTest {
     }
 
     @Test
-    fun testDismissingWakeUpAlarmResetsCurrentWakeTimeToGoalTime() {
+    fun testDismissingWakeUpAlarmSetsCurrentWakeTimeToDismissalTime() {
         preferences.edit()
             .putBoolean("active", false)
             .putBoolean("wake_up_goal_enabled", true)
@@ -692,8 +692,9 @@ class MainServiceTest {
             .setAction(MainService.ACTION_DISMISS_WAKEUP_ALARM)
         service.onStartCommand(dismissIntent, 0, 1)
 
-        assertEquals("expected goal hour 6 but was " + preferences.getInt("current_wake_hour", -1), 6, preferences.getInt("current_wake_hour", -1))
-        assertEquals("expected goal min 30 but was " + preferences.getInt("current_wake_minute", -1), 30, preferences.getInt("current_wake_minute", -1))
+        val cal = Calendar.getInstance()
+        assertEquals(cal.get(Calendar.HOUR_OF_DAY), preferences.getInt("current_wake_hour", -1))
+        assertEquals(cal.get(Calendar.MINUTE), preferences.getInt("current_wake_minute", -1))
     }
 
     @Test
@@ -952,10 +953,11 @@ class MainServiceTest {
             .setAction(MainService.ACTION_DISMISS_WAKEUP_ALARM)
         service.onStartCommand(dismissIntent, 0, 1)
 
-        assertEquals("Current wake hour must reset to target goal hour 6 after dismissal",
-            6, preferences.getInt("current_wake_hour", -1))
-        assertEquals("Current wake minute must reset to target goal minute 30 after dismissal",
-            30, preferences.getInt("current_wake_minute", -1))
+        val calDismiss = Calendar.getInstance()
+        assertEquals("Current wake hour must be set to dismissal hour after dismissal",
+            calDismiss.get(Calendar.HOUR_OF_DAY), preferences.getInt("current_wake_hour", -1))
+        assertEquals("Current wake minute must be set to dismissal minute after dismissal",
+            calDismiss.get(Calendar.MINUTE), preferences.getInt("current_wake_minute", -1))
 
         assertTrue("Next daily alarm timestamp must be saved in preferences",
             preferences.contains(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS))
@@ -1257,8 +1259,9 @@ class MainServiceTest {
             .setAction(MainService.ACTION_AWAKE)
         service.onStartCommand(awakeIntent, 0, 1)
 
-        assertEquals("Current wake hour should reset to goal hour 6", 6, preferences.getInt("current_wake_hour", -1))
-        assertEquals("Current wake minute should reset to goal min 30", 30, preferences.getInt("current_wake_minute", -1))
+        val calAwake = Calendar.getInstance()
+        assertEquals("Current wake hour should set to awake hour", calAwake.get(Calendar.HOUR_OF_DAY), preferences.getInt("current_wake_hour", -1))
+        assertEquals("Current wake minute should set to awake minute", calAwake.get(Calendar.MINUTE), preferences.getInt("current_wake_minute", -1))
         assertFalse("sleep_start_time_ms should be cleared", preferences.contains("sleep_start_time_ms"))
         assertTrue("Next daily wake alarm should be scheduled", preferences.contains(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS))
     }
@@ -1300,8 +1303,9 @@ class MainServiceTest {
             .setAction(MainService.ACTION_AWAKE)
         service.onStartCommand(awakeIntent, 0, 1)
 
-        assertEquals("Current wake hour should reset to goal hour 6", 6, preferences.getInt("current_wake_hour", -1))
-        assertEquals("Current wake minute should reset to goal min 30", 30, preferences.getInt("current_wake_minute", -1))
+        val calAwake = Calendar.getInstance()
+        assertEquals("Current wake hour should set to awake hour", calAwake.get(Calendar.HOUR_OF_DAY), preferences.getInt("current_wake_hour", -1))
+        assertEquals("Current wake minute should set to awake minute", calAwake.get(Calendar.MINUTE), preferences.getInt("current_wake_minute", -1))
         assertEquals("sleep_start_time_ms should be cleared", 0L, preferences.getLong("sleep_start_time_ms", 0L))
     }
 
@@ -1693,7 +1697,7 @@ class MainServiceTest {
     }
 
     @Test
-    fun testDismissingWakeAlarmResetsCurrentWakeTimeAndSchedulesNextAlarm() {
+    fun testDismissingWakeAlarmSetsCurrentWakeTimeToDismissalTimeAndSchedulesNextAlarm() {
         preferences.edit()
             .putBoolean("wake_up_goal_enabled", true)
             .putInt("wake_up_goal_hour", 6)
@@ -1709,15 +1713,16 @@ class MainServiceTest {
             .setAction(MainService.ACTION_DISMISS_WAKEUP_ALARM)
         service.onStartCommand(dismissIntent, 0, 1)
 
-        assertEquals(6, preferences.getInt("current_wake_hour", -1))
-        assertEquals(30, preferences.getInt("current_wake_minute", -1))
+        val cal = Calendar.getInstance()
+        assertEquals(cal.get(Calendar.HOUR_OF_DAY), preferences.getInt("current_wake_hour", -1))
+        assertEquals(cal.get(Calendar.MINUTE), preferences.getInt("current_wake_minute", -1))
 
         val scheduledMs = preferences.getLong(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L)
         assertTrue("Next daily wake alarm must be scheduled after dismissal", scheduledMs > System.currentTimeMillis())
     }
 
     @Test
-    fun testClickingAwakeBeforeAlarmResetsCurrentWakeTimeAndSchedulesNextAlarm() {
+    fun testClickingAwakeBeforeAlarmSetsCurrentWakeTimeToClickTimeAndSchedulesNextAlarm() {
         val now = System.currentTimeMillis()
         preferences.edit()
             .putBoolean("wake_up_goal_enabled", true)
@@ -1735,8 +1740,9 @@ class MainServiceTest {
             .setAction(MainService.ACTION_AWAKE)
         service.onStartCommand(awakeIntent, 0, 1)
 
-        assertEquals("Current wake hour must reset to target goal hour when clicking awake", 6, preferences.getInt("current_wake_hour", -1))
-        assertEquals("Current wake minute must reset to target goal minute when clicking awake", 30, preferences.getInt("current_wake_minute", -1))
+        val cal = Calendar.getInstance()
+        assertEquals("Current wake hour must set to click hour when clicking awake", cal.get(Calendar.HOUR_OF_DAY), preferences.getInt("current_wake_hour", -1))
+        assertEquals("Current wake minute must set to click minute when clicking awake", cal.get(Calendar.MINUTE), preferences.getInt("current_wake_minute", -1))
         assertFalse("Ongoing sleep session must be cleared after clicking awake", preferences.contains("sleep_start_time_ms"))
 
         val scheduledMs = preferences.getLong(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L)
