@@ -8,12 +8,12 @@ Auto Sleep Droid uses these sessions to track rest intervals and automatically l
 
 ## Session Phases Relative to Alarm Time
 
-A sleep session progresses through five concise lifecycle phases determined by simple predicates evaluating current time (`now`), scheduled alarm time (`alarmTime`), and minimum sleep duration (`minSleepDuration`):
+A sleep session progresses through five concise lifecycle phases evaluated by predicates on current time (`now`), scheduled alarm time (`currentAlarmTime`), and minimum sleep duration (`minSleepDuration`):
 
 ### 1. Idle Phase
 
 ```text
-noActiveSession || now < alarmTime - 14_hours
+noActiveSession || now < currentAlarmTime - (minSleepDuration * 1.2)
 ```
 
 - **Description**: Prior to going to bed or when no active sleep session exists.
@@ -23,30 +23,30 @@ noActiveSession || now < alarmTime - 14_hours
 ### 2. Initiation Phase
 
 ```text
-timerRunning && (now >= alarmTime - 14_hours && now < alarmTime - (1.2 * minSleepDuration))
+timerRunning && (now >= currentAlarmTime - (minSleepDuration * 1.2) && now < currentAlarmTime)
 ```
 
-- **Description**: User turns on sleep timer or plays media early in the night.
+- **Description**: User turns on sleep timer or plays media within the sleep safeguard window before `currentAlarmTime`.
 - **Nap Option**: Disabled on main UI and omitted from notifications.
 - **"I'm Awake" Action**: Hidden during early countdown.
 
 ### 3. Active Sleep Phase
 
 ```text
-timerExpired && (now >= alarmTime - 14_hours && now < alarmTime - (1.2 * minSleepDuration))
+timerExpired && (now >= currentAlarmTime - (minSleepDuration * 1.2) && now < currentAlarmTime)
 ```
 
 - **Description**: Timer expires, media pauses (`sleep_start_time_ms`), user is sleeping.
 - **Nap Option**: Disabled on main UI and omitted from notifications.
-- **"I'm Awake" Action**: Hidden until pre-alarm window.
+- **"I'm Awake" Action**: Hidden until pre-alarm wake action window.
 
 ### 4. Pre-Alarm Window Phase
 
 ```text
-now >= alarmTime - (1.2 * minSleepDuration) && now < alarmTime
+now > currentAlarmTime - (minSleepDuration * 1.2) && now < currentAlarmTime
 ```
 
-- **Description**: Current time enters the pre-alarm safeguard window.
+- **Description**: Current time is within the pre-alarm window preceding `currentAlarmTime`.
 - **Nap Option**: Disabled.
 - **"I'm Awake" Action**: Visible in notification shade. Tapping **I'm Awake** completes the session, logs to Health Connect, resets wake time to target goal time, and reschedules for tomorrow.
 
@@ -70,7 +70,7 @@ Nightly sleep sessions track the primary sleep period preceding a scheduled morn
 - **Start Time Capture**:
   - **Timer Start Time**: Recorded (`timer_start_time_ms`) when sleep timer is activated or reset.
   - **Timer Expiration**: Recorded (`sleep_start_time_ms`) when timer expires and media pauses. Resuming and expiring media later updates `sleep_start_time_ms` to the latest expiration time.
-  - **Pre-Wake Reset Window**: Resetting when `now >= alarmTime - (1.2 * minSleepDuration)` updates `sleep_start_time_ms` to current time if no active session exists.
+  - **Pre-Wake Reset Window**: Resetting when `now >= currentAlarmTime - (minSleepDuration * 1.2)` updates `sleep_start_time_ms` to current time if no active session exists.
   - **Fallback Calculation**: If no timer was run, estimated as `wakeTime - minSleepDuration` upon wake alarm trigger or confirmation.
 
 - **End Time Capture**:
@@ -90,5 +90,5 @@ When a sleep session completes:
 
 - **Health Connect Sync**: Valid sessions exceeding minimum session threshold (`hc_min_duration_minutes`, default 15m) are written to Health Connect as a `SleepSessionRecord`.
 - **Minimum Duration Safeguard**: Sessions under the threshold are ignored.
-- **Stale Session Drop Policy (14-Hour Rule)**: Unconfirmed sessions older than 14 hours are dropped without recording.
+- **Stale Session Drop Policy**: Unconfirmed sessions older than 14 hours are dropped without recording.
 - **Timestamp Cleanup**: Pending timestamps are cleared after processing.
