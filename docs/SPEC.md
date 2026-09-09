@@ -75,7 +75,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 ## Auto Sleep Timer (Do Not Disturb)
 - **Purpose**: Optionally turn on the sleep timer when Android's Do Not Disturb mode is activated and turn it off when DND is deactivated.
 - **Behavior**:
-  - Toggling ON opens Android Do Not Disturb settings.
+  - Toggling ON enables automated DND state tracking without automatically redirecting away from the app.
   - Optional automation feature; manual sleep timer toggling remains available at all times regardless of whether this setting is enabled.
   - When `auto_timer_enabled` is true, Auto Sleep Droid listens for DND filter change events (`NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED`).
   - When DND becomes active (interruption filter is not `INTERRUPTION_FILTER_ALL`), the sleep timer is automatically turned ON.
@@ -102,13 +102,13 @@ Toggling "Show notification" to ON prompts the user for notification permission 
      - **Current Wake-Up Time**: Represents the exact clock time when the upcoming wake alarm will ring. Users can view and manually adjust the current wake-up time directly via a dedicated picker row on `MainActivity`.
      - When configured and enabled, the wake alarm is set daily. When the current wake alarm is dismissed or triggered, the next wake-up alarm for the following day is reset to target goal time (`wake_up_goal_hour` / `wake_up_goal_minute`).
   3. **Minimum Sleep Safeguard & Push-Forward Behavior**:
-     - A night sleep session begins when the sleep timer starts or is reset (via flip gesture, volume button, or duration update, updating `timer_start_time_ms`), or when the sleep timer expires and media is paused (`sleep_start_time_ms`). If media is played again during the night and expires, the sleep start time restarts (`sleep_start_time_ms` updated to latest expiration time).
+     - A night sleep session begins when the sleep timer starts or is reset (via flip gesture, volume button, or duration update, updating `timer_start_time_ms`), when media playback is paused while the timer is active, or when the sleep timer expires and media is paused (`sleep_start_time_ms`). If media is played again during the night and expires or pauses, the sleep start time restarts (`sleep_start_time_ms` updated to latest pause or expiration time).
      - When an active sleep session exists (`sleep_start_time_ms` recorded upon timer expiration within the last 14 hours), minimum sleep safeguard calculation uses `requiredWakeUpTime = sleep_start_time_ms + Math.max(0, minimumSleepDuration - sleepTimerDuration)`.
      - When the sleep timer is active (`timerEndsAt > 0`), the projected wake alarm time `requiredWakeUpTime = timerStartTime + minimumSleepDuration` is calculated and displayed in the notification's 'Wake at' status.
      - If `requiredWakeUpTime` is later than `currentWakeUpTime`, `currentWakeUpTime` is automatically pushed forward to `requiredWakeUpTime` to respect the minimum sleep safeguard.
      - When going to bed early (within a `1.2 * minimumSleepDuration` window before `currentWakeUpTime`), starting or rescheduling the sleep timer automatically moves `currentWakeUpTime` earlier toward `Math.max(targetGoalTime, requiredWakeUpTime)`.
   4. **Alarm Trigger & Audio**:
-     - Upon expiration, the app gradually increases the default system alarm tone volume over 3 minutes along a gentle psychoacoustic crescendo curve and updates the ongoing status notification to display the ringing alarm status.
+     - Upon expiration, the app explicitly unmutes `STREAM_ALARM` if muted, ensures an audible volume level, gradually increases the default system alarm tone volume over 3 minutes along a gentle psychoacoustic crescendo curve, and updates the ongoing status notification to display the ringing alarm status.
   5. **Single Alarm Creation**: The app maintains only one wake-up alarm named `"Auto Sleep"`.
   6. **Wake-Up Alarm Gestures & Persistence**:
      - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes and updates the notification text.

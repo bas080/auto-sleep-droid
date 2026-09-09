@@ -917,16 +917,12 @@ class MainActivityTest {
     }
 
     @Test
-    fun testUserInitiatedToggleOpensSettingsPages() {
-        HealthConnectManager.setClientForTesting(null, true)
+    fun testAutoTimerToggleDoesNotOpenDndSettings() {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
         val switchAutoTimer = activity.findViewById<Switch>(R.id.switch_auto_timer)
-        val switchHealthConnect = activity.findViewById<Switch>(R.id.switch_health_connect)
-
         assertNotNull(switchAutoTimer)
-        assertNotNull(switchHealthConnect)
 
         val shadowActivity = Shadows.shadowOf(activity)
         while (shadowActivity.nextStartedActivity != null) {}
@@ -935,36 +931,29 @@ class MainActivityTest {
         switchAutoTimer.isChecked = true
         switchAutoTimer.isPressed = false
 
-        var nextIntent = shadowActivity.nextStartedActivity
-        assertNotNull("User-initiated toggle of Auto DND must open settings page", nextIntent)
-
-        while (shadowActivity.nextStartedActivity != null) {}
-
-        switchHealthConnect.isPressed = true
-        switchHealthConnect.isChecked = true
-        switchHealthConnect.isPressed = false
-
-        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
-
-        nextIntent = shadowActivity.nextStartedActivity
-        assertNotNull("User-initiated toggle of Health Connect must open settings page", nextIntent)
+        val nextIntent = shadowActivity.nextStartedActivity
+        assertEquals("Toggle of Auto DND must not open DND settings page", null, nextIntent)
     }
 
     @Test
-    fun testAutoTimerRowClickLaunchesDndSettings() {
+    fun testAutoTimerRowClickTogglesSwitchWithoutLaunchingDndSettings() {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
         val rowAutoTimer = activity.findViewById<View>(R.id.row_auto_timer)
+        val switchAutoTimer = activity.findViewById<Switch>(R.id.switch_auto_timer)
         assertNotNull(rowAutoTimer)
+        assertNotNull(switchAutoTimer)
 
         val shadowActivity = Shadows.shadowOf(activity)
         while (shadowActivity.nextStartedActivity != null) {}
 
+        val initialChecked = switchAutoTimer.isChecked
         rowAutoTimer.performClick()
 
+        assertEquals(!initialChecked, switchAutoTimer.isChecked)
         val nextIntent = shadowActivity.nextStartedActivity
-        assertNotNull("Clicking Auto DND row container must open DND settings page", nextIntent)
+        assertEquals("Clicking Auto DND row container must toggle switch without opening DND settings page", null, nextIntent)
     }
 
     @Test

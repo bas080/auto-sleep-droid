@@ -856,6 +856,25 @@ class MainServiceTest {
     }
 
     @Test
+    fun testOnPlaybackStateChangedRecordsSleepStartTimeOnMediaPauseWhileActive() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val now = System.currentTimeMillis()
+        service.initializeTimerState(true, 20, now + 1200_000L, 10, true, now)
+        assertEquals(MainService.State.ACTIVE, service.state)
+
+        service.onPlaybackStateChanged(true, now)
+        assertFalse("sleep_start_time_ms should not be set yet while playing", preferences.contains("sleep_start_time_ms"))
+
+        val pauseTime = now + 60_000L
+        service.onPlaybackStateChanged(false, pauseTime)
+
+        assertEquals("sleep_start_time_ms should be recorded when media is paused while active",
+            pauseTime, preferences.getLong("sleep_start_time_ms", 0L))
+    }
+
+    @Test
     fun testRunWakeUpAlarmCrescendoStepAppliesQuadraticGain() {
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()

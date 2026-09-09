@@ -73,7 +73,7 @@ Responsibilities:
 - Transition from `Waiting` to `Active` when playback callback detects active music playback while enabled, and reset an `Active` or `Fading` countdown when volume changes or a phone flip gesture occurs.
 - Fade music volume from the captured current level to zero over 30 seconds upon expiry using an ease-out quadratic curve (starting fast and slowing down).
 - Request transient audio focus (`AudioManager.requestAudioFocus`) to pause active media playback, restore pre-fade volume after media is paused (after a short 500ms delay), and revert to the `Waiting` state.
-- Upon sleep timer start/reschedule or when the current alarm rings, schedule/update the daily recurring `"Auto Sleep"` wake-up alarm via `AlarmManager.setAlarmClock` if Smart Wake-Up Goal is enabled in the background. When triggered (`ACTION_WAKEUP_ALARM_EXPIRY`), `MainService` automatically schedules the next day's alarm for the same goal time, ensures `STREAM_ALARM` is set to an audible baseline level, plays the default system alarm tone using `RingtoneManager` with a 3-minute gentle volume crescendo, and updates the ongoing status notification to display the alarm status.
+- Upon sleep timer start/reschedule or when the current alarm rings, schedule/update the daily recurring `"Auto Sleep"` wake-up alarm via `AlarmManager.setAlarmClock` if Smart Wake-Up Goal is enabled in the background. When triggered (`ACTION_WAKEUP_ALARM_EXPIRY`), `MainService` automatically schedules the next day's alarm for the same goal time, ensures `STREAM_ALARM` is set to an audible baseline level and explicitly unmuted on API 23+ if muted, plays the default system alarm tone using `RingtoneManager` with a 3-minute gentle volume crescendo, and updates the ongoing status notification to display the alarm status.
 - Support nap timer alarm scheduling (`ACTION_START_NAP`, `ACTION_CANCEL_NAP`, `ACTION_NAP_EXPIRY`). When the sleep timer is reset or rescheduled, active nap alarms are pushed forward by the same reset increment. Dismissing a nap alarm does not adjust or affect the current scheduled wake-up time.
 - Cancel/dismiss the `"Auto Sleep"` wake-up alarm via `AlarmManager.cancel` on stop or smart alarm cancel in the background.
 - Trigger a short, faint haptic feedback pulse (`Vibrator`) upon turning off/on, volume button resets, and flip gestures.
@@ -153,7 +153,7 @@ Main Configuration Controls & Action Links:
   - Wake-up alarm enable Switch (`wake_up_goal_enabled` preference, labeled "Wake-up alarm").
   - Target wake-up goal time Button (`btn_target_time`, displaying formatted system time and opening `TimePickerDialog` on click).
   - Minimum sleep duration input using custom `DurationInputView` (`input_min_sleep`, saving `min_sleep_duration_minutes` preference).
-  - Do Not Disturb section featuring Nap DND Switch (`row_nap_dnd`) and Auto sleep timer Switch (`row_auto_timer`).
+  - Do Not Disturb section featuring Nap DND Switch (`row_nap_dnd`) and Auto sleep timer Switch (`row_auto_timer`, enabling automated DND tracking without forcing navigation away to system settings).
 - Links header & action link list at the bottom of the form: Manual, Logs, Feedback, Donate, Export, and Import rendered inside custom `FlowLayout` wrapping inline with light font weight (`sans-serif-light`) separated by middle dots (`·`).
 - Full-screen Manual & Event Logs Views: Overlay `RelativeLayout` views in `activity_main.xml` with a Back button pinned to the bottom-right corner (`alignParentBottom="true"`, `alignParentEnd="true"`), displaying formatted HTML manual text or real-time monospace event logs and closing upon Back button tap or hardware back button press.
 - Crash Reporting: Prompts user on launch via `AlertDialog` if a pending uncaught exception was saved in `SharedPreferences` by `AutoSleepApplication`. Choosing to send report opens the email client prefilled with the crash stack trace, recent event logs (`EventLogger.getEvents`), and app/device version metadata.
@@ -206,7 +206,7 @@ Timer and Wake-Up Goal state is stored in the `sleep_timer` `SharedPreferences` 
 | `nap_duration_minutes` | integer | Previously used nap duration in minutes (default 20) |
 | `nap_alarm_ends_at` | long | Wall-clock timestamp (millis) when active nap alarm triggers |
 | `health_connect_enabled` | boolean | Whether sleep sessions are synchronized with Android Health Connect |
-| `sleep_start_time_ms` | long | Wall-clock timestamp (millis) recorded when sleep timer expired |
+| `sleep_start_time_ms` | long | Wall-clock timestamp (millis) recorded when sleep timer expired or when media was paused while active |
 | `nap_start_time_ms` | long | Wall-clock timestamp (millis) recorded when a nap alarm started |
 
 Event log history is stored in the `event_logger` `SharedPreferences` file:
