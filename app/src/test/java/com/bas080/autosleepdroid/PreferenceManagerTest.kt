@@ -176,6 +176,94 @@ class PreferenceManagerTest {
     }
 
     @Test
+    fun testPreferenceComputationsSessionPhaseTransitionsAcrossPreferenceStates() {
+        val now = System.currentTimeMillis()
+        val cal = java.util.Calendar.getInstance()
+        cal.timeInMillis = now
+
+        // Default state: no session ongoing, wake alarm disabled -> IDLE
+        assertEquals(SessionPhase.IDLE, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
+        assertTrue("Nap should be allowed in IDLE phase", preferenceManager.getComputed(PreferenceComputations.IS_NAP_ALLOWED)!!)
+        assertFalse("Awake action should be hidden in IDLE phase", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+
+        // Enable wake alarm and set current wake time 4 hours in the future
+        cal.add(java.util.Calendar.HOUR_OF_DAY, 4)
+        val wakeHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+        val wakeMin = cal.get(java.util.Calendar.MINUTE)
+
+        rawPreferences.edit()
+            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true)
+            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, wakeHour)
+            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, wakeMin)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, wakeHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, wakeMin)
+            .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 480) // 8 hours min sleep -> 1.2x = 9.6h window, 0.5x = 4h pre-alarm
+            .putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now - 3600_000L) // active session started 1h ago
+            .commit()
+
+        // 4 hours before wake time with 8h min sleep is inside INITIATION_AND_ACTIVE_SLEEP window (windowStart is now - 5.6h)
+        assertEquals(SessionPhase.INITIATION_AND_ACTIVE_SLEEP, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
+        assertFalse("Nap should not be allowed during active sleep phase", preferenceManager.getComputed(PreferenceComputations.IS_NAP_ALLOWED)!!)
+        assertFalse("Awake action should be hidden during active sleep phase", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+
+        // Set sleepStartTime 6 hours ago so minimum sleep safeguard (7.6h) does not push wake time beyond 2h in future
+        cal.timeInMillis = now
+        cal.add(java.util.Calendar.HOUR_OF_DAY, 2)
+        val preAlarmHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+        val preAlarmMin = cal.get(java.util.Calendar.MINUTE)
+
+        rawPreferences.edit()
+            .putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now - 6 * 3600_000L)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, preAlarmHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, preAlarmMin)
+            .commit()
+
+        assertEquals(SessionPhase.PRE_ALARM_WINDOW, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
+        assertFalse("Nap should not be allowed in pre-alarm window", preferenceManager.getComputed(PreferenceComputations.IS_NAP_ALLOWED)!!)
+        assertTrue("Awake action should be shown in pre-alarm window", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+
+        // Move wake time into past (alarm ringing/phase), with sleepStartTime 10h ago so min sleep safeguard is fully satisfied
+        cal.timeInMillis = now
+        cal.add(java.util.Calendar.MINUTE, -10)
+        val alarmHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+        val alarmMin = cal.get(java.util.Calendar.MINUTE)
+
+        rawPreferences.edit()
+            .putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now - 10 * 3600_000L)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, alarmHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, alarmMin)
+            .commit()
+
+        val actualPhase3 = preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE)
+        assertEquals(SessionPhase.ALARM, actualPhase3)
+        assertFalse("Nap should not be allowed during alarm phase", preferenceManager.getComputed(PreferenceComputations.IS_NAP_ALLOWED)!!)
+        assertTrue("Awake action should be shown during alarm phase", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+
+        // Clear ongoing sleep session -> returns to IDLE phase even after wake time
+        rawPreferences.edit().remove(PreferenceKeys.KEY_SLEEP_START_TIME_MS).commit()
+
+        assertEquals(SessionPhase.IDLE, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
+        assertTrue("Nap should be allowed in IDLE phase after clearing session", preferenceManager.getComputed(PreferenceComputations.IS_NAP_ALLOWED)!!)
+
+        // Activate nap
+        rawPreferences.edit().putLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, now + 1200_000L).commit()
+        assertTrue("Nap should be active", preferenceManager.getComputed(PreferenceComputations.IS_NAP_ACTIVE)!!)
+        assertTrue("Nap allowed should return true when nap is active", preferenceManager.getComputed(PreferenceComputations.IS_NAP_ALLOWED)!!)
+        assertTrue("Awake action should return true when nap is active", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+    }
+
+    @Test
+    fun testSessionPhaseIsAlarmWhenWakeupAlarmIsRingingOrSnoozed() {
+        rawPreferences.edit().putBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING, true).commit()
+        assertEquals(SessionPhase.ALARM, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
+        assertTrue("Awake action should be shown when wakeup alarm is ringing", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+
+        rawPreferences.edit().remove(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING).putBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_SNOOZED, true).commit()
+        assertEquals(SessionPhase.ALARM, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
+        assertTrue("Awake action should be shown when wakeup alarm is snoozed", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+    }
+
+    @Test
     fun testWatchEffectInitialAndReactiveExecutionAndDispose() {
         val runCount = AtomicInteger(0)
         val lastValue = AtomicInteger(0)

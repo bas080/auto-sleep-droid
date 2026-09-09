@@ -21,6 +21,8 @@ object PreferenceKeys {
     const val KEY_NAP_ALARM_ENDS_AT: String = "nap_alarm_ends_at"
     const val KEY_NAP_START_TIME_MS: String = "nap_start_time_ms"
     const val KEY_NAP_ALARM_RINGING: String = "is_nap_alarm_ringing"
+    const val KEY_WAKEUP_ALARM_RINGING: String = "is_wakeup_alarm_ringing"
+    const val KEY_WAKEUP_ALARM_SNOOZED: String = "is_wakeup_alarm_snoozed"
     const val KEY_HEALTH_CONNECT_ENABLED: String = "health_connect_enabled"
     const val KEY_HC_MIN_DURATION_MINUTES: String = "hc_min_duration_minutes"
     const val KEY_WAKEUP_LAST_SCHEDULED_MS: String = "wakeup_last_scheduled_ms"
