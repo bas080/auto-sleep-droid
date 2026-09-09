@@ -28,7 +28,7 @@ Auto Sleep Droid puts your phone to sleep when you fall asleep, and wakes you up
 2. Configure your sleep timer duration (from 1 minute up to 24 hours), show notification preference, and wake-up goal settings on the main screen. Each input and toggle includes a clear description explaining its effect.
 3. Start playing your podcast, music, or video app. The timer automatically begins counting down.
 4. If you're still awake, press your phone's volume buttons or flip your phone over at any time to reset the timer to full duration. Resetting the sleep timer also pushes any active nap alarm forward by the same duration increment.
-5. Tap **"Nap"** on the main screen or notification shade to launch a quick nap alarm dialog, or **"Cancel Nap"** to cancel an active nap.
+5. Tap **"Nap"** on the main screen or notification shade to launch a quick nap alarm dialog, or **"I'm Awake"** / **"Cancel Nap"** to cancel an active nap.
 6. Tap **"Disable"** or **"Enable"** in the notification shade to toggle the sleep timer at any time.
 7. Access action links at the bottom of the main screen (**Manual**, **Logs**, **Feedback**, **Donate**, **Export**, and **Import**) arranged inline with middle dots.
 

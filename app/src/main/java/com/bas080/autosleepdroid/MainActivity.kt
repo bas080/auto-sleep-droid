@@ -682,7 +682,7 @@ class MainActivity : Activity(), EventLogger.Listener {
         if (btnNap != null && textNapStatus != null) {
             if (isNapActive) {
                 btnNap?.isEnabled = true
-                textNapStatus?.setText(R.string.action_cancel_nap)
+                textNapStatus?.setText(R.string.action_awake)
                 btnNap?.setOnClickListener { cancelNap() }
             } else if (isNapAllowed) {
                 btnNap?.isEnabled = true

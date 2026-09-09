@@ -34,7 +34,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 ## User interface
 - Main Application Screen (`MainActivity`):
   - Provides a complete single-screen configuration UI for all settings:
-    - Nap alarm section at top featuring a Nap button ("Nap" or "Cancel Nap" when active).
+    - Nap alarm section at top featuring a Nap button ("Nap" or "I'm Awake" when active).
     - Sleep timer enable/disable switch and timer duration input (0-12h with 5m steps using hour and minute wheel pickers). Timer duration controls remain enabled when the sleep timer switch is OFF.
     - Wake-up alarm enable switch ("Wake-up alarm"), target wake-up time picker button, and minimum sleep duration input.
     - Health Connect synchronization switch and minimum session duration input.
@@ -126,7 +126,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 ## Nap Timer
 - **Purpose**: A minimal, quick way to start or cancel a nap directly from the main screen or status notification shade.
 - **UI & Notification Actions**:
-  - Main Screen (`MainActivity`): Features a dedicated Nap section with a Nap button (`btn_nap`). Tapping **Nap** launches `NapDialogActivity` prefilled with previously used nap duration; if active, tapping **Cancel Nap** cancels the active nap alarm. `MainActivity` listens for preference changes so UI switches automatically synchronize when nap or DND states change.
+  - Main Screen (`MainActivity`): Features a dedicated Nap section with a Nap button (`btn_nap`). Tapping **Nap** launches `NapDialogActivity` prefilled with previously used nap duration; if active, tapping **I'm Awake** cancels the active nap alarm. `MainActivity` listens for preference changes so UI switches automatically synchronize when nap or DND states change.
   - Nap Dialog: Presented using standard system alert dialog styling with DurationInputView and standard positive ("Nap") / negative ("Cancel") buttons, styled consistently with all other dialogs.
   - Notification Shade: Features a **Nap** / **Cancel Nap** action button. Tapping **Nap** launches `NapDialogActivity` without pulling `MainActivity` or the main UI to the foreground; tapping **Cancel Nap** cancels the nap alarm.
 - **Nap Alarm & Reset Behavior**:
