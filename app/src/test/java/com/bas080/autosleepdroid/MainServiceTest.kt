@@ -1239,24 +1239,28 @@ class MainServiceTest {
     }
 
     @Test
-    fun testAwakeActionWhileTimerIsActiveDiscardsSessionAndKeepsTimerRunning() {
+    fun testAwakeActionProcessesSessionResetsWakeTimeAndSchedulesNextAlarm() {
+        val now = System.currentTimeMillis()
         preferences.edit()
-            .putBoolean("active", true)
-            .putInt("duration_minutes", 30)
-            .putLong("timer_start_time_ms", System.currentTimeMillis() - 300_000L)
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", 6)
+            .putInt("wake_up_goal_minute", 30)
+            .putInt("current_wake_hour", 7)
+            .putInt("current_wake_minute", 0)
+            .putLong("sleep_start_time_ms", now - 4 * 3600_000L)
             .commit()
 
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
 
-        service.startTimer(30, System.currentTimeMillis() + 1500_000L, System.currentTimeMillis(), true)
-
         val awakeIntent = Intent(context, MainService::class.java)
             .setAction(MainService.ACTION_AWAKE)
         service.onStartCommand(awakeIntent, 0, 1)
 
-        assertTrue("Timer state machine should remain active when marking awake during countdown", service.isActive)
-        assertFalse("timer_start_time_ms should be cleared when marking awake during countdown", preferences.contains("timer_start_time_ms"))
+        assertEquals("Current wake hour should reset to goal hour 6", 6, preferences.getInt("current_wake_hour", -1))
+        assertEquals("Current wake minute should reset to goal min 30", 30, preferences.getInt("current_wake_minute", -1))
+        assertFalse("sleep_start_time_ms should be cleared", preferences.contains("sleep_start_time_ms"))
+        assertTrue("Next daily wake alarm should be scheduled", preferences.contains(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS))
     }
 
     @Test
@@ -1652,5 +1656,90 @@ class MainServiceTest {
 
         assertTrue("Sleep timer active preference should remain true after nap cancellation",
             preferences.getBoolean("active", false))
+    }
+
+    @Test
+    fun testNapAllowedAndStartsAfterDismissingWakeAlarm() {
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", 6)
+            .putInt("wake_up_goal_minute", 30)
+            .putInt("current_wake_hour", 6)
+            .putInt("current_wake_minute", 30)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val triggerIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_WAKEUP_ALARM_EXPIRY)
+        service.onStartCommand(triggerIntent, 0, 1)
+
+        val dismissIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_DISMISS_WAKEUP_ALARM)
+        service.onStartCommand(dismissIntent, 0, 1)
+
+        val preferenceManager = PreferenceManager(preferences)
+        val isNapAllowed = preferenceManager.getComputed(PreferenceComputations.IS_NAP_ALLOWED)
+        assertTrue("Nap must be allowed as soon as alarm is dismissed and now is after wake time", true == isNapAllowed)
+
+        val startNapIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_START_NAP)
+            .putExtra(MainService.EXTRA_NAP_DURATION_MINUTES, 20)
+        service.onStartCommand(startNapIntent, 0, 1)
+
+        assertTrue("Nap alarm expiration timestamp must be saved after starting nap",
+            preferences.getLong(MainService.KEY_NAP_ALARM_ENDS_AT, 0L) > System.currentTimeMillis())
+    }
+
+    @Test
+    fun testDismissingWakeAlarmResetsCurrentWakeTimeAndSchedulesNextAlarm() {
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", 6)
+            .putInt("wake_up_goal_minute", 30)
+            .putInt("current_wake_hour", 7)
+            .putInt("current_wake_minute", 15)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val dismissIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_DISMISS_WAKEUP_ALARM)
+        service.onStartCommand(dismissIntent, 0, 1)
+
+        assertEquals(6, preferences.getInt("current_wake_hour", -1))
+        assertEquals(30, preferences.getInt("current_wake_minute", -1))
+
+        val scheduledMs = preferences.getLong(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L)
+        assertTrue("Next daily wake alarm must be scheduled after dismissal", scheduledMs > System.currentTimeMillis())
+    }
+
+    @Test
+    fun testClickingAwakeBeforeAlarmResetsCurrentWakeTimeAndSchedulesNextAlarm() {
+        val now = System.currentTimeMillis()
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", 6)
+            .putInt("wake_up_goal_minute", 30)
+            .putInt("current_wake_hour", 7)
+            .putInt("current_wake_minute", 0)
+            .putLong("sleep_start_time_ms", now - 4 * 3600_000L)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val awakeIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_AWAKE)
+        service.onStartCommand(awakeIntent, 0, 1)
+
+        assertEquals("Current wake hour must reset to target goal hour when clicking awake", 6, preferences.getInt("current_wake_hour", -1))
+        assertEquals("Current wake minute must reset to target goal minute when clicking awake", 30, preferences.getInt("current_wake_minute", -1))
+        assertFalse("Ongoing sleep session must be cleared after clicking awake", preferences.contains("sleep_start_time_ms"))
+
+        val scheduledMs = preferences.getLong(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L)
+        assertTrue("Next wake alarm must be rescheduled after clicking awake", scheduledMs > now)
     }
 }

@@ -444,12 +444,28 @@ class MainService : Service(), SensorEventListener {
         updateNotification()
     }
 
+    private fun setWakeUpAlarmState(ringing: Boolean, snoozed: Boolean) {
+        this.isWakeUpAlarmRinging = ringing
+        this.isWakeUpAlarmSnoozed = snoozed
+        preferences?.edit()?.let { editor ->
+            if (ringing) editor.putBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING, true)
+            else editor.remove(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING)
+
+            if (snoozed) editor.putBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_SNOOZED, true)
+            else editor.remove(PreferenceKeys.KEY_WAKEUP_ALARM_SNOOZED)
+
+            editor.apply()
+        }
+    }
+
     private fun initializeStateAndNotification() {
         val savedEnabled = preferences?.getBoolean(KEY_ENABLED, true) ?: true
         val savedDuration = preferences?.getInt(KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES) ?: AppDefaults.DURATION_MINUTES
         val savedEndsAt = preferences?.getLong(KEY_TIMER_ENDS_AT, 0L) ?: 0L
         napAlarmEndsAt = preferences?.getLong(KEY_NAP_ALARM_ENDS_AT, 0L) ?: 0L
         isNapAlarmRinging = preferences?.getBoolean(KEY_NAP_ALARM_RINGING, false) ?: false
+        isWakeUpAlarmRinging = preferences?.getBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING, false) ?: false
+        isWakeUpAlarmSnoozed = preferences?.getBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_SNOOZED, false) ?: false
         val currentVolume = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
         val musicActive = audioManager != null && audioManager!!.isMusicActive
 
@@ -620,8 +636,7 @@ class MainService : Service(), SensorEventListener {
                     updateNextWakeUpTimeOnDismissOrExpiry()
                 }
                 if (isWakeAlarmEnabled()) {
-                    isWakeUpAlarmRinging = true
-                    isWakeUpAlarmSnoozed = false
+                    setWakeUpAlarmState(true, false)
                     updateListenersRegistration()
                     playWakeUpAlarmSound()
                 } else {
@@ -639,8 +654,7 @@ class MainService : Service(), SensorEventListener {
                 cancelSnoozeAlarm()
                 cancelNapAlarm(false)
                 setNapAlarmRinging(false)
-                isWakeUpAlarmRinging = false
-                isWakeUpAlarmSnoozed = false
+                setWakeUpAlarmState(false, false)
                 updateListenersRegistration()
                 checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
                 updateNotification()
@@ -649,8 +663,7 @@ class MainService : Service(), SensorEventListener {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed for 9m")
                 stopWakeUpAlarmSound()
                 snoozeWakeUpAlarm()
-                isWakeUpAlarmRinging = false
-                isWakeUpAlarmSnoozed = true
+                setWakeUpAlarmState(false, true)
                 updateListenersRegistration()
                 updateNotification()
                 Toast.makeText(this, R.string.toast_alarm_snoozed, Toast.LENGTH_SHORT).show()
@@ -675,8 +688,7 @@ class MainService : Service(), SensorEventListener {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm triggered")
                 cancelNapAlarm(false)
                 setNapAlarmRinging(true)
-                isWakeUpAlarmRinging = true
-                isWakeUpAlarmSnoozed = false
+                setWakeUpAlarmState(true, false)
                 updateListenersRegistration()
                 playWakeUpAlarmSound()
                 updateNotification()
@@ -761,8 +773,7 @@ class MainService : Service(), SensorEventListener {
             unregisterAudioPlaybackCallback()
             stopWakeUpAlarmSound()
             cancelSnoozeAlarm()
-            isWakeUpAlarmRinging = false
-            isWakeUpAlarmSnoozed = false
+            setWakeUpAlarmState(false, false)
             onCancelAlarm()
             updateListenersRegistration()
             showOrHideNotification()
@@ -888,42 +899,19 @@ class MainService : Service(), SensorEventListener {
 
         val wasNap = isNapAlarmRinging || isNapActive()
 
-        if (wasNap) {
-            processSleepSession()
-            stopWakeUpAlarmSound()
-            cancelSnoozeAlarm()
-            cancelNapAlarm(false)
-            setNapAlarmRinging(false)
-            isWakeUpAlarmRinging = false
-            isWakeUpAlarmSnoozed = false
-            updateListenersRegistration()
-            updateNotification()
-            Toast.makeText(this, R.string.toast_awake_registered, Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        if (isActive) {
-            preferences?.edit()
-                ?.remove(PreferenceKeys.KEY_SLEEP_START_TIME_MS)
-                ?.remove(PreferenceKeys.KEY_TIMER_START_TIME_MS)
-                ?.apply()
-            updateNotification()
-            Toast.makeText(this, R.string.toast_awake_registered, Toast.LENGTH_SHORT).show()
-            return
-        }
-
         processSleepSession()
 
         stopWakeUpAlarmSound()
         cancelSnoozeAlarm()
         cancelNapAlarm(false)
         setNapAlarmRinging(false)
-        isWakeUpAlarmRinging = false
-        isWakeUpAlarmSnoozed = false
+        setWakeUpAlarmState(false, false)
 
-        dismissAutoSleepAlarm()
-        updateNextWakeUpTimeOnDismissOrExpiry()
-        checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
+        if (!wasNap) {
+            dismissAutoSleepAlarm()
+            updateNextWakeUpTimeOnDismissOrExpiry()
+            checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
+        }
 
         updateListenersRegistration()
         updateNotification()
@@ -1426,8 +1414,7 @@ class MainService : Service(), SensorEventListener {
         EventLogger.log(this, "Wake-Up Goal alarm snoozed via flip gesture")
         stopWakeUpAlarmSound()
         snoozeWakeUpAlarm()
-        isWakeUpAlarmRinging = false
-        isWakeUpAlarmSnoozed = true
+        setWakeUpAlarmState(false, true)
         onTriggerVibration()
         updateListenersRegistration()
         updateNotification()
@@ -1443,8 +1430,7 @@ class MainService : Service(), SensorEventListener {
         cancelSnoozeAlarm()
         cancelNapAlarm(false)
         setNapAlarmRinging(false)
-        isWakeUpAlarmRinging = false
-        isWakeUpAlarmSnoozed = false
+        setWakeUpAlarmState(false, false)
         onTriggerVibration()
         updateListenersRegistration()
         updateNotification()
@@ -1743,8 +1729,7 @@ class MainService : Service(), SensorEventListener {
     override fun onDestroy() {
         EventLogger.log(this, EventLogger.LEVEL_LOW, "MainService destroyed")
         stopWakeUpAlarmSound()
-        isWakeUpAlarmRinging = false
-        isWakeUpAlarmSnoozed = false
+        setWakeUpAlarmState(false, false)
         setNapAlarmRinging(false)
         unregisterSensorListener()
         unregisterVolumeObserver()

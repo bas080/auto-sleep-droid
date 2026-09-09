@@ -2,6 +2,38 @@ package com.bas080.autosleepdroid
 
 import java.util.Calendar
 
+enum class SessionPhase {
+    IDLE,
+    INITIATION_AND_ACTIVE_SLEEP,
+    PRE_ALARM_WINDOW,
+    ALARM
+}
+
+fun getSessionPhase(
+    now: Long,
+    currentWakeTime: Long,
+    minSleepDuration: Long,
+    isSessionOngoing: Boolean,
+    isAlarmRingingOrSnoozed: Boolean = false
+): SessionPhase {
+    if (isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime)) {
+        return SessionPhase.ALARM
+    }
+
+    val windowStart = currentWakeTime - (minSleepDuration * 1.2).toLong()
+    val preAlarmStart = currentWakeTime - (minSleepDuration * 0.5).toLong()
+
+    if (now >= preAlarmStart && now < currentWakeTime) {
+        return SessionPhase.PRE_ALARM_WINDOW
+    }
+
+    if (now >= windowStart && now < preAlarmStart) {
+        return SessionPhase.INITIATION_AND_ACTIVE_SLEEP
+    }
+
+    return SessionPhase.IDLE
+}
+
 object PreferenceComputations {
 
     val IS_WAKE_ALARM_ENABLED: PreferenceManager.ComputedValue<Boolean> =
@@ -61,22 +93,24 @@ object PreferenceComputations {
             val timerStartTime = getter.getLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, 0L)
             val timerEndsAt = getter.getLong(PreferenceKeys.KEY_TIMER_ENDS_AT, 0L)
             val napEndsAt = getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L)
-            val isNapRinging = getter.getBoolean(MainService.KEY_NAP_ALARM_RINGING, false)
+            val isNapRinging = getter.getBoolean(PreferenceKeys.KEY_NAP_ALARM_RINGING, false)
+            val isWakeupRinging = getter.getBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING, false)
+            val isWakeupSnoozed = getter.getBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_SNOOZED, false)
+            val isAlarmRingingOrSnoozed = isNapRinging || isWakeupRinging || isWakeupSnoozed
 
             val isSessionOngoing = (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) ||
                     (timerStartTime > 0L && (now - timerStartTime < 14 * 3600_000L)) ||
                     (timerEndsAt > 0L) ||
                     (napEndsAt > now) ||
-                    isNapRinging
+                    isAlarmRingingOrSnoozed
 
-            getSessionPhase(now, currentWakeTime, minSleepDurationMs, isSessionOngoing)
+            getSessionPhase(now, currentWakeTime, minSleepDurationMs, isSessionOngoing, isAlarmRingingOrSnoozed)
         }
 
     val SHOULD_SHOW_AWAKE_ACTION: PreferenceManager.ComputedValue<Boolean> =
         PreferenceManager.ComputedValue { getter ->
             val napActive = getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L) > System.currentTimeMillis()
-            val napRinging = getter.getBoolean(MainService.KEY_NAP_ALARM_RINGING, false)
-            if (napActive || napRinging) return@ComputedValue true
+            if (napActive) return@ComputedValue true
 
             val phase = GET_SESSION_PHASE.compute(getter)
             phase == SessionPhase.PRE_ALARM_WINDOW || phase == SessionPhase.ALARM
