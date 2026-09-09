@@ -6,33 +6,58 @@ A **sleep session** in Auto Sleep Droid represents a tracked period of sleep bou
 
 Auto Sleep Droid uses these sessions to track rest intervals and automatically log completed sleep records to Android Health Connect.
 
-## Session Phases Relative to Alarm Time ($T_{alarm}$)
+## Session Phases Relative to Alarm Time
 
-A sleep session progresses through five concise lifecycle phases defined relative to the scheduled wake alarm time ($T_{alarm}$) and minimum sleep duration ($D_{min}$, default 7.5h):
+A sleep session progresses through five concise lifecycle phases determined by simple predicates evaluating current time (`now`), scheduled alarm time (`alarmTime`), and minimum sleep duration (`minSleepDuration`):
 
-### 1. Idle Phase ($t < T_{alarm} - 14\text{h}$ or no active session)
-- **Time Range**: Prior to going to bed or when no active sleep session exists.
-- **Nap State**: Fully enabled on the main UI and notification shade.
-- **"I'm Awake"**: Hidden.
+### 1. Idle Phase
 
-### 2. Initiation Phase ($T_{alarm} - 14\text{h} \le t < T_{alarm} - 1.2 \cdot D_{min}$, timer running)
-- **Time Range**: User turns on sleep timer or plays media early in the night.
-- **Nap State**: Disabled on main UI and omitted from notifications.
-- **"I'm Awake"**: Hidden during early countdown.
+```text
+noActiveSession || now < alarmTime - 14_hours
+```
 
-### 3. Active Sleep Phase ($T_{alarm} - 14\text{h} \le t < T_{alarm} - 1.2 \cdot D_{min}$, timer expired)
-- **Time Range**: Timer expires, media pauses (`sleep_start_time_ms`), user is sleeping.
-- **Nap State**: Disabled on main UI and omitted from notifications.
-- **"I'm Awake"**: Hidden until pre-alarm window.
+- **Description**: Prior to going to bed or when no active sleep session exists.
+- **Nap Option**: Fully enabled on the main UI and notification shade.
+- **"I'm Awake" Action**: Hidden.
 
-### 4. Pre-Alarm Window Phase ($T_{alarm} - 1.2 \cdot D_{min} \le t < T_{alarm}$)
-- **Time Range**: Current time enters the pre-alarm safeguard window (up to $1.2 \cdot D_{min}$ before $T_{alarm}$).
-- **Nap State**: Disabled.
-- **"I'm Awake"**: Visible in notification shade. Tapping **I'm Awake** completes the session, logs to Health Connect, resets wake time to target goal time, and reschedules for tomorrow.
+### 2. Initiation Phase
 
-### 5. Alarm Ringing / Snoozed Phase ($t = T_{alarm}$ or snoozed)
-- **Time Range**: Alarm triggers or is snoozed.
-- **Actions**: Offers **Dismiss** (or **I'm Awake**) and **Snooze**. Dismissing or marking awake concludes the session and reverts to Idle Phase.
+```text
+timerRunning && (now >= alarmTime - 14_hours && now < alarmTime - (1.2 * minSleepDuration))
+```
+
+- **Description**: User turns on sleep timer or plays media early in the night.
+- **Nap Option**: Disabled on main UI and omitted from notifications.
+- **"I'm Awake" Action**: Hidden during early countdown.
+
+### 3. Active Sleep Phase
+
+```text
+timerExpired && (now >= alarmTime - 14_hours && now < alarmTime - (1.2 * minSleepDuration))
+```
+
+- **Description**: Timer expires, media pauses (`sleep_start_time_ms`), user is sleeping.
+- **Nap Option**: Disabled on main UI and omitted from notifications.
+- **"I'm Awake" Action**: Hidden until pre-alarm window.
+
+### 4. Pre-Alarm Window Phase
+
+```text
+now >= alarmTime - (1.2 * minSleepDuration) && now < alarmTime
+```
+
+- **Description**: Current time enters the pre-alarm safeguard window.
+- **Nap Option**: Disabled.
+- **"I'm Awake" Action**: Visible in notification shade. Tapping **I'm Awake** completes the session, logs to Health Connect, resets wake time to target goal time, and reschedules for tomorrow.
+
+### 5. Alarm Ringing / Snoozed Phase
+
+```text
+isAlarmRinging || isAlarmSnoozed
+```
+
+- **Description**: Scheduled wake alarm triggers or is snoozed.
+- **Actions**: Notification shade offers **I'm Awake** (as the dismiss action) and **Snooze**. Tapping **I'm Awake** dismisses the alarm, completes and logs the session, and reverts to the Idle Phase.
 
 ## How Sleep Sessions Work
 
@@ -45,8 +70,8 @@ Nightly sleep sessions track the primary sleep period preceding a scheduled morn
 - **Start Time Capture**:
   - **Timer Start Time**: Recorded (`timer_start_time_ms`) when sleep timer is activated or reset.
   - **Timer Expiration**: Recorded (`sleep_start_time_ms`) when timer expires and media pauses. Resuming and expiring media later updates `sleep_start_time_ms` to the latest expiration time.
-  - **Pre-Wake Reset Window**: Resetting within $[T_{alarm} - 1.2 \cdot D_{min}, T_{alarm}]$ updates `sleep_start_time_ms` to current time if no active session exists.
-  - **Fallback Calculation**: If no timer was run, estimated as $T_{wake} - D_{min}$ upon wake alarm trigger or confirmation.
+  - **Pre-Wake Reset Window**: Resetting when `now >= alarmTime - (1.2 * minSleepDuration)` updates `sleep_start_time_ms` to current time if no active session exists.
+  - **Fallback Calculation**: If no timer was run, estimated as `wakeTime - minSleepDuration` upon wake alarm trigger or confirmation.
 
 - **End Time Capture**:
   - Captured when wake alarm is dismissed or when **I'm Awake** is tapped.

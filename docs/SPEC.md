@@ -44,8 +44,8 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
   - The notification features primary toggle actions ("Disable" when enabled, or "Enable" when disabled) and a secondary action button ("Nap" or "I'm Awake").
-  - Starting a nap is disabled on `MainActivity` and unavailable in notifications while a sleep session is in progress ($t \ge T_{alarm} - 14\text{h}$).
-  - The secondary action displays **I'm Awake** during the pre-alarm window ($T_{alarm} - 1.2 \cdot D_{min} \le t < T_{alarm}$), during active naps, or while alarms are ringing/snoozed. When no sleep session is in progress (Idle Phase), it displays **Nap**. During active sleep sessions prior to the pre-alarm window ($t < T_{alarm} - 1.2 \cdot D_{min}$), the Nap action is omitted.
+  - Starting a nap is disabled on `MainActivity` and unavailable in notifications while a sleep session is in progress (`now >= alarmTime - 14_hours`).
+  - The secondary action displays **I'm Awake** during the pre-alarm window (`now >= alarmTime - (1.2 * minSleepDuration)`), during active naps, or while alarms are ringing/snoozed (serving as the alarm dismiss action). When no sleep session is in progress (Idle Phase), it displays **Nap**. During active sleep sessions prior to the pre-alarm window, the Nap action is omitted.
   - Tapping "I'm Awake" stops any active alarm or nap, completes/logs the active sleep session to Health Connect (if enabled), steps night wake-up time 15 minutes back toward target goal time (for night sleep), reschedules the wake alarm for tomorrow, and reverts the notification action back to "Nap".
   - Tapping/clicking the notification body opens `MainActivity`.
 
