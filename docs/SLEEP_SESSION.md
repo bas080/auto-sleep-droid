@@ -1,0 +1,47 @@
+# Sleep Session Concept & Workflow
+
+## Overview
+
+A **sleep session** in Auto Sleep Droid represents a tracked period of sleep bounded by a start timestamp and an end timestamp. Sleep is defined as the rest period that occurs either before a wake-up alarm (a nightly sleep session) or when a nap is started (a nap session).
+
+Auto Sleep Droid uses these sessions to track rest intervals and automatically log completed sleep records to Android Health Connect.
+
+## How Sleep Sessions Work
+
+Auto Sleep Droid tracks two distinct types of sleep sessions: **Nightly Sleep Sessions** and **Nap Sessions**.
+
+### Nightly Sleep Sessions
+
+Nightly sleep sessions track the primary sleep period preceding a scheduled morning wake-up alarm or wake action.
+
+- **Start Time Capture**:
+  - **Timer Start Time**: When the sleep timer is activated or reset (via phone flip gesture, hardware volume button press, or duration adjustment), `timer_start_time_ms` is recorded.
+  - **Timer Expiration**: When the sleep timer countdown completes and media playback is paused, `sleep_start_time_ms` is recorded. If media playback is resumed later during the night and the sleep timer expires again, `sleep_start_time_ms` updates to the latest expiration timestamp.
+  - **Pre-Wake Reset Window**: If the sleep timer is reset within the window `[current_wake_time - 1.2 * min_sleep_duration, current_wake_time]` while no active session exists (or an existing session is over 14 hours old), `sleep_start_time_ms` updates to the current system timestamp.
+  - **Fallback Calculation**: If no sleep timer was run prior to wake-up, the app estimates sleep start as `wake_time - minimum_sleep_duration` upon wake alarm trigger or explicit wake confirmation.
+
+- **End Time Capture**:
+  - Captured when the scheduled wake-up alarm is dismissed (via hardware volume button press, notification action button, or main UI) or when the user explicitly taps **I'm Awake** in the ongoing status notification.
+
+### Nap Sessions
+
+Nap sessions track short daytime rests initiated via the Nap feature.
+
+- **Start Time Capture**: Recorded (`nap_start_time_ms`) when a nap alarm is started from the main screen or status notification shade.
+- **End Time Capture**: Captured when the nap alarm triggers, is dismissed, or when the user taps **I'm Awake** while a nap is active.
+- **Independent Operation**: Nap sessions operate independently of nightly sleep sessions and do not alter or adjust scheduled nightly wake-up goal times.
+
+### Session Processing & Health Connect Integration
+
+When a sleep session or nap completes (upon alarm dismissal or tapping **I'm Awake**):
+
+- **Health Connect Sync**: If Health Connect integration is enabled (`health_connect_enabled`), Health Connect SDK is present on the device, and write permission (`android.permission.health.WRITE_SLEEP`) is granted, completed sessions are written to Health Connect as a `SleepSessionRecord`.
+- **Minimum Duration Safeguard**: Sessions shorter than the configured threshold (`hc_min_duration_minutes`, default 15 minutes) are filtered out and ignored to prevent logging accidental resets or brief naps.
+- **Stale Session Drop Policy (14-Hour Rule)**: If 14 hours pass without explicit wake confirmation (**I'm Awake**) or alarm dismissal, unconfirmed sleep session timestamps are considered stale and dropped without being written to Health Connect.
+- **Timestamp Cleanup**: Once processed or dropped, pending start timestamps (`sleep_start_time_ms`, `timer_start_time_ms`, `nap_start_time_ms`) are cleared to avoid duplicate session entries.
+
+### Notification Integration
+
+- **"I'm Awake" Action**: The ongoing status notification displays **I'm Awake** as its secondary action whenever an active sleep session exists (`sleep_start_time_ms` or active timer within 14 hours), a nap is active, or an alarm is ringing/snoozed.
+- **Background Execution**: Tapping **I'm Awake** processes the sleep session directly in the background without launching UI dialogs, cancels today's pending wake alarm or active nap, resets current wake time to target goal time (for night sleep), reschedules tomorrow's alarm, and reverts the notification action back to **Nap**.
+- **Active Countdown Protection**: Tapping **I'm Awake** while a sleep timer countdown is still running discards pending timer start timestamps without stopping the countdown timer or canceling scheduled alarms.
