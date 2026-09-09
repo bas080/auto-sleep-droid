@@ -1527,16 +1527,21 @@ public class MainServiceTest {
     public void testNotificationReportsProjectedWakeAlarmTimeWhileTimerIsActive() {
         long now = System.currentTimeMillis();
         long timerEndsAt = now + 30 * 60_000L;
+        Calendar calWake = Calendar.getInstance();
+        calWake.setTimeInMillis(now + 10 * 3600_000L);
+        int wakeHour = calWake.get(Calendar.HOUR_OF_DAY);
+        int wakeMinute = calWake.get(Calendar.MINUTE);
+
         preferences.edit()
                 .putBoolean("active", true)
                 .putBoolean("show_notification", true)
                 .putBoolean("wake_up_goal_enabled", true)
                 .putInt("duration_minutes", 30)
                 .putInt("min_sleep_duration_minutes", 450)
-                .putInt("wake_up_goal_hour", 6)
-                .putInt("wake_up_goal_minute", 30)
-                .putInt("current_wake_hour", 6)
-                .putInt("current_wake_minute", 30)
+                .putInt("wake_up_goal_hour", wakeHour)
+                .putInt("wake_up_goal_minute", wakeMinute)
+                .putInt("current_wake_hour", wakeHour)
+                .putInt("current_wake_minute", wakeMinute)
                 .putLong("timer_ends_at", timerEndsAt)
                 .commit();
 
