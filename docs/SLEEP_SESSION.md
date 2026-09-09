@@ -49,6 +49,36 @@ isSessionOngoing && now >= currentWakeTime
 - **Description**: Current time reaches or passes `currentWakeTime` during an ongoing session. Snoozing advances `currentWakeTime` to the snoozed alarm time.
 - **Actions**: Notification shade offers **I'm Awake** (as the dismiss action) and **Snooze**. Tapping **I'm Awake** dismisses the alarm, completes and logs the session, resets wake time to target goal time, and reverts to the Idle Phase.
 
+## Phase Calculation Pseudocode
+
+The session phase can be determined cleanly using early returns and a fallback return:
+
+```kotlin
+fun getSessionPhase(
+    now: Long,
+    currentWakeTime: Long,
+    minSleepDuration: Long,
+    isSessionOngoing: Boolean
+): SessionPhase {
+    val windowStart = currentWakeTime - (minSleepDuration * 1.2)
+    val preAlarmStart = currentWakeTime - (minSleepDuration * 0.5)
+
+    if (isSessionOngoing && now >= currentWakeTime) {
+        return SessionPhase.ALARM
+    }
+
+    if (now >= preAlarmStart && now < currentWakeTime) {
+        return SessionPhase.PRE_ALARM_WINDOW
+    }
+
+    if (now >= windowStart && now < preAlarmStart) {
+        return SessionPhase.INITIATION_AND_ACTIVE_SLEEP
+    }
+
+    return SessionPhase.IDLE
+}
+```
+
 ## How Sleep Sessions Work
 
 Auto Sleep Droid tracks two distinct types of sleep sessions: **Nightly Sleep Sessions** and **Nap Sessions**.
