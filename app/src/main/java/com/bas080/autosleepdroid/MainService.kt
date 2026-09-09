@@ -321,6 +321,10 @@ class MainService : Service(), SensorEventListener {
             EventLogger.log("Music playback started")
         } else if (playbackStopped) {
             EventLogger.log("Music playback stopped")
+            if (state == State.ACTIVE) {
+                preferences?.edit()?.putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now)?.apply()
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Media paused during active timer; recorded sleep start time")
+            }
         }
 
         if (isEnabled) {
@@ -1292,6 +1296,14 @@ class MainService : Service(), SensorEventListener {
         if (maxVol <= 0) {
             return
         }
+        if (Build.VERSION.SDK_INT >= 23 && am.isStreamMute(AudioManager.STREAM_ALARM)) {
+            try {
+                am.adjustStreamVolume(AudioManager.STREAM_ALARM, AudioManager.ADJUST_UNMUTE, 0)
+                EventLogger.log(this, "Unmuted STREAM_ALARM for wake-up alarm")
+            } catch (e: Exception) {
+                EventLogger.log(this, "Failed to unmute STREAM_ALARM: ${e.message}")
+            }
+        }
         val currentVol = am.getStreamVolume(AudioManager.STREAM_ALARM)
         val minAudibleVol = Math.max(1, Math.round(maxVol * 0.3f))
         if (currentVol < minAudibleVol) {
@@ -1316,7 +1328,7 @@ class MainService : Service(), SensorEventListener {
             if (currentAlarmRingtone != null) {
                 AlarmAudioUtils.configureAlarmAudioAttributes(currentAlarmRingtone)
                 if (Build.VERSION.SDK_INT >= 28) {
-                    currentAlarmRingtone?.setVolume(0.0f)
+                    currentAlarmRingtone?.setVolume(0.05f)
                 }
                 currentAlarmRingtone?.play()
                 EventLogger.log(this, "Wake-Up Goal alarm tone started playing")
@@ -1338,7 +1350,8 @@ class MainService : Service(), SensorEventListener {
         val ringtone = currentAlarmRingtone ?: return
         val elapsedTimeMs = System.currentTimeMillis() - alarmCrescendoStartTimeMs
         val linearProgress = Math.min(1.0f, elapsedTimeMs.toFloat() / ALARM_CRESCENDO_DURATION_MS)
-        val gain = linearProgress * linearProgress
+        val rawGain = linearProgress * linearProgress
+        val gain = Math.max(0.05f, rawGain)
 
         if (Build.VERSION.SDK_INT >= 28) {
             try {

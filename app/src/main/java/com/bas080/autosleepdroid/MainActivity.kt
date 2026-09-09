@@ -402,11 +402,10 @@ class MainActivity : Activity(), EventLogger.Listener {
                 val dndActive = isDndActive()
                 editor.putBoolean(PreferenceKeys.KEY_ACTIVE, dndActive)
                 switchEnableTimer?.isChecked = dndActive
-                openDndSettings()
             }
             editor.apply()
             if (isChecked) {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, if (isUserInitiated) "Auto sleep timer (DND) enabled; opening DND settings" else "Auto sleep timer (DND) enabled")
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto sleep timer (DND) enabled")
             } else {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto sleep timer (DND) disabled")
             }
