@@ -70,6 +70,7 @@ class MainActivity : Activity(), EventLogger.Listener {
     private var btnNap: View? = null
     private var textNapStatus: TextView? = null
     private var btnVersion: View? = null
+    private var btnFeedback: View? = null
     private var btnLinks: View? = null
     private var eventScrollView: ScrollView? = null
     private var eventLogText: TextView? = null
@@ -169,6 +170,7 @@ class MainActivity : Activity(), EventLogger.Listener {
         btnNap = findViewById(R.id.btn_nap)
         textNapStatus = findViewById(R.id.text_nap_status)
         btnVersion = findViewById(R.id.btn_version)
+        btnFeedback = findViewById(R.id.btn_feedback)
         btnLinks = findViewById(R.id.btn_links)
         eventScrollView = findViewById(R.id.event_scroll_view)
         eventLogText = findViewById(R.id.event_log_text)
@@ -186,14 +188,24 @@ class MainActivity : Activity(), EventLogger.Listener {
 
         btnVersion?.setOnClickListener { openUrl("https://github.com/bas080/auto-sleep-droid/releases") }
 
+        btnFeedback?.setOnClickListener { promptFeedbackIncludeLogs() }
+
         btnLinks?.setOnClickListener { showLinksDialog() }
+    }
+
+    private fun promptFeedbackIncludeLogs() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle(R.string.dialog_feedback_logs_title)
+        builder.setMessage(R.string.dialog_feedback_logs_message)
+        builder.setPositiveButton(R.string.dialog_yes) { _, _ -> sendFeedbackEmail(includeLogs = true) }
+        builder.setNegativeButton(R.string.dialog_no) { _, _ -> sendFeedbackEmail(includeLogs = false) }
+        builder.show()
     }
 
     private fun showLinksDialog() {
         val options = arrayOf<CharSequence>(
             getString(R.string.link_manual),
             getString(R.string.link_logs),
-            getString(R.string.link_feedback),
             getString(R.string.link_donate),
             getString(R.string.link_export),
             getString(R.string.link_import)
@@ -205,21 +217,22 @@ class MainActivity : Activity(), EventLogger.Listener {
             when (which) {
                 0 -> showManualScreen()
                 1 -> showLogsScreen()
-                2 -> sendFeedbackEmail()
-                3 -> openUrl("https://liberapay.com/bas080")
-                4 -> exportSettings()
-                5 -> showImportDialog()
+                2 -> openUrl("https://liberapay.com/bas080")
+                3 -> exportSettings()
+                4 -> showImportDialog()
             }
         }
         builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ -> dialog.dismiss() }
         builder.show()
     }
 
-    fun sendFeedbackEmail(crashReport: String? = null) {
+    fun sendFeedbackEmail(crashReport: String? = null, includeLogs: Boolean = false) {
         val subject = "Auto Sleep Droid Feedback (v${BuildConfig.VERSION_NAME})"
         val bodyBuilder = StringBuilder()
         if (!crashReport.isNullOrEmpty()) {
             bodyBuilder.append("Crash Report:\n").append(crashReport).append("\n\n")
+        }
+        if (includeLogs || !crashReport.isNullOrEmpty()) {
             val events = EventLogger.getEvents(this)
             if (events.isNotEmpty()) {
                 bodyBuilder.append("Logs:\n")
@@ -531,6 +544,7 @@ class MainActivity : Activity(), EventLogger.Listener {
         setRowEnabled(rowHealthConnect, true)
         setRowEnabled(inputHcMinDuration, healthConnectEnabled)
         setRowEnabled(btnVersion, true)
+        setRowEnabled(btnFeedback, true)
 
         goalContainer?.visibility = View.VISIBLE
     }

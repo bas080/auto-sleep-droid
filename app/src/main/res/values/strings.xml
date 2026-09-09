@@ -75,8 +75,13 @@
     <string name="desc_nap_dnd">Turn DND on during nap and off when nap ends</string>
     <string name="label_version">Version</string>
     <string name="desc_version">View release notes and check for updates</string>
+    <string name="desc_feedback">Send feedback or report issues via email</string>
     <string name="label_links">Links</string>
-    <string name="desc_links">Manual, event logs, feedback, donation, export, and import</string>
+    <string name="desc_links">Manual, event logs, donation, export, and import</string>
+    <string name="dialog_feedback_logs_title">Include event logs?</string>
+    <string name="dialog_feedback_logs_message">Would you like to include event logs in your feedback email to help troubleshoot issues?</string>
+    <string name="dialog_yes">Yes</string>
+    <string name="dialog_no">No</string>
     <string name="version_label">v%1$s</string>
     <string name="btn_back">Back</string>
     <string name="link_manual">Manual</string>

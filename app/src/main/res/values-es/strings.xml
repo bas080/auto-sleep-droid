@@ -74,8 +74,13 @@
     <string name="desc_nap_dnd">Activa No molestar durante la siesta y desactívalo al finalizar</string>
     <string name="label_version">Versión</string>
     <string name="desc_version">Ver notas de la versión y buscar actualizaciones</string>
+    <string name="desc_feedback">Enviar comentarios o informar de problemas por correo</string>
     <string name="label_links">Enlaces</string>
-    <string name="desc_links">Manual, registros, comentarios, donación, exportar e importar</string>
+    <string name="desc_links">Manual, registros, donación, exportar e importar</string>
+    <string name="dialog_feedback_logs_title">¿Incluir registros de eventos?</string>
+    <string name="dialog_feedback_logs_message">¿Deseas incluir los registros de eventos en tu correo de comentarios para ayudar a solucionar problemas?</string>
+    <string name="dialog_yes">Sí</string>
+    <string name="dialog_no">No</string>
     <string name="version_label">v%1$s</string>
     <string name="btn_back">Volver</string>
     <string name="link_manual">Manual</string>

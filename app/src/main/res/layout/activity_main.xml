@@ -252,6 +252,15 @@
                     app:rowType="value"
                     app:valueId="@+id/app_version_text" />
 
+                <!-- Feedback Row -->
+                <com.bas080.autosleepdroid.SettingRowView
+                    android:id="@+id/btn_feedback"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:rowTitle="@string/link_feedback"
+                    app:rowDescription="@string/desc_feedback"
+                    app:rowType="none" />
+
                 <!-- Links Section -->
                 <com.bas080.autosleepdroid.SettingRowView
                     android:id="@+id/btn_links"
