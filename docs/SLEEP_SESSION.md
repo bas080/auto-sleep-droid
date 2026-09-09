@@ -8,7 +8,7 @@ Auto Sleep Droid uses these sessions to track rest intervals and automatically l
 
 ## Session Phases Relative to Alarm Time
 
-A sleep session progresses through concise lifecycle phases evaluated by predicates on current time (`now`), `currentWakeTime`, and `minSleepDuration`:
+A sleep session progresses through four concise lifecycle phases evaluated by predicates on current time (`now`), `currentWakeTime`, and `minSleepDuration`:
 
 ### 1. Idle Phase
 
@@ -26,7 +26,7 @@ A sleep session progresses through concise lifecycle phases evaluated by predica
 now >= currentWakeTime - (minSleepDuration * 1.2) && now < currentWakeTime - (minSleepDuration * 0.5)
 ```
 
-- **Description**: Sleep window when going to bed or actively sleeping (evaluated purely by time range, regardless of whether the sleep timer is active or expired).
+- **Description**: Sleep window when going to bed or actively sleeping.
 - **Nap Option**: Disabled on main UI and omitted from notifications.
 - **"I'm Awake" Action**: Hidden during early sleep.
 
@@ -40,13 +40,13 @@ now >= currentWakeTime - (minSleepDuration * 0.5) && now < currentWakeTime
 - **Nap Option**: Disabled.
 - **"I'm Awake" Action**: Visible in notification shade. Tapping **I'm Awake** completes the session, logs to Health Connect, resets wake time to target goal time, and reschedules for tomorrow.
 
-### 4. Alarm / Ringing Phase
+### 4. Alarm Phase
 
 ```text
-(isSessionOngoing && now >= currentWakeTime) || isAlarmRinging || isAlarmSnoozed
+isSessionOngoing && now >= currentWakeTime
 ```
 
-- **Description**: Current time reaches or passes `currentWakeTime` during an ongoing session, or the alarm is actively ringing/snoozed.
+- **Description**: Current time reaches or passes `currentWakeTime` during an ongoing session. Snoozing advances `currentWakeTime` to the snoozed alarm time.
 - **Actions**: Notification shade offers **I'm Awake** (as the dismiss action) and **Snooze**. Tapping **I'm Awake** dismisses the alarm, completes and logs the session, resets wake time to target goal time, and reverts to the Idle Phase.
 
 ## How Sleep Sessions Work
