@@ -224,7 +224,6 @@ class MainService : Service(), SensorEventListener {
         }
     }
 
-    @JvmOverloads
     fun handleAlarmExpiryState(currentVolume: Int, now: Long = System.currentTimeMillis()) {
         if (isEnabled && state == State.ACTIVE) {
             if (timerEndsAt > 0L && now < timerEndsAt - 1000L) {
@@ -1791,22 +1790,18 @@ class MainService : Service(), SensorEventListener {
         private const val ORIENTATION_FACE_UP = 1
         private const val ORIENTATION_FACE_DOWN = 2
 
-        @JvmStatic
         fun isValidDuration(minutes: Int): Boolean {
             return minutes >= AppDefaults.MINUTES_MIN && minutes <= AppDefaults.MINUTES_MAX
         }
 
-        @JvmStatic
         fun formatDurationString(totalMinutes: Int): String {
             return DurationUtils.formatDurationString(totalMinutes)
         }
 
-        @JvmStatic
         fun parseDurationMinutes(input: String?): Int {
             return DurationUtils.parseDurationMinutes(input)
         }
 
-        @JvmStatic
         fun calculateScheduledAlarm(context: Context?, now: Long, timerEndsAt: Long): Calendar? {
             context ?: return null
             val prefs = context.getSharedPreferences(PREFERENCES, MODE_PRIVATE)

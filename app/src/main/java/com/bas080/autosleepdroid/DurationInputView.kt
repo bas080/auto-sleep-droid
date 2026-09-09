@@ -10,11 +10,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.NumberPicker
 
-class DurationInputView @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
-) : LinearLayout(context, attrs, defStyleAttr) {
+class DurationInputView : LinearLayout {
 
     private var pickerHours: NumberPicker? = null
     private var pickerMinutes: NumberPicker? = null
@@ -32,7 +28,19 @@ class DurationInputView @JvmOverloads constructor(
         fun onInvalidDuration()
     }
 
-    init {
+    constructor(context: Context) : super(context) {
+        initView(context)
+    }
+
+    constructor(context: Context, attrs: AttributeSet?) : super(context, attrs) {
+        initView(context)
+    }
+
+    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
+        initView(context)
+    }
+
+    private fun initView(context: Context) {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER
         LayoutInflater.from(context).inflate(R.layout.view_duration_input, this, true)
