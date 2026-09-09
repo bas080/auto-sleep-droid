@@ -62,6 +62,29 @@
                     android:textStyle="bold" />
 
                 <com.bas080.autosleepdroid.SettingRowView
+                    android:id="@+id/btn_nap"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:rowTitle="@string/label_nap"
+                    app:rowDescription="@string/desc_nap"
+                    app:rowType="value"
+                    app:valueId="@+id/text_nap_status" />
+
+                <!-- Do Not Disturb Section -->
+                <TextView
+                    android:id="@+id/header_dnd"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="24dp"
+                    android:paddingBottom="4dp"
+                    android:text="@string/heading_dnd"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <com.bas080.autosleepdroid.SettingRowView
                     android:id="@+id/row_nap_dnd"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -70,14 +93,15 @@
                     app:rowType="toggle"
                     app:switchId="@+id/switch_nap_dnd" />
 
+                <!-- Auto Sleep Timer Toggle Row -->
                 <com.bas080.autosleepdroid.SettingRowView
-                    android:id="@+id/btn_nap"
+                    android:id="@+id/row_auto_timer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:rowTitle="@string/label_nap"
-                    app:rowDescription="@string/desc_nap"
-                    app:rowType="value"
-                    app:valueId="@+id/text_nap_status" />
+                    app:rowTitle="@string/label_auto_timer"
+                    app:rowDescription="@string/desc_auto_timer"
+                    app:rowType="toggle"
+                    app:switchId="@+id/switch_auto_timer" />
 
                 <!-- Timer Section -->
                 <TextView
@@ -92,16 +116,6 @@
                     android:textColor="?android:attr/textColorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
-
-                <!-- Auto Sleep Timer Toggle Row -->
-                <com.bas080.autosleepdroid.SettingRowView
-                    android:id="@+id/row_auto_timer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:rowTitle="@string/label_auto_timer"
-                    app:rowDescription="@string/desc_auto_timer"
-                    app:rowType="toggle"
-                    app:switchId="@+id/switch_auto_timer" />
 
                 <!-- Enable Sleep Timer -->
                 <com.bas080.autosleepdroid.SettingRowView

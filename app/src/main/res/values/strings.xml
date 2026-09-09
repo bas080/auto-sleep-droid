@@ -64,6 +64,7 @@
     <string name="toast_nap_started">Nap alarm set for %1$s</string>
     <string name="toast_nap_cancelled">Nap alarm cancelled</string>
     <string name="heading_nap">Nap</string>
+    <string name="heading_dnd">Do Not Disturb</string>
     <string name="heading_timer">Timer</string>
     <string name="heading_alarm">Alarm</string>
     <string name="heading_health_connect">Health Connect</string>

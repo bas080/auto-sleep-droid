@@ -35,11 +35,10 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - Main Application Screen (`MainActivity`):
   - Provides a complete single-screen configuration UI for all settings:
     - Nap alarm section at top featuring a Nap button ("Nap" or "Cancel Nap" when active).
-    - Sleep timer enable/disable switch.
-    - Duration inputs (sleep timer duration: 0-12h with 5m steps, minimum sleep duration: 0-16h with 15m steps, nap alarm duration: 0-3h with 5m steps) use hour and minute wheel pickers. Timer duration controls remain enabled when the sleep timer switch is OFF.
-    - Auto sleep timer (DND) enable/disable switch (optional automation; manual toggle always available).
+    - Do Not Disturb section featuring Nap DND switch and Auto sleep timer (DND) switch.
+    - Sleep timer enable/disable switch and timer duration input (0-12h with 5m steps using hour and minute wheel pickers). Timer duration controls remain enabled when the sleep timer switch is OFF.
     - Wake-up alarm enable switch ("Wake-up alarm"), target wake-up time picker button, and minimum sleep duration input.
-    - Section headings (Nap, Timer, Alarm, About) remain fully visible and opaque at all times.
+    - Section headings (Nap, Do Not Disturb, Timer, Alarm, Health Connect, About) remain fully visible and opaque at all times.
   - Action links at the bottom of the form under a "Links" header: Manual, Logs, Feedback, Donate, Export, and Import arranged in a FlowLayout inline wrapping layout separated by middle dots.
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
@@ -131,7 +130,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
   - Notification Shade: Features a **Nap** / **Cancel Nap** action button. Tapping **Nap** launches `NapDialogActivity` without pulling `MainActivity` or the main UI to the foreground; tapping **Cancel Nap** cancels the nap alarm.
 - **Nap Alarm & Reset Behavior**:
   - Uses existing wake alarm behavior (alarm tone with 3-minute volume crescendo, flip gesture snooze, volume button dismiss).
-  - Feature toggle: An optional "Do Not Disturb (DND)" toggle row under the Nap section on `MainActivity` controls whether DND mode is automatically turned on when a nap starts and turned off when the nap ends or is cancelled (when notification policy access permission is granted).
+  - Feature toggle: An optional "Do Not Disturb (DND)" toggle row under the Do Not Disturb section on `MainActivity` controls whether DND mode is automatically turned on when a nap starts and turned off when the nap ends or is cancelled (when notification policy access permission is granted).
   - When the sleep timer is reset (via flip gesture, volume button press, or duration update), an active nap alarm is pushed forward by the same reset increment. Dismissing or marking awake from a nap alarm records the nap session without affecting or adjusting the current wake-up time.
 
 ## Health Connect Integration
