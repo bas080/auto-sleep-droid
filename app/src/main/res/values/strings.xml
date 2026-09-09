@@ -71,7 +71,7 @@
     <string name="heading_about">About</string>
     <string name="label_nap">Nap alarm</string>
     <string name="desc_nap">Start a quick nap wake alarm</string>
-    <string name="label_nap_dnd">Do Not Disturb (DND)</string>
+    <string name="label_nap_dnd">Nap DND</string>
     <string name="desc_nap_dnd">Turn DND on during nap and off when nap ends</string>
     <string name="label_version">Version</string>
     <string name="desc_version">View release notes and check for updates</string>
@@ -106,7 +106,7 @@
     <string name="desc_duration">Sleep timer countdown duration before audio volume fades out</string>
     <string name="label_wake_up_goal">Wake-up alarm</string>
     <string name="desc_wake_up_goal">Automatically schedule daily wake-up alarms with sleep duration safeguards</string>
-    <string name="label_auto_timer">Auto sleep timer (DND)</string>
+    <string name="label_auto_timer">Auto sleep timer</string>
     <string name="desc_auto_timer">Optionally turn sleep timer on/off with Do Not Disturb (manual toggle always available)</string>
     <string name="label_target_time">Target wake-up time</string>
     <string name="desc_target_time">Desired daily wake-up clock time</string>
