@@ -39,8 +39,9 @@ Toggling "Show notification" to ON prompts the user for notification permission 
     - Wake-up alarm enable switch ("Wake-up alarm"), target wake-up time picker button, and minimum sleep duration input.
     - Health Connect synchronization switch and minimum session duration input.
     - Do Not Disturb section featuring Nap DND switch and Auto sleep timer switch.
+    - About section featuring Version row, Feedback row (prompts user whether to include event logs in their email), and Links row.
     - Section headings (Nap, Timer, Alarm, Health Connect, Do Not Disturb, About) remain fully visible and opaque at all times.
-  - Action links at the bottom of the form under a "Links" header: Manual, Logs, Feedback, Donate, Export, and Import arranged in a FlowLayout inline wrapping layout separated by middle dots.
+  - Action links under a "Links" header: Manual, Logs, Donate, Export, and Import.
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
   - The notification features primary toggle actions ("Disable" when enabled, or "Enable" when disabled) and a secondary action button ("Nap" or "I'm Awake").
@@ -165,7 +166,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - Starting the sleep timer schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
 - Disabling the timer does not cancel scheduled wake alarms, allowing the wake alarm to operate independently of the sleep timer.
 - Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
-- The main screen includes "Export" and "Import" action links rendered in the bottom action link list.
+- The main screen includes a Feedback row under About and "Export" and "Import" action links in the Links dialog.
 - Tapping "Export" serializes configuration settings and launches a system share action (`ACTION_SEND`).
 - Tapping "Import" presents an instructional dialog for pasting configuration strings, updating preferences and notifications upon valid input, or preserving existing preferences when given invalid input.
 - Health Connect synchronization can be toggled from the main screen UI and automatically records sleep sessions when sleep and wake events occur.

@@ -166,16 +166,25 @@ class MainActivityTest {
     }
 
     @Test
-    fun testLinksDialogFeedbackLaunchesIntent() {
-        val controller = Robolectric.buildActivity(MainActivity::class.java)
-        val activity = controller.create().get()
-        val btnLinks = activity.findViewById<View>(R.id.btn_links)
-        assertNotNull(btnLinks)
+    fun testFeedbackButtonPromptsIncludeLogsDialogAndLaunchesIntent() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        EventLogger.log(application, EventLogger.LEVEL_HIGH, "User feedback test log")
 
-        btnLinks.performClick()
-        val dialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertNotNull(dialog)
-        Shadows.shadowOf(dialog).clickOnItem(2)
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val btnFeedback = activity.findViewById<View>(R.id.btn_feedback)
+        assertNotNull("btn_feedback view should exist in About section", btnFeedback)
+
+        // Test clicking Feedback and choosing Yes (Include Logs)
+        btnFeedback.performClick()
+        val promptDialog = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull("Feedback click should show include logs prompt dialog", promptDialog)
+
+        val yesBtn = promptDialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        assertNotNull(yesBtn)
+        yesBtn.performClick()
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
         val chooserIntent = Shadows.shadowOf(activity).nextStartedActivity
         assertNotNull(chooserIntent)
@@ -186,6 +195,27 @@ class MainActivityTest {
         assertEquals(Intent.ACTION_SENDTO, sendIntent?.action)
         assertTrue(sendIntent?.dataString?.startsWith("mailto:bas080@hotmail.com") == true)
         assertTrue(sendIntent?.getStringExtra(Intent.EXTRA_SUBJECT)?.contains("Auto Sleep Droid Feedback") == true)
+        val bodyWithLogs = sendIntent?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
+        assertTrue("Feedback email with logs included should contain Logs section", bodyWithLogs.contains("Logs:"))
+        assertTrue("Feedback email should contain logged events", bodyWithLogs.contains("User feedback test log"))
+
+        // Test clicking Feedback and choosing No (Send Without Logs)
+        btnFeedback.performClick()
+        val promptDialogNo = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull(promptDialogNo)
+
+        val noBtn = promptDialogNo.getButton(DialogInterface.BUTTON_NEGATIVE)
+        assertNotNull(noBtn)
+        noBtn.performClick()
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        val chooserIntentNo = Shadows.shadowOf(activity).nextStartedActivity
+        assertNotNull(chooserIntentNo)
+
+        val sendIntentNo = chooserIntentNo?.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+        assertNotNull(sendIntentNo)
+        val bodyWithoutLogs = sendIntentNo?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
+        assertFalse("Feedback email without logs should NOT contain Logs section", bodyWithoutLogs.contains("Logs:"))
     }
 
     @Test
@@ -198,7 +228,7 @@ class MainActivityTest {
         btnLinks.performClick()
         val dialog = ShadowAlertDialog.getLatestAlertDialog()
         assertNotNull(dialog)
-        Shadows.shadowOf(dialog).clickOnItem(3)
+        Shadows.shadowOf(dialog).clickOnItem(2)
 
         val intent = Shadows.shadowOf(activity).nextStartedActivity
         assertNotNull(intent)
@@ -216,7 +246,7 @@ class MainActivityTest {
         btnLinks.performClick()
         val dialog = ShadowAlertDialog.getLatestAlertDialog()
         assertNotNull(dialog)
-        Shadows.shadowOf(dialog).clickOnItem(4)
+        Shadows.shadowOf(dialog).clickOnItem(3)
 
         val chooserIntent = Shadows.shadowOf(activity).nextStartedActivity
         assertNotNull(chooserIntent)
@@ -238,7 +268,7 @@ class MainActivityTest {
         btnLinks.performClick()
         val linksDialog = ShadowAlertDialog.getLatestAlertDialog()
         assertNotNull(linksDialog)
-        Shadows.shadowOf(linksDialog).clickOnItem(5)
+        Shadows.shadowOf(linksDialog).clickOnItem(4)
 
         val importDialog = ShadowAlertDialog.getLatestAlertDialog()
         assertNotNull(importDialog)
@@ -984,7 +1014,7 @@ class MainActivityTest {
         val switchGoal = activity.findViewById<Switch>(R.id.switch_enable_goal)
         switchGoal.isChecked = true
 
-        val rowIds = intArrayOf(R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_version, R.id.btn_links)
+        val rowIds = intArrayOf(R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_version, R.id.btn_feedback, R.id.btn_links)
         for (rowId in rowIds) {
             val parentRow = activity.findViewById<View>(rowId)
             assertNotNull("Row should exist", parentRow)
