@@ -40,6 +40,7 @@ class MainActivity : Activity(), EventLogger.Listener {
     private var logsOverlayContainer: View? = null
 
     private var headerNap: View? = null
+    private var headerDnd: View? = null
     private var headerTimer: View? = null
     private var headerAlarm: View? = null
     private var headerHealthConnect: View? = null
@@ -138,6 +139,7 @@ class MainActivity : Activity(), EventLogger.Listener {
         logsOverlayContainer = findViewById(R.id.logs_overlay_container)
 
         headerNap = findViewById(R.id.header_nap)
+        headerDnd = findViewById(R.id.header_dnd)
         headerTimer = findViewById(R.id.header_timer)
         headerAlarm = findViewById(R.id.header_alarm)
         headerHealthConnect = findViewById(R.id.header_health_connect)
@@ -512,6 +514,7 @@ class MainActivity : Activity(), EventLogger.Listener {
 
     private fun updateInputEnabledStates(active: Boolean, goalEnabled: Boolean, healthConnectEnabled: Boolean) {
         setRowEnabled(headerNap, true)
+        setRowEnabled(headerDnd, true)
         setRowEnabled(headerTimer, true)
         setRowEnabled(headerAlarm, true)
         setRowEnabled(headerHealthConnect, true)

@@ -628,14 +628,17 @@ class MainActivityTest {
         val activity = controller.create().resume().get()
 
         val headerNap = activity.findViewById<TextView>(R.id.header_nap)
+        val headerDnd = activity.findViewById<TextView>(R.id.header_dnd)
         val headerTimer = activity.findViewById<TextView>(R.id.header_timer)
         val headerAlarm = activity.findViewById<TextView>(R.id.header_alarm)
 
         assertNotNull(headerNap)
+        assertNotNull(headerDnd)
         assertNotNull(headerTimer)
         assertNotNull(headerAlarm)
 
         assertEquals(activity.getString(R.string.heading_nap), headerNap.text.toString())
+        assertEquals(activity.getString(R.string.heading_dnd), headerDnd.text.toString())
         assertEquals(activity.getString(R.string.heading_timer), headerTimer.text.toString())
         assertEquals(activity.getString(R.string.heading_alarm), headerAlarm.text.toString())
 
@@ -647,6 +650,8 @@ class MainActivityTest {
 
         assertTrue(headerNap.isEnabled)
         assertEquals(1.0f, headerNap.alpha, 0.01f)
+        assertTrue(headerDnd.isEnabled)
+        assertEquals(1.0f, headerDnd.alpha, 0.01f)
         assertTrue(headerTimer.isEnabled)
         assertEquals(1.0f, headerTimer.alpha, 0.01f)
         assertTrue(headerAlarm.isEnabled)
@@ -655,6 +660,8 @@ class MainActivityTest {
         switchGoal.isChecked = false
         assertTrue(headerNap.isEnabled)
         assertEquals(1.0f, headerNap.alpha, 0.01f)
+        assertTrue(headerDnd.isEnabled)
+        assertEquals(1.0f, headerDnd.alpha, 0.01f)
         assertTrue(headerTimer.isEnabled)
         assertEquals(1.0f, headerTimer.alpha, 0.01f)
         assertTrue(headerAlarm.isEnabled)
@@ -663,6 +670,8 @@ class MainActivityTest {
         switchEnable.isChecked = false
         assertTrue(headerNap.isEnabled)
         assertEquals(1.0f, headerNap.alpha, 0.01f)
+        assertTrue(headerDnd.isEnabled)
+        assertEquals(1.0f, headerDnd.alpha, 0.01f)
         assertTrue(headerTimer.isEnabled)
         assertEquals(1.0f, headerTimer.alpha, 0.01f)
         assertTrue(headerAlarm.isEnabled)
