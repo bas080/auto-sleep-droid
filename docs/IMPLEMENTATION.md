@@ -153,7 +153,7 @@ Main Configuration Controls & Action Links:
   - Wake-up alarm enable Switch (`wake_up_goal_enabled` preference, labeled "Wake-up alarm").
   - Target wake-up goal time Button (`btn_target_time`, displaying formatted system time and opening `TimePickerDialog` on click).
   - Minimum sleep duration input using custom `DurationInputView` (`input_min_sleep`, saving `min_sleep_duration_minutes` preference).
-  - Do Not Disturb section featuring Nap DND Switch (`row_nap_dnd`) and Auto sleep timer Switch (`row_auto_timer`).
+  - Do Not Disturb section featuring Nap DND Switch (`row_nap_dnd`) and Auto sleep timer Switch (`row_auto_timer`, enabling automated DND tracking without forcing navigation away to system settings).
   - About section featuring Version row (`btn_version`), Feedback row (`btn_feedback`, which presents a prompt dialog asking if the user wants to include event logs in their email), and Links row (`btn_links`).
 - Links header & action list dialog: Manual, Logs, Donate, Export, and Import.
 - Full-screen Manual & Event Logs Views: Overlay `RelativeLayout` views in `activity_main.xml` with a Back button pinned to the bottom-right corner (`alignParentBottom="true"`, `alignParentEnd="true"`), displaying formatted HTML manual text or real-time monospace event logs and closing upon Back button tap or hardware back button press.
