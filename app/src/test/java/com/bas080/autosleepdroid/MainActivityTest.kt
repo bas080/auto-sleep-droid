@@ -237,16 +237,13 @@ class MainActivityTest {
     }
 
     @Test
-    fun testLinksDialogExportLaunchesShareIntent() {
+    fun testExportButtonLaunchesShareIntent() {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().get()
-        val btnLinks = activity.findViewById<View>(R.id.btn_links)
-        assertNotNull(btnLinks)
+        val btnExport = activity.findViewById<View>(R.id.btn_export)
+        assertNotNull(btnExport)
 
-        btnLinks.performClick()
-        val dialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertNotNull(dialog)
-        Shadows.shadowOf(dialog).clickOnItem(3)
+        btnExport.performClick()
 
         val chooserIntent = Shadows.shadowOf(activity).nextStartedActivity
         assertNotNull(chooserIntent)
@@ -259,16 +256,13 @@ class MainActivityTest {
     }
 
     @Test
-    fun testLinksDialogImportShowsImportDialogAndImportsJSON() {
+    fun testImportButtonShowsImportDialogAndImportsJSON() {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().get()
-        val btnLinks = activity.findViewById<View>(R.id.btn_links)
-        assertNotNull(btnLinks)
+        val btnImport = activity.findViewById<View>(R.id.btn_import)
+        assertNotNull(btnImport)
 
-        btnLinks.performClick()
-        val linksDialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertNotNull(linksDialog)
-        Shadows.shadowOf(linksDialog).clickOnItem(4)
+        btnImport.performClick()
 
         val importDialog = ShadowAlertDialog.getLatestAlertDialog()
         assertNotNull(importDialog)
@@ -662,6 +656,7 @@ class MainActivityTest {
         val headerAlarm = activity.findViewById<TextView>(R.id.header_alarm)
         val headerHealthConnect = activity.findViewById<TextView>(R.id.header_health_connect)
         val headerDnd = activity.findViewById<TextView>(R.id.header_dnd)
+        val headerBackup = activity.findViewById<TextView>(R.id.header_backup)
         val headerAbout = activity.findViewById<TextView>(R.id.header_about)
 
         assertNotNull(headerNap)
@@ -669,6 +664,7 @@ class MainActivityTest {
         assertNotNull(headerAlarm)
         assertNotNull(headerHealthConnect)
         assertNotNull(headerDnd)
+        assertNotNull(headerBackup)
         assertNotNull(headerAbout)
 
         assertEquals(activity.getString(R.string.heading_nap), headerNap.text.toString())
@@ -676,6 +672,7 @@ class MainActivityTest {
         assertEquals(activity.getString(R.string.heading_alarm), headerAlarm.text.toString())
         assertEquals(activity.getString(R.string.heading_health_connect), headerHealthConnect.text.toString())
         assertEquals(activity.getString(R.string.heading_dnd), headerDnd.text.toString())
+        assertEquals(activity.getString(R.string.heading_backup), headerBackup.text.toString())
         assertEquals(activity.getString(R.string.heading_about), headerAbout.text.toString())
 
         val switchEnable = activity.findViewById<Switch>(R.id.switch_enable_timer)
@@ -1014,7 +1011,7 @@ class MainActivityTest {
         val switchGoal = activity.findViewById<Switch>(R.id.switch_enable_goal)
         switchGoal.isChecked = true
 
-        val rowIds = intArrayOf(R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_version, R.id.btn_feedback, R.id.btn_links)
+        val rowIds = intArrayOf(R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_export, R.id.btn_import, R.id.btn_version, R.id.btn_feedback, R.id.btn_links)
         for (rowId in rowIds) {
             val parentRow = activity.findViewById<View>(rowId)
             assertNotNull("Row should exist", parentRow)

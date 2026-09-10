@@ -1589,22 +1589,20 @@ class MainServiceTest {
     fun testNotificationReportsProjectedWakeAlarmTimeWhileTimerIsActive() {
         val now = System.currentTimeMillis()
         val timerEndsAt = now + 30 * 60_000L
-        val cal = Calendar.getInstance()
-        cal.timeInMillis = now
-        cal.add(Calendar.HOUR_OF_DAY, 12)
-        val targetHour = cal.get(Calendar.HOUR_OF_DAY)
-        val targetMin = cal.get(Calendar.MINUTE)
-
+        val calWake = Calendar.getInstance()
+        calWake.timeInMillis = now + 12 * 3600_000L
+        val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = calWake.get(Calendar.MINUTE)
         preferences.edit()
             .putBoolean("active", true)
             .putBoolean("show_notification", true)
             .putBoolean("wake_up_goal_enabled", true)
             .putInt("duration_minutes", 30)
             .putInt("min_sleep_duration_minutes", 450)
-            .putInt("wake_up_goal_hour", targetHour)
-            .putInt("wake_up_goal_minute", targetMin)
-            .putInt("current_wake_hour", targetHour)
-            .putInt("current_wake_minute", targetMin)
+            .putInt("wake_up_goal_hour", wakeHour)
+            .putInt("wake_up_goal_minute", wakeMin)
+            .putInt("current_wake_hour", wakeHour)
+            .putInt("current_wake_minute", wakeMin)
             .putLong("timer_ends_at", timerEndsAt)
             .commit()
 
