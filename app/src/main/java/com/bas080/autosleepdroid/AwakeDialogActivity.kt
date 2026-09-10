@@ -23,11 +23,7 @@ class AwakeDialogActivity : Activity() {
             val serviceIntent = Intent(this@AwakeDialogActivity, MainService::class.java).apply {
                 action = MainService.ACTION_AWAKE
             }
-            if (Build.VERSION.SDK_INT >= 26) {
-                startForegroundService(serviceIntent)
-            } else {
-                startService(serviceIntent)
-            }
+            startForegroundService(serviceIntent)
             finish()
         }
         builder.setNegativeButton(R.string.dialog_cancel) { _, _ -> finish() }

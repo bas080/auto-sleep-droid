@@ -16,10 +16,6 @@ class BootReceiver : BroadcastReceiver() {
         EventLogger.log(context, "Boot completed")
 
         val serviceIntent = Intent(context, MainService::class.java)
-        if (Build.VERSION.SDK_INT >= 26) {
-            context.startForegroundService(serviceIntent)
-        } else {
-            context.startService(serviceIntent)
-        }
+        context.startForegroundService(serviceIntent)
     }
 }
