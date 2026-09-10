@@ -1774,6 +1774,85 @@ class MainServiceTest {
     }
 
     @Test
+    fun testExternalDndActivationDuringNapPreservesDndOnNapEnd() {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        Shadows.shadowOf(nm).setNotificationPolicyAccessGranted(true)
+
+        preferences.edit()
+            .putBoolean("nap_dnd_enabled", true)
+            .putBoolean("auto_timer_enabled", true)
+            .putBoolean("active", false)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val startNapIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_START_NAP)
+            .putExtra(MainService.EXTRA_NAP_DURATION_MINUTES, 20)
+        service.onStartCommand(startNapIntent, 0, 1)
+
+        val lastSelfTimeField = MainService::class.java.getDeclaredField("lastSelfDndChangeTimeMs")
+        lastSelfTimeField.isAccessible = true
+        lastSelfTimeField.setLong(service, System.currentTimeMillis() - 5000L)
+
+        val dndBroadcast = Intent(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
+        val receiverField = MainService::class.java.getDeclaredField("dndReceiver")
+        receiverField.isAccessible = true
+        val receiver = receiverField.get(service) as android.content.BroadcastReceiver?
+        assertNotNull(receiver)
+        receiver?.onReceive(service, dndBroadcast)
+
+        assertTrue("KEY_NAP_DND_WAS_ACTIVE should be marked true when external DND broadcast arrives during nap",
+            preferences.getBoolean(PreferenceKeys.KEY_NAP_DND_WAS_ACTIVE, false))
+
+        val cancelNapIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_CANCEL_NAP)
+        service.onStartCommand(cancelNapIntent, 0, 1)
+
+        assertEquals("System DND should remain active after nap cancellation when DND was externally activated",
+            NotificationManager.INTERRUPTION_FILTER_PRIORITY, nm.currentInterruptionFilter)
+    }
+
+    @Test
+    fun testSystemDndScheduleActivePreservesDndOnNapEnd() {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        Shadows.shadowOf(nm).setNotificationPolicyAccessGranted(true)
+
+        if (android.os.Build.VERSION.SDK_INT >= 24) {
+            val rule = android.app.AutomaticZenRule(
+                "Bedtime",
+                android.content.ComponentName(context, MainService::class.java),
+                android.net.Uri.parse("condition://bedtime"),
+                NotificationManager.INTERRUPTION_FILTER_PRIORITY,
+                true
+            )
+            nm.addAutomaticZenRule(rule)
+        }
+
+        preferences.edit()
+            .putBoolean("nap_dnd_enabled", true)
+            .putBoolean("auto_timer_enabled", true)
+            .putBoolean("active", false)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val startNapIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_START_NAP)
+            .putExtra(MainService.EXTRA_NAP_DURATION_MINUTES, 20)
+        service.onStartCommand(startNapIntent, 0, 1)
+
+        val cancelNapIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_CANCEL_NAP)
+        service.onStartCommand(cancelNapIntent, 0, 1)
+
+        assertEquals("System DND should remain active on nap cancellation when an automatic Zen rule is enabled",
+            NotificationManager.INTERRUPTION_FILTER_PRIORITY, nm.currentInterruptionFilter)
+    }
+
+    @Test
     fun testNapAllowedAndStartsAfterDismissingWakeAlarm() {
         preferences.edit()
             .putBoolean("wake_up_goal_enabled", true)
