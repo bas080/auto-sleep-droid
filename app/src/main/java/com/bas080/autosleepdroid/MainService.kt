@@ -1563,6 +1563,14 @@ class MainService : Service() {
 
             if (minWakeTimeMillis > scheduledAlarmMillis) {
                 scheduledAlarmMillis = minWakeTimeMillis
+                val calPushed = Calendar.getInstance()
+                calPushed.timeInMillis = minWakeTimeMillis
+                val pushedHour = calPushed.get(Calendar.HOUR_OF_DAY)
+                val pushedMin = calPushed.get(Calendar.MINUTE)
+                prefs.edit()
+                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, pushedHour)
+                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, pushedMin)
+                    .apply()
             }
 
             val calAlarm = Calendar.getInstance()
