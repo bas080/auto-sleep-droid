@@ -495,7 +495,7 @@ class MainService : Service(), SensorEventListener {
     }
 
     private fun registerAudioPlaybackCallback() {
-        if (audioManager != null && Build.VERSION.SDK_INT >= 26) {
+        if (audioManager != null) {
             audioPlaybackCallback = object : AudioManager.AudioPlaybackCallback() {
                 override fun onPlaybackConfigChanged(configs: MutableList<android.media.AudioPlaybackConfiguration>?) {
                     super.onPlaybackConfigChanged(configs)
@@ -508,14 +508,14 @@ class MainService : Service(), SensorEventListener {
     }
 
     private fun unregisterAudioPlaybackCallback() {
-        if (audioManager != null && audioPlaybackCallback != null && Build.VERSION.SDK_INT >= 26) {
+        if (audioManager != null && audioPlaybackCallback != null) {
             audioManager?.unregisterAudioPlaybackCallback(audioPlaybackCallback!!)
             audioPlaybackCallback = null
         }
     }
 
     private fun registerDndReceiver() {
-        if (dndReceiver == null && Build.VERSION.SDK_INT >= 23) {
+        if (dndReceiver == null) {
             dndReceiver = object : android.content.BroadcastReceiver() {
                 override fun onReceive(context: Context?, intent: Intent?) {
                     if (NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED == intent?.action) {
@@ -544,23 +544,21 @@ class MainService : Service(), SensorEventListener {
         val autoTimerEnabled = true == preferenceManager?.getComputed(PreferenceComputations.IS_AUTO_TIMER_ENABLED)
         if (!autoTimerEnabled) return
 
-        if (Build.VERSION.SDK_INT >= 23) {
-            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
-            if (nm != null) {
-                val filter = nm.currentInterruptionFilter
-                val dndActive = filter != NotificationManager.INTERRUPTION_FILTER_ALL
-                val musicActive = audioManager != null && audioManager!!.isMusicActive
-                val now = System.currentTimeMillis()
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
+        if (nm != null) {
+            val filter = nm.currentInterruptionFilter
+            val dndActive = filter != NotificationManager.INTERRUPTION_FILTER_ALL
+            val musicActive = audioManager != null && audioManager!!.isMusicActive
+            val now = System.currentTimeMillis()
 
-                if (dndActive && !isEnabled) {
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "DND active: turning ON sleep timer")
-                    handleTurnOn(musicActive, now, true)
-                    updateNotification()
-                } else if (!dndActive && isEnabled) {
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "DND inactive: turning OFF sleep timer")
-                    handleTurnOff(true)
-                    updateNotification()
-                }
+            if (dndActive && !isEnabled) {
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "DND active: turning ON sleep timer")
+                handleTurnOn(musicActive, now, true)
+                updateNotification()
+            } else if (!dndActive && isEnabled) {
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "DND inactive: turning OFF sleep timer")
+                handleTurnOff(true)
+                updateNotification()
             }
         }
     }
@@ -827,10 +825,8 @@ class MainService : Service(), SensorEventListener {
                     EventLogger.log(this, "Exact alarm permission missing, using fallback alarm")
                     am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
                 }
-            } else if (Build.VERSION.SDK_INT >= 23) {
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
             } else {
-                am.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
             }
         } catch (e: SecurityException) {
             EventLogger.log(this, "SecurityException scheduling alarm, using fallback alarm")
@@ -1198,22 +1194,20 @@ class MainService : Service(), SensorEventListener {
         if (preferenceManager != null && true != preferenceManager?.getComputed(PreferenceComputations.IS_NAP_DND_ENABLED)) {
             return
         }
-        if (Build.VERSION.SDK_INT >= 23) {
-            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
-            if (nm != null && nm.isNotificationPolicyAccessGranted) {
-                try {
-                    val targetFilter = if (enable)
-                        NotificationManager.INTERRUPTION_FILTER_PRIORITY
-                    else
-                        NotificationManager.INTERRUPTION_FILTER_ALL
-                    isNapDndChanging = true
-                    nm.setInterruptionFilter(targetFilter)
-                    handler.postDelayed({ isNapDndChanging = false }, 1000L)
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, if (enable) "DND enabled for nap" else "DND disabled after nap")
-                } catch (e: Exception) {
-                    isNapDndChanging = false
-                    EventLogger.log(this, "Failed to set DND mode: ${e.message}")
-                }
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
+        if (nm != null && nm.isNotificationPolicyAccessGranted) {
+            try {
+                val targetFilter = if (enable)
+                    NotificationManager.INTERRUPTION_FILTER_PRIORITY
+                else
+                    NotificationManager.INTERRUPTION_FILTER_ALL
+                isNapDndChanging = true
+                nm.setInterruptionFilter(targetFilter)
+                handler.postDelayed({ isNapDndChanging = false }, 1000L)
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, if (enable) "DND enabled for nap" else "DND disabled after nap")
+            } catch (e: Exception) {
+                isNapDndChanging = false
+                EventLogger.log(this, "Failed to set DND mode: ${e.message}")
             }
         }
     }
@@ -1299,7 +1293,7 @@ class MainService : Service(), SensorEventListener {
         if (maxVol <= 0) {
             return
         }
-        if (Build.VERSION.SDK_INT >= 23 && am.isStreamMute(AudioManager.STREAM_ALARM)) {
+        if (am.isStreamMute(AudioManager.STREAM_ALARM)) {
             try {
                 am.adjustStreamVolume(AudioManager.STREAM_ALARM, AudioManager.ADJUST_UNMUTE, 0)
                 EventLogger.log(this, "Unmuted STREAM_ALARM for wake-up alarm")

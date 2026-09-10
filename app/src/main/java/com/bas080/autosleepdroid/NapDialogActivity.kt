@@ -37,11 +37,7 @@ class NapDialogActivity : Activity() {
                     action = MainService.ACTION_START_NAP
                     putExtra(MainService.EXTRA_NAP_DURATION_MINUTES, minutes)
                 }
-                if (Build.VERSION.SDK_INT >= 26) {
-                    startForegroundService(serviceIntent)
-                } else {
-                    startService(serviceIntent)
-                }
+                startForegroundService(serviceIntent)
                 finish()
             } else {
                 Toast.makeText(this@NapDialogActivity, R.string.toast_duration_invalid, Toast.LENGTH_SHORT).show()

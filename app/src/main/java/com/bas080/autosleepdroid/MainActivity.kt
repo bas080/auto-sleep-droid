@@ -555,19 +555,14 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun isDndPermissionGranted(): Boolean {
-        if (Build.VERSION.SDK_INT >= 23) {
-            val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager?
-            return nm != null && nm.isNotificationPolicyAccessGranted
-        }
-        return true
+        val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager?
+        return nm != null && nm.isNotificationPolicyAccessGranted
     }
 
     private fun isDndActive(): Boolean {
-        if (Build.VERSION.SDK_INT >= 23) {
-            val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager?
-            if (nm != null) {
-                return nm.currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL
-            }
+        val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager?
+        if (nm != null) {
+            return nm.currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL
         }
         return false
     }
@@ -1001,21 +996,13 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val serviceIntent = Intent(this, MainService::class.java).apply {
             action = MainService.ACTION_REDRAW_NOTIFICATION
         }
-        if (Build.VERSION.SDK_INT >= 26) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
-        }
+        startForegroundService(serviceIntent)
     }
 
 
     private fun startTimerService() {
         val serviceIntent = Intent(this, MainService::class.java)
-        if (Build.VERSION.SDK_INT >= 26) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
-        }
+        startForegroundService(serviceIntent)
     }
 
     companion object {
