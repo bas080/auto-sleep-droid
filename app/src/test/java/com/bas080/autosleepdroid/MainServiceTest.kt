@@ -279,7 +279,7 @@ class MainServiceTest {
     fun testNotificationActionDisplaysNapAndCancelNap() {
         preferences.edit().putBoolean("active", false).putBoolean("show_notification", true).commit()
         val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
+        controller.create()
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val shadowNotificationManager = Shadows.shadowOf(notificationManager)
@@ -1168,7 +1168,7 @@ class MainServiceTest {
             .commit()
 
         val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
+        controller.create()
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val shadowNotificationManager = Shadows.shadowOf(notificationManager)
@@ -1456,7 +1456,7 @@ class MainServiceTest {
             .commit()
 
         val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
+        controller.create()
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val shadowNotificationManager = Shadows.shadowOf(notificationManager)
@@ -1493,7 +1493,7 @@ class MainServiceTest {
             .commit()
 
         val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
+        controller.create()
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val shadowNotificationManager = Shadows.shadowOf(notificationManager)
@@ -1532,7 +1532,7 @@ class MainServiceTest {
             .commit()
 
         val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
+        controller.create()
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val shadowNotificationManager = Shadows.shadowOf(notificationManager)
@@ -1596,7 +1596,7 @@ class MainServiceTest {
             .commit()
 
         val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
+        controller.create()
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val shadowNotificationManager = Shadows.shadowOf(notificationManager)
@@ -1660,7 +1660,7 @@ class MainServiceTest {
     @Test
     fun testStartNapIntentTargetsMainServiceWithStartNapAction() {
         val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
+        controller.create()
 
         val shadowNM = Shadows.shadowOf(
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)

@@ -213,7 +213,7 @@ class MainActivity : Activity(), EventLogger.Listener {
 
         val builder = AlertDialog.Builder(this)
         builder.setTitle(R.string.label_links)
-        builder.setItems(options) { dialog, which ->
+        builder.setItems(options) { _, which ->
             when (which) {
                 0 -> showManualScreen()
                 1 -> showLogsScreen()
@@ -308,6 +308,7 @@ class MainActivity : Activity(), EventLogger.Listener {
         textContent.text = formattedText
     }
 
+    @Suppress("DEPRECATION")
     override fun onBackPressed() {
         if ((manualOverlayContainer != null && manualOverlayContainer!!.visibility == View.VISIBLE)
             || (logsOverlayContainer != null && logsOverlayContainer!!.visibility == View.VISIBLE)
@@ -524,6 +525,7 @@ class MainActivity : Activity(), EventLogger.Listener {
         updateInputEnabledStates(active, goalEnabled, healthConnectEnabled)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun updateInputEnabledStates(active: Boolean, goalEnabled: Boolean, healthConnectEnabled: Boolean) {
         setRowEnabled(headerNap, true)
         setRowEnabled(headerDnd, true)
