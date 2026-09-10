@@ -1193,6 +1193,11 @@ class MainService : Service(), SensorEventListener {
         if (preferenceManager != null && true != preferenceManager?.getComputed(PreferenceComputations.IS_NAP_DND_ENABLED)) {
             return
         }
+        val wasDndAlreadyActive = preferences?.getBoolean(PreferenceKeys.KEY_NAP_DND_WAS_ACTIVE, false) ?: false
+        if (!enable && wasDndAlreadyActive) {
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Preserving DND state after nap because DND was already active before nap start")
+            return
+        }
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
         if (nm != null && nm.isNotificationPolicyAccessGranted) {
             try {
@@ -1212,10 +1217,14 @@ class MainService : Service(), SensorEventListener {
     private fun startNapAlarm(durationMinutes: Int) {
         val now = System.currentTimeMillis()
         napAlarmEndsAt = now + durationMinutes * 60_000L
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
+        val dndAlreadyActive = nm != null && nm.isNotificationPolicyAccessGranted &&
+                nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
         preferences?.edit()
             ?.putInt(KEY_NAP_DURATION_MINUTES, durationMinutes)
             ?.putLong(KEY_NAP_ALARM_ENDS_AT, napAlarmEndsAt)
             ?.putLong(PreferenceKeys.KEY_NAP_START_TIME_MS, now)
+            ?.putBoolean(PreferenceKeys.KEY_NAP_DND_WAS_ACTIVE, dndAlreadyActive)
             ?.apply()
         scheduleNapAlarm(napAlarmEndsAt)
         setDndMode(true)
@@ -1276,6 +1285,7 @@ class MainService : Service(), SensorEventListener {
             ?.remove(PreferenceKeys.KEY_NAP_START_TIME_MS)
             ?.apply()
         setDndMode(false)
+        preferences?.edit()?.remove(PreferenceKeys.KEY_NAP_DND_WAS_ACTIVE)?.apply()
         if (showToast) {
             setNapAlarmRinging(false)
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm cancelled")

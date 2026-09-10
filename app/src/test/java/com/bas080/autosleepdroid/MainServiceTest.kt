@@ -1744,6 +1744,36 @@ class MainServiceTest {
     }
 
     @Test
+    fun testNapDndPreservesExistingDndStateWhenDndWasAlreadyActivePriorToNap() {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        Shadows.shadowOf(nm).setNotificationPolicyAccessGranted(true)
+        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+
+        preferences.edit()
+            .putBoolean("nap_dnd_enabled", true)
+            .putBoolean("auto_timer_enabled", true)
+            .putBoolean("active", true)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val startNapIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_START_NAP)
+            .putExtra(MainService.EXTRA_NAP_DURATION_MINUTES, 20)
+        service.onStartCommand(startNapIntent, 0, 1)
+
+        val cancelNapIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_CANCEL_NAP)
+        service.onStartCommand(cancelNapIntent, 0, 1)
+
+        assertEquals("DND filter must remain INTERRUPTION_FILTER_PRIORITY if DND was already active prior to nap start",
+            NotificationManager.INTERRUPTION_FILTER_PRIORITY, nm.currentInterruptionFilter)
+        assertTrue("Sleep timer active preference should remain true when system DND is preserved",
+            preferences.getBoolean("active", false))
+    }
+
+    @Test
     fun testNapAllowedAndStartsAfterDismissingWakeAlarm() {
         preferences.edit()
             .putBoolean("wake_up_goal_enabled", true)
