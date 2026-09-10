@@ -201,10 +201,10 @@ class PreferenceManagerTest {
             .putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now - 3600_000L) // active session started 1h ago
             .commit()
 
-        // 4 hours before wake time with 8h min sleep is inside INITIATION_AND_ACTIVE_SLEEP window (windowStart is now - 5.6h)
+        // 4 hours before wake time with 8h min sleep is inside the awake window (windowStart is now - 5.6h)
         assertEquals(SessionPhase.INITIATION_AND_ACTIVE_SLEEP, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
-        assertFalse("Nap should not be allowed during active sleep phase", preferenceManager.getComputed(PreferenceComputations.IS_NAP_ALLOWED)!!)
-        assertFalse("Awake action should be hidden during active sleep phase", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+        assertFalse("Nap should not be allowed during awake window", preferenceManager.getComputed(PreferenceComputations.IS_NAP_ALLOWED)!!)
+        assertTrue("Awake action should be shown during awake window", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
 
         // Set sleepStartTime 6 hours ago so minimum sleep safeguard (7.6h) does not push wake time beyond 2h in future
         cal.timeInMillis = now
