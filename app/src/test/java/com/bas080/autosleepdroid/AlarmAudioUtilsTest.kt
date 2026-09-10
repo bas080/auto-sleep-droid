@@ -37,17 +37,11 @@ class AlarmAudioUtilsTest {
 
         AlarmAudioUtils.configureAlarmAudioAttributes(mockRingtone)
 
-        if (android.os.Build.VERSION.SDK_INT >= 21) {
-            val attributes = mockRingtone.audioAttributes
-            assertNotNull("AudioAttributes must be configured on Ringtone", attributes)
-            assertEquals("AudioAttributes usage must be USAGE_ALARM so Android Do Not Disturb does not block alarm sound",
-                AudioAttributes.USAGE_ALARM, attributes.usage)
-            assertEquals("AudioAttributes content type must be CONTENT_TYPE_SONIFICATION",
-                AudioAttributes.CONTENT_TYPE_SONIFICATION, attributes.contentType)
-        } else {
-            @Suppress("DEPRECATION")
-            assertEquals("Stream type must be STREAM_ALARM",
-                AudioManager.STREAM_ALARM, mockRingtone.streamType)
-        }
+        val attributes = mockRingtone.audioAttributes
+        assertNotNull("AudioAttributes must be configured on Ringtone", attributes)
+        assertEquals("AudioAttributes usage must be USAGE_ALARM so Android Do Not Disturb does not block alarm sound",
+            AudioAttributes.USAGE_ALARM, attributes.usage)
+        assertEquals("AudioAttributes content type must be CONTENT_TYPE_SONIFICATION",
+            AudioAttributes.CONTENT_TYPE_SONIFICATION, attributes.contentType)
     }
 }

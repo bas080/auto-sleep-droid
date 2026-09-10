@@ -18,14 +18,9 @@ object AlarmAudioUtils {
         if (ringtone == null) {
             return
         }
-        if (Build.VERSION.SDK_INT >= 21) {
-            ringtone.audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-        } else {
-            @Suppress("DEPRECATION")
-            ringtone.streamType = AudioManager.STREAM_ALARM
-        }
+        ringtone.audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
     }
 }

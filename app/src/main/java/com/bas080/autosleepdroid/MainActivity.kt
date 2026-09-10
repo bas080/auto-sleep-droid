@@ -306,12 +306,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             return
         }
 
-        val formattedText: CharSequence = if (Build.VERSION.SDK_INT >= 24) {
-            Html.fromHtml(htmlText, Html.FROM_HTML_MODE_LEGACY)
-        } else {
-            @Suppress("DEPRECATION")
-            Html.fromHtml(htmlText)
-        }
+        val formattedText: CharSequence = Html.fromHtml(htmlText, Html.FROM_HTML_MODE_LEGACY)
 
         textContent.text = formattedText
     }
