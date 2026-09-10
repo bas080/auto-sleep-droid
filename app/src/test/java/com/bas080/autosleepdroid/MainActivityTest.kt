@@ -109,7 +109,7 @@ class MainActivityTest {
     @Test
     fun testLinksDialogLogsShowsFullScreenView() {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
-        val activity = controller.create().get()
+        val activity = controller.create().start().resume().get()
         val btnLinks = activity.findViewById<View>(R.id.btn_links)
         assertNotNull(btnLinks)
 
@@ -126,8 +126,7 @@ class MainActivityTest {
         assertEquals(View.VISIBLE, logsOverlay.visibility)
         assertEquals(View.GONE, mainContent.visibility)
 
-        @Suppress("DEPRECATION")
-        activity.onBackPressed()
+        activity.onBackPressedDispatcher.onBackPressed()
 
         assertEquals(View.GONE, logsOverlay.visibility)
         assertEquals(View.VISIBLE, mainContent.visibility)

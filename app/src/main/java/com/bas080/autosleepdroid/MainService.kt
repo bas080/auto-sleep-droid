@@ -120,11 +120,11 @@ class MainService : Service(), SensorEventListener {
         this.lastObservedMediaActive = false
 
         if (savedEnabled && savedEndsAt > now) {
-            startTimer(configuredDurationMinutes, savedEndsAt, now, false)
+            startTimer(configuredDurationMinutes, savedEndsAt, false)
         } else if (savedEnabled && savedEndsAt > 0L && savedEndsAt <= now) {
             beginFadeOut(initialVolume)
         } else if (savedEnabled && musicActive) {
-            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true)
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
         } else if (savedEnabled) {
             transitionTo(State.WAITING)
         } else {
@@ -146,7 +146,7 @@ class MainService : Service(), SensorEventListener {
         if (state == State.OFF) {
             configuredDurationMinutes = newDuration
             if (musicActive) {
-                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true)
+                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
             } else {
                 onPersistState(true, configuredDurationMinutes, 0L)
                 transitionTo(State.WAITING)
@@ -154,13 +154,13 @@ class MainService : Service(), SensorEventListener {
         } else if (state == State.WAITING) {
             configuredDurationMinutes = newDuration
             if (musicActive) {
-                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true)
+                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
             } else {
                 updateNotification()
             }
         } else if (state == State.ACTIVE) {
             if (newDuration != configuredDurationMinutes) {
-                startTimer(newDuration, now + newDuration * 60_000L, now, true)
+                startTimer(newDuration, now + newDuration * 60_000L, true)
             }
         } else if (state == State.FADING) {
             configuredDurationMinutes = newDuration
@@ -183,7 +183,7 @@ class MainService : Service(), SensorEventListener {
         }
         onPersistState(true, configuredDurationMinutes, timerEndsAt)
         if (musicActive) {
-            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true)
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
         } else {
             transitionTo(State.WAITING)
         }
@@ -201,14 +201,14 @@ class MainService : Service(), SensorEventListener {
         }
 
         if (musicActive) {
-            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true)
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
         } else {
             onPersistState(true, configuredDurationMinutes, 0L)
             transitionTo(State.WAITING)
         }
     }
 
-    fun startTimer(durationMinutes: Int, endsAt: Long, @Suppress("UNUSED_PARAMETER") now: Long, persist: Boolean) {
+    fun startTimer(durationMinutes: Int, endsAt: Long, persist: Boolean) {
         onCancelAlarm()
         val wasActive = state == State.ACTIVE
         configuredDurationMinutes = if (isValidDuration(durationMinutes)) durationMinutes else AppDefaults.DURATION_MINUTES
@@ -256,7 +256,7 @@ class MainService : Service(), SensorEventListener {
         }
 
         if (currentVolume != lastFadeVolume) {
-            cancelFadeForVolumeChange(currentVolume)
+            cancelFadeForVolumeChange()
             return false
         }
 
@@ -294,7 +294,7 @@ class MainService : Service(), SensorEventListener {
         transitionTo(State.WAITING)
     }
 
-    fun cancelFadeForVolumeChange(@Suppress("UNUSED_PARAMETER") currentVolume: Int) {
+    fun cancelFadeForVolumeChange() {
         cancelFadeForFlip()
     }
 
@@ -307,7 +307,7 @@ class MainService : Service(), SensorEventListener {
         EventLogger.log("Restored pre-fade volume to $volumeBeforeFade")
         lastObservedVolume = volumeBeforeFade
         if (isValidDuration(configuredDurationMinutes)) {
-            startTimer(configuredDurationMinutes, System.currentTimeMillis() + configuredDurationMinutes * 60_000L, System.currentTimeMillis(), true)
+            startTimer(configuredDurationMinutes, System.currentTimeMillis() + configuredDurationMinutes * 60_000L, true)
         } else {
             transitionTo(State.WAITING)
         }
@@ -330,7 +330,7 @@ class MainService : Service(), SensorEventListener {
 
         if (isEnabled) {
             if (state == State.WAITING && musicActive) {
-                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true)
+                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
             }
         }
     }
@@ -348,7 +348,7 @@ class MainService : Service(), SensorEventListener {
         if (volumeChanged) {
             EventLogger.log("Volume changed to $currentVolume")
             if (state == State.FADING) {
-                cancelFadeForVolumeChange(currentVolume)
+                cancelFadeForVolumeChange()
             } else if (state == State.ACTIVE) {
                 resetTimerForVolumeChange(now)
             }
@@ -372,7 +372,7 @@ class MainService : Service(), SensorEventListener {
     private fun resetTimerForVolumeChange(now: Long) {
         if (state != State.FADING && isValidDuration(configuredDurationMinutes)) {
             onTriggerVibration()
-            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, now, true)
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
         }
     }
 
@@ -383,8 +383,12 @@ class MainService : Service(), SensorEventListener {
         alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager?
         preferenceManager = PreferenceManager(getSharedPreferences(PREFERENCES, MODE_PRIVATE))
         preferences = preferenceManager?.sharedPreferences
-        @Suppress("DEPRECATION")
-        vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator?
+        vibrator = if (Build.VERSION.SDK_INT >= 31) {
+            val vibratorManager = getSystemService(android.os.VibratorManager::class.java)
+            vibratorManager?.defaultVibrator
+        } else {
+            getSystemService(Vibrator::class.java)
+        }
         createNotificationChannel()
 
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager?
@@ -1528,7 +1532,6 @@ class MainService : Service(), SensorEventListener {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun buildNotification(): Notification {
         val title: String
         var contentText: String
@@ -1595,7 +1598,6 @@ class MainService : Service(), SensorEventListener {
             .setContentIntent(contentPendingIntent)
             .setCategory(Notification.CATEGORY_SERVICE)
             .setOngoing(true)
-            .setPriority(Notification.PRIORITY_LOW)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
 
