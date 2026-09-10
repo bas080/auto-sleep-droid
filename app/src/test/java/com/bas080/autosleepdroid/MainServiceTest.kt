@@ -1389,15 +1389,21 @@ class MainServiceTest {
 
     @Test
     fun testAwakeActionDuringActiveNapPreservesCurrentWakeTime() {
-        val napEndsAt = System.currentTimeMillis() + 1200_000L
+        val now = System.currentTimeMillis()
+        val calWake = Calendar.getInstance()
+        calWake.timeInMillis = now + 12 * 3600_000L
+        val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = calWake.get(Calendar.MINUTE)
+
+        val napEndsAt = now + 1200_000L
         preferences.edit()
             .putBoolean("wake_up_goal_enabled", true)
-            .putInt("wake_up_goal_hour", 6)
-            .putInt("wake_up_goal_minute", 30)
-            .putInt("current_wake_hour", 7)
-            .putInt("current_wake_minute", 30)
+            .putInt("wake_up_goal_hour", wakeHour)
+            .putInt("wake_up_goal_minute", wakeMin)
+            .putInt("current_wake_hour", wakeHour)
+            .putInt("current_wake_minute", wakeMin)
             .putLong(MainService.KEY_NAP_ALARM_ENDS_AT, napEndsAt)
-            .putLong("nap_start_time_ms", System.currentTimeMillis() - 600_000L)
+            .putLong("nap_start_time_ms", now - 600_000L)
             .commit()
 
         val controller = Robolectric.buildService(MainService::class.java)
@@ -1409,8 +1415,8 @@ class MainServiceTest {
             .setAction(MainService.ACTION_AWAKE)
         service.onStartCommand(awakeIntent, 0, 1)
 
-        assertEquals("Current wake hour must remain unchanged when marking awake during a nap", 7, preferences.getInt("current_wake_hour", -1))
-        assertEquals("Current wake minute must remain unchanged when marking awake during a nap", 30, preferences.getInt("current_wake_minute", -1))
+        assertEquals("Current wake hour must remain unchanged when marking awake during a nap", wakeHour, preferences.getInt("current_wake_hour", -1))
+        assertEquals("Current wake minute must remain unchanged when marking awake during a nap", wakeMin, preferences.getInt("current_wake_minute", -1))
         assertFalse("nap_alarm_ends_at must be cleared after marking awake", preferences.contains(MainService.KEY_NAP_ALARM_ENDS_AT))
         assertFalse("nap_start_time_ms must be cleared after marking awake", preferences.contains("nap_start_time_ms"))
         assertFalse("shouldShowAwakeAction should revert to false after marking awake", service.shouldShowAwakeAction())
@@ -1457,9 +1463,19 @@ class MainServiceTest {
 
     @Test
     fun testNotificationShowsNapWhenNoActiveSleepSessionEvenIfWakeAlarmEnabled() {
+        val now = System.currentTimeMillis()
+        val calWake = Calendar.getInstance()
+        calWake.timeInMillis = now + 12 * 3600_000L
+        val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = calWake.get(Calendar.MINUTE)
+
         preferences.edit()
             .putBoolean("show_notification", true)
             .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", wakeHour)
+            .putInt("wake_up_goal_minute", wakeMin)
+            .putInt("current_wake_hour", wakeHour)
+            .putInt("current_wake_minute", wakeMin)
             .remove("sleep_start_time_ms")
             .commit()
 
