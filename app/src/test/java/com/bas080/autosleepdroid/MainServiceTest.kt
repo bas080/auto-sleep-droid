@@ -403,7 +403,7 @@ class MainServiceTest {
         lastTimerEndsAtField.isAccessible = true
         lastTimerEndsAtField.setLong(service, now + 10000L)
 
-        service.startTimer(20, now + 10000L + 15 * 60_000L, now, true)
+        service.startTimer(20, now + 10000L + 15 * 60_000L, true)
 
         val shiftedNapEndsAt = preferences.getLong("nap_alarm_ends_at", 0L)
         assertEquals(initialNapEndsAt + 15 * 60_000L, shiftedNapEndsAt)
@@ -1240,7 +1240,7 @@ class MainServiceTest {
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
 
-        service.startTimer(30, System.currentTimeMillis() + 1800_000L, System.currentTimeMillis(), true)
+        service.startTimer(30, System.currentTimeMillis() + 1800_000L, true)
 
         assertTrue("timer_start_time_ms should be recorded when timer is active", preferences.contains("timer_start_time_ms"))
 
@@ -1295,13 +1295,20 @@ class MainServiceTest {
 
     @Test
     fun testAwakeActionRegistersSleepAndUpdatesAlarmSchedule() {
-        val sleepStart = System.currentTimeMillis() - 8 * 3600_000L
+        val now = System.currentTimeMillis()
+        val sleepStart = now - 8 * 3600_000L
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = now
+        cal.add(Calendar.HOUR_OF_DAY, 12)
+        val targetHour = cal.get(Calendar.HOUR_OF_DAY)
+        val targetMin = cal.get(Calendar.MINUTE)
+
         preferences.edit()
             .putBoolean("wake_up_goal_enabled", true)
-            .putInt("wake_up_goal_hour", 6)
-            .putInt("wake_up_goal_minute", 30)
-            .putInt("current_wake_hour", 7)
-            .putInt("current_wake_minute", 30)
+            .putInt("wake_up_goal_hour", targetHour)
+            .putInt("wake_up_goal_minute", targetMin)
+            .putInt("current_wake_hour", targetHour)
+            .putInt("current_wake_minute", targetMin)
             .putLong("sleep_start_time_ms", sleepStart)
             .commit()
 
@@ -1343,7 +1350,7 @@ class MainServiceTest {
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
 
-        service.startTimer(timerDurationMin, timerEndsAt, now, true)
+        service.startTimer(timerDurationMin, timerEndsAt, true)
 
         service.onTimerRescheduled()
 
@@ -1582,16 +1589,22 @@ class MainServiceTest {
     fun testNotificationReportsProjectedWakeAlarmTimeWhileTimerIsActive() {
         val now = System.currentTimeMillis()
         val timerEndsAt = now + 30 * 60_000L
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = now
+        cal.add(Calendar.HOUR_OF_DAY, 12)
+        val targetHour = cal.get(Calendar.HOUR_OF_DAY)
+        val targetMin = cal.get(Calendar.MINUTE)
+
         preferences.edit()
             .putBoolean("active", true)
             .putBoolean("show_notification", true)
             .putBoolean("wake_up_goal_enabled", true)
             .putInt("duration_minutes", 30)
             .putInt("min_sleep_duration_minutes", 450)
-            .putInt("wake_up_goal_hour", 6)
-            .putInt("wake_up_goal_minute", 30)
-            .putInt("current_wake_hour", 6)
-            .putInt("current_wake_minute", 30)
+            .putInt("wake_up_goal_hour", targetHour)
+            .putInt("wake_up_goal_minute", targetMin)
+            .putInt("current_wake_hour", targetHour)
+            .putInt("current_wake_minute", targetMin)
             .putLong("timer_ends_at", timerEndsAt)
             .commit()
 

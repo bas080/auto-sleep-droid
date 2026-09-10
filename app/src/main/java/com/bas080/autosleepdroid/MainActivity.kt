@@ -1,8 +1,10 @@
 package com.bas080.autosleepdroid
 
 import android.Manifest
-import android.app.Activity
 import android.app.AlertDialog
+import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import android.app.TimePickerDialog
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -32,7 +34,7 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.Calendar
 
-class MainActivity : Activity(), EventLogger.Listener {
+class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     private var mainContentContainer: View? = null
     private var manualOverlayContainer: View? = null
@@ -82,6 +84,16 @@ class MainActivity : Activity(), EventLogger.Listener {
     private var isUserInitiatedHealthConnect = false
     private var isRequestingHealthConnectPermission = false
 
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        EventLogger.log(this, EventLogger.LEVEL_LOW, "Notification permission granted: $isGranted")
+        if (isGranted) {
+            startTimerService()
+        }
+        redrawNotification()
+    }
+
     private class BoolPrefSpec(val key: String, val defaultValue: Boolean)
 
     private class IntPrefSpec(val key: String, val defaultValue: Int, val min: Int, val max: Int)
@@ -99,6 +111,18 @@ class MainActivity : Activity(), EventLogger.Listener {
         bindViews()
         setupHeaderAndLinks()
         setupConfigControls()
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if ((manualOverlayContainer != null && manualOverlayContainer!!.visibility == View.VISIBLE)
+                    || (logsOverlayContainer != null && logsOverlayContainer!!.visibility == View.VISIBLE)
+                ) {
+                    hideOverlays()
+                } else {
+                    finish()
+                }
+            }
+        })
 
         requestNotificationPermissionOnStartupIfNeeded()
         startTimerService()
@@ -125,10 +149,7 @@ class MainActivity : Activity(), EventLogger.Listener {
         if (Build.VERSION.SDK_INT >= 33) {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 EventLogger.log(this, EventLogger.LEVEL_LOW, "Requesting notification permission on app startup")
-                requestPermissions(
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    NOTIFICATION_PERMISSION_REQUEST
-                )
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
@@ -308,16 +329,6 @@ class MainActivity : Activity(), EventLogger.Listener {
         textContent.text = formattedText
     }
 
-    @Suppress("DEPRECATION")
-    override fun onBackPressed() {
-        if ((manualOverlayContainer != null && manualOverlayContainer!!.visibility == View.VISIBLE)
-            || (logsOverlayContainer != null && logsOverlayContainer!!.visibility == View.VISIBLE)
-        ) {
-            hideOverlays()
-            return
-        }
-        super.onBackPressed()
-    }
 
     fun showDurationDialog(
         titleResId: Int,
@@ -382,7 +393,7 @@ class MainActivity : Activity(), EventLogger.Listener {
         switchEnableTimer?.setOnCheckedChangeListener { _, isChecked ->
             preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_ACTIVE, isChecked)?.apply()
             val goalEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) ?: false
-            updateInputEnabledStates(isChecked, goalEnabled)
+            updateInputEnabledStates(goalEnabled)
             EventLogger.log(this, EventLogger.LEVEL_HIGH, if (isChecked) "Timer enabled from UI" else "Timer disabled from UI")
         }
 
@@ -438,8 +449,7 @@ class MainActivity : Activity(), EventLogger.Listener {
                 ?.putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, isChecked)
                 ?.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
                 ?.apply()
-            val timerActive = preferenceManager?.getBoolean(PreferenceKeys.KEY_ACTIVE, true) ?: true
-            updateInputEnabledStates(timerActive, isChecked)
+            updateInputEnabledStates(isChecked)
             EventLogger.log(this, EventLogger.LEVEL_HIGH, if (isChecked) "Wake-up goal enabled" else "Wake-up goal disabled")
         }
 
@@ -503,9 +513,8 @@ class MainActivity : Activity(), EventLogger.Listener {
                     HealthConnectManager.revokeAllPermissions(this)
                 }
             }
-            val active = preferenceManager?.getBoolean(PreferenceKeys.KEY_ACTIVE, true) ?: true
             val goalEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) ?: false
-            updateInputEnabledStates(active, goalEnabled, isChecked)
+            updateInputEnabledStates(goalEnabled, isChecked)
         }
 
         inputHcMinDuration?.setOnClickListener {
@@ -520,13 +529,12 @@ class MainActivity : Activity(), EventLogger.Listener {
         }
     }
 
-    private fun updateInputEnabledStates(active: Boolean, goalEnabled: Boolean) {
+    private fun updateInputEnabledStates(goalEnabled: Boolean) {
         val healthConnectEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
-        updateInputEnabledStates(active, goalEnabled, healthConnectEnabled)
+        updateInputEnabledStates(goalEnabled, healthConnectEnabled)
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    private fun updateInputEnabledStates(active: Boolean, goalEnabled: Boolean, healthConnectEnabled: Boolean) {
+    private fun updateInputEnabledStates(goalEnabled: Boolean, healthConnectEnabled: Boolean) {
         setRowEnabled(headerNap, true)
         setRowEnabled(headerDnd, true)
         setRowEnabled(headerTimer, true)
@@ -722,7 +730,6 @@ class MainActivity : Activity(), EventLogger.Listener {
     }
 
     private fun updateGoalUi(getter: PreferenceGetter) {
-        val active = getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true)
         val goalEnabled = getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false)
         val healthConnectEnabled = getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)
         val goalHour = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
@@ -735,7 +742,7 @@ class MainActivity : Activity(), EventLogger.Listener {
         updateTargetTimeButtonText(goalHour, goalMin)
         updateCurrentWakeTimeButtonText(currentHour, currentMin)
         textMinSleepValue?.text = getComputedDurationString(preferenceManager, PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, minSleepMin)
-        updateInputEnabledStates(active, goalEnabled, healthConnectEnabled)
+        updateInputEnabledStates(goalEnabled, healthConnectEnabled)
     }
 
     private fun updateHealthConnectUi(getter: PreferenceGetter) {
@@ -1006,17 +1013,6 @@ class MainActivity : Activity(), EventLogger.Listener {
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
-            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
-            EventLogger.log(this, EventLogger.LEVEL_LOW, "Notification permission granted: $granted")
-            if (granted) {
-                startTimerService()
-            }
-            redrawNotification()
-        }
-    }
 
     private fun startTimerService() {
         val serviceIntent = Intent(this, MainService::class.java)
@@ -1028,8 +1024,6 @@ class MainActivity : Activity(), EventLogger.Listener {
     }
 
     companion object {
-        private const val NOTIFICATION_PERMISSION_REQUEST = 100
-
         private val EXPORTED_BOOL_PREFS = arrayOf(
             BoolPrefSpec(PreferenceKeys.KEY_NAP_DND_ENABLED, false),
             BoolPrefSpec(PreferenceKeys.KEY_ACTIVE, true),
