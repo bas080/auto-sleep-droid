@@ -45,3 +45,25 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 - **User Manual Asset:** The user manual is bundled in `app/src/main/assets/manual.html` and must be kept in sync whenever changes affecting user-visible behavior or features occur or whenever `docs/SPEC.md` is updated. Do not use nested lists (`<ul>` inside `<li>`) in `manual.html` or user documentation; favor flat, single-level lists, paragraphs, or separate subheadings instead.
 - **Permissions Declaration & Documentation:** Whenever feature logic relies on system permissions or policy access (e.g. Do Not Disturb access), always ensure `<uses-permission>` is declared in `AndroidManifest.xml` AND documented in the "Permissions Used" section in `README.md` (specifying whether each permission is required or optional).
 - **Minimal Null Guards & Exception Handling:** Write code with the least amount of null guards and `try-catch` blocks necessary. Allow exceptions to be thrown when the application enters an invalid state so that the global error handler can intercept the error, record diagnostic context/stack traces, and prompt the user appropriately rather than silently swallowing errors or continuing in a corrupted state.
+- **Android Backwards Compatibility & `@Suppress("DEPRECATION")` Guidelines:**
+  1. *Version Fallback Branches for Devices Below a Certain API Level:* When an application supports older Android versions (within its configured `minSdk` range) and a framework API is deprecated in newer SDKs (e.g. API 31), write version-conditional logic:
+     ```kotlin
+     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+         // Modern API for Android 12+ (API 31+)
+         val vibratorManager = context.getSystemService(VibratorManager::class.java)
+         vibratorManager?.defaultVibrator
+     } else {
+         // Fallback for Android 8.0 - 11 (API 26 to 30)
+         // Here Context.VIBRATOR_SERVICE is deprecated in newer SDKs,
+         // but required to support devices running Android 8-11.
+         @Suppress("DEPRECATION")
+         context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+     }
+     ```
+     In these version fallback branches, `@Suppress("DEPRECATION")` is legitimate and expected because you intentionally invoke legacy framework calls to support older devices within your `minSdk` range.
+  2. *When Refactoring Is Preferred Over `@Suppress`:* There are two key cases where refactoring without `@Suppress` is preferable:
+     - **AndroidX Compatibility Libraries:** AndroidX provides backward-compatible wrappers (`IntentCompat`, `OnBackPressedDispatcher`, `ActivityResultContracts`, `NotificationCompat`) that handle API level checks internally down to low API levels. Using AndroidX abstractions removes deprecations while preserving full backward compatibility.
+     - **APIs Already Supported Across `minSdk`:** If an API check guards logic for API 21 or 24, but the app's `minSdk` is 26, the fallback branch is dead code on all supported devices. Removing the dead branch eliminates both the unreachable code and the deprecation warning.
+  3. *Summary:*
+     - Using `@Suppress("DEPRECATION")` is valid whenever you maintain explicit backward-compatibility fallbacks for older devices within your `minSdk` target.
+     - Using AndroidX / Modern APIs is preferred when AndroidX helpers exist or when the modern API is natively supported across your entire `minSdk` range.
