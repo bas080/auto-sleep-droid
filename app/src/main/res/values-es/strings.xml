@@ -67,6 +67,7 @@
     <string name="heading_timer">Temporizador</string>
     <string name="heading_alarm">Alarma</string>
     <string name="heading_health_connect">Health Connect</string>
+    <string name="heading_backup">Copia de seguridad</string>
     <string name="heading_about">Acerca de</string>
     <string name="label_nap">Alarma de siesta</string>
     <string name="desc_nap">Inicia una alarma de siesta rápida</string>
@@ -76,7 +77,11 @@
     <string name="desc_version">Ver notas de la versión y buscar actualizaciones</string>
     <string name="desc_feedback">Enviar comentarios o informar de problemas por correo</string>
     <string name="label_links">Enlaces</string>
-    <string name="desc_links">Manual, registros, donación, exportar e importar</string>
+    <string name="desc_links">Manual, registros y donación</string>
+    <string name="label_export">Exportar ajustes</string>
+    <string name="desc_export">Compartir cadena de configuración mediante el menú del sistema</string>
+    <string name="label_import">Importar ajustes</string>
+    <string name="desc_import">Pegar y restaurar cadena de configuración JSON</string>
     <string name="dialog_feedback_logs_title">¿Incluir registros de eventos?</string>
     <string name="dialog_feedback_logs_message">¿Deseas incluir los registros de eventos en tu correo de comentarios para ayudar a solucionar problemas?</string>
     <string name="dialog_yes">Sí</string>

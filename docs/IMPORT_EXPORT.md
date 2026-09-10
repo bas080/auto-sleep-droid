@@ -14,7 +14,7 @@ As specified in Issue #61 and user design updates:
 - **Export**: Serializes configuration into a JSON string and launches a system share action (`Intent.ACTION_SEND`) allowing the user to copy or send settings.
 - **Import**: Presents an instructional dialog prompting the user to paste or enter an application configuration string and updates application settings.
 - **Data Format**: A standardized, structured JSON string format.
-- **UI Location**: Placed on `MainActivity` rendered in the scrollable list of action links at the bottom of the form under a "Links" header alongside Manual, Logs, Feedback, and Donate.
+- **UI Location**: Placed on `MainActivity` in a dedicated header section named Backup (`header_backup`) featuring standalone setting rows for Export settings (`btn_export`) and Import settings (`btn_import`).
 
 ---
 
@@ -73,10 +73,10 @@ The export string must be a valid JSON object adhering to schema version `1`:
 
 ### Placement on `MainActivity`
 
-The Import/Export control section is located on `MainActivity` (`activity_main.xml`), integrated into the horizontal scrollable link list at the bottom of the form under a "Links" header alongside existing action links (`Manual`, `Logs`, `Feedback`, `Donate`).
+The Import/Export control section is located on `MainActivity` (`activity_main.xml`), integrated into a dedicated header section named Backup (`header_backup`) featuring standalone setting rows for Export settings (`btn_export`) and Import settings (`btn_import`).
 
 ### Layout Components
-- **Link Bar Integration**: Borderless button action links (`btn_export` for "Export" and `btn_import` for "Import") added to the horizontal scrollable link bar inside `activity_main.xml`.
+- **Backup Section Integration**: Dedicated header section (`header_backup`) and rows (`btn_export` for "Export settings" and `btn_import` for "Import settings") added to `activity_main.xml`.
 
 ---
 
@@ -93,7 +93,7 @@ The Import/Export control section is located on `MainActivity` (`activity_main.x
 
 ### Import Workflow with Instructional Dialog
 
-1. User opens `MainActivity` and taps **"Import"** (or **"Import Settings"**).
+1. User opens `MainActivity` and taps **"Import settings"** under Backup.
 2. An instructional modal dialog (`AlertDialog`) titled **"Import Settings"** appears containing:
    - **Instructional Message**: *"Paste your settings JSON configuration string below to import app preferences:"*
    - **Text Input Area**: An `EditText` field for pasting or entering the JSON string.
@@ -129,4 +129,4 @@ The Import/Export control section is located on `MainActivity` (`activity_main.x
 
 ## 7. Summary
 
-The Import and Export Settings feature provides a clean, dependency-free mechanism for users to back up, restore, or share their Auto Sleep Droid configuration via a standardized JSON string. Integrated into `MainActivity` with system share action (`ACTION_SEND`) upon export and an instructional dialog upon import, it combines convenient zero-friction sharing with safety validation.
+The Import and Export Settings feature provides a clean, dependency-free mechanism for users to back up, restore, or share their Auto Sleep Droid configuration via a standardized JSON string. Integrated into `MainActivity` under a header section named Backup with system share action (`ACTION_SEND`) upon export and an instructional dialog upon import, it combines convenient zero-friction sharing with safety validation.

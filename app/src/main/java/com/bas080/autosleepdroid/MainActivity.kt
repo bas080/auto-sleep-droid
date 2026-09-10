@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private var headerTimer: View? = null
     private var headerAlarm: View? = null
     private var headerHealthConnect: View? = null
+    private var headerBackup: View? = null
     private var headerAbout: View? = null
 
     private var rowNapDnd: View? = null
@@ -71,6 +72,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private var textHcMinDurationValue: TextView? = null
     private var btnNap: View? = null
     private var textNapStatus: TextView? = null
+    private var btnExport: View? = null
+    private var btnImport: View? = null
     private var btnVersion: View? = null
     private var btnFeedback: View? = null
     private var btnLinks: View? = null
@@ -165,6 +168,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         headerTimer = findViewById(R.id.header_timer)
         headerAlarm = findViewById(R.id.header_alarm)
         headerHealthConnect = findViewById(R.id.header_health_connect)
+        headerBackup = findViewById(R.id.header_backup)
         headerAbout = findViewById(R.id.header_about)
 
         rowNapDnd = findViewById(R.id.row_nap_dnd)
@@ -190,6 +194,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         textHcMinDurationValue = findViewById(R.id.text_hc_min_duration_value)
         btnNap = findViewById(R.id.btn_nap)
         textNapStatus = findViewById(R.id.text_nap_status)
+        btnExport = findViewById(R.id.btn_export)
+        btnImport = findViewById(R.id.btn_import)
         btnVersion = findViewById(R.id.btn_version)
         btnFeedback = findViewById(R.id.btn_feedback)
         btnLinks = findViewById(R.id.btn_links)
@@ -206,6 +212,9 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         val btnLogsBack = findViewById<Button>(R.id.btn_logs_back)
         btnLogsBack?.setOnClickListener { hideOverlays() }
+
+        btnExport?.setOnClickListener { exportSettings() }
+        btnImport?.setOnClickListener { showImportDialog() }
 
         btnVersion?.setOnClickListener { openUrl("https://github.com/bas080/auto-sleep-droid/releases") }
 
@@ -227,9 +236,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val options = arrayOf<CharSequence>(
             getString(R.string.link_manual),
             getString(R.string.link_logs),
-            getString(R.string.link_donate),
-            getString(R.string.link_export),
-            getString(R.string.link_import)
+            getString(R.string.link_donate)
         )
 
         val builder = AlertDialog.Builder(this)
@@ -239,8 +246,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 0 -> showManualScreen()
                 1 -> showLogsScreen()
                 2 -> openUrl("https://liberapay.com/bas080")
-                3 -> exportSettings()
-                4 -> showImportDialog()
             }
         }
         builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ -> dialog.dismiss() }
@@ -535,6 +540,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         setRowEnabled(headerTimer, true)
         setRowEnabled(headerAlarm, true)
         setRowEnabled(headerHealthConnect, true)
+        setRowEnabled(headerBackup, true)
         setRowEnabled(headerAbout, true)
 
         setRowEnabled(rowNapDnd, true)
@@ -548,6 +554,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         setRowEnabled(inputMinSleep, goalEnabled)
         setRowEnabled(rowHealthConnect, true)
         setRowEnabled(inputHcMinDuration, healthConnectEnabled)
+        setRowEnabled(btnExport, true)
+        setRowEnabled(btnImport, true)
         setRowEnabled(btnVersion, true)
         setRowEnabled(btnFeedback, true)
 
