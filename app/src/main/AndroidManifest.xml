@@ -42,13 +42,6 @@
         </activity-alias>
 
         <activity
-            android:name=".NapDialogActivity"
-            android:exported="false"
-            android:taskAffinity=""
-            android:excludeFromRecents="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-
-        <activity
             android:name=".AwakeDialogActivity"
             android:exported="false"
             android:taskAffinity=""

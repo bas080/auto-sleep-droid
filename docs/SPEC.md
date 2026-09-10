@@ -4,7 +4,7 @@
 - **Sleep Timer**: The application feature that counts down while media is playing and fades volume down to zero to pause playback upon expiration.
 - **Sleep Timer Duration**: The user-configured duration in minutes (default 20 minutes, min 1 minute, max 24 hours) that the sleep timer counts down before fading and pausing media.
 - **Fade-Out / Fading**: The 30-second volume fade at sleep timer expiration where music volume gradually decreases along an ease-out curve down to zero before media playback is paused.
-- **Wake-Up Alarm ("Auto Sleep")**: The background wake-up alarm scheduled via AlarmManager by Auto Sleep Droid that plays the system default alarm tone and updates the ongoing status notification to display the wake-up alarm status. Users can snooze the alarm with a phone flip gesture or a hardware volume button click. Only tapping "I'm Awake" stops the alarm.
+- **Wake-Up Alarm ("Auto Sleep")**: The background wake-up alarm scheduled via AlarmManager by Auto Sleep Droid that plays the system default alarm tone and updates the ongoing status notification to display the wake-up alarm status. Users can snooze the alarm with a hardware volume button click. Only tapping "I'm Awake" stops the alarm.
 - **Target Goal Time**: The user's desired daily wake-up clock time (e.g., `06:30 AM`).
 - **Minimum Sleep Duration**: The user-configured minimum sleep safeguard duration in hours (default 7.5 hours) ensuring that the wake-up alarm is set no earlier than `timerStartTime + minimumSleepDuration`. When media pauses after timer expiration, the effective remaining sleep safeguard is `Math.max(0, minimumSleepDuration - sleepTimerDuration)`.
 
@@ -14,7 +14,7 @@ Provide an Android sleep timer app configured directly from a single main UI scr
 ## System states
 - Off: The timer is manually disabled. Media continues playing normally, and the current volume remains entirely unchanged.
 - Waiting: A duration is configured and auto-sleep is turned on. The app sits passively listening for active media playback via playback state listeners.
-- Active: Triggered by media playback, the timer actively counts down from the configured duration towards expiration. Pausing media while active does not pause or send the timer back to Waiting; the active countdown continues towards expiration and can be reset to the configured duration via volume changes, flip gestures, or duration updates.
+- Active: Triggered by media playback, the timer actively counts down from the configured duration towards expiration. Pausing media while active does not pause or send the timer back to Waiting; the active countdown continues towards expiration and can be reset to the configured duration via volume changes or duration updates.
 - Fading: The timer reaches zero, initiating a 30-second volume fade along a curve that starts steep and flattens out. Completing this fade pauses media, restores pre-fade volume, and returns the app back to the Waiting state.
 
 ## Notification states and content
@@ -24,7 +24,7 @@ All notification content is concise and directly visible in the notification bod
 - Waiting: "Waiting for playback (20m) • Wake at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
 - Active: "Fades out at 11:15 PM (20m) • Wake at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
 - Fading: "Fading volume" • Button: "Disable"
-- Wake-up Alarm Ringing: "Flip or volume button to snooze • Tap I'm Awake to stop" • Buttons: "I'm Awake", "Snooze"
+- Wake-up Alarm Ringing: "Press volume button to snooze • Tap I'm Awake to stop" • Buttons: "I'm Awake", "Snooze"
 - Wake-up Alarm Snoozed: "Snoozed 9m • Tap I'm Awake to stop" • Button: "I'm Awake"
 
 Only the action button lives in the expanded shade. All information text is directly visible in the main notification view.
@@ -34,21 +34,19 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 ## User interface
 - Main Application Screen (`MainActivity`):
   - Provides a complete single-screen configuration UI for all settings:
-    - Nap alarm section at top featuring a Nap button ("Nap" or "I'm Awake" when active).
     - Sleep timer enable/disable switch and timer duration input (0-12h with 5m steps using hour and minute wheel pickers). Timer duration controls remain enabled when the sleep timer switch is OFF.
     - Wake-up alarm enable switch ("Wake-up alarm"), target wake-up time picker button, and minimum sleep duration input.
     - Health Connect synchronization switch and minimum session duration input.
-    - Do Not Disturb section featuring Nap DND switch and Auto sleep timer switch.
+    - Do Not Disturb section featuring Auto sleep timer switch.
     - Backup section featuring Export settings row and Import settings row.
     - About section featuring Version row, Feedback row (prompts user whether to include event logs in their email), and Links row.
-    - Section headings (Nap, Timer, Alarm, Health Connect, Do Not Disturb, Backup, About) remain fully visible and opaque at all times.
+    - Section headings (Timer, Alarm, Health Connect, Do Not Disturb, Backup, About) remain fully visible and opaque at all times.
   - Action links under a "Links" header: Manual, Logs, and Donate.
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
-  - The notification features primary toggle actions ("Disable" when enabled, or "Enable" when disabled) and a secondary action button ("Nap" or "I'm Awake").
-  - Tapping "Nap" opens a duration dialog prefilled with the previously used nap duration. Starting a nap schedules a nap wake alarm and switches the notification action to "I'm Awake".
-  - The secondary action displays "I'm Awake" whenever a nap is active, during the pre-alarm window, or during the alarm phase (when an alarm is ringing or snoozed or after wake time). When no nap is active and outside the pre-alarm/alarm window, it displays "Nap".
-  - Tapping "I'm Awake" stops any active alarm or nap, completes/logs the active sleep session to Health Connect (if enabled), sets current wake-up time to the moment "I'm Awake" was pressed (for night sleep sessions; preserved during naps), reschedules the wake alarm for tomorrow, and reverts the notification action back to "Nap".
+  - The notification features primary toggle actions ("Disable" when enabled, or "Enable" when disabled) and optionally an "I'm Awake" secondary action button.
+  - The secondary action displays "I'm Awake" during an active sleep window around the scheduled wake time (`currentWakeTime ± minSleepDuration / 2`) or when an alarm is ringing or snoozed.
+  - Tapping "I'm Awake" stops any active alarm, completes/logs the active sleep session to Health Connect (if enabled), sets current wake-up time to the moment "I'm Awake" was pressed, and reschedules the wake alarm for tomorrow.
   - Tapping/clicking the notification body opens `MainActivity`.
 
 ## Timer configuration
@@ -65,10 +63,8 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 
 ## Timer behavior
 - When enabled, count down from the configured duration while media is playing.
-- Detect phone flip gestures and volume changes ONLY during Active (media playback) and Fading states to reset the timer. Ignore phone flip gestures and volume changes in Waiting and Off states.
+- Detect volume changes ONLY during Active (media playback) and Fading states to reset the timer. Ignore volume changes in Waiting and Off states.
 - When volume-up or volume-down is pressed during Active state: allow the system volume to change and reset the timer to the original configured duration.
-- When the phone is flipped (face-up to face-down, or face-down to face-down, detected via motion sensor) during Active state: reset the timer to the original configured duration.
-- If a phone flip gesture occurs during fade-out: cancel the fade-out, restore the volume to pre-fade level, and reset the timer.
 - If volume-up or volume-down is pressed during fade-out: cancel the fade-out, restore the volume to pre-fade level, and reset the timer.
 - When the timer expires: fade to zero over 30 seconds (starting fast and slowing down along a curve), pause all active media apps, restore the pre-fade volume after pausing media, and return to the Waiting state.
 - When the timer is turned off: leave the current volume unchanged, display the Off notification (if notification display is enabled), and allow media to continue playing.
@@ -113,9 +109,8 @@ Toggling "Show notification" to ON prompts the user for notification permission 
      - Upon expiration, the app explicitly unmutes `STREAM_ALARM` if muted, ensures an audible volume level, gradually increases the default system alarm tone volume over 3 minutes along a gentle psychoacoustic crescendo curve, and updates the ongoing status notification to display the ringing alarm status.
   5. **Single Alarm Creation**: The app maintains only one wake-up alarm named `"Auto Sleep"`.
   6. **Wake-Up Alarm Gestures & Persistence**:
-     - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes and updates the notification text.
      - **Volume Button to Snooze**: Pressing a hardware volume button while the wake-up alarm is ringing or snoozed snoozes the alarm for 9 minutes.
-     - **Wake-Up Action ("I'm Awake")**: The ongoing status notification displays **I'm Awake** whenever a nap is active, during an active sleep window around the scheduled wake time, or when an alarm is ringing or snoozed. Tapping **I'm Awake** is the sole action that stops the alarm, registering the sleep session in Health Connect (if enabled and meeting the minimum duration threshold), clearing `sleep_start_time_ms`, setting current wake time to the exact moment **I'm Awake** was tapped, rescheduling the wake alarm for tomorrow at Target Goal Time, and reverting the notification action back to **Nap**.
+     - **Wake-Up Action ("I'm Awake")**: The ongoing status notification displays **I'm Awake** during an active sleep window around the scheduled wake time (`currentWakeTime ± minSleepDuration / 2`) or when an alarm is ringing or snoozed. Tapping **I'm Awake** is the sole action that stops the alarm, registering the sleep session in Health Connect (if enabled and meeting the minimum duration threshold), clearing `sleep_start_time_ms`, setting current wake time to the exact moment **I'm Awake** was tapped, and rescheduling the wake alarm for tomorrow at Target Goal Time.
      - **Sleep Timer Toggle Independence**: Turning off or disabling the sleep timer does not affect scheduled wake alarms.
 - **Disabled by Default**: The feature is off by default until enabled in `MainActivity`.
 - **User Inputs**:
@@ -125,35 +120,24 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - **Event Logging**:
   - Every calculation and alarm update is logged line-by-line in the debug event log on `MainActivity`.
 
-## Nap Timer
-- **Purpose**: A minimal, quick way to start or cancel a nap directly from the main screen or status notification shade.
-- **UI & Notification Actions**:
-  - Main Screen (`MainActivity`): Features a dedicated Nap section with a Nap button (`btn_nap`). Tapping **Nap** launches `NapDialogActivity` prefilled with previously used nap duration; if active, tapping **I'm Awake** cancels the active nap alarm. `MainActivity` listens for preference changes so UI switches automatically synchronize when nap or DND states change.
-  - Nap Dialog: Presented using standard system alert dialog styling with DurationInputView and standard positive ("Nap") / negative ("Cancel") buttons, styled consistently with all other dialogs.
-  - Notification Shade: Features a **Nap** / **Cancel Nap** action button. Tapping **Nap** launches `NapDialogActivity` without pulling `MainActivity` or the main UI to the foreground; tapping **Cancel Nap** cancels the nap alarm.
-- **Nap Alarm & Reset Behavior**:
-  - Uses existing wake alarm behavior (alarm tone with 3-minute volume crescendo, flip gesture snooze, volume button dismiss).
-  - Feature toggle: An optional "Do Not Disturb (DND)" toggle row under the Do Not Disturb section on `MainActivity` controls whether DND mode is automatically turned on when a nap starts and turned off when the nap ends or is cancelled (when notification policy access permission is granted).
-  - When the sleep timer is reset (via flip gesture, volume button press, or duration update), an active nap alarm is pushed forward by the same reset increment. Dismissing or marking awake from a nap alarm records the nap session without affecting or adjusting the current wake-up time.
-
 ## Sleep Sessions & Workflow
 - Tracked rest intervals bounded by start and end timestamps.
-- Lifecycle phases relative to alarm time: Idle Phase, Initiation & Active Sleep Phase, Pre-Alarm Window Phase, and Alarm Phase.
+- Lifecycle awake window relative to alarm time: Awake window relative to scheduled wake time (`currentWakeTime`) and minimum sleep duration (`minimumSleepDuration`).
 - Detailed concept, phase predicates, start/end time capture, and Health Connect sync workflow are documented in `docs/SLEEP_SESSION.md`.
 
 ## Health Connect Integration
-- **Purpose**: Automatically save sleep and wake timestamps as sleep sessions (both nightly sleep and naps) to Health Connect when enabled.
+- **Purpose**: Automatically save sleep and wake timestamps as sleep sessions to Health Connect when enabled.
 - **Behavior**:
   - A toggle setting on the main screen allows enabling or disabling Health Connect synchronization.
-  - A configurable "Min session duration" row (`hc_min_duration_minutes`, default 15 minutes) under the Health Connect section on `MainActivity` specifies the minimum session length required before writing to Health Connect. Sleep sessions or naps shorter than this threshold are ignored.
-  - When enabled, night sleep start time uses the sleep timer start time (`timer_start_time_ms`), falling back to `wakeTime - minimumSleepDuration` if no sleep timer was run. Wake time is captured when the wake alarm or nap alarm is dismissed or when **I'm Awake** is tapped.
-  - Valid sleep sessions and naps exceeding the threshold duration are automatically persisted to Health Connect.
+  - A configurable "Min session duration" row (`hc_min_duration_minutes`, default 15 minutes) under the Health Connect section on `MainActivity` specifies the minimum session length required before writing to Health Connect. Sleep sessions shorter than this threshold are ignored.
+  - When enabled, night sleep start time uses the sleep timer start time (`timer_start_time_ms`), falling back to `wakeTime - minimumSleepDuration` if no sleep timer was run. Wake time is captured when **I'm Awake** is tapped.
+  - Valid sleep sessions exceeding the threshold duration are automatically persisted to Health Connect.
   - If Health Connect is unavailable or permissions are not granted, the user is notified via a message and the setting remains off.
 
 ## Acceptance criteria
 - The main activity presents a single-screen configuration UI for all timer, goal, notification, and event log settings.
 - Real-time timestamped event logs are displayed directly on `MainActivity`.
-- The complete timer workflow is configurable from `MainActivity` and toggleable from the notification bar, system volume buttons, and phone flip gesture.
+- The complete timer workflow is configurable from `MainActivity` and toggleable from the notification bar and system volume buttons.
 - The notification action button contains a single action: "Disable" when enabled or "Enable" when disabled.
 - The "Show notification" setting toggles ongoing notification shade notification visibility across all timer states.
 - Volume-up and volume-down both reset an active timer while preserving their normal volume behavior.
@@ -166,7 +150,7 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - The wake-up alarm is daily recurring, automatically scheduling the next alarm for the same target goal time when the current alarm rings.
 - Starting the sleep timer schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
 - Disabling the timer does not cancel scheduled wake alarms, allowing the wake alarm to operate independently of the sleep timer.
-- Flipping the phone or pressing a hardware volume button while the wake-up alarm is ringing or snoozed snoozes the alarm for 9 minutes.
+- Pressing a hardware volume button while the wake-up alarm is ringing or snoozed snoozes the alarm for 9 minutes.
 - Tapping "I'm Awake" is the sole action that stops the wake alarm and sets the current wake time to the moment it was pressed.
 - The main screen includes a Backup header section with Export and Import settings rows, a Feedback row under About, and action links in the Links dialog.
 - Tapping "Export" serializes configuration settings and launches a system share action (`ACTION_SEND`).

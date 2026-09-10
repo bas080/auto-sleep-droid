@@ -41,7 +41,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private var manualTextContent: TextView? = null
     private var logsOverlayContainer: View? = null
 
-    private var headerNap: View? = null
     private var headerDnd: View? = null
     private var headerTimer: View? = null
     private var headerAlarm: View? = null
@@ -49,8 +48,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private var headerBackup: View? = null
     private var headerAbout: View? = null
 
-    private var rowNapDnd: View? = null
-    private var switchNapDnd: Switch? = null
     private var rowEnableTimer: View? = null
     private var switchEnableTimer: Switch? = null
     private var inputDuration: View? = null
@@ -70,8 +67,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private var switchHealthConnect: Switch? = null
     private var inputHcMinDuration: View? = null
     private var textHcMinDurationValue: TextView? = null
-    private var btnNap: View? = null
-    private var textNapStatus: TextView? = null
     private var btnExport: View? = null
     private var btnImport: View? = null
     private var btnVersion: View? = null
@@ -163,7 +158,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         manualTextContent = findViewById(R.id.manual_text_content)
         logsOverlayContainer = findViewById(R.id.logs_overlay_container)
 
-        headerNap = findViewById(R.id.header_nap)
         headerDnd = findViewById(R.id.header_dnd)
         headerTimer = findViewById(R.id.header_timer)
         headerAlarm = findViewById(R.id.header_alarm)
@@ -171,8 +165,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         headerBackup = findViewById(R.id.header_backup)
         headerAbout = findViewById(R.id.header_about)
 
-        rowNapDnd = findViewById(R.id.row_nap_dnd)
-        switchNapDnd = findViewById(R.id.switch_nap_dnd)
         rowEnableTimer = findViewById(R.id.row_enable_timer)
         switchEnableTimer = findViewById(R.id.switch_enable_timer)
         inputDuration = findViewById(R.id.input_duration)
@@ -192,8 +184,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         switchHealthConnect = findViewById(R.id.switch_health_connect)
         inputHcMinDuration = findViewById(R.id.input_hc_min_duration)
         textHcMinDurationValue = findViewById(R.id.text_hc_min_duration_value)
-        btnNap = findViewById(R.id.btn_nap)
-        textNapStatus = findViewById(R.id.text_nap_status)
         btnExport = findViewById(R.id.btn_export)
         btnImport = findViewById(R.id.btn_import)
         btnVersion = findViewById(R.id.btn_version)
@@ -363,25 +353,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun setupConfigControls() {
-        rowNapDnd?.setOnClickListener {
-            switchNapDnd?.let { sw ->
-                sw.isPressed = true
-                sw.toggle()
-                sw.isPressed = false
-            }
-        }
-
-        switchNapDnd?.setOnCheckedChangeListener { buttonView, isChecked ->
-            preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, isChecked)?.apply()
-            val isUserInitiated = buttonView.isPressed
-            if (isChecked && isUserInitiated && !isDndPermissionGranted()) {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap DND enabled; DND policy permission missing, opening settings")
-                openDndPermissionSettings()
-            } else {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, if (isChecked) "Nap DND enabled" else "Nap DND disabled")
-            }
-        }
-
         rowEnableTimer?.setOnClickListener {
             switchEnableTimer?.let { sw ->
                 sw.isPressed = true
@@ -535,7 +506,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun updateInputEnabledStates(goalEnabled: Boolean, healthConnectEnabled: Boolean) {
-        setRowEnabled(headerNap, true)
         setRowEnabled(headerDnd, true)
         setRowEnabled(headerTimer, true)
         setRowEnabled(headerAlarm, true)
@@ -543,7 +513,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         setRowEnabled(headerBackup, true)
         setRowEnabled(headerAbout, true)
 
-        setRowEnabled(rowNapDnd, true)
         setRowEnabled(rowEnableTimer, true)
         setRowEnabled(inputDuration, true)
         setRowEnabled(rowAutoTimer, true)
@@ -692,31 +661,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         return pm.getComputed(key, PreferenceComputations.formatDuration(key, defaultMinutes)) ?: DurationUtils.formatDurationString(defaultMinutes)
     }
 
-    private fun updateNapUi(getter: PreferenceGetter) {
-        val napDndEnabled = getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false)
-        val napDurationMinutes = getter.getInt(PreferenceKeys.KEY_NAP_DURATION_MINUTES, AppDefaults.NAP_DURATION_MINUTES)
-
-        val isNapActive = getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L) > System.currentTimeMillis()
-        val isNapAllowed = true == preferenceManager?.getComputed(PreferenceComputations.IS_NAP_ALLOWED)
-
-        switchNapDnd?.isChecked = napDndEnabled
-        if (btnNap != null && textNapStatus != null) {
-            if (isNapActive) {
-                btnNap?.isEnabled = true
-                textNapStatus?.setText(R.string.action_awake)
-                btnNap?.setOnClickListener { cancelNap() }
-            } else if (isNapAllowed) {
-                btnNap?.isEnabled = true
-                textNapStatus?.text = getComputedDurationString(preferenceManager, PreferenceKeys.KEY_NAP_DURATION_MINUTES, napDurationMinutes)
-                btnNap?.setOnClickListener { openNapDialog() }
-            } else {
-                btnNap?.isEnabled = false
-                textNapStatus?.text = getComputedDurationString(preferenceManager, PreferenceKeys.KEY_NAP_DURATION_MINUTES, napDurationMinutes)
-                btnNap?.setOnClickListener(null)
-            }
-        }
-    }
-
     private fun updateTimerUi(getter: PreferenceGetter) {
         val active = getter.getBoolean(PreferenceKeys.KEY_ACTIVE, true)
         val durationMinutes = getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES)
@@ -759,24 +703,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                     }
                 }
             }
-        }
-    }
-
-    private fun openNapDialog() {
-        val intent = Intent(this, NapDialogActivity::class.java)
-        startActivity(intent)
-    }
-
-    private fun cancelNap() {
-        preferenceManager?.edit()?.remove(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT)?.apply()
-
-        val serviceIntent = Intent(this, MainService::class.java).apply {
-            action = MainService.ACTION_CANCEL_NAP
-        }
-        if (Build.VERSION.SDK_INT >= 26) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
         }
     }
 
@@ -946,7 +872,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         if (uiEffectsHandle == null) {
             uiEffectsHandle = pm.watchEffects(
-                PreferenceManager.PreferenceEffect { getter -> updateNapUi(getter) },
                 PreferenceManager.PreferenceEffect { getter -> updateTimerUi(getter) },
                 PreferenceManager.PreferenceEffect { getter -> updateGoalUi(getter) },
                 PreferenceManager.PreferenceEffect { getter -> updateHealthConnectUi(getter) }
@@ -1015,7 +940,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     companion object {
         private val EXPORTED_BOOL_PREFS = arrayOf(
-            BoolPrefSpec(PreferenceKeys.KEY_NAP_DND_ENABLED, false),
             BoolPrefSpec(PreferenceKeys.KEY_ACTIVE, true),
             BoolPrefSpec(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false),
             BoolPrefSpec(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false),

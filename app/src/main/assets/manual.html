@@ -3,38 +3,36 @@
 <p>Auto Sleep Droid puts your phone to sleep when you fall asleep, and wakes you up when you're ready. It is a low-friction sleep timer and wake-up safeguard designed to control media playback with main screen configuration and intuitive notification controls.</p>
 
 <h3>Main Configuration Screen</h3>
-<p>Settings are logically grouped under <b>Nap</b>, <b>Timer</b>, <b>Alarm</b>, <b>Health Connect</b>, <b>Do Not Disturb</b>, and <b>Backup</b> headings.</p>
+<p>Settings are logically grouped under <b>Timer</b>, <b>Alarm</b>, <b>Health Connect</b>, <b>Do Not Disturb</b>, and <b>Backup</b> headings.</p>
 <ul>
-  <li><b>Nap Alarm</b>: Tap <b>Nap</b> on the main screen to launch a quick nap duration dialog and start a nap alarm. If a nap is already running, tapping <b>I'm Awake</b> cancels the active nap alarm.</li>
   <li><b>Sleep Timer</b>: Enable or disable the sleep timer and set the countdown duration by tapping the duration button to open a duration wheel dialog. Timer duration controls remain enabled when the sleep timer switch is OFF.</li>
   <li><b>Target Wake-Up Goal</b>: Enable daily wake-up alarms, set your target wake-up time, view/edit your current wake-up time, and configure minimum sleep duration safeguards. The wake alarm operates independently of the sleep timer switch.</li>
-  <li><b>Health Connect Sync</b>: Toggle Health Connect integration under the Health Connect section to automatically persist sleep, nap, and wake times to Android Health Connect upon wake or nap alarm dismissal. Toggling ON opens Health Connect permission settings, while toggling OFF revokes Health Connect permissions.</li>
-  <li><b>Do Not Disturb</b>: Configure Do Not Disturb options. The <b>Nap DND</b> toggle controls whether DND mode is automatically turned ON when a nap starts and turned OFF when the nap ends or is cancelled. The <b>Auto sleep timer</b> toggle enables automated DND tracking so the sleep timer automatically turns ON when DND is active and turns OFF when DND ends.</li>
+  <li><b>Health Connect Sync</b>: Toggle Health Connect integration under the Health Connect section to automatically persist sleep and wake times to Android Health Connect upon wake. Toggling ON opens Health Connect permission settings, while toggling OFF revokes Health Connect permissions.</li>
+  <li><b>Do Not Disturb</b>: Configure Do Not Disturb options. The <b>Auto sleep timer</b> toggle enables automated DND tracking so the sleep timer automatically turns ON when DND is active and turns OFF when DND ends.</li>
   <li><b>Backup Section</b>: Tap <b>Export settings</b> to share your current configuration JSON string via Android's system share menu. Tap <b>Import settings</b> to paste, validate, and restore configuration JSON strings.</li>
   <li><b>About Section</b>: Tap <b>Version</b> to check for release updates on GitHub. Tap <b>Feedback</b> to send feedback or report issues via email (prompting whether to include event logs). Access <b>Manual</b>, <b>Logs</b>, and <b>Donate</b> from <b>Links</b>. Full-screen views for Manual and Event Logs feature a Back button in the bottom-right corner.</li>
 </ul>
 
 <h3>Sleep Timer &amp; Notifications</h3>
 <ul>
-  <li><b>Notification Controls</b>: The ongoing notification shade display provides single-tap toggle actions (<b>Disable</b> / <b>Enable</b>) and a <b>Nap</b> or <b>I'm Awake</b> button (showing <b>I'm Awake</b> after the sleep timer expires, during active naps, or when alarms ring, and <b>Nap</b> otherwise). Tapping <b>I'm Awake</b> unifies stopping alarms, active naps, and early night wake-ups in a single action. All notification content is concise and directly visible.</li>
-  <li><b>Nap Timer</b>: Tap <b>Nap</b> on the main screen or in the notification shade to set a quick nap duration and start a nap alarm. When the Nap DND toggle is enabled, starting a nap automatically turns ON Do Not Disturb (DND) mode, which is turned OFF when the nap ends or is cancelled. Resetting the sleep timer pushes any active nap alarm forward by the same reset increment. Dismissing or marking awake from a nap alarm does not affect your current wake-up time.</li>
+  <li><b>Notification Controls</b>: The ongoing notification shade display provides single-tap toggle actions (<b>Disable</b> / <b>Enable</b>) and an <b>I'm Awake</b> button during the awake window around your alarm or when an alarm is ringing/snoozed. Tapping <b>I'm Awake</b> stops alarms and registers sleep sessions in a single action. All notification content is concise and directly visible.</li>
   <li><b>Automatic Playback Detection</b>: The timer sits waiting until media starts playing, then automatically begins counting down.</li>
   <li><b>Fade &amp; Pause</b>: When timer expires, audio slowly fades down over 30 seconds before media playback is paused, and original volume is restored.</li>
-  <li><b>Screen-Free Resets</b>: Press any physical volume button or flip your phone over while in bed to reset the timer to full duration without looking at your screen.</li>
+  <li><b>Screen-Free Resets</b>: Press any physical volume button while in bed to reset the timer to full duration without looking at your screen.</li>
 </ul>
 
 <h3>Smart Wake-Up Goal</h3>
 <ul>
   <li><b>Independent Wake Alarm &amp; Current Wake Time</b>: The wake alarm operates independently of whether the sleep timer is turned on. You can view and edit the upcoming wake alarm clock time using the <b>Current wake-up time</b> setting. Starting or resetting the sleep timer late pushes the wake alarm forward into the future to guarantee your minimum sleep duration safeguard. The sleep timer only pushes the alarm later and never earlier.</li>
   <li><b>Gentle Crescendo Wake-Up</b>: When the wake-up alarm triggers, the tone volume gradually increases over 3 minutes along a gentle psychoacoustic curve for a peaceful transition.</li>
-  <li><b>Snooze Alarm (9m)</b>: Flip your phone over, press any physical volume button, or tap <b>Snooze</b> on the alarm notification to snooze the alarm for 9 minutes.</li>
-  <li><b>Stopping Alarm ("I'm Awake")</b>: Tap <b>I'm Awake</b> in the ongoing notification shade or main screen to stop the alarm. Pressing <b>I'm Awake</b> inside the wake window stops the alarm, sets your current wake-up time to the exact moment you pressed <b>I'm Awake</b>, registers your sleep session in Health Connect (if enabled), and reschedules tomorrow's wake alarm to your Target Goal Time.</li>
+  <li><b>Snooze Alarm (9m)</b>: Press any physical volume button or tap <b>Snooze</b> on the alarm notification to snooze the alarm for 9 minutes.</li>
+  <li><b>Stopping Alarm ("I'm Awake")</b>: Tap <b>I'm Awake</b> in the ongoing notification shade or main screen to stop the alarm. Pressing <b>I'm Awake</b> inside the awake window (half of minimum sleep duration before or after scheduled wake time) stops the alarm, sets your current wake-up time to the exact moment you pressed <b>I'm Awake</b>, registers your sleep session in Health Connect (if enabled), and reschedules tomorrow's wake alarm to your Target Goal Time.</li>
 </ul>
 
 <h3>Health Connect Integration</h3>
 <ul>
-  <li><b>Automatic Sleep &amp; Nap Logging</b>: When Health Connect sync is enabled, Auto Sleep Droid automatically records your sleep, nap, and wake times as sleep sessions in Android Health Connect upon alarm dismissal. Night sleep start time uses when your sleep timer originally started, falling back to your minimum sleep duration if no timer was run.</li>
-  <li><b>Min Session Duration Threshold</b>: Configure a minimum session threshold (default 15 minutes) under the Health Connect section to filter out short accidental wake-ups or naps from being saved to Health Connect.</li>
+  <li><b>Automatic Sleep Logging</b>: When Health Connect sync is enabled, Auto Sleep Droid automatically records your sleep and wake times as sleep sessions in Android Health Connect upon tapping <b>I'm Awake</b>. Night sleep start time uses when your sleep timer originally started, falling back to your minimum sleep duration if no timer was run.</li>
+  <li><b>Min Session Duration Threshold</b>: Configure a minimum session threshold (default 15 minutes) under the Health Connect section to filter out short accidental wake-ups from being saved to Health Connect.</li>
   <li><b>Permissions &amp; Data Control</b>: Toggling Health Connect ON opens Android Health Connect permission settings to grant permission. Toggling OFF revokes Health Connect permissions, stopping future sync while preserving previously recorded sleep data.</li>
 </ul>
 

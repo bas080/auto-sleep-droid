@@ -569,24 +569,6 @@ class MainActivityTest {
     }
 
     @Test
-    fun testNapButtonDisplaysNapWhenInactiveAndLaunchesDialog() {
-        val controller = Robolectric.buildActivity(MainActivity::class.java)
-        val activity = controller.create().resume().get()
-
-        val btnNap = activity.findViewById<View>(R.id.btn_nap)
-        val textNapStatus = activity.findViewById<TextView>(R.id.text_nap_status)
-        assertNotNull(btnNap)
-        assertNotNull(textNapStatus)
-        assertEquals("20m", textNapStatus.text.toString())
-
-        btnNap.performClick()
-
-        val nextStarted = Shadows.shadowOf(activity).nextStartedActivity
-        assertNotNull(nextStarted)
-        assertEquals(NapDialogActivity::class.java.name, nextStarted?.component?.className)
-    }
-
-    @Test
     fun testAboutHeaderExistsAboveLinks() {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
@@ -594,31 +576,6 @@ class MainActivityTest {
         val headerAbout = activity.findViewById<TextView>(R.id.header_about)
         assertNotNull(headerAbout)
         assertEquals(activity.getString(R.string.heading_about), headerAbout.text.toString())
-    }
-
-    @Test
-    fun testNapButtonDisplaysCancelNapWhenActiveAndSendsCancelIntent() {
-        val prefs = ApplicationProvider.getApplicationContext<Context>().getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
-        prefs.edit().putLong("nap_alarm_ends_at", System.currentTimeMillis() + 600000L).commit()
-
-        val controller = Robolectric.buildActivity(MainActivity::class.java)
-        val activity = controller.create().resume().get()
-
-        val app = ApplicationProvider.getApplicationContext<Application>()
-        val shadowApp = Shadows.shadowOf(app)
-        while (shadowApp.nextStartedService != null) {}
-
-        val btnNap = activity.findViewById<View>(R.id.btn_nap)
-        val textNapStatus = activity.findViewById<TextView>(R.id.text_nap_status)
-        assertNotNull(btnNap)
-        assertNotNull(textNapStatus)
-        assertEquals(activity.getString(R.string.action_awake), textNapStatus.text.toString())
-
-        btnNap.performClick()
-
-        val serviceIntent = shadowApp.nextStartedService
-        assertNotNull(serviceIntent)
-        assertEquals(MainService.ACTION_CANCEL_NAP, serviceIntent?.action)
     }
 
     @Test
@@ -651,7 +608,6 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
-        val headerNap = activity.findViewById<TextView>(R.id.header_nap)
         val headerTimer = activity.findViewById<TextView>(R.id.header_timer)
         val headerAlarm = activity.findViewById<TextView>(R.id.header_alarm)
         val headerHealthConnect = activity.findViewById<TextView>(R.id.header_health_connect)
@@ -659,7 +615,6 @@ class MainActivityTest {
         val headerBackup = activity.findViewById<TextView>(R.id.header_backup)
         val headerAbout = activity.findViewById<TextView>(R.id.header_about)
 
-        assertNotNull(headerNap)
         assertNotNull(headerTimer)
         assertNotNull(headerAlarm)
         assertNotNull(headerHealthConnect)
@@ -667,7 +622,6 @@ class MainActivityTest {
         assertNotNull(headerBackup)
         assertNotNull(headerAbout)
 
-        assertEquals(activity.getString(R.string.heading_nap), headerNap.text.toString())
         assertEquals(activity.getString(R.string.heading_timer), headerTimer.text.toString())
         assertEquals(activity.getString(R.string.heading_alarm), headerAlarm.text.toString())
         assertEquals(activity.getString(R.string.heading_health_connect), headerHealthConnect.text.toString())
@@ -681,8 +635,6 @@ class MainActivityTest {
         switchEnable.isChecked = true
         switchGoal.isChecked = true
 
-        assertTrue(headerNap.isEnabled)
-        assertEquals(1.0f, headerNap.alpha, 0.01f)
         assertTrue(headerDnd.isEnabled)
         assertEquals(1.0f, headerDnd.alpha, 0.01f)
         assertTrue(headerTimer.isEnabled)
@@ -691,8 +643,6 @@ class MainActivityTest {
         assertEquals(1.0f, headerAlarm.alpha, 0.01f)
 
         switchGoal.isChecked = false
-        assertTrue(headerNap.isEnabled)
-        assertEquals(1.0f, headerNap.alpha, 0.01f)
         assertTrue(headerDnd.isEnabled)
         assertEquals(1.0f, headerDnd.alpha, 0.01f)
         assertTrue(headerTimer.isEnabled)
@@ -701,8 +651,6 @@ class MainActivityTest {
         assertEquals(1.0f, headerAlarm.alpha, 0.01f)
 
         switchEnable.isChecked = false
-        assertTrue(headerNap.isEnabled)
-        assertEquals(1.0f, headerNap.alpha, 0.01f)
         assertTrue(headerDnd.isEnabled)
         assertEquals(1.0f, headerDnd.alpha, 0.01f)
         assertTrue(headerTimer.isEnabled)
@@ -1011,7 +959,7 @@ class MainActivityTest {
         val switchGoal = activity.findViewById<Switch>(R.id.switch_enable_goal)
         switchGoal.isChecked = true
 
-        val rowIds = intArrayOf(R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_export, R.id.btn_import, R.id.btn_version, R.id.btn_feedback, R.id.btn_links)
+        val rowIds = intArrayOf(R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_export, R.id.btn_import, R.id.btn_version, R.id.btn_feedback, R.id.btn_links)
         for (rowId in rowIds) {
             val parentRow = activity.findViewById<View>(rowId)
             assertNotNull("Row should exist", parentRow)
