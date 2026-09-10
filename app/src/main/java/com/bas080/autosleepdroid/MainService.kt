@@ -72,6 +72,7 @@ class MainService : Service(), SensorEventListener {
     private var napAlarmEndsAt = 0L
     private var lastTimerEndsAt = 0L
     private var isNapAlarmRinging = false
+    private var lastSelfDndChangeTimeMs = 0L
 
     var state = State.OFF
         private set
@@ -519,6 +520,13 @@ class MainService : Service(), SensorEventListener {
                 override fun onReceive(context: Context?, intent: Intent?) {
                     if (NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED == intent?.action) {
                         EventLogger.log(context, EventLogger.LEVEL_HIGH, "DND state changed")
+                        val now = System.currentTimeMillis()
+                        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
+                        val dndActive = nm != null && nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+                        if (now - lastSelfDndChangeTimeMs > 1500L && isNapActive() && dndActive) {
+                            preferences?.edit()?.putBoolean(PreferenceKeys.KEY_NAP_DND_WAS_ACTIVE, true)?.apply()
+                            EventLogger.log(context, EventLogger.LEVEL_HIGH, "Recorded external DND activation during nap")
+                        }
                         checkAndApplyDndAutoTimer()
                     }
                 }
@@ -1189,22 +1197,42 @@ class MainService : Service(), SensorEventListener {
         return true == pm.getComputed(PreferenceComputations.IS_NAP_ALLOWED)
     }
 
+    private fun isSystemDndScheduleActive(nm: NotificationManager): Boolean {
+        if (Build.VERSION.SDK_INT >= 24) {
+            try {
+                val rules = nm.automaticZenRules
+                if (!rules.isNullOrEmpty()) {
+                    for (rule in rules.values) {
+                        if (rule != null && rule.isEnabled) {
+                            return true
+                        }
+                    }
+                }
+            } catch (ignored: Exception) {
+            }
+        }
+        return false
+    }
+
     private fun setDndMode(enable: Boolean) {
         if (preferenceManager != null && true != preferenceManager?.getComputed(PreferenceComputations.IS_NAP_DND_ENABLED)) {
             return
         }
         val wasDndAlreadyActive = preferences?.getBoolean(PreferenceKeys.KEY_NAP_DND_WAS_ACTIVE, false) ?: false
-        if (!enable && wasDndAlreadyActive) {
-            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Preserving DND state after nap because DND was already active before nap start")
-            return
-        }
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
+        if (!enable && nm != null && nm.isNotificationPolicyAccessGranted) {
+            if (wasDndAlreadyActive || isSystemDndScheduleActive(nm)) {
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Preserving DND state after nap because DND was active prior to nap or a system DND schedule is active")
+                return
+            }
+        }
         if (nm != null && nm.isNotificationPolicyAccessGranted) {
             try {
                 val targetFilter = if (enable)
                     NotificationManager.INTERRUPTION_FILTER_PRIORITY
                 else
                     NotificationManager.INTERRUPTION_FILTER_ALL
+                lastSelfDndChangeTimeMs = System.currentTimeMillis()
                 nm.setInterruptionFilter(targetFilter)
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, if (enable) "DND enabled for nap" else "DND disabled after nap")
                 checkAndApplyDndAutoTimer()
