@@ -595,8 +595,8 @@ class MainServiceTest {
     }
 
     @Test
-    fun testVolumeKeyDismissesRingingWakeUpAlarm() {
-        preferences.edit().putBoolean("show_notification", true).commit()
+    fun testVolumeKeySnoozesRingingWakeUpAlarm() {
+        preferences.edit().putBoolean("wake_up_goal_enabled", true).putBoolean("show_notification", true).commit()
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
 
@@ -609,16 +609,20 @@ class MainServiceTest {
 
         assertNotNull(shadowNotificationManager.getNotification(1001))
 
-        context.sendBroadcast(Intent("android.media.VOLUME_CHANGED_ACTION"))
-        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+        val receiverField = MainService::class.java.getDeclaredField("volumeReceiver")
+        receiverField.isAccessible = true
+        val receiver = receiverField.get(service) as android.content.BroadcastReceiver?
+        assertNotNull(receiver)
+        receiver?.onReceive(service, Intent("android.media.VOLUME_CHANGED_ACTION"))
 
-        val dismissedNotification = shadowNotificationManager.getNotification(1001)
-        assertNotNull(dismissedNotification)
-        assertFalse(context.getString(R.string.wakeup_alarm_title) == dismissedNotification.extras.getCharSequence(Notification.EXTRA_TITLE))
+        val snoozedNotification = shadowNotificationManager.getNotification(1001)
+        assertNotNull(snoozedNotification)
+        assertTrue("Volume key should snooze alarm and keep snoozed notification open",
+            snoozedNotification.extras.getCharSequence(Notification.EXTRA_TEXT).toString().contains("Snoozed 9m"))
     }
 
     @Test
-    fun testVolumeKeyDismissesSnoozedWakeUpAlarm() {
+    fun testVolumeKeySnoozesSnoozedWakeUpAlarm() {
         preferences.edit().putBoolean("show_notification", true).commit()
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
@@ -642,9 +646,10 @@ class MainServiceTest {
         assertNotNull(receiver)
         receiver?.onReceive(service, Intent("android.media.VOLUME_CHANGED_ACTION"))
 
-        val dismissedNotification = shadowNotificationManager.getNotification(1001)
-        assertNotNull(dismissedNotification)
-        assertFalse(context.getString(R.string.wakeup_alarm_title) == dismissedNotification.extras.getCharSequence(Notification.EXTRA_TITLE))
+        val snoozedNotification = shadowNotificationManager.getNotification(1001)
+        assertNotNull(snoozedNotification)
+        assertTrue("Volume key should keep alarm snoozed",
+            snoozedNotification.extras.getCharSequence(Notification.EXTRA_TEXT).toString().contains("Snoozed 9m"))
     }
 
     @Test
@@ -726,7 +731,7 @@ class MainServiceTest {
     }
 
     @Test
-    fun testDismissingNapAlarmViaVolumeKeyDoesNotAffectCurrentWakeTime() {
+    fun testSnoozingNapAlarmViaVolumeKeyDoesNotAffectCurrentWakeTime() {
         preferences.edit()
             .putBoolean("active", false)
             .putBoolean("wake_up_goal_enabled", true)
@@ -746,9 +751,9 @@ class MainServiceTest {
         context.sendBroadcast(Intent("android.media.VOLUME_CHANGED_ACTION"))
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
-        assertEquals("Current wake hour must remain unchanged on nap alarm volume key dismiss",
+        assertEquals("Current wake hour must remain unchanged on nap alarm volume key snooze",
             7, preferences.getInt("current_wake_hour", -1))
-        assertEquals("Current wake minute must remain unchanged on nap alarm volume key dismiss",
+        assertEquals("Current wake minute must remain unchanged on nap alarm volume key snooze",
             30, preferences.getInt("current_wake_minute", -1))
     }
 
@@ -1368,7 +1373,7 @@ class MainServiceTest {
     }
 
     @Test
-    fun testOnTimerRescheduledMovesWakeAlarmEarlierWhenGoingToBedEarlyWithinWindow() {
+    fun testOnTimerRescheduledDoesNotMoveWakeAlarmEarlierWhenGoingToBedEarly() {
         val now = System.currentTimeMillis()
         val minSleepMin = 450
 
@@ -1399,8 +1404,8 @@ class MainServiceTest {
 
         service.onTimerRescheduled()
 
-        assertEquals(goalHour, preferences.getInt("current_wake_hour", -1))
-        assertEquals(goalMin, preferences.getInt("current_wake_minute", -1))
+        assertEquals("Current wake hour should remain unchanged on timer reschedule", currentHour, preferences.getInt("current_wake_hour", -1))
+        assertEquals("Current wake minute should remain unchanged on timer reschedule", currentMin, preferences.getInt("current_wake_minute", -1))
     }
 
     @Test
@@ -1520,10 +1525,10 @@ class MainServiceTest {
     }
 
     @Test
-    fun testNotificationActionsInActiveSleepPhaseHasNoSecondaryAction() {
+    fun testNotificationActionsWhenNoActiveSessionShowsNapAction() {
         val now = System.currentTimeMillis()
         val calWake = Calendar.getInstance()
-        calWake.timeInMillis = now + 6 * 3600_000L // 6h in future -> INITIATION_AND_ACTIVE_SLEEP phase (between 1.2*7.5h=9h and 0.5*7.5h=3.75h)
+        calWake.timeInMillis = now + 6 * 3600_000L
         val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
         val wakeMin = calWake.get(Calendar.MINUTE)
 
@@ -1546,8 +1551,9 @@ class MainServiceTest {
         val notification = shadowNotificationManager.getNotification(1001)
         assertNotNull(notification)
 
-        assertEquals("During active sleep phase, notification should feature only 1 action (Disable)", 1, notification.actions.size)
+        assertEquals("When no session is ongoing, notification features Disable and Nap actions", 2, notification.actions.size)
         assertEquals("Disable", notification.actions[0].title.toString())
+        assertEquals("Nap", notification.actions[1].title.toString())
     }
 
     @Test

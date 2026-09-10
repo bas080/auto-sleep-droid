@@ -4,7 +4,7 @@
 - **Sleep Timer**: The application feature that counts down while media is playing and fades volume down to zero to pause playback upon expiration.
 - **Sleep Timer Duration**: The user-configured duration in minutes (default 20 minutes, min 1 minute, max 24 hours) that the sleep timer counts down before fading and pausing media.
 - **Fade-Out / Fading**: The 30-second volume fade at sleep timer expiration where music volume gradually decreases along an ease-out curve down to zero before media playback is paused.
-- **Wake-Up Alarm ("Auto Sleep")**: The background wake-up alarm scheduled via AlarmManager by Auto Sleep Droid that plays the system default alarm tone and updates the ongoing status notification to display the wake-up alarm status. Users can snooze the alarm with a phone flip gesture or dismiss it with a hardware volume button click.
+- **Wake-Up Alarm ("Auto Sleep")**: The background wake-up alarm scheduled via AlarmManager by Auto Sleep Droid that plays the system default alarm tone and updates the ongoing status notification to display the wake-up alarm status. Users can snooze the alarm with a phone flip gesture or a hardware volume button click. Only tapping "I'm Awake" stops the alarm.
 - **Target Goal Time**: The user's desired daily wake-up clock time (e.g., `06:30 AM`).
 - **Minimum Sleep Duration**: The user-configured minimum sleep safeguard duration in hours (default 7.5 hours) ensuring that the wake-up alarm is set no earlier than `timerStartTime + minimumSleepDuration`. When media pauses after timer expiration, the effective remaining sleep safeguard is `Math.max(0, minimumSleepDuration - sleepTimerDuration)`.
 
@@ -24,8 +24,8 @@ All notification content is concise and directly visible in the notification bod
 - Waiting: "Waiting for playback (20m) • Wake at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
 - Active: "Fades out at 11:15 PM (20m) • Wake at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
 - Fading: "Fading volume" • Button: "Disable"
-- Wake-up Alarm Ringing: "Flip to snooze • Press volume button to dismiss" • Buttons: "Dismiss", "Snooze"
-- Wake-up Alarm Snoozed: "Snoozed 9m • Press volume button to dismiss" • Button: "Dismiss"
+- Wake-up Alarm Ringing: "Flip or volume button to snooze • Tap I'm Awake to stop" • Buttons: "I'm Awake", "Snooze"
+- Wake-up Alarm Snoozed: "Snoozed 9m • Tap I'm Awake to stop" • Button: "I'm Awake"
 
 Only the action button lives in the expanded shade. All information text is directly visible in the main notification view.
 If the "Show notification" setting is disabled by the user (disabled by default), the ongoing sleep timer notification is hidden in all timer states (Off, Waiting, Active, Fading).
@@ -107,15 +107,15 @@ Toggling "Show notification" to ON prompts the user for notification permission 
      - A night sleep session begins when the sleep timer starts or is reset (via flip gesture, volume button, or duration update, updating `timer_start_time_ms`), when media playback is paused while the timer is active, or when the sleep timer expires and media is paused (`sleep_start_time_ms`). If media is played again during the night and expires or pauses, the sleep start time restarts (`sleep_start_time_ms` updated to latest pause or expiration time).
      - When an active sleep session exists (`sleep_start_time_ms` recorded upon timer expiration within the last 14 hours), minimum sleep safeguard calculation uses `requiredWakeUpTime = sleep_start_time_ms + Math.max(0, minimumSleepDuration - sleepTimerDuration)`.
      - When the sleep timer is active (`timerEndsAt > 0`), the projected wake alarm time `requiredWakeUpTime = timerStartTime + minimumSleepDuration` is calculated and displayed in the notification's 'Wake at' status.
-     - If `requiredWakeUpTime` is later than `currentWakeUpTime`, `currentWakeUpTime` is automatically pushed forward to `requiredWakeUpTime` to respect the minimum sleep safeguard.
-     - When going to bed early (within a `1.2 * minimumSleepDuration` window before `currentWakeUpTime`), starting or rescheduling the sleep timer automatically moves `currentWakeUpTime` earlier toward `Math.max(targetGoalTime, requiredWakeUpTime)`.
+     - If `requiredWakeUpTime` is later than `currentWakeUpTime`, `currentWakeUpTime` is automatically pushed forward to `requiredWakeUpTime` to respect the minimum sleep safeguard. The sleep timer only pushes the wake-up alarm later and never earlier.
+     - Setting the wake-up alarm earlier happens exclusively when the user presses **I'm Awake** within the awake window around the alarm.
   4. **Alarm Trigger & Audio**:
      - Upon expiration, the app explicitly unmutes `STREAM_ALARM` if muted, ensures an audible volume level, gradually increases the default system alarm tone volume over 3 minutes along a gentle psychoacoustic crescendo curve, and updates the ongoing status notification to display the ringing alarm status.
   5. **Single Alarm Creation**: The app maintains only one wake-up alarm named `"Auto Sleep"`.
   6. **Wake-Up Alarm Gestures & Persistence**:
      - **Flip to Snooze**: Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes and updates the notification text.
-     - **Volume Button to Dismiss**: Pressing a hardware volume button while the wake-up alarm is ringing or snoozed dismisses the alarm and reverts the notification back to standard status.
-     - **Early Wake-Up ("I'm Awake")**: The ongoing status notification displays **I'm Awake** as its secondary action whenever a nap is active, during the pre-alarm window, or during the alarm phase (when an alarm is ringing or snoozed). Tapping **I'm Awake** in the notification shade marks the user awake directly in the background without launching an activity or pop-up dialog, registering the sleep session in Health Connect (if enabled and exceeding the minimum session duration threshold), clearing `sleep_start_time_ms`, canceling today's pending wake alarm, setting the current wake-up time to the exact moment **I'm Awake** was tapped (for night sleep sessions), rescheduling the alarm for tomorrow, and reverting the notification action back to **Nap**. If 14 hours pass without tapping **I'm Awake** or dismissing the alarm, the unconfirmed sleep session is dropped and not recorded to Health Connect.
+     - **Volume Button to Snooze**: Pressing a hardware volume button while the wake-up alarm is ringing or snoozed snoozes the alarm for 9 minutes.
+     - **Wake-Up Action ("I'm Awake")**: The ongoing status notification displays **I'm Awake** whenever a nap is active, during an active sleep window around the scheduled wake time, or when an alarm is ringing or snoozed. Tapping **I'm Awake** is the sole action that stops the alarm, registering the sleep session in Health Connect (if enabled and meeting the minimum duration threshold), clearing `sleep_start_time_ms`, setting current wake time to the exact moment **I'm Awake** was tapped, rescheduling the wake alarm for tomorrow at Target Goal Time, and reverting the notification action back to **Nap**.
      - **Sleep Timer Toggle Independence**: Turning off or disabling the sleep timer does not affect scheduled wake alarms.
 - **Disabled by Default**: The feature is off by default until enabled in `MainActivity`.
 - **User Inputs**:
@@ -166,7 +166,8 @@ Toggling "Show notification" to ON prompts the user for notification permission 
 - The wake-up alarm is daily recurring, automatically scheduling the next alarm for the same target goal time when the current alarm rings.
 - Starting the sleep timer schedules/updates the `"Auto Sleep"` wake-up alarm (when enabled) using `Math.max(targetGoalTime, timerStartTime + sleepTimerDuration + minimumSleepDuration)` while enforcing a minimum sleep duration safeguard (default 7.5h) via background `AlarmManager.setAlarmClock`.
 - Disabling the timer does not cancel scheduled wake alarms, allowing the wake alarm to operate independently of the sleep timer.
-- Flipping the phone while the wake-up alarm is ringing snoozes the alarm for 9 minutes.
+- Flipping the phone or pressing a hardware volume button while the wake-up alarm is ringing or snoozed snoozes the alarm for 9 minutes.
+- Tapping "I'm Awake" is the sole action that stops the wake alarm and sets the current wake time to the moment it was pressed.
 - The main screen includes a Backup header section with Export and Import settings rows, a Feedback row under About, and action links in the Links dialog.
 - Tapping "Export" serializes configuration settings and launches a system share action (`ACTION_SEND`).
 - Tapping "Import" presents an instructional dialog for pasting configuration strings, updating preferences and notifications upon valid input, or preserving existing preferences when given invalid input.

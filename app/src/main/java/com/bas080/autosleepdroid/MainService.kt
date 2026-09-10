@@ -576,7 +576,7 @@ class MainService : Service(), SensorEventListener {
                 override fun onReceive(context: Context?, intent: Intent?) {
                     if ("android.media.VOLUME_CHANGED_ACTION" == intent?.action) {
                         if (isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) {
-                            dismissWakeUpAlarmViaVolumeKey()
+                            snoozeWakeUpAlarmViaVolumeKey()
                         } else {
                             val streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
                             if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
@@ -647,9 +647,6 @@ class MainService : Service(), SensorEventListener {
                 handleAlarmExpiryState(currentVol)
             } else if (ACTION_WAKEUP_ALARM_EXPIRY == action) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep wake-up alarm triggered")
-                if (!isNapAlarmRinging) {
-                    updateNextWakeUpTimeOnDismissOrExpiry()
-                }
                 if (isWakeAlarmEnabled()) {
                     setWakeUpAlarmState(true, false)
                     updateListenersRegistration()
@@ -1113,17 +1110,13 @@ class MainService : Service(), SensorEventListener {
             val minSleepMs = minSleepMin * 60_000L
             val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
             val requiredWakeTime: Long
-            val baseTime: Long
             if (newTimerEndsAt > 0L) {
-                baseTime = newTimerEndsAt
                 val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
                 requiredWakeTime = newTimerEndsAt + effectiveMinSleepMs
             } else if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
-                baseTime = sleepStartTime
                 val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
                 requiredWakeTime = sleepStartTime + effectiveMinSleepMs
             } else {
-                baseTime = now
                 requiredWakeTime = now + minSleepMs
             }
 
@@ -1142,19 +1135,7 @@ class MainService : Service(), SensorEventListener {
                 calCurrent.add(Calendar.DAY_OF_YEAR, 1)
             }
 
-            val calGoal = Calendar.getInstance()
-            calGoal.timeInMillis = now
-            calGoal.set(Calendar.HOUR_OF_DAY, goalHour)
-            calGoal.set(Calendar.MINUTE, goalMin)
-            calGoal.set(Calendar.SECOND, 0)
-            calGoal.set(Calendar.MILLISECOND, 0)
-            if (calGoal.timeInMillis <= now) {
-                calGoal.add(Calendar.DAY_OF_YEAR, 1)
-            }
-
             val currentAlarmMs = calCurrent.timeInMillis
-            val goalAlarmMs = calGoal.timeInMillis
-            val windowMs = (1.2 * minSleepMs).toLong()
 
             if (requiredWakeTime > currentAlarmMs) {
                 val calRequired = Calendar.getInstance()
@@ -1167,20 +1148,6 @@ class MainService : Service(), SensorEventListener {
                     .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
                     .apply()
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Pushed wake alarm forward to ${formatTime(pushedHour, pushedMin)} due to min sleep safeguard")
-            } else if (currentAlarmMs - baseTime <= windowMs) {
-                val earlierWakeMs = Math.max(goalAlarmMs, requiredWakeTime)
-                if (earlierWakeMs < currentAlarmMs) {
-                    val calEarlier = Calendar.getInstance()
-                    calEarlier.timeInMillis = earlierWakeMs
-                    val earlierHour = calEarlier.get(Calendar.HOUR_OF_DAY)
-                    val earlierMin = calEarlier.get(Calendar.MINUTE)
-                    prefs.edit()
-                        .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, earlierHour)
-                        .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, earlierMin)
-                        .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
-                        .apply()
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Moved wake alarm earlier to ${formatTime(earlierHour, earlierMin)} (within 1.2x min sleep window)")
-                }
             }
         }
 
@@ -1518,21 +1485,15 @@ class MainService : Service(), SensorEventListener {
         updateNotification()
     }
 
-    private fun dismissWakeUpAlarmViaVolumeKey() {
-        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed via volume button")
-        processSleepSessionOnAlarmDismissal()
-        if (!isNapAlarmRinging) {
-            updateNextWakeUpTimeOnDismissOrExpiry()
-        }
+    private fun snoozeWakeUpAlarmViaVolumeKey() {
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed via volume button")
         stopWakeUpAlarmSound()
-        cancelSnoozeAlarm()
-        cancelNapAlarm(false)
-        setNapAlarmRinging(false)
-        setWakeUpAlarmState(false, false)
+        snoozeWakeUpAlarm()
+        setWakeUpAlarmState(false, true)
         onTriggerVibration()
         updateListenersRegistration()
         updateNotification()
-        Toast.makeText(this, R.string.toast_alarm_dismissed, Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.toast_alarm_snoozed, Toast.LENGTH_SHORT).show()
     }
 
     private fun pauseMediaViaAudioFocus() {

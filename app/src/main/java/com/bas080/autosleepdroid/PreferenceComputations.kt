@@ -109,20 +109,58 @@ object PreferenceComputations {
 
     val SHOULD_SHOW_AWAKE_ACTION: PreferenceManager.ComputedValue<Boolean> =
         PreferenceManager.ComputedValue { getter ->
-            val napActive = getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L) > System.currentTimeMillis()
+            val now = System.currentTimeMillis()
+            val napActive = getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L) > now
             if (napActive) return@ComputedValue true
 
-            val phase = GET_SESSION_PHASE.compute(getter)
-            phase == SessionPhase.PRE_ALARM_WINDOW || phase == SessionPhase.ALARM
+            val isNapRinging = getter.getBoolean(PreferenceKeys.KEY_NAP_ALARM_RINGING, false)
+            val isWakeupRinging = getter.getBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING, false)
+            val isWakeupSnoozed = getter.getBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_SNOOZED, false)
+            if (isNapRinging || isWakeupRinging || isWakeupSnoozed) return@ComputedValue true
+
+            val wakeAlarmEnabled = getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false)
+            if (!wakeAlarmEnabled) return@ComputedValue false
+
+            val sleepStartTime = getter.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
+            val timerStartTime = getter.getLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, 0L)
+            val timerEndsAt = getter.getLong(PreferenceKeys.KEY_TIMER_ENDS_AT, 0L)
+
+            val isSessionOngoing = (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) ||
+                    (timerStartTime > 0L && (now - timerStartTime < 14 * 3600_000L)) ||
+                    (timerEndsAt > 0L)
+
+            if (!isSessionOngoing) return@ComputedValue false
+
+            val minSleepMin = getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+            val minSleepMs = minSleepMin * 60_000L
+
+            val goalHour = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
+            val goalMin = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
+            val currentHour = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)
+            val currentMin = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
+
+            val calCurrent = Calendar.getInstance()
+            calCurrent.timeInMillis = now
+            calCurrent.set(Calendar.HOUR_OF_DAY, currentHour)
+            calCurrent.set(Calendar.MINUTE, currentMin)
+            calCurrent.set(Calendar.SECOND, 0)
+            calCurrent.set(Calendar.MILLISECOND, 0)
+            if (now - calCurrent.timeInMillis > 12 * 3600_000L) {
+                calCurrent.add(Calendar.DAY_OF_YEAR, 1)
+            }
+            val currentWakeTime = calCurrent.timeInMillis
+
+            val windowStart = currentWakeTime - (1.2 * minSleepMs).toLong()
+            val windowEnd = currentWakeTime + 4 * 3600_000L
+
+            now in windowStart..windowEnd
         }
 
     val IS_NAP_ALLOWED: PreferenceManager.ComputedValue<Boolean> =
         PreferenceManager.ComputedValue { getter ->
             val napActive = getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L) > System.currentTimeMillis()
             if (napActive) return@ComputedValue true
-
-            val phase = GET_SESSION_PHASE.compute(getter)
-            phase == SessionPhase.IDLE
+            !SHOULD_SHOW_AWAKE_ACTION.compute(getter)
         }
 
     val IS_AUTO_TIMER_ENABLED: PreferenceManager.ComputedValue<Boolean> =

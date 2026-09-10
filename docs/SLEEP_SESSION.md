@@ -6,48 +6,18 @@ A **sleep session** in Auto Sleep Droid represents a tracked period of sleep bou
 
 Auto Sleep Droid uses these sessions to track rest intervals and automatically log completed sleep records to Android Health Connect.
 
-## Session Phases Relative to Alarm Time
+## Awake Window & Alarm Interactions
 
-A sleep session progresses through four concise lifecycle phases evaluated by predicates on current time (`now`), `currentWakeTime`, and `minSleepDuration`:
+A sleep session is active during the rest window surrounding your scheduled wake time. The application provides a simple window for declaring wakefulness (**"I'm Awake"**):
 
-### 1. Idle Phase
+### Awake Window Availability
+- **Active Sleep Window**: When an active sleep session exists and current time is within the window around `currentWakeTime` (from `currentWakeTime - 1.2 * minSleepDuration` up to `currentWakeTime + 4 hours`).
+- **Alarm / Snooze Phase**: Whenever a wake alarm or nap is ringing or snoozed, or when a nap is active.
+- **Daytime Idle**: Outside this window, **"Nap"** is shown instead of **"I'm Awake"**.
 
-```text
-!isSessionOngoing && (now < currentWakeTime - (minSleepDuration * 1.2) || now >= currentWakeTime)
-```
-
-- **Description**: Current time is outside the sleep session window (prior to bedtime or after wake time).
-- **Nap Option**: Fully enabled on the main UI and notification shade.
-- **"I'm Awake" Action**: Hidden.
-
-### 2. Initiation & Active Sleep Phase
-
-```text
-now >= currentWakeTime - (minSleepDuration * 1.2) && now < currentWakeTime - (minSleepDuration * 0.5)
-```
-
-- **Description**: Sleep window when going to bed or actively sleeping.
-- **Nap Option**: Disabled on main UI and omitted from notifications.
-- **"I'm Awake" Action**: Hidden during early sleep.
-
-### 3. Pre-Alarm Window Phase
-
-```text
-now >= currentWakeTime - (minSleepDuration * 0.5) && now < currentWakeTime
-```
-
-- **Description**: Current time enters the early wake window preceding `currentWakeTime`.
-- **Nap Option**: Disabled.
-- **"I'm Awake" Action**: Visible in notification shade. Tapping **I'm Awake** completes the session, logs to Health Connect, sets current wake time to the moment it was pressed, and reschedules for tomorrow.
-
-### 4. Alarm Phase
-
-```text
-isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime)
-```
-
-- **Description**: Current time reaches or passes `currentWakeTime` during an ongoing session, or an alarm is ringing or snoozed.
-- **Actions**: Notification shade offers **I'm Awake** (as the dismiss action) and **Snooze**. Tapping **I'm Awake** dismisses the alarm, completes and logs the session, sets current wake time to the moment it was pressed, and reverts to the Idle Phase.
+### Alarm Controls & Gestures
+- **Snoozing**: Both phone flip gestures and hardware volume button presses snooze a ringing or snoozed wake alarm for 9 minutes.
+- **Stopping**: Only tapping **"I'm Awake"** stops and dismisses the alarm, updating **Current Wake-Up Time** to the moment it was pressed and logging the sleep session to Health Connect.
 
 ## Phase Calculation Pseudocode
 
