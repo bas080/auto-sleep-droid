@@ -208,7 +208,7 @@ class MainService : Service(), SensorEventListener {
         }
     }
 
-    fun startTimer(durationMinutes: Int, endsAt: Long, now: Long, persist: Boolean) {
+    fun startTimer(durationMinutes: Int, endsAt: Long, @Suppress("UNUSED_PARAMETER") now: Long, persist: Boolean) {
         onCancelAlarm()
         val wasActive = state == State.ACTIVE
         configuredDurationMinutes = if (isValidDuration(durationMinutes)) durationMinutes else AppDefaults.DURATION_MINUTES
@@ -294,7 +294,7 @@ class MainService : Service(), SensorEventListener {
         transitionTo(State.WAITING)
     }
 
-    fun cancelFadeForVolumeChange(currentVolume: Int) {
+    fun cancelFadeForVolumeChange(@Suppress("UNUSED_PARAMETER") currentVolume: Int) {
         cancelFadeForFlip()
     }
 
@@ -383,6 +383,7 @@ class MainService : Service(), SensorEventListener {
         alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager?
         preferenceManager = PreferenceManager(getSharedPreferences(PREFERENCES, MODE_PRIVATE))
         preferences = preferenceManager?.sharedPreferences
+        @Suppress("DEPRECATION")
         vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator?
         createNotificationChannel()
 
@@ -1527,6 +1528,7 @@ class MainService : Service(), SensorEventListener {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun buildNotification(): Notification {
         val title: String
         var contentText: String

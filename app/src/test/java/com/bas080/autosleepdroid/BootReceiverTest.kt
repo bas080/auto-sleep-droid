@@ -1,5 +1,6 @@
 package com.bas080.autosleepdroid
 
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
@@ -9,8 +10,8 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowApplication
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -24,7 +25,8 @@ class BootReceiverTest {
         val bootIntent = Intent(Intent.ACTION_BOOT_COMPLETED)
         receiver.onReceive(context, bootIntent)
 
-        val nextService = ShadowApplication.getInstance().nextStartedService
+        val shadowApp = Shadows.shadowOf(ApplicationProvider.getApplicationContext<Application>())
+        val nextService = shadowApp.nextStartedService
         assertNotNull(nextService)
         assertEquals(MainService::class.java.name, nextService?.component?.className)
     }
@@ -37,7 +39,8 @@ class BootReceiverTest {
         val otherIntent = Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED)
         receiver.onReceive(context, otherIntent)
 
-        val nextService = ShadowApplication.getInstance().nextStartedService
+        val shadowApp = Shadows.shadowOf(ApplicationProvider.getApplicationContext<Application>())
+        val nextService = shadowApp.nextStartedService
         assertNull(nextService)
     }
 }

@@ -11,6 +11,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Switch
 import android.widget.TextView
+import androidx.core.content.IntentCompat
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -154,7 +155,7 @@ class MainActivityTest {
         assertNotNull(chooserIntent)
         assertEquals(Intent.ACTION_CHOOSER, chooserIntent?.action)
 
-        val sendIntent = chooserIntent?.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+        val sendIntent = IntentCompat.getParcelableExtra(chooserIntent!!, Intent.EXTRA_INTENT, Intent::class.java)
         assertNotNull(sendIntent)
         assertEquals(Intent.ACTION_SENDTO, sendIntent?.action)
         val bodyText = sendIntent?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
@@ -181,7 +182,7 @@ class MainActivityTest {
         assertNotNull(chooserIntent)
         assertEquals(Intent.ACTION_CHOOSER, chooserIntent?.action)
 
-        val sendIntent = chooserIntent?.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+        val sendIntent = IntentCompat.getParcelableExtra(chooserIntent!!, Intent.EXTRA_INTENT, Intent::class.java)
         assertNotNull(sendIntent)
         assertEquals(Intent.ACTION_SENDTO, sendIntent?.action)
         assertTrue(sendIntent?.dataString?.startsWith("mailto:bas080@hotmail.com") == true)
@@ -222,7 +223,7 @@ class MainActivityTest {
         assertNotNull(chooserIntent)
         assertEquals(Intent.ACTION_CHOOSER, chooserIntent?.action)
 
-        val sendIntent = chooserIntent?.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+        val sendIntent = IntentCompat.getParcelableExtra(chooserIntent!!, Intent.EXTRA_INTENT, Intent::class.java)
         assertNotNull(sendIntent)
         assertEquals(Intent.ACTION_SEND, sendIntent?.action)
         assertTrue(sendIntent?.getStringExtra(Intent.EXTRA_TEXT)?.contains("\"version\":1") == true)
