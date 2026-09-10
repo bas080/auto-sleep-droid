@@ -1711,26 +1711,36 @@ class MainServiceTest {
     }
 
     @Test
-    fun testCancellingNapWithNapDndDoesNotToggleOffSleepTimer() {
+    fun testBothDndSettingsEnabledTogglesSleepTimerOnNapStartAndStop() {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         Shadows.shadowOf(nm).setNotificationPolicyAccessGranted(true)
-        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
 
         preferences.edit()
             .putBoolean("nap_dnd_enabled", true)
             .putBoolean("auto_timer_enabled", true)
-            .putBoolean("active", true)
-            .putLong(MainService.KEY_NAP_ALARM_ENDS_AT, System.currentTimeMillis() + 1200_000L)
+            .putBoolean("active", false)
             .commit()
 
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
 
-        val cancelNapIntent = Intent(context, MainService::class.java).setAction(MainService.ACTION_CANCEL_NAP)
+        assertFalse("Sleep timer should initially be disabled", service.isEnabled)
+        assertFalse("Active preference should initially be false", preferences.getBoolean("active", true))
+
+        val startNapIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_START_NAP)
+            .putExtra(MainService.EXTRA_NAP_DURATION_MINUTES, 20)
+        service.onStartCommand(startNapIntent, 0, 1)
+
+        assertTrue("Starting nap when both DND settings are enabled must turn ON sleep timer", service.isEnabled)
+        assertTrue("Active preference must be true after starting nap", preferences.getBoolean("active", false))
+
+        val cancelNapIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_CANCEL_NAP)
         service.onStartCommand(cancelNapIntent, 0, 1)
 
-        assertTrue("Sleep timer active preference should remain true after nap cancellation",
-            preferences.getBoolean("active", false))
+        assertFalse("Stopping nap when both DND settings are enabled must disable sleep timer", service.isEnabled)
+        assertFalse("Active preference must be false after stopping nap", preferences.getBoolean("active", true))
     }
 
     @Test

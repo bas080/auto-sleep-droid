@@ -72,7 +72,6 @@ class MainService : Service(), SensorEventListener {
     private var napAlarmEndsAt = 0L
     private var lastTimerEndsAt = 0L
     private var isNapAlarmRinging = false
-    private var isNapDndChanging = false
 
     var state = State.OFF
         private set
@@ -540,7 +539,7 @@ class MainService : Service(), SensorEventListener {
     }
 
     private fun checkAndApplyDndAutoTimer() {
-        if (isNapDndChanging || preferenceManager == null) return
+        if (preferenceManager == null) return
         val autoTimerEnabled = true == preferenceManager?.getComputed(PreferenceComputations.IS_AUTO_TIMER_ENABLED)
         if (!autoTimerEnabled) return
 
@@ -1201,12 +1200,10 @@ class MainService : Service(), SensorEventListener {
                     NotificationManager.INTERRUPTION_FILTER_PRIORITY
                 else
                     NotificationManager.INTERRUPTION_FILTER_ALL
-                isNapDndChanging = true
                 nm.setInterruptionFilter(targetFilter)
-                handler.postDelayed({ isNapDndChanging = false }, 1000L)
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, if (enable) "DND enabled for nap" else "DND disabled after nap")
+                checkAndApplyDndAutoTimer()
             } catch (e: Exception) {
-                isNapDndChanging = false
                 EventLogger.log(this, "Failed to set DND mode: ${e.message}")
             }
         }
