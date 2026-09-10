@@ -17,6 +17,7 @@ object PreferenceKeys {
     const val KEY_CURRENT_WAKE_MINUTE: String = "current_wake_minute"
     const val KEY_MIN_SLEEP_DURATION_MINUTES: String = "min_sleep_duration_minutes"
     const val KEY_NAP_DND_ENABLED: String = "nap_dnd_enabled"
+    const val KEY_NAP_DND_WAS_ACTIVE: String = "nap_dnd_was_active"
     const val KEY_NAP_DURATION_MINUTES: String = "nap_duration_minutes"
     const val KEY_NAP_ALARM_ENDS_AT: String = "nap_alarm_ends_at"
     const val KEY_NAP_START_TIME_MS: String = "nap_start_time_ms"
