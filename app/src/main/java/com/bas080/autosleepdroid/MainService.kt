@@ -1037,11 +1037,8 @@ class MainService : Service(), SensorEventListener {
         if (v != null && v.hasVibrator()) {
             if (Build.VERSION.SDK_INT >= 29) {
                 v.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
-            } else if (Build.VERSION.SDK_INT >= 26) {
-                v.vibrate(VibrationEffect.createOneShot(70L, VibrationEffect.DEFAULT_AMPLITUDE))
             } else {
-                @Suppress("DEPRECATION")
-                v.vibrate(70L)
+                v.vibrate(VibrationEffect.createOneShot(70L, VibrationEffect.DEFAULT_AMPLITUDE))
             }
         }
     }
@@ -1339,17 +1336,12 @@ class MainService : Service(), SensorEventListener {
                 if (uri == null) continue
                 try {
                     val player = android.media.MediaPlayer().apply {
-                        if (Build.VERSION.SDK_INT >= 21) {
-                            setAudioAttributes(
-                                AudioAttributes.Builder()
-                                    .setUsage(AudioAttributes.USAGE_ALARM)
-                                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                                    .build()
-                            )
-                        } else {
-                            @Suppress("DEPRECATION")
-                            setAudioStreamType(AudioManager.STREAM_ALARM)
-                        }
+                        setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_ALARM)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                        )
                         setDataSource(applicationContext, uri)
                         isLooping = true
                         prepare()
@@ -1516,20 +1508,15 @@ class MainService : Service(), SensorEventListener {
 
     private fun pauseMediaViaAudioFocus() {
         val am = audioManager ?: return
-        if (Build.VERSION.SDK_INT >= 26) {
-            val focusRequest = android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                .setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
-                .build()
-            am.requestAudioFocus(focusRequest)
-        } else {
-            @Suppress("DEPRECATION")
-            am.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-        }
+        val focusRequest = android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            .build()
+        am.requestAudioFocus(focusRequest)
     }
 
     private fun buildNotification(): Notification {
