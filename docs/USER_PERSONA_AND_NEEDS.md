@@ -127,6 +127,29 @@ When configuring a wake-up goal (e.g. `6:30 AM` for day workers or `4:30 PM` for
 
 ---
 
-## 7. Summary
+## 7. User Roleplay Journey & Friction Analysis Report
+
+### Roleplay Narrative: Alex ("The Audiobook & Podcast Sleeper")
+* **Scenario**: Bedtime setup at 11:15 PM, zero-gaze extension in the dark at 11:40 PM, and early afternoon power nap setup at 2:00 PM.
+* **Bedtime Setup Workflow**:
+  Alex opens `MainActivity` to configure his bedtime settings. He sets the sleep timer duration to 30 minutes via the `DurationInputView` dialog, enables the Wake-Up Goal switch with a target wake time of 6:30 AM, and sets his minimum sleep safeguard to 7.5 hours. Upon starting media playback, the ongoing status notification transitions to `"Fades out at 11:45 PM (30m) • Wake at 6:30 AM"`.
+* **Zero-Gaze Extension Workflow**:
+  At 11:40 PM, as the volume begins fading down, Alex flips his phone on his nightstand without unlocking the screen. The subtle haptic vibration confirms the action, pre-fade volume is restored, and the timer resets to 12:10 AM. Because the timer was reset late at 11:40 PM with a 7.5-hour minimum sleep safeguard (`11:40 PM + 7.5h = 07:10 AM`), Auto Sleep Droid automatically shifts his scheduled wake alarm from 6:30 AM forward to 7:10 AM to safeguard his rest.
+* **Nap Timer Workflow**:
+  At 2:00 PM the following afternoon, Alex pulls down his notification shade and taps the "Nap" secondary action button. A translucent dialog appears prefilled with 20 minutes. Confirming the nap schedules an alarm for 2:20 PM and changes the notification action button to "I'm Awake". When the nap alarm triggers, tapping "I'm Awake" stops the alarm, logs the nap session, and resets the action button back to "Nap".
+
+### Identified Friction Points & UX Recommendations
+* **Target Wake Time vs. Current Wake Time Clarity**:
+  Having two distinct wake time fields ("Target wake-up time" and "Current wake-up time") in `MainActivity` can cause initial confusion. First-time users may wonder why their wake time changed automatically when late resets occur. Adding a brief explanatory label under "Current wake-up time" helps clarify that it automatically adapts to enforce minimum sleep.
+* **Duration Input Wheel Pickers without Text Labels**:
+  `DurationInputView` displays hour and minute wheel pickers side by side without explicit "hours" and "mins" text labels above or beside the wheels. Users configuring timers in dark conditions benefit from clear visual unit indicators.
+* **Secondary Action Omission during Active Sleep Phase**:
+  During the Initiation & Active Sleep Phase, the secondary action button in the notification shade is hidden to maintain minimal shade UI. Users waking up midway through the night who check the notification shade will not see a secondary action until the Pre-Alarm Window begins.
+* **First-Time Permission Flow for Nap DND**:
+  Toggling "Nap DND" for the first time opens system Notification Policy Access settings. Providing an inline explanatory dialog prior to launching system settings improves user context.
+
+---
+
+## 8. Summary
 
 Auto Sleep Droid fulfills the needs of nighttime and nightshift media listeners by providing a frictionless, screen-free sleep management experience. By combining notification shade controls, natural duration parsing (`7h 30m`, `0.5h`), gesture-based timer extension, and dynamic wake-up goal safeguards, the app aligns perfectly with the mental model of its users.
