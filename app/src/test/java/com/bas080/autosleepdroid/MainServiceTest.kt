@@ -1398,19 +1398,21 @@ class MainServiceTest {
 
     @Test
     fun testAwakeActionDuringActiveNapPreservesCurrentWakeTime() {
-        val napEndsAt = System.currentTimeMillis() + 1200_000L
         preferences.edit()
-            .putBoolean("wake_up_goal_enabled", true)
+            .putBoolean("wake_up_goal_enabled", false)
             .putInt("wake_up_goal_hour", 6)
             .putInt("wake_up_goal_minute", 30)
             .putInt("current_wake_hour", 7)
             .putInt("current_wake_minute", 30)
-            .putLong(MainService.KEY_NAP_ALARM_ENDS_AT, napEndsAt)
-            .putLong("nap_start_time_ms", System.currentTimeMillis() - 600_000L)
             .commit()
 
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
+
+        val startNapIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_START_NAP)
+            .putExtra(MainService.EXTRA_NAP_DURATION_MINUTES, 20)
+        service.onStartCommand(startNapIntent, 0, 1)
 
         assertTrue("shouldShowAwakeAction should return true when a nap is active", service.shouldShowAwakeAction())
 
@@ -1429,7 +1431,7 @@ class MainServiceTest {
     fun testAwakeActionNotificationActionWhenWakeAlarmIsEnabledAndActiveSleepSession() {
         val now = System.currentTimeMillis()
         val calWake = Calendar.getInstance()
-        calWake.timeInMillis = now + 2 * 3600_000L
+        calWake.timeInMillis = now + 1 * 3600_000L // 1 hour in future = Pre-Alarm Window (within 0.5 * 7.5h = 3.75h)
         val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
         val wakeMin = calWake.get(Calendar.MINUTE)
 
@@ -1441,6 +1443,7 @@ class MainServiceTest {
             .putInt("wake_up_goal_minute", wakeMin)
             .putInt("current_wake_hour", wakeHour)
             .putInt("current_wake_minute", wakeMin)
+            .putInt("min_sleep_duration_minutes", 450)
             .putLong("sleep_start_time_ms", sleepStart)
             .commit()
 
@@ -1466,9 +1469,18 @@ class MainServiceTest {
 
     @Test
     fun testNotificationShowsNapWhenNoActiveSleepSessionEvenIfWakeAlarmEnabled() {
+        val cal = Calendar.getInstance()
+        cal.add(Calendar.HOUR_OF_DAY, -1) // Wake time passed 1h ago -> IDLE phase
+        val pastHour = cal.get(Calendar.HOUR_OF_DAY)
+        val pastMin = cal.get(Calendar.MINUTE)
+
         preferences.edit()
             .putBoolean("show_notification", true)
             .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", pastHour)
+            .putInt("wake_up_goal_minute", pastMin)
+            .putInt("current_wake_hour", pastHour)
+            .putInt("current_wake_minute", pastMin)
             .remove("sleep_start_time_ms")
             .commit()
 
@@ -1490,6 +1502,37 @@ class MainServiceTest {
             }
         }
         assertTrue("Ongoing notification should feature 'Nap' action button during daytime when no active sleep session exists", foundNapAction)
+    }
+
+    @Test
+    fun testNotificationActionsInActiveSleepPhaseHasNoSecondaryAction() {
+        val now = System.currentTimeMillis()
+        val calWake = Calendar.getInstance()
+        calWake.timeInMillis = now + 6 * 3600_000L // 6h in future -> INITIATION_AND_ACTIVE_SLEEP phase (between 1.2*7.5h=9h and 0.5*7.5h=3.75h)
+        val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = calWake.get(Calendar.MINUTE)
+
+        preferences.edit()
+            .putBoolean("show_notification", true)
+            .putBoolean("active", true)
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", wakeHour)
+            .putInt("wake_up_goal_minute", wakeMin)
+            .putInt("current_wake_hour", wakeHour)
+            .putInt("current_wake_minute", wakeMin)
+            .putInt("min_sleep_duration_minutes", 450)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val shadowNotificationManager = Shadows.shadowOf(notificationManager)
+        val notification = shadowNotificationManager.getNotification(1001)
+        assertNotNull(notification)
+
+        assertEquals("During active sleep phase, notification should feature only 1 action (Disable)", 1, notification.actions.size)
+        assertEquals("Disable", notification.actions[0].title.toString())
     }
 
     @Test
