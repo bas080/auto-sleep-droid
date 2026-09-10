@@ -11,10 +11,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.drawable.Icon
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.Ringtone
@@ -33,7 +29,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 
-class MainService : Service(), SensorEventListener {
+class MainService : Service() {
 
     enum class State {
         OFF,
@@ -53,13 +49,6 @@ class MainService : Service(), SensorEventListener {
     private var volumeReceiver: android.content.BroadcastReceiver? = null
     private var dndReceiver: android.content.BroadcastReceiver? = null
 
-    private var sensorManager: SensorManager? = null
-    private var accelerometer: Sensor? = null
-    private var lastOrientation = ORIENTATION_UNKNOWN
-    private var lastSensorEventTimeMs = 0L
-    private var sensorListenerRegistered = false
-    private var sensorThread: HandlerThread? = null
-    private var sensorHandler: Handler? = null
     private var vibrator: Vibrator? = null
     private var lastScheduledWakeupAlarmTimeMs = 0L
     private var alarmMediaPlayer: android.media.MediaPlayer? = null
@@ -69,9 +58,7 @@ class MainService : Service(), SensorEventListener {
     private var isWakeUpAlarmRinging = false
     private var isWakeUpAlarmSnoozed = false
     private var isForeground = false
-    private var napAlarmEndsAt = 0L
     private var lastTimerEndsAt = 0L
-    private var isNapAlarmRinging = false
     private var lastSelfDndChangeTimeMs = 0L
 
     var state = State.OFF
@@ -245,13 +232,8 @@ class MainService : Service(), SensorEventListener {
         transitionTo(State.FADING)
     }
 
-    fun runFadeStep(currentVolume: Int, flipDetected: Boolean): Boolean {
+    fun runFadeStep(currentVolume: Int): Boolean {
         if (state != State.FADING) {
-            return false
-        }
-
-        if (flipDetected) {
-            cancelFadeForFlip()
             return false
         }
 
@@ -295,10 +277,6 @@ class MainService : Service(), SensorEventListener {
     }
 
     fun cancelFadeForVolumeChange() {
-        cancelFadeForFlip()
-    }
-
-    fun cancelFadeForFlip() {
         onTriggerVibration()
         onCancelAlarm()
         suppressVolumeReset = true
@@ -355,19 +333,6 @@ class MainService : Service(), SensorEventListener {
         }
     }
 
-    fun onPhoneFlipped(now: Long) {
-        if (!isActive) {
-            return
-        }
-
-        EventLogger.log("Phone flip gesture detected")
-
-        if (state == State.FADING) {
-            cancelFadeForFlip()
-        } else if (state == State.ACTIVE) {
-            resetTimerForVolumeChange(now)
-        }
-    }
 
     private fun resetTimerForVolumeChange(now: Long) {
         if (state != State.FADING && isValidDuration(configuredDurationMinutes)) {
@@ -391,10 +356,6 @@ class MainService : Service(), SensorEventListener {
         }
         createNotificationChannel()
 
-        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager?
-        if (sensorManager != null) {
-            accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        }
 
         setupPreferenceListeners()
         initializeStateAndNotification()
@@ -417,11 +378,6 @@ class MainService : Service(), SensorEventListener {
             onWakeGoalConfigChanged(goalEnabled)
         }
 
-        preferenceManager?.watchEffect { getter ->
-            getter.getBoolean(PreferenceKeys.KEY_NAP_DND_ENABLED, false)
-            getter.getLong(PreferenceKeys.KEY_NAP_ALARM_ENDS_AT, 0L)
-            updateNotification()
-        }
 
         preferenceManager?.watchEffect { getter ->
             if (getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false)) {
@@ -472,8 +428,6 @@ class MainService : Service(), SensorEventListener {
         val savedEnabled = preferences?.getBoolean(KEY_ENABLED, true) ?: true
         val savedDuration = preferences?.getInt(KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES) ?: AppDefaults.DURATION_MINUTES
         val savedEndsAt = preferences?.getLong(KEY_TIMER_ENDS_AT, 0L) ?: 0L
-        napAlarmEndsAt = preferences?.getLong(KEY_NAP_ALARM_ENDS_AT, 0L) ?: 0L
-        isNapAlarmRinging = preferences?.getBoolean(KEY_NAP_ALARM_RINGING, false) ?: false
         isWakeUpAlarmRinging = preferences?.getBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING, false) ?: false
         isWakeUpAlarmSnoozed = preferences?.getBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_SNOOZED, false) ?: false
         val currentVolume = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
@@ -523,10 +477,6 @@ class MainService : Service(), SensorEventListener {
                         val now = System.currentTimeMillis()
                         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
                         val dndActive = nm != null && nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
-                        if (now - lastSelfDndChangeTimeMs > 1500L && isNapActive() && dndActive) {
-                            preferences?.edit()?.putBoolean(PreferenceKeys.KEY_NAP_DND_WAS_ACTIVE, true)?.apply()
-                            EventLogger.log(context, EventLogger.LEVEL_HIGH, "Recorded external DND activation during nap")
-                        }
                         checkAndApplyDndAutoTimer()
                     }
                 }
@@ -604,28 +554,6 @@ class MainService : Service(), SensorEventListener {
         }
     }
 
-    private fun registerSensorListener() {
-        if (sensorManager != null && accelerometer != null && !sensorListenerRegistered) {
-            if (sensorThread == null) {
-                sensorThread = HandlerThread("SensorThread").apply { start() }
-                sensorHandler = Handler(sensorThread!!.looper)
-            }
-            sensorListenerRegistered = true
-            sensorManager?.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL, sensorHandler)
-        }
-    }
-
-    private fun unregisterSensorListener() {
-        if (sensorListenerRegistered && sensorManager != null) {
-            sensorListenerRegistered = false
-            sensorManager?.unregisterListener(this)
-        }
-        sensorThread?.let {
-            it.quitSafely()
-            sensorThread = null
-            sensorHandler = null
-        }
-    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent != null) {
@@ -659,13 +587,9 @@ class MainService : Service(), SensorEventListener {
             } else if (ACTION_DISMISS_WAKEUP_ALARM == action) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed")
                 processSleepSessionOnAlarmDismissal()
-                if (!isNapAlarmRinging) {
-                    updateNextWakeUpTimeOnDismissOrExpiry()
-                }
+                updateNextWakeUpTimeOnDismissOrExpiry()
                 stopWakeUpAlarmSound()
                 cancelSnoozeAlarm()
-                cancelNapAlarm(false)
-                setNapAlarmRinging(false)
                 setWakeUpAlarmState(false, false)
                 updateListenersRegistration()
                 checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
@@ -690,19 +614,6 @@ class MainService : Service(), SensorEventListener {
                 dismissAutoSleepAlarm()
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Smart Wake-Up Goal cleared")
                 Toast.makeText(this, R.string.toast_goal_stopped, Toast.LENGTH_SHORT).show()
-                updateNotification()
-            } else if (ACTION_START_NAP == action) {
-                val duration = intent.getIntExtra(EXTRA_NAP_DURATION_MINUTES, preferences?.getInt(KEY_NAP_DURATION_MINUTES, 20) ?: 20)
-                startNapAlarm(duration)
-            } else if (ACTION_CANCEL_NAP == action) {
-                cancelNapAlarm(true)
-            } else if (ACTION_NAP_EXPIRY == action) {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm triggered")
-                cancelNapAlarm(false)
-                setNapAlarmRinging(true)
-                setWakeUpAlarmState(true, false)
-                updateListenersRegistration()
-                playWakeUpAlarmSound()
                 updateNotification()
             } else if (ACTION_REDRAW_NOTIFICATION == action) {
                 reloadSettingsAndUpdate()
@@ -741,7 +652,7 @@ class MainService : Service(), SensorEventListener {
 
         val currentVolume = audioManager!!.getStreamVolume(AudioManager.STREAM_MUSIC)
 
-        val continues = runFadeStep(currentVolume, false)
+        val continues = runFadeStep(currentVolume)
         if (continues) {
             fadeRunnable?.let { handler.postDelayed(it, AppDefaults.FADE_STEP_INTERVAL_MS) }
         }
@@ -764,13 +675,6 @@ class MainService : Service(), SensorEventListener {
     }
 
     private fun updateListenersRegistration() {
-        val needSensor = isActive || isWakeUpAlarmRinging
-        if (needSensor) {
-            registerSensorListener()
-        } else {
-            unregisterSensorListener()
-        }
-
         val needVolume = isActive || isWakeUpAlarmRinging || isWakeUpAlarmSnoozed
         if (needVolume) {
             registerVolumeObserver()
@@ -867,37 +771,28 @@ class MainService : Service(), SensorEventListener {
 
         val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
         val timerStartTime = prefs.getLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, 0L)
-        val napStartTime = prefs.getLong(PreferenceKeys.KEY_NAP_START_TIME_MS, 0L)
         val wakeTime = System.currentTimeMillis()
 
-        if (napStartTime > 0L && wakeTime > napStartTime) {
-            val durationMinutes = (wakeTime - napStartTime) / 60_000L
-            if (healthConnectEnabled && (wakeTime - napStartTime < 14 * 3600_000L) && durationMinutes >= hcMinDurationMinutes) {
-                HealthConnectManager.writeSleepSession(this, napStartTime, wakeTime, null)
-            }
-            prefs.edit().remove(PreferenceKeys.KEY_NAP_START_TIME_MS).apply()
-        } else {
-            var startTime = 0L
-            if (timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)) {
-                startTime = timerStartTime
-            } else if (sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
-                startTime = sleepStartTime
-            } else if (isWakeAlarmEnabled()) {
-                val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
-                startTime = wakeTime - (minSleepMin * 60_000L)
-            }
-
-            if (startTime > 0L && wakeTime > startTime) {
-                val durationMinutes = (wakeTime - startTime) / 60_000L
-                if (healthConnectEnabled && durationMinutes >= hcMinDurationMinutes && (wakeTime - startTime < 14 * 3600_000L)) {
-                    HealthConnectManager.writeSleepSession(this, startTime, wakeTime, null)
-                }
-            }
-            prefs.edit()
-                .remove(PreferenceKeys.KEY_SLEEP_START_TIME_MS)
-                .remove(PreferenceKeys.KEY_TIMER_START_TIME_MS)
-                .apply()
+        var startTime = 0L
+        if (timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)) {
+            startTime = timerStartTime
+        } else if (sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
+            startTime = sleepStartTime
+        } else if (isWakeAlarmEnabled()) {
+            val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+            startTime = wakeTime - (minSleepMin * 60_000L)
         }
+
+        if (startTime > 0L && wakeTime > startTime) {
+            val durationMinutes = (wakeTime - startTime) / 60_000L
+            if (healthConnectEnabled && durationMinutes >= hcMinDurationMinutes && (wakeTime - startTime < 14 * 3600_000L)) {
+                HealthConnectManager.writeSleepSession(this, startTime, wakeTime, null)
+            }
+        }
+        prefs.edit()
+            .remove(PreferenceKeys.KEY_SLEEP_START_TIME_MS)
+            .remove(PreferenceKeys.KEY_TIMER_START_TIME_MS)
+            .apply()
     }
 
     private fun processSleepSessionOnAlarmDismissal() {
@@ -907,21 +802,15 @@ class MainService : Service(), SensorEventListener {
     private fun handleAwakeAction() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "User marked as awake explicitly")
 
-        val wasNap = isNapAlarmRinging || isNapActive()
-
         processSleepSession()
 
         stopWakeUpAlarmSound()
         cancelSnoozeAlarm()
-        cancelNapAlarm(false)
-        setNapAlarmRinging(false)
         setWakeUpAlarmState(false, false)
 
-        if (!wasNap) {
-            dismissAutoSleepAlarm()
-            updateNextWakeUpTimeOnDismissOrExpiry()
-            checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
-        }
+        dismissAutoSleepAlarm()
+        updateNextWakeUpTimeOnDismissOrExpiry()
+        checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
 
         updateListenersRegistration()
         updateNotification()
@@ -934,7 +823,7 @@ class MainService : Service(), SensorEventListener {
     }
 
     fun shouldShowAwakeAction(): Boolean {
-        if (isNapActive() || isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) {
+        if (isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) {
             return true
         }
         val pm = preferenceManager ?: return false
@@ -1094,13 +983,6 @@ class MainService : Service(), SensorEventListener {
             editor.apply()
         }
         val newTimerEndsAt = timerEndsAt
-        if (lastTimerEndsAt > 0L && newTimerEndsAt > lastTimerEndsAt && isNapActive()) {
-            val deltaMs = newTimerEndsAt - lastTimerEndsAt
-            napAlarmEndsAt += deltaMs
-            prefs?.edit()?.putLong(KEY_NAP_ALARM_ENDS_AT, napAlarmEndsAt)?.apply()
-            scheduleNapAlarm(napAlarmEndsAt)
-            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Pushed nap alarm forward by ${deltaMs / 60_000L}m")
-        }
         lastTimerEndsAt = newTimerEndsAt
         scheduleExpiry()
 
@@ -1154,140 +1036,6 @@ class MainService : Service(), SensorEventListener {
         checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
     }
 
-    private fun isNapActive(): Boolean {
-        val pm = preferenceManager ?: return napAlarmEndsAt > System.currentTimeMillis()
-        return true == pm.getComputed(PreferenceComputations.IS_NAP_ACTIVE)
-    }
-
-    private fun isNapAllowed(): Boolean {
-        val pm = preferenceManager ?: return true
-        return true == pm.getComputed(PreferenceComputations.IS_NAP_ALLOWED)
-    }
-
-    private fun isSystemDndScheduleActive(nm: NotificationManager): Boolean {
-        if (Build.VERSION.SDK_INT >= 24) {
-            try {
-                val rules = nm.automaticZenRules
-                if (!rules.isNullOrEmpty()) {
-                    for (rule in rules.values) {
-                        if (rule != null && rule.isEnabled) {
-                            return true
-                        }
-                    }
-                }
-            } catch (ignored: Exception) {
-            }
-        }
-        return false
-    }
-
-    private fun setDndMode(enable: Boolean) {
-        if (preferenceManager != null && true != preferenceManager?.getComputed(PreferenceComputations.IS_NAP_DND_ENABLED)) {
-            return
-        }
-        val wasDndAlreadyActive = preferences?.getBoolean(PreferenceKeys.KEY_NAP_DND_WAS_ACTIVE, false) ?: false
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
-        if (!enable && nm != null && nm.isNotificationPolicyAccessGranted) {
-            if (wasDndAlreadyActive || isSystemDndScheduleActive(nm)) {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Preserving DND state after nap because DND was active prior to nap or a system DND schedule is active")
-                return
-            }
-        }
-        if (nm != null && nm.isNotificationPolicyAccessGranted) {
-            try {
-                val targetFilter = if (enable)
-                    NotificationManager.INTERRUPTION_FILTER_PRIORITY
-                else
-                    NotificationManager.INTERRUPTION_FILTER_ALL
-                lastSelfDndChangeTimeMs = System.currentTimeMillis()
-                nm.setInterruptionFilter(targetFilter)
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, if (enable) "DND enabled for nap" else "DND disabled after nap")
-                checkAndApplyDndAutoTimer()
-            } catch (e: Exception) {
-                EventLogger.log(this, "Failed to set DND mode: ${e.message}")
-            }
-        }
-    }
-
-    private fun startNapAlarm(durationMinutes: Int) {
-        val now = System.currentTimeMillis()
-        napAlarmEndsAt = now + durationMinutes * 60_000L
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
-        val dndAlreadyActive = nm != null && nm.isNotificationPolicyAccessGranted &&
-                nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
-        preferences?.edit()
-            ?.putInt(KEY_NAP_DURATION_MINUTES, durationMinutes)
-            ?.putLong(KEY_NAP_ALARM_ENDS_AT, napAlarmEndsAt)
-            ?.putLong(PreferenceKeys.KEY_NAP_START_TIME_MS, now)
-            ?.putBoolean(PreferenceKeys.KEY_NAP_DND_WAS_ACTIVE, dndAlreadyActive)
-            ?.apply()
-        scheduleNapAlarm(napAlarmEndsAt)
-        setDndMode(true)
-        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm started for ${formatDurationString(durationMinutes)}")
-        Toast.makeText(this, getString(R.string.toast_nap_started, formatDurationString(durationMinutes)), Toast.LENGTH_SHORT).show()
-        updateNotification()
-    }
-
-    private fun scheduleNapAlarm(triggerAtMs: Long) {
-        val am = alarmManager ?: return
-        val intent = Intent(this, MainService::class.java).setAction(ACTION_NAP_EXPIRY)
-        val pendingIntent = PendingIntent.getService(
-            this, 107, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val showIntent = Intent(this, MainActivity::class.java)
-        val showPendingIntent = PendingIntent.getActivity(
-            this, 102, showIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val clockInfo = AlarmManager.AlarmClockInfo(triggerAtMs, showPendingIntent)
-        try {
-            am.setAlarmClock(clockInfo, pendingIntent)
-        } catch (e: Exception) {
-            EventLogger.log(this, "Failed to schedule nap alarm: ${e.message}")
-        }
-    }
-
-    private fun setNapAlarmRinging(ringing: Boolean) {
-        this.isNapAlarmRinging = ringing
-        if (preferences != null) {
-            if (ringing) {
-                preferences?.edit()?.putBoolean(KEY_NAP_ALARM_RINGING, true)?.apply()
-            } else {
-                preferences?.edit()?.remove(KEY_NAP_ALARM_RINGING)?.apply()
-            }
-        }
-    }
-
-    private fun cancelNapAlarm(showToast: Boolean) {
-        val am = alarmManager
-        if (am != null) {
-            val intent = Intent(this, MainService::class.java).setAction(ACTION_NAP_EXPIRY)
-            val pendingIntent = PendingIntent.getService(
-                this, 107, intent,
-                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-            )
-            if (pendingIntent != null) {
-                am.cancel(pendingIntent)
-                pendingIntent.cancel()
-            }
-        }
-        napAlarmEndsAt = 0L
-        preferences?.edit()
-            ?.remove(KEY_NAP_ALARM_ENDS_AT)
-            ?.remove(PreferenceKeys.KEY_NAP_START_TIME_MS)
-            ?.apply()
-        setDndMode(false)
-        preferences?.edit()?.remove(PreferenceKeys.KEY_NAP_DND_WAS_ACTIVE)?.apply()
-        if (showToast) {
-            setNapAlarmRinging(false)
-            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Nap alarm cancelled")
-            Toast.makeText(this, R.string.toast_nap_cancelled, Toast.LENGTH_SHORT).show()
-            updateNotification()
-        }
-    }
 
     private fun ensureAudibleAlarmStreamVolume() {
         val am = audioManager ?: return
@@ -1475,15 +1223,6 @@ class MainService : Service(), SensorEventListener {
         }
     }
 
-    private fun snoozeWakeUpAlarmViaFlip() {
-        EventLogger.log(this, "Wake-Up Goal alarm snoozed via flip gesture")
-        stopWakeUpAlarmSound()
-        snoozeWakeUpAlarm()
-        setWakeUpAlarmState(false, true)
-        onTriggerVibration()
-        updateListenersRegistration()
-        updateNotification()
-    }
 
     private fun snoozeWakeUpAlarmViaVolumeKey() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed via volume button")
@@ -1556,11 +1295,6 @@ class MainService : Service(), SensorEventListener {
             }
         }
 
-        if (!isWakeUpAlarmRinging && !isWakeUpAlarmSnoozed && isNapActive()) {
-            val timeFormat = android.text.format.DateFormat.getTimeFormat(this)
-            val formattedNapTime = timeFormat.format(Date(napAlarmEndsAt))
-            contentText += getString(R.string.notification_nap_suffix, formattedNapTime)
-        }
 
         val contentIntent = Intent(this, MainActivity::class.java)
         val contentPendingIntent = PendingIntent.getActivity(
@@ -1623,12 +1357,6 @@ class MainService : Service(), SensorEventListener {
                     getString(R.string.action_awake),
                     awakeIntent()
                 ).build()
-            } else if (isNapAllowed()) {
-                Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
-                    getString(R.string.action_nap),
-                    startNapIntent()
-                ).build()
             } else {
                 null
             }
@@ -1689,13 +1417,6 @@ class MainService : Service(), SensorEventListener {
         )
     }
 
-    private fun startNapIntent(): PendingIntent {
-        val intent = Intent(this, MainService::class.java).setAction(ACTION_START_NAP)
-        return PendingIntent.getService(
-            this, 12, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-    }
 
     private fun snoozeWakeUpAlarmIntent(): PendingIntent {
         val intent = Intent(this, MainService::class.java).setAction(ACTION_SNOOZE_WAKEUP_ALARM)
@@ -1745,46 +1466,11 @@ class MainService : Service(), SensorEventListener {
         }
     }
 
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event != null && event.sensor != null && event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-            val now = System.currentTimeMillis()
-            if (now - lastSensorEventTimeMs < SENSOR_THROTTLE_MS) {
-                return
-            }
-            lastSensorEventTimeMs = now
-
-            val z = event.values[2]
-            var currentOrientation = ORIENTATION_UNKNOWN
-            if (z < -8.5f) {
-                currentOrientation = ORIENTATION_FACE_DOWN
-            } else if (z > 8.5f) {
-                currentOrientation = ORIENTATION_FACE_UP
-            }
-
-            if (currentOrientation != ORIENTATION_UNKNOWN) {
-                if (lastOrientation != ORIENTATION_UNKNOWN && lastOrientation != currentOrientation) {
-                    handler.post {
-                        if (isWakeUpAlarmRinging) {
-                            snoozeWakeUpAlarmViaFlip()
-                        } else {
-                            onPhoneFlipped(now)
-                        }
-                    }
-                }
-                lastOrientation = currentOrientation
-            }
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-    }
 
     override fun onDestroy() {
         EventLogger.log(this, EventLogger.LEVEL_LOW, "MainService destroyed")
         stopWakeUpAlarmSound()
         setWakeUpAlarmState(false, false)
-        setNapAlarmRinging(false)
-        unregisterSensorListener()
         unregisterVolumeObserver()
         unregisterDndReceiver()
         unregisterAudioPlaybackCallback()
@@ -1809,16 +1495,9 @@ class MainService : Service(), SensorEventListener {
         const val ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION"
         const val ACTION_CLEAR_GOAL = "com.bas080.autosleepdroid.CLEAR_GOAL"
         const val ACTION_AUTO_TIMER_CHECK = "com.bas080.autosleepdroid.AUTO_TIMER_CHECK"
-        const val ACTION_START_NAP = "com.bas080.autosleepdroid.START_NAP"
-        const val ACTION_CANCEL_NAP = "com.bas080.autosleepdroid.CANCEL_NAP"
-        const val ACTION_NAP_EXPIRY = "com.bas080.autosleepdroid.NAP_EXPIRY"
         const val EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION"
-        const val EXTRA_NAP_DURATION_MINUTES = "extra_nap_duration_minutes"
         const val ALARM_SEARCH_NAME = "Auto Sleep"
         const val KEY_WAKEUP_LAST_SCHEDULED_MS = PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS
-        const val KEY_NAP_DURATION_MINUTES = PreferenceKeys.KEY_NAP_DURATION_MINUTES
-        const val KEY_NAP_ALARM_ENDS_AT = PreferenceKeys.KEY_NAP_ALARM_ENDS_AT
-        const val KEY_NAP_ALARM_RINGING = PreferenceKeys.KEY_NAP_ALARM_RINGING
 
         private const val CHANNEL_ID = "sleep_timer"
         private const val NOTIFICATION_ID = 1001
@@ -1829,13 +1508,8 @@ class MainService : Service(), SensorEventListener {
         private const val KEY_TIMER_ENDS_AT = PreferenceKeys.KEY_TIMER_ENDS_AT
         private const val REMOTE_INPUT_KEY = "duration_minutes"
         private const val PAUSE_RESET_DELAY_MS = 500L
-        private const val SENSOR_THROTTLE_MS = 300L
         private const val ALARM_CRESCENDO_DURATION_MS = AppDefaults.ALARM_CRESCENDO_DURATION_MS
         private const val ALARM_CRESCENDO_INTERVAL_MS = AppDefaults.ALARM_CRESCENDO_INTERVAL_MS
-
-        private const val ORIENTATION_UNKNOWN = 0
-        private const val ORIENTATION_FACE_UP = 1
-        private const val ORIENTATION_FACE_DOWN = 2
 
         fun isValidDuration(minutes: Int): Boolean {
             return minutes >= AppDefaults.MINUTES_MIN && minutes <= AppDefaults.MINUTES_MAX

@@ -19,35 +19,15 @@ A sleep session is active during the rest window surrounding your scheduled wake
 - **Snoozing**: Both phone flip gestures and hardware volume button presses snooze a ringing or snoozed wake alarm for 9 minutes.
 - **Stopping**: Only tapping **"I'm Awake"** stops and dismisses the alarm, updating **Current Wake-Up Time** to the moment it was pressed and logging the sleep session to Health Connect.
 
-## Phase Calculation Pseudocode
+## Awake Window Calculation Pseudocode
 
-The session phase is evaluated in `PreferenceComputations.kt` using early returns and a fallback return:
+The awake window evaluation in `PreferenceComputations.kt` calculates whether **"I'm Awake"** is displayed based on current time, scheduled wake time, and minimum sleep duration:
 
 ```kotlin
-fun getSessionPhase(
-    now: Long,
-    currentWakeTime: Long,
-    minSleepDuration: Long,
-    isSessionOngoing: Boolean,
-    isAlarmRingingOrSnoozed: Boolean = false
-): SessionPhase {
-    if (isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime)) {
-        return SessionPhase.ALARM
-    }
+val windowStart = currentWakeTime - (1.2 * minSleepMs).toLong()
+val windowEnd = currentWakeTime + 4 * 3600_000L
 
-    val windowStart = currentWakeTime - (minSleepDuration * 1.2)
-    val preAlarmStart = currentWakeTime - (minSleepDuration * 0.5)
-
-    if (now >= preAlarmStart && now < currentWakeTime) {
-        return SessionPhase.PRE_ALARM_WINDOW
-    }
-
-    if (now >= windowStart && now < preAlarmStart) {
-        return SessionPhase.INITIATION_AND_ACTIVE_SLEEP
-    }
-
-    return SessionPhase.IDLE
-}
+val isAwakeWindowActive = (now in windowStart..windowEnd) || isAlarmRingingOrSnoozed || isNapActive
 ```
 
 ## How Sleep Sessions Work

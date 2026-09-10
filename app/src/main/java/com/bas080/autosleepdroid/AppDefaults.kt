@@ -10,7 +10,6 @@ object AppDefaults {
 
     const val MIN_SLEEP_DURATION_MINUTES: Int = 450 // 7h 30m
     const val HC_MIN_DURATION_MINUTES: Int = 15
-    const val NAP_DURATION_MINUTES: Int = 20
 
     const val FADE_DURATION_MS: Long = 30_000L
     const val FADE_STEP_INTERVAL_MS: Long = 1_000L
