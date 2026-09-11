@@ -1,88 +1,24 @@
-# Health Connect Integration
+# Health Connect Integration Architecture
+
+This document describes the design, permissions, session filtering, data formatting, and permission revocation behavior for Android Health Connect integration in Auto Sleep Droid.
 
 ## Overview
+Auto Sleep Droid integrates with Android Health Connect (`androidx.health.connect:connect-client`) to automatically record sleep sessions (`SleepSessionRecord`) based on sleep timer expiration and wake alarm dismissals or "I'm Awake" presses.
 
-Auto Sleep Droid integrates with Android Health Connect (`androidx.health.connect:connect-client`) to automatically record sleep sessions (`SleepSessionRecord`) based on sleep timer expiration, nap alarm completions, and wake alarm dismissals.
+## Value Proposition
+Automatically log your nightly sleep sessions into Android Health Connect without requiring manual sleep tracking apps or wearables. When you fall asleep listening to media, Auto Sleep Droid records the start and end of your sleep cycle directly into Health Connect upon wake.
 
-## Product Goal
-
-Automatically log your nightly sleep sessions and daytime naps into Android Health Connect without requiring manual sleep tracking apps or wearables. When you fall asleep listening to media or take a quick nap, Auto Sleep Droid records the start and end of your sleep cycle directly into Health Connect upon alarm dismissal.
-
-## Architecture and Flow
-
-1. **Sleep & Nap Start Time Capture**:
-   - **Nightly Sleep**: When the sleep timer expires and active media playback is paused (or when volume fade completes), the exact timestamp (`sleep_start_time_ms`) is persisted to `SharedPreferences`.
-   - **Naps**: When a nap alarm is started, the nap start timestamp (`nap_start_time_ms`) is persisted to `SharedPreferences`.
+## Session Lifecycle & Data Formatting
+1. **Sleep Start Time Capture**:
+   - **Nightly Sleep**: When the sleep timer is activated or reset, `timer_start_time_ms` is persisted. When the sleep timer expires and media is paused (or media is paused while the timer is active), `sleep_start_time_ms` is persisted.
 2. **Wake Time Capture**:
-   - When a scheduled wake-up alarm or nap alarm triggers and is dismissed (via notification action button, hardware volume key press, or main UI), the current timestamp (`wake_time_ms`) is captured as the wake time.
-3. **Session Persistence**:
-   - If `health_connect_enabled` is true, Health Connect SDK is available on the device, and write permission (`android.permission.health.WRITE_SLEEP`) is granted:
-     - Auto Sleep Droid constructs a `SleepSessionRecord` with `startTime` set to `nap_start_time_ms` (for naps) or `sleep_start_time_ms` (for nightly sleep) and `endTime` set to `wake_time_ms`, along with local system zone offsets (`ZoneOffset`).
-     - Asynchronously writes the record to Health Connect via `HealthConnectClient.insertRecords(...)` on a background I/O thread.
-     - Logs the outcome to `EventLogger`.
-     - Clears the pending start timestamp to prevent duplicate session records.
+   - When a scheduled wake-up alarm triggers and is dismissed or when **I'm Awake** is tapped, the current timestamp (`wake_time_ms`) is captured as the wake time.
+3. **Record Creation**:
+   - Auto Sleep Droid constructs a `SleepSessionRecord` with `startTime` set to `timer_start_time_ms` or `sleep_start_time_ms` (falling back to `wake_time_ms - min_sleep_duration`) and `endTime` set to `wake_time_ms`, along with local system zone offsets (`ZoneOffset`).
+4. **Duration Safeguard Threshold**:
+   - Configurable minimum session threshold (`hc_min_duration_minutes`, default 15 minutes, range 0–2h, step 5m) configured under the Health Connect section in `MainActivity`. Sleep sessions shorter than this threshold are filtered out before writing to Health Connect.
 
-## Data Schema
-
-The Health Connect integration uses `androidx.health.connect.client.records.SleepSessionRecord`:
-
-- `startTime`: `Instant` created from `sleep_start_time_ms`.
-- `endTime`: `Instant` created from `wake_time_ms`.
-- `startZoneOffset`: System local `ZoneOffset` at sleep start time.
-- `endZoneOffset`: System local `ZoneOffset` at wake time.
-- `title`: "Sleep"
-
-## Permissions and Compatibility
-
-- **Permissions**: `<uses-permission android:name="android.permission.health.WRITE_SLEEP" />`
-- **Android 14+ (API 34+)**: Health Connect is integrated into the Android framework. Permission usage activity alias `ViewPermissionUsageActivity` is registered in `AndroidManifest.xml`.
-- **Android 13 and below (API 26-33)**: Requires the Health Connect app installed from Google Play Store.
-- **SDK Status Check**: Checked dynamically via `HealthConnectClient.getSdkStatus(context)`. If Health Connect is not available on the device, enabling the switch displays an informative Toast message and prevents invalid state activation.
-
-## Settings and User Interface
-
-- Configuration switch located in `MainActivity` under the dedicated Health Connect section (`label_health_connect`).
-- Toggling Health Connect ON automatically opens Android Health Connect permission settings for immediate permission configuration.
-- Toggling Health Connect OFF programmatically revokes all application permission grants in Health Connect (`PermissionController.revokeAllPermissions()`).
-- Re-checking permission status on `onResume()` automatically disables sync if write permissions are revoked externally in Health Connect settings.
-- Exported and imported seamlessly alongside existing app configuration in JSON format (`health_connect_enabled`).
-
-## Permission Revocation and Data Retention
-
-### How Permission Revocation Works
-
-When Health Connect permissions are revoked (either by toggling Health Connect OFF in Auto Sleep Droid via `PermissionController.revokeAllPermissions()` or by manually revoking access in Android's Health Connect system settings):
-
-1. **Future Sync Blocked**: Auto Sleep Droid loses authorization to write new `SleepSessionRecord` entries into Health Connect.
-2. **Previously Written Data Retained**: Revoking permissions **does NOT delete or erase previously recorded sleep data**. All sleep sessions previously written by Auto Sleep Droid remain safely stored in the user's Health Connect database on the device and remain accessible to other health apps authorized by the user.
-3. **Deleting Historical Data**: If a user wishes to delete past sleep records, they can view, manage, or delete historical data created by Auto Sleep Droid directly inside Android's Health Connect system app under **Settings > Health Connect > App permissions > Auto Sleep Droid > Delete Auto Sleep Droid data**.
-
-### Documentation References
-
-- [Google Health Connect Developer Permissions Guide](https://developer.android.com/health-and-fitness/guides/health-connect/develop/permissions)
-- [Google Health Connect Privacy & Data Access Principles](https://developer.android.com/health-and-fitness/guides/health-connect/get-started/privacy-and-data-access)
-- [Android Help: Manage your Health Connect data](https://support.google.com/android/answer/12201281)
-
-## Build Size Optimization
-
-Integrating Health Connect and Protocol Buffers adds AndroidX Health Connect, ProtoBuf runtime, and Kotlin coroutines libraries. Enabling R8 minification (`minifyEnabled true`) in `app/build.gradle` trims unused library classes, keeping the release APK size at ~330 KB.
-
-## Questions and Future Considerations
-
-The following questions and potential future enhancements are presented for consideration:
-
-1. **Sleep Session Start Boundaries**:
-   - *Current Behavior*: Sleep start time is recorded when the sleep timer expires (when media fades out and pauses).
-   - *Question*: Should sleep start time be configurable to measure from when the sleep timer *starts counting down* instead of when media pauses?
-
-2. **Sleep Stages**:
-   - *Current Behavior*: Sleep sessions are logged as single uninterrupted sleep sessions (`SleepSessionRecord`).
-   - *Question*: Since Auto Sleep Droid does not require wearable heart rate or motion sensors, logging detailed stages (LIGHT, DEEP, REM) is currently omitted. Is single-session logging sufficient, or should we consider manual/heuristic stage estimations?
-
-3. **Wake Alarms Without Sleep Timer**:
-   - *Current Behavior*: A sleep session is only persisted if the sleep timer was used prior to sleep (capturing `sleep_start_time_ms`).
-   - *Question*: If a user sets a wake alarm but does not use the sleep timer at night, should the app fall back to calculating estimated sleep start as `wakeTime - minSleepDuration` (or `wakeTime - targetSleepHours`), or only log when explicit sleep start events occur?
-
-4. **Session History and Management**:
-   - *Current Behavior*: Auto Sleep Droid writes records to Health Connect; viewing and deleting past sessions is handled by the system Health Connect app.
-   - *Question*: Would you like Auto Sleep Droid to request `READ_SLEEP` permission in a future update to display past sleep session history directly inside the app's Event Logs or a dedicated History view?
+## Permissions & Consent Workflow
+- Declare `android.permission.health.WRITE_SLEEP` in `AndroidManifest.xml`.
+- When the Health Connect toggle is turned ON in `MainActivity`, the app checks for write permissions. If missing, it launches the app-specific Health Connect permission management screen (`android.health.connect.action.MANAGE_HEALTH_PERMISSIONS`).
+- When the Health Connect toggle is turned OFF in `MainActivity`, the app revokes all Health Connect permissions via `PermissionController.revokeAllPermissions()`. Revoking permissions stops future syncs while retaining previously recorded data in Health Connect.
