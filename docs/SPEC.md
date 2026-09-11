@@ -24,17 +24,17 @@ All notification content is concise and directly visible in the notification bod
   - Title: "Click notification when awake"
   - Body (Off): "Sleep timer is off • ⏰︎ 6:15 AM" • Button: "Enable"
   - Body (Waiting): "Waiting for playback • ⏰︎ 6:15 AM" • Button: "Disable"
-  - Body (Active): "⏸︎ 11:15 PM • ⏰︎ 6:15 AM" • Button: "Disable"
-  - Body (Fading): "⏸︎ 11:15 PM • ⏰︎ 6:15 AM" • Button: "Disable"
+  - Body (Active): "♪ 11:15 PM • ⏰︎ 6:15 AM" • Button: "Disable"
+  - Body (Fading): "♪ 11:15 PM • ⏰︎ 6:15 AM" • Button: "Disable"
   - Body (Wake-up Alarm Ringing): "Press volume button to snooze • Press I'm Awake to stop" • Button: "Disable"
   - Body (Wake-up Alarm Snoozed): "Snoozed 9m • Press I'm Awake to stop" • Button: "Disable"
 - Outside the sleep/awake window (or when wake alarm is disabled or after "I'm Awake" clicked):
   - Title: "Auto Sleep Droid"
   - Body (Off): "Sleep timer is off • ⏰︎ 6:15 AM" • Button: "Enable"
-  - Body (Active): "⏸︎ 11:15 PM • ⏰︎ 6:15 AM" • Button: "Disable"
+  - Body (Active): "♪ 11:15 PM • ⏰︎ 6:15 AM" • Button: "Disable"
 
 The only visible action on the notification is the sleep timer toggle ("Enable" / "Disable").
-Monochrome text-style alarm icons (`⏰︎ <time>`) and pause icons (`⏸︎ <time>`) using text variation selectors (`\uFE0E`) are displayed concisely in default notification text color.
+Monochrome text-style alarm icons (`⏰︎ <time>`) and music note symbols (`♪ <time>`) are displayed concisely in default notification text color.
 When in the sleep/awake window (`T - 1.2 * minSleepDuration` until alarm dismissed), the notification title displays "Click notification when awake". Clicking the notification body during this window registers "I'm Awake" (with toast feedback), stops active alarms, updates wake schedule, and does not open the main UI. Clicking outside the awake window or after "I'm Awake" was already clicked opens the main UI.
 
 ## User interface

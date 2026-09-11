@@ -1259,7 +1259,7 @@ class MainService : Service() {
         } else if (isFading) {
             val targetTimeStr = formatTargetTime()
             if (targetTimeStr.isNotEmpty()) {
-                parts.add("\u23F8\uFE0E $targetTimeStr")
+                parts.add("\u266A $targetTimeStr")
             }
             if (alarmTimeStr != null) {
                 parts.add("\u23F0\uFE0E $alarmTimeStr")
@@ -1267,7 +1267,7 @@ class MainService : Service() {
         } else if (isActive) {
             val targetTimeStr = formatTargetTime()
             if (targetTimeStr.isNotEmpty()) {
-                parts.add("\u23F8\uFE0E $targetTimeStr")
+                parts.add("\u266A $targetTimeStr")
             }
             if (alarmTimeStr != null) {
                 parts.add("\u23F0\uFE0E $alarmTimeStr")
