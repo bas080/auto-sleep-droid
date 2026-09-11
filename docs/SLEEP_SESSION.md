@@ -6,28 +6,78 @@ A **sleep session** in Auto Sleep Droid represents a tracked period of sleep bou
 
 Auto Sleep Droid uses these sessions to track rest intervals and automatically log completed sleep records to Android Health Connect.
 
-## Awake Window & Alarm Interactions
+## Session Phases Relative to Alarm Time
 
-A sleep session is active during the rest window surrounding your scheduled wake time. The application provides a simple window for declaring wakefulness (**"I'm Awake"**):
+A sleep session progresses through four concise lifecycle phases evaluated by predicates on current time (`now`), `currentWakeTime`, and `minSleepDuration`:
 
-### Awake Window Availability
-- **Active Sleep Window**: When an active sleep session exists and current time is within the window around `currentWakeTime` (from `currentWakeTime - 1.2 * minSleepDuration` up to `currentWakeTime + 4 hours`).
-- **Alarm / Snooze Phase**: Whenever a wake alarm or nap is ringing or snoozed, or when a nap is active.
-- **Daytime Idle**: Outside this window, **"Nap"** is shown instead of **"I'm Awake"**.
+### 1. Idle Phase
 
-### Alarm Controls & Gestures
-- **Snoozing**: Both phone flip gestures and hardware volume button presses snooze a ringing or snoozed wake alarm for 9 minutes.
-- **Stopping**: Only tapping **"I'm Awake"** stops and dismisses the alarm, updating **Current Wake-Up Time** to the moment it was pressed and logging the sleep session to Health Connect.
+```text
+!isSessionOngoing && (now < currentWakeTime - (minSleepDuration * 1.2) || now >= currentWakeTime)
+```
 
-## Awake Window Calculation Pseudocode
+- **Description**: Current time is outside the sleep session window (prior to bedtime or after wake time).
+- **Nap Option**: Fully enabled on the main UI and notification shade.
+- **"I'm Awake" Action**: Hidden.
 
-The awake window evaluation in `PreferenceComputations.kt` calculates whether **"I'm Awake"** is displayed based on current time, scheduled wake time, and minimum sleep duration:
+### 2. Initiation & Active Sleep Phase
+
+```text
+now >= currentWakeTime - (minSleepDuration * 1.2) && now < currentWakeTime - (minSleepDuration * 0.5)
+```
+
+- **Description**: Sleep window when going to bed or actively sleeping.
+- **Nap Option**: Disabled on main UI and omitted from notifications.
+- **"I'm Awake" Action**: Hidden during early sleep.
+
+### 3. Pre-Alarm Window Phase
+
+```text
+now >= currentWakeTime - (minSleepDuration * 0.5) && now < currentWakeTime
+```
+
+- **Description**: Current time enters the early wake window preceding `currentWakeTime`.
+- **Nap Option**: Disabled.
+- **"I'm Awake" Action**: Visible in notification shade. Tapping **I'm Awake** completes the session, logs to Health Connect, sets current wake time to the moment it was pressed, and reschedules for tomorrow.
+
+### 4. Alarm Phase
+
+```text
+isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime)
+```
+
+- **Description**: Current time reaches or passes `currentWakeTime` during an ongoing session, or an alarm is ringing or snoozed.
+- **Actions**: Notification shade offers **I'm Awake** (as the dismiss action) and **Snooze**. Tapping **I'm Awake** dismisses the alarm, completes and logs the session, sets current wake time to the moment it was pressed, and reverts to the Idle Phase.
+
+## Phase Calculation Pseudocode
+
+The session phase is evaluated in `PreferenceComputations.kt` using early returns and a fallback return:
 
 ```kotlin
-val windowStart = currentWakeTime - (1.2 * minSleepMs).toLong()
-val windowEnd = currentWakeTime + 4 * 3600_000L
+fun getSessionPhase(
+    now: Long,
+    currentWakeTime: Long,
+    minSleepDuration: Long,
+    isSessionOngoing: Boolean,
+    isAlarmRingingOrSnoozed: Boolean = false
+): SessionPhase {
+    if (isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime)) {
+        return SessionPhase.ALARM
+    }
 
-val isAwakeWindowActive = (now in windowStart..windowEnd) || isAlarmRingingOrSnoozed || isNapActive
+    val windowStart = currentWakeTime - (minSleepDuration * 1.2)
+    val preAlarmStart = currentWakeTime - (minSleepDuration * 0.5)
+
+    if (now >= preAlarmStart && now < currentWakeTime) {
+        return SessionPhase.PRE_ALARM_WINDOW
+    }
+
+    if (now >= windowStart && now < preAlarmStart) {
+        return SessionPhase.INITIATION_AND_ACTIVE_SLEEP
+    }
+
+    return SessionPhase.IDLE
+}
 ```
 
 ## How Sleep Sessions Work

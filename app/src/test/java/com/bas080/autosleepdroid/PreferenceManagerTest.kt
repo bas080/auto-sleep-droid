@@ -146,16 +146,44 @@ class PreferenceManagerTest {
     }
 
     @Test
-    fun testPreferenceComputationsShouldShowAwakeAction() {
+    fun testGetSessionPhasePhases() {
+        val minSleepDurationMs = 8 * 3600_000L
+        val wakeTime = 1_000_000_000_000L
+
+        val windowStart = wakeTime - (minSleepDurationMs * 1.2).toLong()
+        val preAlarmStart = wakeTime - (minSleepDurationMs * 0.5).toLong()
+
+        assertEquals(SessionPhase.IDLE, getSessionPhase(windowStart - 1000L, wakeTime, minSleepDurationMs, false))
+        assertEquals(SessionPhase.IDLE, getSessionPhase(wakeTime + 1000L, wakeTime, minSleepDurationMs, false))
+
+        assertEquals(SessionPhase.INITIATION_AND_ACTIVE_SLEEP, getSessionPhase(windowStart, wakeTime, minSleepDurationMs, true))
+        assertEquals(SessionPhase.INITIATION_AND_ACTIVE_SLEEP, getSessionPhase(windowStart + 1000L, wakeTime, minSleepDurationMs, true))
+
+        assertEquals(SessionPhase.PRE_ALARM_WINDOW, getSessionPhase(preAlarmStart, wakeTime, minSleepDurationMs, true))
+        assertEquals(SessionPhase.PRE_ALARM_WINDOW, getSessionPhase(preAlarmStart + 1000L, wakeTime, minSleepDurationMs, true))
+
+        assertEquals(SessionPhase.ALARM, getSessionPhase(wakeTime, wakeTime, minSleepDurationMs, true))
+        assertEquals(SessionPhase.ALARM, getSessionPhase(wakeTime + 5000L, wakeTime, minSleepDurationMs, true))
+    }
+
+    @Test
+    fun testPreferenceComputationsGetSessionPhase() {
+        val phase = preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE)
+        assertEquals(SessionPhase.IDLE, phase)
+    }
+
+    @Test
+    fun testPreferenceComputationsSessionPhaseTransitionsAcrossPreferenceStates() {
         val now = System.currentTimeMillis()
         val cal = java.util.Calendar.getInstance()
         cal.timeInMillis = now
 
-        // Default state: wake alarm disabled -> Awake hidden
-        assertFalse("Awake action should be hidden when wake goal disabled", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+        // Default state: no session ongoing, wake alarm disabled -> IDLE
+        assertEquals(SessionPhase.IDLE, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
+        assertFalse("Awake action should be hidden when alarm disabled", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
 
-        // Enable wake alarm and set current wake time 1 hour in the future
-        cal.add(java.util.Calendar.HOUR_OF_DAY, 1)
+        // Enable wake alarm and set current wake time 4 hours in the future (outside minSleep/2 range)
+        cal.add(java.util.Calendar.HOUR_OF_DAY, 4)
         val wakeHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
         val wakeMin = cal.get(java.util.Calendar.MINUTE)
 
@@ -165,19 +193,62 @@ class PreferenceManagerTest {
             .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, wakeMin)
             .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, wakeHour)
             .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, wakeMin)
-            .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 480)
+            .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 480) // 8 hours min sleep -> awake range is +-4h around wake time
+            .putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now - 3600_000L) // active session started 1h ago
             .commit()
 
-        // 1 hour before wake time is inside the awake window (within 2h of wake time)
-        assertTrue("Awake action should be shown during awake window", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+        // 4 hours before wake time with 8h min sleep is inside INITIATION_AND_ACTIVE_SLEEP window
+        assertEquals(SessionPhase.INITIATION_AND_ACTIVE_SLEEP, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
+        assertTrue("Awake action should be shown within minSleep/2 range of wake time", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+
+        // Set current wake time 2 hours in the future
+        cal.timeInMillis = now
+        cal.add(java.util.Calendar.HOUR_OF_DAY, 2)
+        val preAlarmHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+        val preAlarmMin = cal.get(java.util.Calendar.MINUTE)
+
+        rawPreferences.edit()
+            .putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now - 6 * 3600_000L)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, preAlarmHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, preAlarmMin)
+            .commit()
+
+        assertEquals(SessionPhase.PRE_ALARM_WINDOW, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
+        assertTrue("Awake action should be shown in pre-alarm window", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+
+        // Move wake time into past (alarm ringing/phase)
+        cal.timeInMillis = now
+        cal.add(java.util.Calendar.MINUTE, -10)
+        val alarmHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+        val alarmMin = cal.get(java.util.Calendar.MINUTE)
+
+        rawPreferences.edit()
+            .putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now - 10 * 3600_000L)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, alarmHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, alarmMin)
+            .commit()
+
+        val actualPhase3 = preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE)
+        assertEquals(SessionPhase.ALARM, actualPhase3)
+        assertTrue("Awake action should be shown during alarm phase", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+
+        // Clear ongoing sleep session -> returns to IDLE phase even after wake time
+        rawPreferences.edit().remove(PreferenceKeys.KEY_SLEEP_START_TIME_MS).commit()
+
+        assertEquals(SessionPhase.IDLE, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
     }
 
     @Test
-    fun testShouldShowAwakeActionWhenWakeupAlarmIsRingingOrSnoozed() {
-        rawPreferences.edit().putBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING, true).commit()
+    fun testSessionPhaseIsAlarmWhenWakeupAlarmIsRingingOrSnoozed() {
+        rawPreferences.edit()
+            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true)
+            .putBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING, true)
+            .commit()
+        assertEquals(SessionPhase.ALARM, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
         assertTrue("Awake action should be shown when wakeup alarm is ringing", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
 
         rawPreferences.edit().remove(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING).putBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_SNOOZED, true).commit()
+        assertEquals(SessionPhase.ALARM, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
         assertTrue("Awake action should be shown when wakeup alarm is snoozed", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
     }
 
