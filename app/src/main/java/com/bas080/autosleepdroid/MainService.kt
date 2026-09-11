@@ -1052,20 +1052,6 @@ class MainService : Service() {
                     .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
                     .apply()
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Pushed wake alarm forward to ${formatTime(pushedHour, pushedMin)} due to min sleep safeguard")
-            } else if (currentAlarmMs - baseTime <= windowMs) {
-                val earlierWakeMs = Math.max(goalAlarmMs, requiredWakeTime)
-                if (earlierWakeMs < currentAlarmMs) {
-                    val calEarlier = Calendar.getInstance()
-                    calEarlier.timeInMillis = earlierWakeMs
-                    val earlierHour = calEarlier.get(Calendar.HOUR_OF_DAY)
-                    val earlierMin = calEarlier.get(Calendar.MINUTE)
-                    prefs.edit()
-                        .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, earlierHour)
-                        .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, earlierMin)
-                        .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
-                        .apply()
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Moved wake alarm earlier to ${formatTime(earlierHour, earlierMin)} (within 1.2x min sleep window)")
-                }
             }
         }
 
