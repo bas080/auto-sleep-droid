@@ -20,17 +20,22 @@ Provide an Android sleep timer app configured directly from a single main UI scr
 ## Notification states and content
 All notification content is concise and directly visible in the notification body without showing sleep timer duration:
 
-- Off: "Sleep timer is off • ⏰ 6:15 AM • Click notification when awake" • Button: "Enable"
-- Waiting: "Waiting for playback • ⏰ 6:15 AM • Click notification when awake" • Button: "Disable"
-- Active: "Timer running • ⏸ 11:15 PM • ⏰ 6:15 AM • Click notification when awake" • Button: "Disable"
-- Fading: "Fading volume • ⏸ 11:15 PM • ⏰ 6:15 AM • Click notification when awake" • Button: "Disable"
-- Wake-up Alarm Ringing: "Wake-up alarm • Press volume button to snooze • Press I'm Awake to stop" • Button: "Disable"
-- Wake-up Alarm Snoozed: "Wake-up alarm • Snoozed 9m • Press I'm Awake to stop" • Button: "Disable"
+- Before going to sleep (`T - 1.2 * minSleepDuration`) until alarm dismissed:
+  - Title: "Click notification when awake"
+  - Body (Off): "Sleep timer is off • ⏰︎ 6:15 AM" • Button: "Enable"
+  - Body (Waiting): "Waiting for playback • ⏰︎ 6:15 AM" • Button: "Disable"
+  - Body (Active): "⏸︎ 11:15 PM • ⏰︎ 6:15 AM" • Button: "Disable"
+  - Body (Fading): "⏸︎ 11:15 PM • ⏰︎ 6:15 AM" • Button: "Disable"
+  - Body (Wake-up Alarm Ringing): "Press volume button to snooze • Press I'm Awake to stop" • Button: "Disable"
+  - Body (Wake-up Alarm Snoozed): "Snoozed 9m • Press I'm Awake to stop" • Button: "Disable"
+- Outside the sleep/awake window (or when wake alarm is disabled or after "I'm Awake" clicked):
+  - Title: "Auto Sleep Droid"
+  - Body (Off): "Sleep timer is off • ⏰︎ 6:15 AM" • Button: "Enable"
+  - Body (Active): "⏸︎ 11:15 PM • ⏰︎ 6:15 AM" • Button: "Disable"
 
 The only visible action on the notification is the sleep timer toggle ("Enable" / "Disable").
-Alarm icons (`⏰ <time>`) and pause icons (`⏸ <time>`) are displayed concisely in the notification text when applicable.
-If an alarm is configured, the notification explains that users should click the notification when they wake up in the morning.
-Clicking the notification body during the awake window registers "I'm Awake" (with toast feedback), stops any active alarm, updates wake schedule, and does not open the main UI. Clicking outside the awake window or after "I'm Awake" was already clicked opens the main UI.
+Monochrome text-style alarm icons (`⏰︎ <time>`) and pause icons (`⏸︎ <time>`) using text variation selectors (`\uFE0E`) are displayed concisely in default notification text color.
+When in the sleep/awake window (`T - 1.2 * minSleepDuration` until alarm dismissed), the notification title displays "Click notification when awake". Clicking the notification body during this window registers "I'm Awake" (with toast feedback), stops active alarms, updates wake schedule, and does not open the main UI. Clicking outside the awake window or after "I'm Awake" was already clicked opens the main UI.
 
 ## User interface
 - Main Application Screen (`MainActivity`):
