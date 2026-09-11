@@ -22,8 +22,30 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  test:
-    name: Run Unit Tests
+  trigger-release:
+    name: Run release script and push tag
+    if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT || secrets.PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Run release script and push master and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          RAW_VERSION="${{ inputs.version }}"
+          VERSION_NAME="${RAW_VERSION#v}"
+          ./scripts/release.sh "${VERSION_NAME}"
+          git push origin master "v${VERSION_NAME}"
+
+  build-test-release:
+    name: Test, Build & Publish APK
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
     steps:
@@ -47,51 +69,6 @@ jobs:
 
       - name: Run unit tests
         run: ./gradlew test --parallel
-
-  trigger-release:
-    name: Run release script and push tag
-    if: github.event_name == 'workflow_dispatch' && inputs.version != ''
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.RELEASE_PAT || secrets.PAT || secrets.GITHUB_TOKEN }}
-
-      - name: Run release script and push master and tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          RAW_VERSION="${{ inputs.version }}"
-          VERSION_NAME="${RAW_VERSION#v}"
-          ./scripts/release.sh "${VERSION_NAME}"
-          git push origin master
-          git push origin "v${VERSION_NAME}"
-
-  build-and-release:
-    name: Build & Publish APK
-    needs: test
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: 'gradle'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Build APK
         env:
