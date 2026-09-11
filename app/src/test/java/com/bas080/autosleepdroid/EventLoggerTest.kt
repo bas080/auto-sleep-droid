@@ -12,6 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -86,5 +87,33 @@ class EventLoggerTest {
         val highSpans = (formattedHigh as Spanned).getSpans(0, formattedHigh.length, ForegroundColorSpan::class.java)
         assertEquals(-0x777778, highSpans[0].foregroundColor)
         assertEquals(-0x1, highSpans[1].foregroundColor)
+    }
+
+    @Test
+    fun testFilePersistenceAndAppend() {
+        EventLogger.log(context, "First log message")
+        EventLogger.log(context, "Second log message")
+
+        val logFile = File(context.filesDir, "event_logs.txt")
+        assertTrue(logFile.exists())
+
+        val linesInFile = logFile.readLines().filter { it.trim().isNotEmpty() }
+        assertEquals(2, linesInFile.size)
+
+        val eventsFromApi = EventLogger.getEvents(context)
+        assertEquals(2, eventsFromApi.size)
+        assertEquals(linesInFile, eventsFromApi)
+    }
+
+    @Test
+    fun testClearLogs() {
+        EventLogger.log(context, "Message to clear")
+        val logFile = File(context.filesDir, "event_logs.txt")
+        assertTrue(logFile.exists())
+
+        EventLogger.clear(context)
+
+        assertTrue(EventLogger.getEvents(context).isEmpty())
+        assertFalse(logFile.exists())
     }
 }

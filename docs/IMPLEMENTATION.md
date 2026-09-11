@@ -132,7 +132,7 @@ Main Configuration Controls & Action Links:
 
 ## Error Handling Philosophy
 
-Write code with the least amount of defensive null guards and `try-catch` blocks necessary. Code fails fast on unexpected state, caught by global exception handler in `AutoSleepApplication`.
+Write code with the least amount of defensive null guards and `try-catch` blocks necessary. Code fails fast on unexpected state, caught by global exception handler in `AutoSleepApplication`. Defensive wrapping of operations in `try-catch` blocks is explicitly prohibited across the codebase.
 
 ### `HealthConnectManager`
 
@@ -149,7 +149,7 @@ Utility object managing integration with Android Health Connect (`androidx.healt
 
 File: `app/src/main/java/com/bas080/autosleepdroid/EventLogger.kt`
 
-Centralized logging utility that formats event lines with timestamps (`yyyy-MM-dd HH:mm:ss - <message>`). Keeps logs bounded up to 500 lines in memory and `SharedPreferences`.
+Centralized append-only logging utility that formats event lines with timestamps and importance levels (`LEVEL_LOW`, `LEVEL_NORMAL`, `LEVEL_HIGH`). Persists logs directly to internal app storage (`event_logs.txt`) without keeping log lists in memory or enforcing a fixed line count. If appending to the log file fails, it prunes the file to the 50 most recent lines and retries. Supports clearing logs via `EventLogger.clear(context)`.
 
 ### `BootReceiver`
 
