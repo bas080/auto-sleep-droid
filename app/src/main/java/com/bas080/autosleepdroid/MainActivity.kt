@@ -89,7 +89,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         if (isGranted) {
             startTimerService()
         }
-        redrawNotification()
     }
 
     private class BoolPrefSpec(val key: String, val defaultValue: Boolean)
@@ -618,7 +617,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             editor.apply()
             updateTargetTimeButtonText(hourOfDay, minute)
             updateCurrentWakeTimeButtonText(pm.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay), pm.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute))
-            redrawNotification()
         }
     }
 
@@ -636,7 +634,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 .remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
                 .apply()
             updateCurrentWakeTimeButtonText(hourOfDay, minute)
-            redrawNotification()
         }
     }
 
@@ -809,8 +806,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
             Toast.makeText(this, R.string.toast_import_success, Toast.LENGTH_SHORT).show()
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Imported settings from string")
-
-            redrawNotification()
         } catch (e: JSONException) {
             Toast.makeText(this, R.string.toast_import_invalid, Toast.LENGTH_SHORT).show()
             EventLogger.log(this, "Failed to import settings: invalid format (${e.message})")
@@ -864,7 +859,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 }
             }
         }
-        redrawNotification()
         registerPreferenceListeners()
     }
 
@@ -925,14 +919,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private fun scrollToBottom() {
         eventScrollView?.post { eventScrollView?.fullScroll(ScrollView.FOCUS_DOWN) }
     }
-
-    private fun redrawNotification() {
-        val serviceIntent = Intent(this, MainService::class.java).apply {
-            action = MainService.ACTION_REDRAW_NOTIFICATION
-        }
-        startForegroundService(serviceIntent)
-    }
-
 
     private fun startTimerService() {
         val serviceIntent = Intent(this, MainService::class.java)

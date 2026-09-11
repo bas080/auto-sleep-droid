@@ -15,7 +15,7 @@
 
 <h3>Sleep Timer &amp; Notifications</h3>
 <ul>
-  <li><b>Notification Controls</b>: The ongoing notification shade display provides single-tap toggle actions (<b>Disable</b> / <b>Enable</b>) and an <b>I'm Awake</b> button (showing <b>I'm Awake</b> during the awake window around your scheduled wake time or when alarms ring/snooze). Tapping <b>I'm Awake</b> is the sole action to stop ringing or snoozed alarms. All notification content is concise and directly visible.</li>
+  <li><b>Notification Controls</b>: The ongoing notification shade display provides a single-tap toggle action (<b>Disable</b> / <b>Enable</b>). All notification content is concise, displaying icons for fade-out time (⏸) and wake alarm time (⏰). When an alarm is configured, clicking the notification when you wake up registers <b>I'm Awake</b>, stops active alarms, and updates your wake schedule without opening the main UI.</li>
   <li><b>Automatic Playback Detection</b>: The timer sits waiting until media starts playing, then automatically begins counting down.</li>
   <li><b>Fade &amp; Pause</b>: When timer expires, audio slowly fades down over 30 seconds before media playback is paused, and original volume is restored.</li>
   <li><b>Screen-Free Resets</b>: Press any physical volume button while in bed to reset the timer to full duration without looking at your screen.</li>
@@ -25,8 +25,8 @@
 <ul>
   <li><b>Independent Wake Alarm &amp; Current Wake Time</b>: The wake alarm operates independently of whether the sleep timer is turned on. You can adjust the upcoming wake alarm clock time using the <b>Current wake-up time</b> setting. When you go to bed early, the sleep timer automatically moves your wake alarm earlier. Sleep timer resets push the current wake time forward when needed to enforce your minimum sleep duration safeguard.</li>
   <li><b>Gentle Crescendo Wake-Up</b>: When the wake-up alarm triggers, the tone volume gradually increases over 3 minutes along a gentle psychoacoustic curve for a peaceful transition.</li>
-  <li><b>Snooze Alarm (9m)</b>: Press any physical volume button or tap <b>Snooze</b> on the alarm notification when the alarm triggers to snooze for 9 minutes.</li>
-  <li><b>Stop Alarm &amp; Early Wake-Up ("I'm Awake")</b>: Tapping <b>I'm Awake</b> in the ongoing notification shade or main UI is the sole action to stop a ringing or snoozed alarm. Tapping <b>I'm Awake</b> during your awake window (half of minimum sleep duration before or after your alarm) sets your current wake-up time to 15 minutes before current time (capped at your target goal time), registers your sleep session in Health Connect (if enabled), and reschedules your alarm for tomorrow.</li>
+  <li><b>Snooze Alarm (9m)</b>: Press any physical volume button when the wake alarm triggers to snooze for 9 minutes.</li>
+  <li><b>Stop Alarm &amp; Early Wake-Up ("I'm Awake")</b>: Clicking the notification during your awake window (or when an alarm is ringing or snoozed) is the sole action to stop a ringing or snoozed alarm. It sets your current wake-up time to 15 minutes before current time (capped at your target goal time), registers your sleep session in Health Connect (if enabled), and reschedules your alarm for tomorrow.</li>
 </ul>
 
 <h3>Health Connect Integration</h3>
