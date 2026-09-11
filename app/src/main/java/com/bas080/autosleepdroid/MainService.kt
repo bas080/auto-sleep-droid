@@ -356,7 +356,6 @@ class MainService : Service() {
         }
         createNotificationChannel()
 
-
         setupPreferenceListeners()
         initializeStateAndNotification()
     }
@@ -377,7 +376,6 @@ class MainService : Service() {
             getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
             onWakeGoalConfigChanged(goalEnabled)
         }
-
 
         preferenceManager?.watchEffect { getter ->
             if (getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false)) {
@@ -832,13 +830,21 @@ class MainService : Service() {
 
     private fun updateNextWakeUpTimeOnDismissOrExpiry() {
         val prefs = preferences ?: return
+        val goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
+        val goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
+        val goalMins = goalHour * 60 + goalMin
+
         val cal = Calendar.getInstance()
-        val hour = cal.get(Calendar.HOUR_OF_DAY)
-        val min = cal.get(Calendar.MINUTE)
+        cal.add(Calendar.MINUTE, -15)
+        val calcMins = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+
+        val finalMins = Math.max(goalMins, calcMins)
+        val newHour = finalMins / 60
+        val newMin = finalMins % 60
 
         prefs.edit()
-            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hour)
-            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, min)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, newHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, newMin)
             .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
             .apply()
     }
@@ -992,13 +998,17 @@ class MainService : Service() {
             val minSleepMs = minSleepMin * 60_000L
             val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
             val requiredWakeTime: Long
+            val baseTime: Long
             if (newTimerEndsAt > 0L) {
+                baseTime = newTimerEndsAt
                 val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
                 requiredWakeTime = newTimerEndsAt + effectiveMinSleepMs
             } else if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
+                baseTime = sleepStartTime
                 val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
                 requiredWakeTime = sleepStartTime + effectiveMinSleepMs
             } else {
+                baseTime = now
                 requiredWakeTime = now + minSleepMs
             }
 
@@ -1017,7 +1027,19 @@ class MainService : Service() {
                 calCurrent.add(Calendar.DAY_OF_YEAR, 1)
             }
 
+            val calGoal = Calendar.getInstance()
+            calGoal.timeInMillis = now
+            calGoal.set(Calendar.HOUR_OF_DAY, goalHour)
+            calGoal.set(Calendar.MINUTE, goalMin)
+            calGoal.set(Calendar.SECOND, 0)
+            calGoal.set(Calendar.MILLISECOND, 0)
+            if (calGoal.timeInMillis <= now) {
+                calGoal.add(Calendar.DAY_OF_YEAR, 1)
+            }
+
             val currentAlarmMs = calCurrent.timeInMillis
+            val goalAlarmMs = calGoal.timeInMillis
+            val windowMs = (1.2 * minSleepMs).toLong()
 
             if (requiredWakeTime > currentAlarmMs) {
                 val calRequired = Calendar.getInstance()
@@ -1030,6 +1052,20 @@ class MainService : Service() {
                     .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
                     .apply()
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Pushed wake alarm forward to ${formatTime(pushedHour, pushedMin)} due to min sleep safeguard")
+            } else if (currentAlarmMs - baseTime <= windowMs) {
+                val earlierWakeMs = Math.max(goalAlarmMs, requiredWakeTime)
+                if (earlierWakeMs < currentAlarmMs) {
+                    val calEarlier = Calendar.getInstance()
+                    calEarlier.timeInMillis = earlierWakeMs
+                    val earlierHour = calEarlier.get(Calendar.HOUR_OF_DAY)
+                    val earlierMin = calEarlier.get(Calendar.MINUTE)
+                    prefs.edit()
+                        .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, earlierHour)
+                        .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, earlierMin)
+                        .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
+                        .apply()
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Moved wake alarm earlier to ${formatTime(earlierHour, earlierMin)} (within 1.2x min sleep window)")
+                }
             }
         }
 
@@ -1223,6 +1259,16 @@ class MainService : Service() {
         }
     }
 
+    private fun snoozeWakeUpAlarmViaFlip() {
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed via flip gesture")
+        stopWakeUpAlarmSound()
+        snoozeWakeUpAlarm()
+        setWakeUpAlarmState(false, true)
+        onTriggerVibration()
+        updateListenersRegistration()
+        updateNotification()
+        Toast.makeText(this, R.string.toast_alarm_snoozed, Toast.LENGTH_SHORT).show()
+    }
 
     private fun snoozeWakeUpAlarmViaVolumeKey() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed via volume button")
@@ -1417,7 +1463,6 @@ class MainService : Service() {
         )
     }
 
-
     private fun snoozeWakeUpAlarmIntent(): PendingIntent {
         val intent = Intent(this, MainService::class.java).setAction(ACTION_SNOOZE_WAKEUP_ALARM)
         return PendingIntent.getService(
@@ -1508,8 +1553,13 @@ class MainService : Service() {
         private const val KEY_TIMER_ENDS_AT = PreferenceKeys.KEY_TIMER_ENDS_AT
         private const val REMOTE_INPUT_KEY = "duration_minutes"
         private const val PAUSE_RESET_DELAY_MS = 500L
+        private const val SENSOR_THROTTLE_MS = 300L
         private const val ALARM_CRESCENDO_DURATION_MS = AppDefaults.ALARM_CRESCENDO_DURATION_MS
         private const val ALARM_CRESCENDO_INTERVAL_MS = AppDefaults.ALARM_CRESCENDO_INTERVAL_MS
+
+        private const val ORIENTATION_UNKNOWN = 0
+        private const val ORIENTATION_FACE_UP = 1
+        private const val ORIENTATION_FACE_DOWN = 2
 
         fun isValidDuration(minutes: Int): Boolean {
             return minutes >= AppDefaults.MINUTES_MIN && minutes <= AppDefaults.MINUTES_MAX
@@ -1563,14 +1613,6 @@ class MainService : Service() {
 
             if (minWakeTimeMillis > scheduledAlarmMillis) {
                 scheduledAlarmMillis = minWakeTimeMillis
-                val calPushed = Calendar.getInstance()
-                calPushed.timeInMillis = minWakeTimeMillis
-                val pushedHour = calPushed.get(Calendar.HOUR_OF_DAY)
-                val pushedMin = calPushed.get(Calendar.MINUTE)
-                prefs.edit()
-                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, pushedHour)
-                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, pushedMin)
-                    .apply()
             }
 
             val calAlarm = Calendar.getInstance()

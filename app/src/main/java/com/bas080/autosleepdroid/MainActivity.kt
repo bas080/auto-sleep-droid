@@ -706,6 +706,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
     }
 
+
     private fun exportSettings() {
         val pm = preferenceManager ?: return
         try {

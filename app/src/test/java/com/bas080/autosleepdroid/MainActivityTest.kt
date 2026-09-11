@@ -959,7 +959,7 @@ class MainActivityTest {
         val switchGoal = activity.findViewById<Switch>(R.id.switch_enable_goal)
         switchGoal.isChecked = true
 
-        val rowIds = intArrayOf(R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_export, R.id.btn_import, R.id.btn_version, R.id.btn_feedback, R.id.btn_links)
+        val rowIds = intArrayOf(R.id.btn_nap, R.id.input_duration, R.id.btn_target_time, R.id.input_min_sleep, R.id.btn_export, R.id.btn_import, R.id.btn_version, R.id.btn_feedback, R.id.btn_links)
         for (rowId in rowIds) {
             val parentRow = activity.findViewById<View>(rowId)
             assertNotNull("Row should exist", parentRow)
