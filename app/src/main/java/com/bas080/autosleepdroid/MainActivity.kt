@@ -202,6 +202,12 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val btnLogsBack = findViewById<Button>(R.id.btn_logs_back)
         btnLogsBack?.setOnClickListener { hideOverlays() }
 
+        val btnClearLogs = findViewById<Button>(R.id.btn_clear_logs)
+        btnClearLogs?.setOnClickListener {
+            EventLogger.clear(this)
+            eventLogText?.text = ""
+        }
+
         btnExport?.setOnClickListener { exportSettings() }
         btnImport?.setOnClickListener { showImportDialog() }
 
