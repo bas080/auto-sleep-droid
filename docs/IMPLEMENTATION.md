@@ -112,6 +112,7 @@ The launcher activity starts `MainService`, requests `POST_NOTIFICATIONS` on And
 
 Main Configuration Controls & Action Links:
 
+- External Settings & Permission Launches: External system settings screens (Do Not Disturb settings via `openSettingsWithFallback`, Exact Alarm permission settings via `requestExactAlarmPermissionIfNeeded`, and Health Connect permission settings via `openHealthConnectPermissions`) are launched with `Intent.FLAG_ACTIVITY_NEW_TASK` so they open in a separate task window outside Auto Sleep Droid's activity stack. This allows users to switch back directly to Auto Sleep Droid using Android's recent app switcher without navigating backwards through system settings backstacks.
 - Service Binding & Lifecycle Safety: Binds to `MainService` (`BIND_AUTO_CREATE`) via `ServiceConnection` on `onStart()`, registers key-specific preference listeners via `PreferenceManager` on service connection or `onResume()`, uses `PreferenceManager.getComputed` for memoized UI string formatting and state evaluations, and explicitly unregisters all listeners and unbinds in `onPause()` / `onStop()` to prevent memory leaks.
 - Single-screen configuration UI:
   - Section headings (`headerTimer`, `headerAlarm`, `headerHealthConnect`, `headerDnd`, `headerBackup`, `headerAbout`) remain enabled (`true`) with full opacity (`1.0f`) at all times.

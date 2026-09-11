@@ -949,6 +949,38 @@ class MainActivityTest {
 
         val nextIntent = shadowActivity.nextStartedActivity
         assertNotNull("Clicking Health Connect row container must open Health Connect settings page", nextIntent)
+        assertTrue("Intent must have FLAG_ACTIVITY_NEW_TASK set", (nextIntent!!.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
+    }
+
+    @Test
+    fun testOpenSettingsWithFallbackLaunchesIntentWithNewTaskFlag() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+        val shadowActivity = Shadows.shadowOf(activity)
+        while (shadowActivity.nextStartedActivity != null) {}
+
+        activity.openSettingsWithFallback(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS, android.provider.Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS)
+
+        val nextIntent = shadowActivity.nextStartedActivity
+        assertNotNull(nextIntent)
+        assertEquals(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS, nextIntent?.action)
+        assertTrue("Intent must have FLAG_ACTIVITY_NEW_TASK set", (nextIntent!!.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
+    }
+
+    @Test
+    fun testRequestExactAlarmPermissionIfNeededLaunchesIntentWithNewTaskFlag() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+        val shadowActivity = Shadows.shadowOf(activity)
+        while (shadowActivity.nextStartedActivity != null) {}
+
+        activity.requestExactAlarmPermissionIfNeeded()
+
+        val nextIntent = shadowActivity.nextStartedActivity
+        if (nextIntent != null) {
+            assertEquals(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, nextIntent.action)
+            assertTrue("Intent must have FLAG_ACTIVITY_NEW_TASK set", (nextIntent.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
+        }
     }
 
     @Test
