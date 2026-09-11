@@ -8,6 +8,7 @@ import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.ArrayList
 import java.util.Collections
@@ -19,6 +20,7 @@ object EventLogger {
     const val LEVEL_NORMAL: Int = 1
     const val LEVEL_HIGH: Int = 2
 
+    private const val LOG_FILE_NAME = "event_logs.txt"
     private const val PREF_NAME = "event_logger"
     private const val KEY_LOGS = "logs"
     private const val MAX_LOGS = 500
@@ -56,12 +58,18 @@ object EventLogger {
         val line = "$timestamp $marker$message"
 
         events.add(line)
-        if (events.size > MAX_LOGS) {
+        val exceeded = events.size > MAX_LOGS
+        if (exceeded) {
             events.removeAt(0)
         }
 
         if (targetContext != null) {
-            persistLogs(targetContext.applicationContext)
+            val appCtx = targetContext.applicationContext
+            if (exceeded) {
+                rewriteLogs(appCtx)
+            } else {
+                appendLogLine(appCtx, line)
+            }
         }
 
         val currentListener = listener
@@ -179,37 +187,80 @@ object EventLogger {
     @Synchronized
     fun clear(context: Context?) {
         events.clear()
-        appContext = null
-        loaded = false
-        if (context != null) {
-            val prefs = context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            prefs.edit().remove(KEY_LOGS).apply()
+        val targetContext = context ?: appContext
+        if (targetContext != null) {
+            val appCtx = targetContext.applicationContext
+            val file = getLogFile(appCtx)
+            if (file.exists()) {
+                file.delete()
+            }
+            val prefs = appCtx.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            prefs.edit().remove(KEY_LOGS).commit()
         }
+        if (context != null) {
+            appContext = context.applicationContext
+        } else {
+            appContext = null
+        }
+        loaded = false
+    }
+
+    private fun getLogFile(context: Context): File {
+        return File(context.filesDir, LOG_FILE_NAME)
     }
 
     private fun ensureLoaded(context: Context?) {
         if (!loaded && context != null) {
-            val prefs = context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            val raw = prefs.getString(KEY_LOGS, "")
-            if (!raw.isNullOrEmpty()) {
-                val lines = raw.split("\n")
-                for (line in lines) {
-                    if (line.trim().isNotEmpty()) {
-                        events.add(line)
+            val appCtx = context.applicationContext
+            val file = getLogFile(appCtx)
+            if (file.exists()) {
+                file.useLines { lines ->
+                    for (line in lines) {
+                        if (line.trim().isNotEmpty()) {
+                            events.add(line)
+                        }
                     }
                 }
+            } else {
+                val prefs = appCtx.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                val raw = prefs.getString(KEY_LOGS, null)
+                if (!raw.isNullOrEmpty()) {
+                    val lines = raw.split("\n")
+                    for (line in lines) {
+                        if (line.trim().isNotEmpty()) {
+                            events.add(line)
+                        }
+                    }
+                    prefs.edit().remove(KEY_LOGS).commit()
+                }
             }
+
+            while (events.size > MAX_LOGS) {
+                events.removeAt(0)
+            }
+
+            if (!file.exists() && events.isNotEmpty()) {
+                rewriteLogs(appCtx)
+            }
+
             loaded = true
         }
     }
 
-    private fun persistLogs(context: Context) {
-        val sb = StringBuilder()
-        for (i in events.indices) {
-            if (i > 0) sb.append("\n")
-            sb.append(events[i])
+    private fun appendLogLine(context: Context, line: String) {
+        val file = getLogFile(context)
+        file.appendText(line + "\n")
+    }
+
+    private fun rewriteLogs(context: Context) {
+        val file = getLogFile(context)
+        if (events.isEmpty()) {
+            if (file.exists()) {
+                file.delete()
+            }
+        } else {
+            val content = events.joinToString("\n", postfix = "\n")
+            file.writeText(content)
         }
-        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putString(KEY_LOGS, sb.toString()).apply()
     }
 }

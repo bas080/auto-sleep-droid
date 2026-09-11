@@ -12,6 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -86,5 +87,69 @@ class EventLoggerTest {
         val highSpans = (formattedHigh as Spanned).getSpans(0, formattedHigh.length, ForegroundColorSpan::class.java)
         assertEquals(-0x777778, highSpans[0].foregroundColor)
         assertEquals(-0x1, highSpans[1].foregroundColor)
+    }
+
+    @Test
+    fun testFilePersistenceAndAppend() {
+        EventLogger.log(context, "First log message")
+        EventLogger.log(context, "Second log message")
+
+        val logFile = File(context.filesDir, "event_logs.txt")
+        assertTrue(logFile.exists())
+
+        val linesInFile = logFile.readLines().filter { it.trim().isNotEmpty() }
+        assertEquals(2, linesInFile.size)
+
+        val eventsFromApi = EventLogger.getEvents(context)
+        assertEquals(2, eventsFromApi.size)
+        assertEquals(linesInFile, eventsFromApi)
+    }
+
+    @Test
+    fun testFilePruningExceedingMaxLogs() {
+        for (i in 1..510) {
+            EventLogger.log(context, "Message number $i")
+        }
+
+        val events = EventLogger.getEvents(context)
+        assertEquals(500, events.size)
+        assertTrue(events.first().contains("Message number 11"))
+        assertTrue(events.last().contains("Message number 510"))
+
+        val logFile = File(context.filesDir, "event_logs.txt")
+        val linesInFile = logFile.readLines().filter { it.trim().isNotEmpty() }
+        assertEquals(500, linesInFile.size)
+        assertEquals(events, linesInFile)
+    }
+
+    @Test
+    fun testClearLogs() {
+        EventLogger.log(context, "Message to clear")
+        val logFile = File(context.filesDir, "event_logs.txt")
+        assertTrue(logFile.exists())
+
+        EventLogger.clear(context)
+
+        assertTrue(EventLogger.getEvents(context).isEmpty())
+        assertFalse(logFile.exists())
+    }
+
+    @Test
+    fun testLegacySharedPreferencesMigration() {
+        val prefs = context.getSharedPreferences("event_logger", Context.MODE_PRIVATE)
+        prefs.edit().putString("logs", "1/1 12:00:00 \u0001Legacy log entry 1\n1/1 12:00:01 \u0001Legacy log entry 2").commit()
+
+        val logFile = File(context.filesDir, "event_logs.txt")
+        if (logFile.exists()) {
+            logFile.delete()
+        }
+
+        val events = EventLogger.getEvents(context)
+        assertEquals(2, events.size)
+        assertTrue(events[0].contains("Legacy log entry 1"))
+        assertTrue(events[1].contains("Legacy log entry 2"))
+
+        assertTrue(logFile.exists())
+        assertFalse(prefs.contains("logs"))
     }
 }
