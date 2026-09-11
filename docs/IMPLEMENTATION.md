@@ -180,3 +180,9 @@ Event log history is stored in the `event_logger` `SharedPreferences` file:
 | Key | Type | Meaning |
 |---|---|---|
 | `logs` | string | Newline-separated event log entries (capped at 500 lines) |
+
+## Release Workflow
+
+Releases can be created in two ways:
+1. **Manual Workflow Dispatch:** Trigger the GitHub Actions workflow (`.github/workflows/android-release.yml`) manually using `workflow_dispatch` and supply the target version (e.g. `0.2.4`). The workflow executes `./scripts/release.sh "${VERSION_NAME}"` to bump `versionCode` and `versionName` in `app/build.gradle`, creates a Git commit and version tag (`v${VERSION_NAME}`), pushes them to GitHub, builds the release APK, and publishes the GitHub release.
+2. **Tag Push:** Run `./scripts/release.sh <version>` locally to update `app/build.gradle`, commit, and tag locally. Pushing the tag `v<version>` to GitHub triggers the release workflow to assemble the release APK and publish the GitHub release.
