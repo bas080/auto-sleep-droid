@@ -132,7 +132,7 @@ Main Configuration Controls & Action Links:
 
 ## Error Handling Philosophy
 
-Write code with the least amount of defensive null guards and `try-catch` blocks necessary. Code fails fast on unexpected state, caught by global exception handler in `AutoSleepApplication`. Wrapping operations in unnecessary `try-catch` blocks is explicitly disallowed across the codebase.
+Write code with the least amount of defensive null guards and `try-catch` blocks necessary. Code fails fast on unexpected state, caught by global exception handler in `AutoSleepApplication`.
 
 ### `HealthConnectManager`
 
@@ -149,7 +149,7 @@ Utility object managing integration with Android Health Connect (`androidx.healt
 
 File: `app/src/main/java/com/bas080/autosleepdroid/EventLogger.kt`
 
-Centralized append-only logging utility that formats event lines with timestamps and importance levels (`LEVEL_LOW`, `LEVEL_NORMAL`, `LEVEL_HIGH`). Persists logs in internal app storage (`event_logs.txt`) and automatically migrates legacy `SharedPreferences` entries on startup. Keeps logs bounded up to 500 lines in memory and on disk. Supports clearing logs via `EventLogger.clear(context)`.
+Centralized logging utility that formats event lines with timestamps (`yyyy-MM-dd HH:mm:ss - <message>`). Keeps logs bounded up to 500 lines in memory and `SharedPreferences`.
 
 ### `BootReceiver`
 
@@ -184,5 +184,5 @@ Event log history is stored in the `event_logger` `SharedPreferences` file:
 ## Release Workflow
 
 Releases can be created in two ways:
-1. **Manual Workflow Dispatch:** Trigger the GitHub Actions workflow (`.github/workflows/android-release.yml`) manually using `workflow_dispatch` and supply the target version (e.g. `0.2.4`). The workflow executes `./scripts/release.sh "${VERSION_NAME}"` to bump `versionCode` and `versionName` in `app/build.gradle`, creates a Git commit and version tag (`v${VERSION_NAME}`), pushes them to GitHub, builds the release APK, and publishes the GitHub release.
-2. **Tag Push:** Run `./scripts/release.sh <version>` locally to update `app/build.gradle`, commit, and tag locally. Pushing the tag `v<version>` to GitHub triggers the release workflow to assemble the release APK and publish the GitHub release.
+1. **Manual Workflow Dispatch:** Trigger the GitHub Actions workflow (`.github/workflows/android-release.yml`) manually using `workflow_dispatch` and supply the target version (e.g. `0.2.4`). The `trigger-release` job executes `./scripts/release.sh "${VERSION_NAME}"` to bump `versionCode` and `versionName` in `app/build.gradle`, creates a Git commit and version tag (`v${VERSION_NAME}`), and pushes `master` and the tag to GitHub. Pushing the version tag then triggers the `build-test-release` job to run tests, build the release APK, and publish the GitHub release.
+2. **Tag Push:** Run `./scripts/release.sh <version>` locally to update `app/build.gradle`, commit, and tag locally. Pushing the tag `v<version>` to GitHub triggers the `build-test-release` job to run tests, assemble the release APK, and publish the GitHub release.

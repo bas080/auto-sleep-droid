@@ -17,9 +17,35 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  test:
-    name: Run Unit Tests
+  trigger-release:
+    name: Run release script and push tag
+    if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT || secrets.PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Run release script and push master and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          RAW_VERSION="${{ inputs.version }}"
+          VERSION_NAME="${RAW_VERSION#v}"
+          ./scripts/release.sh "${VERSION_NAME}"
+          git push origin master "v${VERSION_NAME}"
+
+  build-test-release:
+    name: Test, Build & Publish APK
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
     steps:
@@ -44,28 +70,6 @@ jobs:
       - name: Run unit tests
         run: ./gradlew test --parallel
 
-  latest:
-    name: Build latest APK
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: 'gradle'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
       - name: Build APK
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -73,24 +77,26 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS || vars.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "Error: KEYSTORE_BASE64 secret is not defined."
+            exit 1
+          fi
           echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
           KEYSTORE_FILE=/tmp/release.jks ./gradlew assembleRelease
 
-      - name: Prepare latest APK
-        run: |
-          cp app/build/outputs/apk/release/app-release.apk auto-sleep-droid-latest.apk
-
-      - name: Upload latest APK artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: auto-sleep-droid-latest
-          path: auto-sleep-droid-latest.apk
+          name: auto-sleep-droid-apk
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
-      - name: Create or update latest release
+      - name: Create or update latest release (master push)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          cp app/build/outputs/apk/release/app-release.apk auto-sleep-droid-latest.apk
           BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
           git tag -f latest "${GITHUB_SHA}"
           git push origin refs/tags/latest --force || true
@@ -108,66 +114,13 @@ jobs:
               --latest=true
           fi
 
-  version:
-    name: Release version tag
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '')
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Git and create tag (if manual trigger)
-        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          RAW_VERSION="${{ inputs.version }}"
-          VERSION_NAME="${RAW_VERSION#v}"
-          echo "VERSION_TAG=v${VERSION_NAME}" >> $GITHUB_ENV
-          ./scripts/release.sh "${VERSION_NAME}"
-          git push origin master
-          git push origin "v${VERSION_NAME}"
-
-      - name: Set version tag (if tag trigger)
+      - name: Create versioned GitHub release (tag push)
         if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          echo "VERSION_TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: 'gradle'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Build APK
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS || vars.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
-          KEYSTORE_FILE=/tmp/release.jks ./gradlew assembleRelease
-
-      - name: Prepare versioned APK
-        run: |
-          cp app/build/outputs/apk/release/app-release.apk "auto-sleep-droid-${VERSION_TAG}.apk"
-
-      - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          VERSION_TAG="${GITHUB_REF_NAME}"
+          cp app/build/outputs/apk/release/app-release.apk "auto-sleep-droid-${VERSION_TAG}.apk"
           gh release create "${VERSION_TAG}" "auto-sleep-droid-${VERSION_TAG}.apk" \
             --title "Auto Sleep Droid ${VERSION_TAG}" \
             --generate-notes

@@ -41,7 +41,11 @@ This document provides a technical evaluation of the performance characteristics
 A thorough audit of the runtime codebase reveals several critical performance bottlenecks and architectural anti-patterns that impact main-thread latency, memory allocations, and disk I/O.
 
 ### 2.1 Disk I/O & Main-Thread Overhead in `EventLogger`
-- **Resolution**: `EventLogger` was refactored from `SharedPreferences` full-string serialization to file-based append-only storage (`event_logs.txt`). Appending single lines eliminates full array re-serialization on every write call, rewriting the bounded file only when pruning logs beyond 500 lines or on explicit log clears.
+- **Issue**: `EventLogger.log(context, message)` serializes up to 500 string entries into a single newline-separated string and executes `SharedPreferences.edit().putString(...).apply()` on **every single log call**.
+- **Impact**:
+  - Calling `log()` during 30 continuous volume fade steps (1-second intervals) enqueue 30 disk-write operations to the background `SharedPreferences` disk thread in rapid succession.
+  - String concatenation (`sb.append(events.get(i))`) inside `persistLogs()` creates $O(N)$ string allocations on every log invocation, causing garbage collector pressure.
+  - Date formatting via `SimpleDateFormat` instantiates a new formatter object or parses dates repeatedly on the calling thread.
 
 ### 2.2 Object Allocations in `buildNotification()`
 - **Issue**: `buildNotification()` instantiates new `Notification.Builder`, `RemoteInput`, `Notification.Action`, and `Intent` instances, and queries system string resources every time the notification is updated.
