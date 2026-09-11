@@ -17,6 +17,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     name: Run Unit Tests
@@ -44,70 +48,6 @@ jobs:
       - name: Run unit tests
         run: ./gradlew test --parallel
 
-  latest:
-    name: Build latest APK
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: 'gradle'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Build APK
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS || vars.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
-          KEYSTORE_FILE=/tmp/release.jks ./gradlew assembleRelease
-
-      - name: Prepare latest APK
-        run: |
-          cp app/build/outputs/apk/release/app-release.apk auto-sleep-droid-latest.apk
-
-      - name: Upload latest APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: auto-sleep-droid-latest
-          path: auto-sleep-droid-latest.apk
-          if-no-files-found: error
-
-      - name: Create or update latest release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
-          git tag -f latest "${GITHUB_SHA}"
-          git push origin refs/tags/latest --force || true
-
-          if gh release view latest >/dev/null 2>&1; then
-            gh release edit latest --title "${BRANCH_NAME}" --prerelease=false --draft=false
-            gh release edit latest --target "${GITHUB_SHA}" --latest=true
-            gh release upload latest auto-sleep-droid-latest.apk --clobber
-          else
-            gh release create latest auto-sleep-droid-latest.apk \
-              --target "${GITHUB_SHA}" \
-              --title "${BRANCH_NAME}" \
-              --notes "Latest debug APK built from ${BRANCH_NAME}." \
-              --draft=false \
-              --latest=true
-          fi
-
   trigger-release:
     name: Run release script and push tag
     if: github.event_name == 'workflow_dispatch' && inputs.version != ''
@@ -130,18 +70,15 @@ jobs:
           git push origin master
           git push origin "v${VERSION_NAME}"
 
-  version:
-    name: Release version tag
-    if: startsWith(github.ref, 'refs/tags/v')
+  build-and-release:
+    name: Build & Publish APK
+    needs: test
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
-
-      - name: Set version tag
-        run: |
-          echo "VERSION_TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -163,17 +100,50 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS || vars.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
-          KEYSTORE_FILE=/tmp/release.jks ./gradlew assembleRelease
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/release.jks
+            KEYSTORE_FILE=/tmp/release.jks ./gradlew assembleRelease
+          else
+            ./gradlew assembleRelease
+          fi
 
-      - name: Prepare versioned APK
-        run: |
-          cp app/build/outputs/apk/release/app-release.apk "auto-sleep-droid-${VERSION_TAG}.apk"
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-sleep-droid-apk
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
 
-      - name: Create GitHub release
+      - name: Create or update latest release (master push)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          cp app/build/outputs/apk/release/app-release.apk auto-sleep-droid-latest.apk
+          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          git tag -f latest "${GITHUB_SHA}"
+          git push origin refs/tags/latest --force || true
+
+          if gh release view latest >/dev/null 2>&1; then
+            gh release edit latest --title "${BRANCH_NAME}" --prerelease=false --draft=false
+            gh release edit latest --target "${GITHUB_SHA}" --latest=true
+            gh release upload latest auto-sleep-droid-latest.apk --clobber
+          else
+            gh release create latest auto-sleep-droid-latest.apk \
+              --target "${GITHUB_SHA}" \
+              --title "${BRANCH_NAME}" \
+              --notes "Latest debug APK built from ${BRANCH_NAME}." \
+              --draft=false \
+              --latest=true
+          fi
+
+      - name: Create versioned GitHub release (tag push)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION_TAG="${GITHUB_REF_NAME}"
+          cp app/build/outputs/apk/release/app-release.apk "auto-sleep-droid-${VERSION_TAG}.apk"
           gh release create "${VERSION_TAG}" "auto-sleep-droid-${VERSION_TAG}.apk" \
             --title "Auto Sleep Droid ${VERSION_TAG}" \
             --generate-notes
