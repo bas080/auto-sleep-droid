@@ -18,17 +18,19 @@ Provide an Android sleep timer app configured directly from a single main UI scr
 - Fading: The timer reaches zero, initiating a 30-second volume fade along a curve that starts steep and flattens out. Completing this fade pauses media, restores pre-fade volume, and returns the app back to the Waiting state.
 
 ## Notification states and content
-All notification content is concise and directly visible in the notification body without hiding text in expanded views:
+All notification content is concise and directly visible in the notification body without showing sleep timer duration:
 
-- Off: "Timer off (20m) • Wake at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Enable"
-- Waiting: "Waiting for playback (20m) • Wake at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
-- Active: "Fades out at 11:15 PM (20m) • Wake at 6:15 AM" (Alarm detail shown when wake-up goal is enabled) • Button: "Disable"
-- Fading: "Fading volume" • Button: "Disable"
-- Wake-up Alarm Ringing: "Press volume button to snooze • Press I'm Awake to stop" • Buttons: "I'm Awake", "Snooze"
-- Wake-up Alarm Snoozed: "Snoozed 9m • Press I'm Awake to stop" • Button: "I'm Awake"
+- Off: "Sleep timer is off • ⏰ 6:15 AM • Click notification when awake" • Button: "Enable"
+- Waiting: "Waiting for playback • ⏰ 6:15 AM • Click notification when awake" • Button: "Disable"
+- Active: "Timer running • ⏸ 11:15 PM • ⏰ 6:15 AM • Click notification when awake" • Button: "Disable"
+- Fading: "Fading volume • ⏸ 11:15 PM • ⏰ 6:15 AM • Click notification when awake" • Button: "Disable"
+- Wake-up Alarm Ringing: "Wake-up alarm • Press volume button to snooze • Press I'm Awake to stop" • Button: "Disable"
+- Wake-up Alarm Snoozed: "Wake-up alarm • Snoozed 9m • Press I'm Awake to stop" • Button: "Disable"
 
-Only the action button lives in the shade. All information text is directly visible in the main notification view.
-If the "Show notification" setting is disabled by the user (disabled by default), the ongoing sleep timer notification is hidden in all timer states (Off, Waiting, Active, Fading).
+The only visible action on the notification is the sleep timer toggle ("Enable" / "Disable").
+Alarm icons (`⏰ <time>`) and pause icons (`⏸ <time>`) are displayed concisely in the notification text when applicable.
+If an alarm is configured, the notification explains that users should click the notification when they wake up in the morning.
+Clicking the notification body during the awake window registers "I'm Awake" (with toast feedback), stops any active alarm, updates wake schedule, and does not open the main UI. Clicking outside the awake window or after "I'm Awake" was already clicked opens the main UI.
 
 ## User interface
 - Main Application Screen (`MainActivity`):
@@ -43,10 +45,9 @@ If the "Show notification" setting is disabled by the user (disabled by default)
   - Action links under a "Links" header: Manual, Logs, and Donate.
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
-  - The notification features primary toggle actions ("Disable" when enabled, or "Enable" when disabled) and an optional secondary action button ("I'm Awake").
-  - The secondary action displays "I'm Awake" during the awake window (`currentWakeTime +/- (minSleepDuration / 2)`) or during the alarm phase (when an alarm is ringing or snoozed).
-  - Tapping "I'm Awake" stops any ringing or snoozed alarm, completes/logs the active sleep session to Health Connect (if enabled), updates current wake-up time to `max(targetGoalTime, T - 15m)` where `T` is system time when pressed, and reschedules the wake alarm for tomorrow.
-  - Tapping/clicking the notification body opens `MainActivity`.
+  - The notification displays a single action button: the sleep timer toggle ("Disable" when enabled, or "Enable" when disabled).
+  - Tapping/clicking the notification body during the awake window registers "I'm Awake" (with toast feedback), stops any ringing or snoozed alarm, completes/logs the active sleep session to Health Connect (if enabled), updates current wake-up time to `max(targetGoalTime, T - 15m)`, and reschedules the wake alarm for tomorrow without opening the main UI.
+  - Tapping/clicking the notification body outside the awake window opens `MainActivity`.
 
 ## Timer configuration
 - The user can turn the sleep timer on or off and configure all options from the main screen UI or toggle state from the notification.

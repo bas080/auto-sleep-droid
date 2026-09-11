@@ -39,10 +39,10 @@ File: `app/src/main/java/com/bas080/autosleepdroid/MainService.kt`
 
 Responsibilities:
 
-- Create the low-importance ongoing notification (`setOngoing(true)`) representing one of four system states: `Off`, `Waiting`, `Active`, or `Fading`.
-- Display concise, directly visible text in the main notification body (`setContentText`). No content is hidden behind expanded shade views.
-- Set content intent targeting `MainActivity` so tapping the notification opens `MainActivity`.
-- Expose notification shade action buttons: toggle ("Disable" when enabled, or "Enable" when disabled) and "I'm Awake" button (shown during awake window or ringing/snoozed alarms).
+- Create the low-importance ongoing notification (`setOngoing(true)`) representing system state without showing sleep timer duration, using concise emoji/icons (`⏸ <time>` for fadeout time, `⏰ <time>` for scheduled wake alarm).
+- Display concise, directly visible text in the notification body (`setContentText`) including `Click notification when awake` when a wake alarm is configured.
+- Set content intent (`ACTION_NOTIFICATION_CLICK`) targeting `MainService`: if within awake window or alarm phase (`shouldShowAwakeAction()`), clicking the notification triggers "I'm Awake" (showing a toast, stopping alarms, logging sleep session, updating wake schedule, without opening `MainActivity`). Otherwise, launches `MainActivity`.
+- Expose a single notification shade action button: the sleep timer toggle ("Disable" when enabled, or "Enable" when disabled).
 - Respect `show_notification` preference (default `false`); when `show_notification` is `false`, remove the ongoing service notification via `stopForeground(STOP_FOREGROUND_REMOVE)` and `manager.cancel(NOTIFICATION_ID)` across all timer states (`Off`, `Waiting`, `Active`, `Fading`).
 - Centralize state management and `SharedPreferences` observation via `PreferenceManager`.
 - Store timer configuration (`duration_minutes`), enabled state (`active`), wall-clock target expiration (`timer_ends_at`), active timer start timestamp (`timer_start_time_ms`), show notification setting (`show_notification`), and wake-up goal settings in `SharedPreferences`.
@@ -128,7 +128,7 @@ Main Configuration Controls & Action Links:
 - Full-screen Manual & Event Logs Views: Overlay `RelativeLayout` views in `activity_main.xml` with a Back button pinned to the bottom-right corner, displaying formatted HTML manual text or real-time monospace event logs.
 - Crash Reporting: Prompts user on launch via `AlertDialog` if a pending uncaught exception was saved in `SharedPreferences`.
 - Export Settings Action: Serializes current preferences into a Schema Version 1 JSON string, launches system share action (`ACTION_SEND`).
-- Import Settings Action: Prompts user with instructional `AlertDialog`, validates syntax and boundaries, applies valid values, sends `ACTION_REDRAW_NOTIFICATION` to `MainService`.
+- Import Settings Action: Prompts user with instructional `AlertDialog`, validates syntax and boundaries, applies valid values, updating preferences reactively via `PreferenceManager`.
 
 ## Error Handling Philosophy
 

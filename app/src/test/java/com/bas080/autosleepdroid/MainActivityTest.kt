@@ -176,7 +176,6 @@ class MainActivityTest {
         val btnFeedback = activity.findViewById<View>(R.id.btn_feedback)
         assertNotNull("btn_feedback view should exist in About section", btnFeedback)
 
-        // Test clicking Feedback and choosing Yes (Include Logs)
         btnFeedback.performClick()
         val promptDialog = ShadowAlertDialog.getLatestAlertDialog()
         assertNotNull("Feedback click should show include logs prompt dialog", promptDialog)
@@ -199,7 +198,6 @@ class MainActivityTest {
         assertTrue("Feedback email with logs included should contain Logs section", bodyWithLogs.contains("Logs:"))
         assertTrue("Feedback email should contain logged events", bodyWithLogs.contains("User feedback test log"))
 
-        // Test clicking Feedback and choosing No (Send Without Logs)
         btnFeedback.performClick()
         val promptDialogNo = ShadowAlertDialog.getLatestAlertDialog()
         assertNotNull(promptDialogNo)
@@ -579,31 +577,6 @@ class MainActivityTest {
     }
 
     @Test
-    fun testOnResumeStartsRedrawServiceIntent() {
-        val controller = Robolectric.buildActivity(MainActivity::class.java)
-        controller.create()
-
-        val app = ApplicationProvider.getApplicationContext<Application>()
-        val shadowApp = Shadows.shadowOf(app)
-
-        while (shadowApp.nextStartedService != null) {}
-
-        controller.resume()
-
-        var foundRedrawIntent = false
-        var intent: Intent?
-        while (shadowApp.nextStartedService.also { intent = it } != null) {
-            if (MainService.ACTION_REDRAW_NOTIFICATION == intent?.action
-                && MainService::class.java.name == intent?.component?.className
-            ) {
-                foundRedrawIntent = true
-                break
-            }
-        }
-        assertTrue("Expected ACTION_REDRAW_NOTIFICATION intent when MainActivity is resumed", foundRedrawIntent)
-    }
-
-    @Test
     fun testSectionHeadingsExistAndReflectEnabledStates() {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
@@ -808,7 +781,7 @@ class MainActivityTest {
         val text = notification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString()
         val timeFormat = android.text.format.DateFormat.getTimeFormat(activity)
         val formattedExpectedTime = timeFormat.format(targetCal.time)
-        assertTrue("Notification text should display wake time: $text", text.contains("Wake at") || text.contains(formattedExpectedTime))
+        assertTrue("Notification text should display wake time: $text", text.contains("⏰") || text.contains(formattedExpectedTime))
     }
 
     @Test

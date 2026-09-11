@@ -2,11 +2,9 @@ package com.bas080.autosleepdroid
 
 import android.app.Notification
 import android.app.NotificationManager
-import android.app.RemoteInput
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.os.Bundle
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -19,7 +17,6 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowLooper
 import org.robolectric.shadows.ShadowNotificationManager
 import org.robolectric.shadows.ShadowToast
 import java.util.Calendar
@@ -134,180 +131,31 @@ class MainServiceTest {
     }
 
     @Test
-    fun testSetFlexibleDurationViaRemoteInput() {
-        val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
+    fun testNotificationClickActionTriggersAwakeWhenInAwakeWindow() {
+        val now = System.currentTimeMillis()
+        val calWake = Calendar.getInstance()
+        calWake.timeInMillis = now
+        val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = calWake.get(Calendar.MINUTE)
 
-        val setIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_SET_DURATION)
-
-        val results = Bundle()
-        results.putCharSequence("duration_minutes", "2h15m")
-        RemoteInput.addResultsToIntent(
-            arrayOf(RemoteInput.Builder("duration_minutes").build()),
-            setIntent,
-            results
-        )
-
-        service.onStartCommand(setIntent, 0, 1)
-
-        assertEquals(135, preferences.getInt("duration_minutes", -1))
-        assertTrue(preferences.getBoolean("active", false))
-    }
-
-    @Test
-    fun testSetValidDurationViaRemoteInput() {
-        val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
-
-        val setIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_SET_DURATION)
-
-        val results = Bundle()
-        results.putCharSequence("duration_minutes", "45")
-        RemoteInput.addResultsToIntent(
-            arrayOf(RemoteInput.Builder("duration_minutes").build()),
-            setIntent,
-            results
-        )
-
-        service.onStartCommand(setIntent, 0, 1)
-
-        assertEquals(45, preferences.getInt("duration_minutes", -1))
-        assertTrue(preferences.getBoolean("active", false))
-    }
-
-    @Test
-    fun testSetInvalidDurationFallsBackToPreviousValidOrDefault() {
-        preferences.edit()
-            .putBoolean("active", true)
-            .putInt("duration_minutes", 25)
-            .commit()
-
-        val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
-
-        val setIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_SET_DURATION)
-
-        val results = Bundle()
-        results.putCharSequence("duration_minutes", "invalid_number")
-        RemoteInput.addResultsToIntent(
-            arrayOf(RemoteInput.Builder("duration_minutes").build()),
-            setIntent,
-            results
-        )
-
-        service.onStartCommand(setIntent, 0, 1)
-
-        assertEquals(25, preferences.getInt("duration_minutes", -1))
-        assertTrue(preferences.getBoolean("active", false))
-        assertEquals(context.getString(R.string.toast_duration_invalid), ShadowToast.getTextOfLatestToast())
-    }
-
-    @Test
-    fun testSetOutOfRangeDurationFallsBack() {
-        val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
-
-        val setIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_SET_DURATION)
-
-        val results = Bundle()
-        results.putCharSequence("duration_minutes", "99999")
-        RemoteInput.addResultsToIntent(
-            arrayOf(RemoteInput.Builder("duration_minutes").build()),
-            setIntent,
-            results
-        )
-
-        service.onStartCommand(setIntent, 0, 1)
-
-        assertEquals(20, preferences.getInt("duration_minutes", -1))
-        assertTrue(preferences.getBoolean("active", false))
-    }
-
-    @Test
-    fun testRedrawNotificationActionReloadsSettingsAndUpdatesStateMachine() {
-        preferences.edit()
-            .putBoolean("active", true)
-            .putBoolean("show_notification", true)
-            .putInt("duration_minutes", 20)
-            .commit()
-
-        val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
-
-        assertEquals(20, service.configuredDurationMinutes)
-        assertTrue(service.isEnabled)
-
-        preferences.edit()
-            .putBoolean("active", false)
-            .putBoolean("show_notification", true)
-            .putInt("duration_minutes", 45)
-            .putBoolean("wake_up_goal_enabled", true)
-            .putInt("wake_up_goal_hour", 7)
-            .putInt("wake_up_goal_minute", 0)
-            .commit()
-
-        val redrawIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_REDRAW_NOTIFICATION)
-
-        service.onStartCommand(redrawIntent, 0, 1)
-
-        assertFalse(service.isEnabled)
-        assertEquals(45, service.configuredDurationMinutes)
-
-        preferences.edit()
-            .putBoolean("active", true)
-            .putInt("duration_minutes", 60)
-            .commit()
-
-        service.onStartCommand(redrawIntent, 0, 1)
-
-        assertTrue(service.isEnabled)
-        assertEquals(60, service.configuredDurationMinutes)
-
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val shadowNotificationManager = Shadows.shadowOf(notificationManager)
-        val notification = shadowNotificationManager.getNotification(1001)
-        assertNotNull(notification)
-        assertNotNull(notification.contentIntent)
-    }
-
-    @Test
-    fun testReloadSettingsDoesNotOverrideManualTimerToggleWhenAutoDndIsEnabled() {
-        preferences.edit()
-            .putBoolean("active", false)
-            .putBoolean("auto_timer_enabled", true)
-            .putInt("duration_minutes", 20)
-            .commit()
-
-        val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
-
-        assertFalse(service.isEnabled)
-
-        val redrawIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_REDRAW_NOTIFICATION)
-        service.onStartCommand(redrawIntent, 0, 1)
-
-        assertFalse("Reloading settings must not force timer ON when user explicitly disabled it", service.isEnabled)
-    }
-
-    @Test
-    fun testClearGoalIntentClearsGoal() {
         preferences.edit()
             .putBoolean("wake_up_goal_enabled", true)
-            .putInt("wake_up_goal_hour", 6)
-            .putInt("wake_up_goal_minute", 30)
+            .putInt("wake_up_goal_hour", wakeHour)
+            .putInt("wake_up_goal_minute", wakeMin)
+            .putInt("current_wake_hour", wakeHour)
+            .putInt("current_wake_minute", wakeMin)
+            .putLong("sleep_start_time_ms", now - 4 * 3600_000L)
             .commit()
 
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
 
-        service.onStartCommand(Intent(context, MainService::class.java).setAction(MainService.ACTION_CLEAR_GOAL), 0, 1)
-        assertFalse(preferences.getBoolean("wake_up_goal_enabled", true))
+        val clickIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_NOTIFICATION_CLICK)
+        service.onStartCommand(clickIntent, 0, 1)
+
+        assertEquals("sleep_start_time_ms should be removed on awake", 0L, preferences.getLong("sleep_start_time_ms", 0L))
+        assertEquals(context.getString(R.string.toast_awake_registered), ShadowToast.getTextOfLatestToast())
     }
 
     @Test
@@ -328,41 +176,6 @@ class MainServiceTest {
         runFadeStepMethod.invoke(service)
 
         assertTrue(service.isFading)
-    }
-
-    @Test
-    fun testWakeUpAlarmSnoozeKeepsNotificationOpen() {
-        preferences.edit().putBoolean("show_notification", true).putBoolean("wake_up_goal_enabled", true).commit()
-        val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
-
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val shadowNotificationManager = Shadows.shadowOf(notificationManager)
-
-        val triggerIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_WAKEUP_ALARM_EXPIRY)
-        service.onStartCommand(triggerIntent, 0, 1)
-
-        val wakeUpNotification = shadowNotificationManager.getNotification(1001)
-        assertNotNull(wakeUpNotification)
-        assertEquals(context.getString(R.string.wakeup_alarm_title), wakeUpNotification.extras.getCharSequence(Notification.EXTRA_TITLE))
-
-        val snoozeIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_SNOOZE_WAKEUP_ALARM)
-        service.onStartCommand(snoozeIntent, 0, 1)
-
-        val snoozedNotification = shadowNotificationManager.getNotification(1001)
-        assertNotNull("Wake-up alarm notification must remain open when snoozed", snoozedNotification)
-        assertTrue("Snoozed notification content text should contain snooze instruction text",
-            snoozedNotification.extras.getCharSequence(Notification.EXTRA_TEXT).toString().contains("Snoozed 9m"))
-
-        val dismissIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_DISMISS_WAKEUP_ALARM)
-        service.onStartCommand(dismissIntent, 0, 1)
-
-        val dismissedNotification = shadowNotificationManager.getNotification(1001)
-        assertNotNull(dismissedNotification)
-        assertFalse(context.getString(R.string.wakeup_alarm_title) == dismissedNotification.extras.getCharSequence(Notification.EXTRA_TITLE))
     }
 
     @Test
@@ -424,7 +237,7 @@ class MainServiceTest {
     }
 
     @Test
-    fun testDismissingWakeUpAlarmSetsCurrentWakeTimeToDismissalTime() {
+    fun testAwakeActionSetsCurrentWakeTimeToDismissalTime() {
         preferences.edit()
             .putBoolean("active", false)
             .putBoolean("wake_up_goal_enabled", true)
@@ -437,9 +250,9 @@ class MainServiceTest {
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
 
-        val dismissIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_DISMISS_WAKEUP_ALARM)
-        service.onStartCommand(dismissIntent, 0, 1)
+        val awakeIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_AWAKE)
+        service.onStartCommand(awakeIntent, 0, 1)
 
         val cal = Calendar.getInstance()
         cal.add(Calendar.MINUTE, -15)
@@ -449,7 +262,6 @@ class MainServiceTest {
         assertEquals(finalMins / 60, preferences.getInt("current_wake_hour", -1))
         assertEquals(finalMins % 60, preferences.getInt("current_wake_minute", -1))
     }
-
 
     @Test
     fun testFadeVolumeStateConsistencyDuringStreamVolumeSet() {
@@ -472,29 +284,6 @@ class MainServiceTest {
 
         assertEquals("lastObservedVolume must match updated stream volume", currentVolume, service.lastObservedVolume)
         assertTrue("Fade should not be cancelled during fade step volume update", service.isFading)
-    }
-
-    @Test
-    fun testWakeUpAlarmTriggersVolumeCrescendo() {
-        val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
-
-        val crescendoMethod = MainService::class.java.getDeclaredMethod("startWakeUpAlarmCrescendo")
-        crescendoMethod.isAccessible = true
-        crescendoMethod.invoke(service)
-
-        val runnableField = MainService::class.java.getDeclaredField("alarmCrescendoRunnable")
-        runnableField.isAccessible = true
-        assertNotNull("Crescendo runnable should be scheduled when crescendo starts", runnableField.get(service))
-
-        val dismissIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_DISMISS_WAKEUP_ALARM)
-        service.onStartCommand(dismissIntent, 0, 1)
-
-        val ringtoneField = MainService::class.java.getDeclaredField("currentAlarmRingtone")
-        ringtoneField.isAccessible = true
-        assertEquals("Ringtone should be cleared after dismiss", null, ringtoneField.get(service))
-        assertEquals("Crescendo runnable should be cancelled after dismiss", null, runnableField.get(service))
     }
 
     @Test
@@ -625,9 +414,9 @@ class MainServiceTest {
         assertNotNull("Ringing notification must be displayed when wake alarm triggers", ringingNotification)
         assertEquals(context.getString(R.string.wakeup_alarm_title), ringingNotification.extras.getCharSequence(Notification.EXTRA_TITLE))
 
-        val dismissIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_DISMISS_WAKEUP_ALARM)
-        service.onStartCommand(dismissIntent, 0, 1)
+        val awakeIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_AWAKE)
+        service.onStartCommand(awakeIntent, 0, 1)
 
         val calDismiss = Calendar.getInstance()
         calDismiss.add(Calendar.MINUTE, -15)
@@ -642,7 +431,6 @@ class MainServiceTest {
         assertTrue("Next daily alarm timestamp must be saved in preferences",
             preferences.contains(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS))
     }
-
 
     @Test
     fun testWakeUpAlarmTriggersNextDailyAlarm() {
@@ -664,33 +452,6 @@ class MainServiceTest {
 
         val scheduledMs = preferences.getLong(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L)
         assertTrue("Next daily alarm must be scheduled after current alarm rings", scheduledMs > beforeMs)
-    }
-
-    @Test
-    fun testDailyRecurringAlarmSnoozeDoesNotOverwriteNextDailyAlarm() {
-        preferences.edit()
-            .putBoolean("wake_up_goal_enabled", true)
-            .putInt("wake_up_goal_hour", 6)
-            .putInt("wake_up_goal_minute", 30)
-            .putInt("min_sleep_duration_minutes", 450)
-            .commit()
-
-        val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
-
-        val triggerIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_WAKEUP_ALARM_EXPIRY)
-        service.onStartCommand(triggerIntent, 0, 1)
-
-        val dailyAlarmMs = preferences.getLong(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L)
-        assertTrue(dailyAlarmMs > 0L)
-
-        val snoozeIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_SNOOZE_WAKEUP_ALARM)
-        service.onStartCommand(snoozeIntent, 0, 1)
-
-        assertEquals("Snoozing must not overwrite scheduled daily recurring alarm time",
-            dailyAlarmMs, preferences.getLong(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L))
     }
 
     @Test
@@ -753,7 +514,7 @@ class MainServiceTest {
     }
 
     @Test
-    fun testWakeUpAlarmRingingNotificationShowsSnoozeAndDismissActionsAndInstructions() {
+    fun testWakeUpAlarmRingingNotificationShowsSingleToggleActionAndInstructions() {
         preferences.edit().putBoolean("show_notification", true).putBoolean("wake_up_goal_enabled", true).commit()
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
@@ -770,11 +531,10 @@ class MainServiceTest {
 
         val contentText = wakeUpNotification.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
         assertTrue("Notification content text when alarm is ringing should inform user how to snooze/dismiss: $contentText",
-            contentText.contains("Flip to snooze") || contentText.contains("volume button"))
+            contentText.contains("Press volume button to snooze"))
 
-        assertEquals("Notification should feature 2 actions (Dismiss and Snooze) when ringing", 2, wakeUpNotification.actions.size)
-        assertEquals(context.getString(R.string.action_awake), wakeUpNotification.actions[0].title.toString())
-        assertEquals(context.getString(R.string.action_snooze_alarm), wakeUpNotification.actions[1].title.toString())
+        assertEquals("Notification should feature 1 action (Disable/Enable toggle)", 1, wakeUpNotification.actions.size)
+        assertEquals(context.getString(R.string.action_turn_off), wakeUpNotification.actions[0].title.toString())
     }
 
     @Test
@@ -804,10 +564,8 @@ class MainServiceTest {
         assertNotNull(notification)
 
         val contentText = notification.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
-        assertTrue("Notification text when timer is off and wake alarm is enabled should contain 'Timer off': $contentText",
-            contentText.contains("Timer off"))
-        assertTrue("Notification text when timer is off and wake alarm is enabled should contain 'Wake at': $contentText",
-            contentText.contains("Wake at"))
+        assertTrue("Notification text when timer is off and wake alarm is enabled should contain '⏰': $contentText",
+            contentText.contains("⏰"))
     }
 
     @Test
@@ -1040,47 +798,7 @@ class MainServiceTest {
     }
 
     @Test
-    fun testAwakeActionNotificationActionWhenWakeAlarmIsEnabledAndActiveSleepSession() {
-        val now = System.currentTimeMillis()
-        val calWake = Calendar.getInstance()
-        calWake.timeInMillis = now + 1 * 3600_000L
-        val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
-        val wakeMin = calWake.get(Calendar.MINUTE)
-
-        val sleepStart = now - 4 * 3600_000L
-        preferences.edit()
-            .putBoolean("show_notification", true)
-            .putBoolean("wake_up_goal_enabled", true)
-            .putInt("wake_up_goal_hour", wakeHour)
-            .putInt("wake_up_goal_minute", wakeMin)
-            .putInt("current_wake_hour", wakeHour)
-            .putInt("current_wake_minute", wakeMin)
-            .putInt("min_sleep_duration_minutes", 450)
-            .putLong("sleep_start_time_ms", sleepStart)
-            .commit()
-
-        val controller = Robolectric.buildService(MainService::class.java)
-        controller.create()
-
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val shadowNotificationManager = Shadows.shadowOf(notificationManager)
-        val notification = shadowNotificationManager.getNotification(1001)
-        assertNotNull(notification)
-
-        var foundAwakeAction = false
-        if (notification.actions != null) {
-            for (action in notification.actions) {
-                if (context.getString(R.string.action_awake) == action.title.toString()) {
-                    foundAwakeAction = true
-                    break
-                }
-            }
-        }
-        assertTrue("Ongoing notification should feature 'I\'m Awake' action button during pre-alarm window or alarm phase", foundAwakeAction)
-    }
-
-    @Test
-    fun testNotificationActionsInActiveSleepPhaseHasNoSecondaryAction() {
+    fun testNotificationActionsInActiveSleepPhaseHasSingleToggleAction() {
         val now = System.currentTimeMillis()
         val calWake = Calendar.getInstance()
         calWake.timeInMillis = now + 6 * 3600_000L
@@ -1106,7 +824,7 @@ class MainServiceTest {
         val notification = shadowNotificationManager.getNotification(1001)
         assertNotNull(notification)
 
-        assertEquals("During active sleep phase, notification should feature only 1 action (Disable)", 1, notification.actions.size)
+        assertEquals("Notification should feature only 1 action (Disable)", 1, notification.actions.size)
         assertEquals("Disable", notification.actions[0].title.toString())
     }
 
@@ -1159,7 +877,7 @@ class MainServiceTest {
         assertNotNull(notification)
 
         val text = notification.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
-        assertTrue("Notification while timer active should contain 'Wake at': $text", text.contains("Wake at"))
+        assertTrue("Notification while timer active should contain '⏰': $text", text.contains("⏰"))
     }
 
     @Test
@@ -1210,35 +928,6 @@ class MainServiceTest {
             currentHour, preferences.getInt("current_wake_hour", -1))
         assertEquals("Current wake minute should remain unchanged when session-anchored min sleep is satisfied",
             currentMin, preferences.getInt("current_wake_minute", -1))
-    }
-
-    @Test
-    fun testDismissingWakeAlarmSetsCurrentWakeTimeCappedAtGoalTime() {
-        val farFutureGoalHour = 23
-        val farFutureGoalMin = 59
-
-        preferences.edit()
-            .putBoolean("wake_up_goal_enabled", true)
-            .putInt("wake_up_goal_hour", farFutureGoalHour)
-            .putInt("wake_up_goal_minute", farFutureGoalMin)
-            .putInt("current_wake_hour", 12)
-            .putInt("current_wake_minute", 0)
-            .commit()
-
-        val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
-
-        val dismissIntent = Intent(context, MainService::class.java)
-            .setAction(MainService.ACTION_DISMISS_WAKEUP_ALARM)
-        service.onStartCommand(dismissIntent, 0, 1)
-
-        assertEquals("Current wake hour must be capped at goal hour when T-15m is earlier than goal",
-            farFutureGoalHour, preferences.getInt("current_wake_hour", -1))
-        assertEquals("Current wake minute must be capped at goal min when T-15m is earlier than goal",
-            farFutureGoalMin, preferences.getInt("current_wake_minute", -1))
-
-        val scheduledMs = preferences.getLong(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L)
-        assertTrue("Next daily wake alarm must be scheduled after dismissal", scheduledMs > System.currentTimeMillis())
     }
 
     @Test

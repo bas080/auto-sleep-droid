@@ -565,8 +565,6 @@ class MainService : Service() {
                 val musicActive = audioManager != null && audioManager!!.isMusicActive
                 handleTurnOn(musicActive, System.currentTimeMillis(), true)
                 Toast.makeText(this, R.string.toast_timer_turned_on, Toast.LENGTH_SHORT).show()
-            } else if (ACTION_SET_DURATION == action) {
-                handleDurationReply(intent)
             } else if (ACTION_ALARM_EXPIRY == action) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "AlarmManager trigger received")
                 val currentVol = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
@@ -582,59 +580,22 @@ class MainService : Service() {
                 }
                 updateNotification()
                 checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
-            } else if (ACTION_DISMISS_WAKEUP_ALARM == action) {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm dismissed")
-                processSleepSessionOnAlarmDismissal()
-                updateNextWakeUpTimeOnDismissOrExpiry()
-                stopWakeUpAlarmSound()
-                cancelSnoozeAlarm()
-                setWakeUpAlarmState(false, false)
-                updateListenersRegistration()
-                checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
-                updateNotification()
-                Toast.makeText(this, R.string.toast_alarm_dismissed, Toast.LENGTH_SHORT).show()
-            } else if (ACTION_SNOOZE_WAKEUP_ALARM == action) {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed for 9m")
-                stopWakeUpAlarmSound()
-                snoozeWakeUpAlarm()
-                setWakeUpAlarmState(false, true)
-                updateListenersRegistration()
-                updateNotification()
-                Toast.makeText(this, R.string.toast_alarm_snoozed, Toast.LENGTH_SHORT).show()
             } else if (ACTION_AWAKE == action) {
                 handleAwakeAction()
-            } else if (ACTION_CLEAR_GOAL == action) {
-                preferences?.edit()
-                    ?.putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false)
-                    ?.remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
-                    ?.apply()
-                cancelSnoozeAlarm()
-                dismissAutoSleepAlarm()
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Smart Wake-Up Goal cleared")
-                Toast.makeText(this, R.string.toast_goal_stopped, Toast.LENGTH_SHORT).show()
-                updateNotification()
-            } else if (ACTION_REDRAW_NOTIFICATION == action) {
-                reloadSettingsAndUpdate()
+            } else if (ACTION_NOTIFICATION_CLICK == action) {
+                if (shouldShowAwakeAction()) {
+                    handleAwakeAction()
+                } else {
+                    val activityIntent = Intent(this, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    }
+                    startActivity(activityIntent)
+                }
             }
         }
         return START_STICKY
     }
 
-    private fun handleDurationReply(intent: Intent) {
-        val reply = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(REMOTE_INPUT_KEY)
-        val duration = parseDurationMinutes(reply?.toString())
-
-        if (duration > 0) {
-            val musicActive = audioManager != null && audioManager!!.isMusicActive
-            handleDurationReplyState(duration, musicActive, System.currentTimeMillis(), true)
-            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Duration set to ${configuredDurationMinutes}m (input: '$reply')")
-            val formattedStr = formatDurationString(configuredDurationMinutes)
-            Toast.makeText(this, getString(R.string.toast_duration_set, formattedStr), Toast.LENGTH_SHORT).show()
-        } else {
-            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Invalid duration input: '$reply'")
-            Toast.makeText(this, R.string.toast_duration_invalid, Toast.LENGTH_SHORT).show()
-        }
-    }
 
     private fun startFadeRunnable() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Fade-out started")
@@ -1245,17 +1206,6 @@ class MainService : Service() {
         }
     }
 
-    private fun snoozeWakeUpAlarmViaFlip() {
-        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed via flip gesture")
-        stopWakeUpAlarmSound()
-        snoozeWakeUpAlarm()
-        setWakeUpAlarmState(false, true)
-        onTriggerVibration()
-        updateListenersRegistration()
-        updateNotification()
-        Toast.makeText(this, R.string.toast_alarm_snoozed, Toast.LENGTH_SHORT).show()
-    }
-
     private fun snoozeWakeUpAlarmViaVolumeKey() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed via volume button")
         stopWakeUpAlarmSound()
@@ -1282,122 +1232,91 @@ class MainService : Service() {
 
     private fun buildNotification(): Notification {
         val title: String
-        var contentText: String
-        val formattedDurationStr = formatDurationString(configuredDurationMinutes)
+        val parts = mutableListOf<String>()
 
         val now = System.currentTimeMillis()
-        val scheduledAlarm = calculateScheduledAlarm(this, now, timerEndsAt)
-        val showWakeAlarm = isWakeAlarmEnabled() && scheduledAlarm != null &&
-                (scheduledAlarm.timeInMillis - now) >= (configuredDurationMinutes * 1.5 * 60_000L).toLong()
+        val wakeAlarmEnabled = isWakeAlarmEnabled()
+        val scheduledAlarm = if (wakeAlarmEnabled) calculateScheduledAlarm(this, now, timerEndsAt) else null
+        val alarmTimeStr = if (scheduledAlarm != null) {
+            formatTime(scheduledAlarm.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE))
+        } else null
 
         if (isWakeUpAlarmRinging) {
             title = getString(R.string.wakeup_alarm_title)
-            contentText = getString(R.string.wakeup_alarm_text)
+            parts.add(getString(R.string.wakeup_alarm_text))
         } else if (isWakeUpAlarmSnoozed) {
             title = getString(R.string.wakeup_alarm_title)
-            contentText = getString(R.string.wakeup_alarm_snoozed_text)
+            parts.add(getString(R.string.wakeup_alarm_snoozed_text))
         } else if (!isEnabled) {
             title = getString(R.string.timer_off)
-            contentText = if (showWakeAlarm) {
-                val formattedAlarmTime = formatTime(scheduledAlarm!!.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE))
-                getString(R.string.timer_off_expanded_alarm, formattedDurationStr, formattedAlarmTime)
-            } else {
-                getString(R.string.timer_off_collapsed, formattedDurationStr)
+            if (alarmTimeStr != null) {
+                parts.add("⏰ $alarmTimeStr")
             }
         } else if (isFading) {
             title = getString(R.string.fading_title)
-            contentText = getString(R.string.fading_collapsed)
-        } else if (isActive) {
             val targetTimeStr = formatTargetTime()
+            if (targetTimeStr.isNotEmpty()) {
+                parts.add("⏸ $targetTimeStr")
+            }
+            if (alarmTimeStr != null) {
+                parts.add("⏰ $alarmTimeStr")
+            }
+        } else if (isActive) {
             title = getString(R.string.active_title)
-
-            contentText = if (showWakeAlarm) {
-                val formattedAlarmTime = formatTime(scheduledAlarm!!.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE))
-                getString(R.string.active_expanded_alarm, targetTimeStr, formattedDurationStr, formattedAlarmTime)
-            } else {
-                getString(R.string.active_collapsed, targetTimeStr, formattedDurationStr)
+            val targetTimeStr = formatTargetTime()
+            if (targetTimeStr.isNotEmpty()) {
+                parts.add("⏸ $targetTimeStr")
+            }
+            if (alarmTimeStr != null) {
+                parts.add("⏰ $alarmTimeStr")
             }
         } else {
             title = getString(R.string.waiting_title)
-            contentText = if (showWakeAlarm) {
-                val formattedAlarmTime = formatTime(scheduledAlarm!!.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE))
-                getString(R.string.waiting_expanded_alarm, formattedDurationStr, formattedAlarmTime)
-            } else {
-                getString(R.string.waiting_collapsed, formattedDurationStr)
+            if (alarmTimeStr != null) {
+                parts.add("⏰ $alarmTimeStr")
             }
         }
 
+        if (wakeAlarmEnabled && !isWakeUpAlarmRinging && !isWakeUpAlarmSnoozed) {
+            parts.add(getString(R.string.notification_click_when_awake))
+        }
 
-        val contentIntent = Intent(this, MainActivity::class.java)
-        val contentPendingIntent = PendingIntent.getActivity(
-            this, 0, contentIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val contentText = parts.joinToString(" • ")
 
         val builder = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_zzz)
             .setContentTitle(title)
             .setContentText(contentText)
-            .setContentIntent(contentPendingIntent)
+            .setContentIntent(notificationClickIntent())
             .setCategory(Notification.CATEGORY_SERVICE)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
 
-        if (isWakeUpAlarmRinging) {
-            builder.addAction(
-                Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    getString(R.string.action_awake),
-                    awakeIntent()
-                ).build()
-            )
-            builder.addAction(
-                Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
-                    getString(R.string.action_snooze_alarm),
-                    snoozeWakeUpAlarmIntent()
-                ).build()
-            )
-        } else if (isWakeUpAlarmSnoozed) {
-            builder.addAction(
-                Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-                    getString(R.string.action_awake),
-                    awakeIntent()
-                ).build()
-            )
+        val toggleAction: Notification.Action = if (isEnabled) {
+            Notification.Action.Builder(
+                Icon.createWithResource(this, android.R.drawable.ic_media_pause),
+                getString(R.string.action_turn_off),
+                turnOffIntent()
+            ).build()
         } else {
-            val toggleAction: Notification.Action = if (isEnabled) {
-                Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_media_pause),
-                    getString(R.string.action_turn_off),
-                    turnOffIntent()
-                ).build()
-            } else {
-                Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_media_play),
-                    getString(R.string.action_turn_on),
-                    turnOnIntent()
-                ).build()
-            }
-            builder.addAction(toggleAction)
-
-            val secondAction: Notification.Action? = if (shouldShowAwakeAction()) {
-                Notification.Action.Builder(
-                    Icon.createWithResource(this, android.R.drawable.ic_lock_idle_alarm),
-                    getString(R.string.action_awake),
-                    awakeIntent()
-                ).build()
-            } else {
-                null
-            }
-            if (secondAction != null) {
-                builder.addAction(secondAction)
-            }
+            Notification.Action.Builder(
+                Icon.createWithResource(this, android.R.drawable.ic_media_play),
+                getString(R.string.action_turn_on),
+                turnOnIntent()
+            ).build()
         }
+        builder.addAction(toggleAction)
 
         return builder.build()
+    }
+
+    private fun notificationClickIntent(): PendingIntent {
+        val intent = Intent(this, MainService::class.java).setAction(ACTION_NOTIFICATION_CLICK)
+        return PendingIntent.getService(
+            this, 20, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
     }
 
     private fun reloadSettingsAndUpdate() {
@@ -1445,14 +1364,6 @@ class MainService : Service() {
         val intent = Intent(this, MainService::class.java).setAction(ACTION_TURN_ON)
         return PendingIntent.getService(
             this, 7, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-    }
-
-    private fun snoozeWakeUpAlarmIntent(): PendingIntent {
-        val intent = Intent(this, MainService::class.java).setAction(ACTION_SNOOZE_WAKEUP_ALARM)
-        return PendingIntent.getService(
-            this, 15, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
@@ -1515,17 +1426,12 @@ class MainService : Service() {
     }
 
     companion object {
-        const val ACTION_SET_DURATION = "com.bas080.autosleepdroid.SET_DURATION"
         const val ACTION_TURN_OFF = "com.bas080.autosleepdroid.TURN_OFF"
         const val ACTION_TURN_ON = "com.bas080.autosleepdroid.TURN_ON"
         const val ACTION_ALARM_EXPIRY = "com.bas080.autosleepdroid.ALARM_EXPIRY"
         const val ACTION_WAKEUP_ALARM_EXPIRY = "com.bas080.autosleepdroid.AUTO_SLEEP_ALARM_EXPIRY"
-        const val ACTION_DISMISS_WAKEUP_ALARM = "com.bas080.autosleepdroid.DISMISS_WAKEUP_ALARM"
-        const val ACTION_SNOOZE_WAKEUP_ALARM = "com.bas080.autosleepdroid.SNOOZE_WAKEUP_ALARM"
         const val ACTION_AWAKE = "com.bas080.autosleepdroid.AWAKE"
-        const val ACTION_REDRAW_NOTIFICATION = "com.bas080.autosleepdroid.REDRAW_NOTIFICATION"
-        const val ACTION_CLEAR_GOAL = "com.bas080.autosleepdroid.CLEAR_GOAL"
-        const val ACTION_AUTO_TIMER_CHECK = "com.bas080.autosleepdroid.AUTO_TIMER_CHECK"
+        const val ACTION_NOTIFICATION_CLICK = "com.bas080.autosleepdroid.NOTIFICATION_CLICK"
         const val EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION"
         const val ALARM_SEARCH_NAME = "Auto Sleep"
         const val KEY_WAKEUP_LAST_SCHEDULED_MS = PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS
