@@ -1,115 +1,24 @@
-# Sleep Session Concept & Workflow
+# Sleep Sessions & Lifecycle Workflow
 
-## Overview
+This document details the concepts, predicates, start/end time capture, and Health Connect synchronization workflow for sleep sessions in Auto Sleep Droid.
 
-A **sleep session** in Auto Sleep Droid represents a tracked period of sleep bounded by a start timestamp and an end timestamp. Sleep is defined as the rest period that occurs either before a wake-up alarm (a nightly sleep session) or when a nap is started (a nap session).
+## Core Concept
+A **sleep session** in Auto Sleep Droid represents a tracked period of sleep bounded by a start timestamp and an end timestamp. Sleep is defined as the rest period that occurs before a wake-up alarm (a nightly sleep session).
 
-Auto Sleep Droid uses these sessions to track rest intervals and automatically log completed sleep records to Android Health Connect.
+## Session Lifecycle Phases
 
-## Session Phases Relative to Alarm Time
+Sleep sessions progress through four concise lifecycle phases relative to scheduled wake alarm time:
 
-A sleep session progresses through four concise lifecycle phases evaluated by predicates on current time (`now`), `currentWakeTime`, and `minSleepDuration`:
+1. **Idle Phase**: Outside the sleep window or when no wake alarm is scheduled.
+2. **Initiation & Active Sleep Phase**: Within `[currentWakeTime - 1.2 * minSleepDuration, currentWakeTime - 0.5 * minSleepDuration]`.
+3. **Pre-Alarm Window Phase**: Within `[currentWakeTime - 0.5 * minSleepDuration, currentWakeTime]`. The "I'm Awake" action is displayed on ongoing status notifications.
+4. **Alarm Phase**: Wake alarm is ringing or snoozed, or `now >= currentWakeTime`.
 
-### 1. Idle Phase
-
-```text
-!isSessionOngoing && (now < currentWakeTime - (minSleepDuration * 1.2) || now >= currentWakeTime)
-```
-
-- **Description**: Current time is outside the sleep session window (prior to bedtime or after wake time).
-- **Nap Option**: Fully enabled on the main UI and notification shade.
-- **"I'm Awake" Action**: Hidden.
-
-### 2. Initiation & Active Sleep Phase
-
-```text
-now >= currentWakeTime - (minSleepDuration * 1.2) && now < currentWakeTime - (minSleepDuration * 0.5)
-```
-
-- **Description**: Sleep window when going to bed or actively sleeping.
-- **Nap Option**: Disabled on main UI and omitted from notifications.
-- **"I'm Awake" Action**: Hidden during early sleep.
-
-### 3. Pre-Alarm Window Phase
-
-```text
-now >= currentWakeTime - (minSleepDuration * 0.5) && now < currentWakeTime
-```
-
-- **Description**: Current time enters the early wake window preceding `currentWakeTime`.
-- **Nap Option**: Disabled.
-- **"I'm Awake" Action**: Visible in notification shade. Tapping **I'm Awake** completes the session, logs to Health Connect, sets current wake time to the moment it was pressed, and reschedules for tomorrow.
-
-### 4. Alarm Phase
-
-```text
-isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime)
-```
-
-- **Description**: Current time reaches or passes `currentWakeTime` during an ongoing session, or an alarm is ringing or snoozed.
-- **Actions**: Notification shade offers **I'm Awake** (as the dismiss action) and **Snooze**. Tapping **I'm Awake** dismisses the alarm, completes and logs the session, sets current wake time to the moment it was pressed, and reverts to the Idle Phase.
-
-## Phase Calculation Pseudocode
-
-The session phase is evaluated in `PreferenceComputations.kt` using early returns and a fallback return:
-
-```kotlin
-fun getSessionPhase(
-    now: Long,
-    currentWakeTime: Long,
-    minSleepDuration: Long,
-    isSessionOngoing: Boolean,
-    isAlarmRingingOrSnoozed: Boolean = false
-): SessionPhase {
-    if (isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime)) {
-        return SessionPhase.ALARM
-    }
-
-    val windowStart = currentWakeTime - (minSleepDuration * 1.2)
-    val preAlarmStart = currentWakeTime - (minSleepDuration * 0.5)
-
-    if (now >= preAlarmStart && now < currentWakeTime) {
-        return SessionPhase.PRE_ALARM_WINDOW
-    }
-
-    if (now >= windowStart && now < preAlarmStart) {
-        return SessionPhase.INITIATION_AND_ACTIVE_SLEEP
-    }
-
-    return SessionPhase.IDLE
-}
-```
-
-## How Sleep Sessions Work
-
-Auto Sleep Droid tracks two distinct types of sleep sessions: **Nightly Sleep Sessions** and **Nap Sessions**.
-
-### Nightly Sleep Sessions
-
-Nightly sleep sessions track the primary sleep period preceding `currentWakeTime` or a wake action.
+## Session Start & End Capture
 
 - **Start Time Capture**:
-  - **Timer Start Time**: Recorded (`timer_start_time_ms`) when sleep timer is activated or reset.
-  - **Timer Expiration**: Recorded (`sleep_start_time_ms`) when timer expires and media pauses. Resuming and expiring media later updates `sleep_start_time_ms` to the latest expiration time.
-  - **Pre-Wake Reset Window**: Resetting when `now >= currentWakeTime - (minSleepDuration * 1.2)` updates `sleep_start_time_ms` to current time if no active session exists.
-  - **Fallback Calculation**: If no timer was run, estimated as `currentWakeTime - minSleepDuration` upon wake alarm trigger or confirmation.
-
+  - `timer_start_time_ms` is recorded when the sleep timer is activated or reset.
+  - `sleep_start_time_ms` is recorded when media playback is paused while the timer is active or when the timer expires and media is paused.
 - **End Time Capture**:
-  - Captured when wake alarm is dismissed or when **I'm Awake** is tapped.
-
-### Nap Sessions
-
-Nap sessions track short daytime rests initiated via the Nap feature.
-
-- **Start Time Capture**: Recorded (`nap_start_time_ms`) when a nap alarm is started during the Idle Phase.
-- **End Time Capture**: Captured when nap alarm triggers, is dismissed, or when **I'm Awake** is tapped while a nap is active.
-- **Independent Operation**: Nap sessions operate independently of nightly sleep sessions and do not alter `currentWakeTime`.
-
-### Session Processing & Health Connect Integration
-
-When a sleep session completes:
-
-- **Health Connect Sync**: Valid sessions exceeding minimum session threshold (`hc_min_duration_minutes`, default 15m) are written to Health Connect as a `SleepSessionRecord`.
-- **Minimum Duration Safeguard**: Sessions under the threshold are ignored.
-- **Stale Session Drop Policy**: Unconfirmed sessions older than 14 hours are dropped without recording.
-- **Timestamp Cleanup**: Pending timestamps are cleared after processing.
+  - Captured when the wake alarm triggers, is dismissed, or when **I'm Awake** is tapped.
+  - Tapping **I'm Awake** sets current wake-up time to `max(targetGoalTime, T - 15m)` where `T` is system time when pressed, logs the session to Health Connect (if enabled), and reschedules tomorrow's alarm for target goal time.
