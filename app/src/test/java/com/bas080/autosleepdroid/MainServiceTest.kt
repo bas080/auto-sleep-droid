@@ -131,6 +131,58 @@ class MainServiceTest {
     }
 
     @Test
+    fun testNotificationClickIntentLaunchesMainActivityWhenOutsideAwakeWindow() {
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", false)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        controller.create()
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val shadowNotificationManager = Shadows.shadowOf(notificationManager)
+        val notification = shadowNotificationManager.getNotification(1001)
+        assertNotNull(notification)
+
+        val shadowPendingIntent = Shadows.shadowOf(notification.contentIntent)
+        assertTrue("Content intent outside awake window must be an Activity PendingIntent", shadowPendingIntent.isActivity)
+        val intent = shadowPendingIntent.savedIntent
+        assertEquals(MainActivity::class.java.name, intent.component?.className)
+    }
+
+    @Test
+    fun testNotificationClickIntentTargetsMainServiceWhenInAwakeWindow() {
+        val now = System.currentTimeMillis()
+        val calWake = Calendar.getInstance()
+        calWake.timeInMillis = now
+        val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = calWake.get(Calendar.MINUTE)
+
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", wakeHour)
+            .putInt("wake_up_goal_minute", wakeMin)
+            .putInt("current_wake_hour", wakeHour)
+            .putInt("current_wake_minute", wakeMin)
+            .putLong("sleep_start_time_ms", now - 4 * 3600_000L)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        controller.create()
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val shadowNotificationManager = Shadows.shadowOf(notificationManager)
+        val notification = shadowNotificationManager.getNotification(1001)
+        assertNotNull(notification)
+
+        val shadowPendingIntent = Shadows.shadowOf(notification.contentIntent)
+        assertTrue("Content intent in awake window must be a Service PendingIntent", shadowPendingIntent.isService)
+        val intent = shadowPendingIntent.savedIntent
+        assertEquals(MainService.ACTION_NOTIFICATION_CLICK, intent.action)
+        assertEquals(MainService::class.java.name, intent.component?.className)
+    }
+
+    @Test
     fun testNotificationClickActionTriggersAwakeWhenInAwakeWindow() {
         val now = System.currentTimeMillis()
         val calWake = Calendar.getInstance()

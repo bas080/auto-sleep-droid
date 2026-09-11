@@ -1291,11 +1291,21 @@ class MainService : Service() {
     }
 
     private fun notificationClickIntent(): PendingIntent {
-        val intent = Intent(this, MainService::class.java).setAction(ACTION_NOTIFICATION_CLICK)
-        return PendingIntent.getService(
-            this, 20, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        return if (shouldShowAwakeAction()) {
+            val intent = Intent(this, MainService::class.java).setAction(ACTION_NOTIFICATION_CLICK)
+            PendingIntent.getService(
+                this, 20, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else {
+            val intent = Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            }
+            PendingIntent.getActivity(
+                this, 20, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
     }
 
     private fun reloadSettingsAndUpdate() {
