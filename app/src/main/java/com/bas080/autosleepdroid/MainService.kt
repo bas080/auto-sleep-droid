@@ -472,9 +472,6 @@ class MainService : Service() {
                 override fun onReceive(context: Context?, intent: Intent?) {
                     if (NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED == intent?.action) {
                         EventLogger.log(context, EventLogger.LEVEL_HIGH, "DND state changed")
-                        val now = System.currentTimeMillis()
-                        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
-                        val dndActive = nm != null && nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
                         checkAndApplyDndAutoTimer()
                     }
                 }
@@ -959,17 +956,13 @@ class MainService : Service() {
             val minSleepMs = minSleepMin * 60_000L
             val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
             val requiredWakeTime: Long
-            val baseTime: Long
             if (newTimerEndsAt > 0L) {
-                baseTime = newTimerEndsAt
                 val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
                 requiredWakeTime = newTimerEndsAt + effectiveMinSleepMs
             } else if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
-                baseTime = sleepStartTime
                 val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
                 requiredWakeTime = sleepStartTime + effectiveMinSleepMs
             } else {
-                baseTime = now
                 requiredWakeTime = now + minSleepMs
             }
 
@@ -988,19 +981,7 @@ class MainService : Service() {
                 calCurrent.add(Calendar.DAY_OF_YEAR, 1)
             }
 
-            val calGoal = Calendar.getInstance()
-            calGoal.timeInMillis = now
-            calGoal.set(Calendar.HOUR_OF_DAY, goalHour)
-            calGoal.set(Calendar.MINUTE, goalMin)
-            calGoal.set(Calendar.SECOND, 0)
-            calGoal.set(Calendar.MILLISECOND, 0)
-            if (calGoal.timeInMillis <= now) {
-                calGoal.add(Calendar.DAY_OF_YEAR, 1)
-            }
-
             val currentAlarmMs = calCurrent.timeInMillis
-            val goalAlarmMs = calGoal.timeInMillis
-            val windowMs = (1.2 * minSleepMs).toLong()
 
             if (requiredWakeTime > currentAlarmMs) {
                 val calRequired = Calendar.getInstance()
