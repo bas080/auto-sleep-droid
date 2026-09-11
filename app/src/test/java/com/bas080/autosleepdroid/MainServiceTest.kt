@@ -412,7 +412,7 @@ class MainServiceTest {
         val shadowNotificationManager = Shadows.shadowOf(notificationManager)
         val ringingNotification = shadowNotificationManager.getNotification(1001)
         assertNotNull("Ringing notification must be displayed when wake alarm triggers", ringingNotification)
-        assertEquals(context.getString(R.string.wakeup_alarm_title), ringingNotification.extras.getCharSequence(Notification.EXTRA_TITLE))
+        assertEquals(context.getString(R.string.notification_click_when_awake), ringingNotification.extras.getCharSequence(Notification.EXTRA_TITLE))
 
         val awakeIntent = Intent(context, MainService::class.java)
             .setAction(MainService.ACTION_AWAKE)
@@ -564,8 +564,8 @@ class MainServiceTest {
         assertNotNull(notification)
 
         val contentText = notification.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
-        assertTrue("Notification text when timer is off and wake alarm is enabled should contain '⏰': $contentText",
-            contentText.contains("⏰"))
+        assertTrue("Notification text when timer is off and wake alarm is enabled should contain '\\u23F0': $contentText",
+            contentText.contains("\u23F0"))
     }
 
     @Test
@@ -877,7 +877,7 @@ class MainServiceTest {
         assertNotNull(notification)
 
         val text = notification.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
-        assertTrue("Notification while timer active should contain '⏰': $text", text.contains("⏰"))
+        assertTrue("Notification while timer active should contain '\\u23F0': $text", text.contains("\u23F0"))
     }
 
     @Test

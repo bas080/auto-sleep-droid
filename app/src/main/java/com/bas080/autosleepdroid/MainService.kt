@@ -1231,7 +1231,13 @@ class MainService : Service() {
     }
 
     private fun buildNotification(): Notification {
-        val title: String
+        val showAwake = shouldShowAwakeAction()
+        val title: String = if (showAwake) {
+            getString(R.string.notification_click_when_awake)
+        } else {
+            getString(R.string.app_name)
+        }
+
         val parts = mutableListOf<String>()
 
         val now = System.currentTimeMillis()
@@ -1242,43 +1248,35 @@ class MainService : Service() {
         } else null
 
         if (isWakeUpAlarmRinging) {
-            title = getString(R.string.wakeup_alarm_title)
             parts.add(getString(R.string.wakeup_alarm_text))
         } else if (isWakeUpAlarmSnoozed) {
-            title = getString(R.string.wakeup_alarm_title)
             parts.add(getString(R.string.wakeup_alarm_snoozed_text))
         } else if (!isEnabled) {
-            title = getString(R.string.timer_off)
+            parts.add(getString(R.string.timer_off))
             if (alarmTimeStr != null) {
-                parts.add("⏰ $alarmTimeStr")
+                parts.add("\u23F0\uFE0E $alarmTimeStr")
             }
         } else if (isFading) {
-            title = getString(R.string.fading_title)
             val targetTimeStr = formatTargetTime()
             if (targetTimeStr.isNotEmpty()) {
-                parts.add("⏸ $targetTimeStr")
+                parts.add("\u23F8\uFE0E $targetTimeStr")
             }
             if (alarmTimeStr != null) {
-                parts.add("⏰ $alarmTimeStr")
+                parts.add("\u23F0\uFE0E $alarmTimeStr")
             }
         } else if (isActive) {
-            title = getString(R.string.active_title)
             val targetTimeStr = formatTargetTime()
             if (targetTimeStr.isNotEmpty()) {
-                parts.add("⏸ $targetTimeStr")
+                parts.add("\u23F8\uFE0E $targetTimeStr")
             }
             if (alarmTimeStr != null) {
-                parts.add("⏰ $alarmTimeStr")
+                parts.add("\u23F0\uFE0E $alarmTimeStr")
             }
         } else {
-            title = getString(R.string.waiting_title)
+            parts.add(getString(R.string.waiting_title))
             if (alarmTimeStr != null) {
-                parts.add("⏰ $alarmTimeStr")
+                parts.add("\u23F0\uFE0E $alarmTimeStr")
             }
-        }
-
-        if (wakeAlarmEnabled && !isWakeUpAlarmRinging && !isWakeUpAlarmSnoozed) {
-            parts.add(getString(R.string.notification_click_when_awake))
         }
 
         val contentText = parts.joinToString(" • ")

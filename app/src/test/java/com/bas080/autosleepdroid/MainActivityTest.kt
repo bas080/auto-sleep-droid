@@ -781,7 +781,7 @@ class MainActivityTest {
         val text = notification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString()
         val timeFormat = android.text.format.DateFormat.getTimeFormat(activity)
         val formattedExpectedTime = timeFormat.format(targetCal.time)
-        assertTrue("Notification text should display wake time: $text", text.contains("⏰") || text.contains(formattedExpectedTime))
+        assertTrue("Notification text should display wake time: $text", text.contains("\u23F0") || text.contains(formattedExpectedTime))
     }
 
     @Test
