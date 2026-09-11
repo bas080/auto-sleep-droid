@@ -212,7 +212,7 @@ class MainActivityTest {
         val chooserIntentNo = Shadows.shadowOf(activity).nextStartedActivity
         assertNotNull(chooserIntentNo)
 
-        val sendIntentNo = chooserIntentNo?.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+        val sendIntentNo = IntentCompat.getParcelableExtra(chooserIntentNo!!, Intent.EXTRA_INTENT, Intent::class.java)
         assertNotNull(sendIntentNo)
         val bodyWithoutLogs = sendIntentNo?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
         assertFalse("Feedback email without logs should NOT contain Logs section", bodyWithoutLogs.contains("Logs:"))
