@@ -47,6 +47,7 @@ class HealthConnectManagerTest {
         assertNotNull(startedIntent)
         assertEquals("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS", startedIntent?.action)
         assertEquals(activity.packageName, startedIntent?.getStringExtra(Intent.EXTRA_PACKAGE_NAME))
+        assertTrue("Intent must have FLAG_ACTIVITY_NEW_TASK set", (startedIntent!!.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
 
         HealthConnectManager.setClientForTesting(null, null)
     }

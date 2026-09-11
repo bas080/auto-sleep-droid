@@ -544,12 +544,18 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         return false
     }
 
-    private fun openSettingsWithFallback(primaryAction: String, fallbackAction: String) {
+    internal fun openSettingsWithFallback(primaryAction: String, fallbackAction: String) {
         try {
-            startActivity(Intent(primaryAction))
+            val intent = Intent(primaryAction).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
         } catch (e: Exception) {
             try {
-                startActivity(Intent(fallbackAction))
+                val intent = Intent(fallbackAction).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
             } catch (ex: Exception) {
                 Toast.makeText(this, "Could not open DND settings", Toast.LENGTH_SHORT).show()
             }
@@ -822,13 +828,15 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         startActivity(intent)
     }
 
-    private fun requestExactAlarmPermissionIfNeeded() {
+    internal fun requestExactAlarmPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= 31) {
             val alarmManager = getSystemService(ALARM_SERVICE) as android.app.AlarmManager?
             if (alarmManager != null && !alarmManager.canScheduleExactAlarms()) {
                 EventLogger.log(this, EventLogger.LEVEL_LOW, "Opening exact alarm settings")
-                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                intent.data = Uri.parse("package:$packageName")
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = Uri.parse("package:$packageName")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
                 startActivity(intent)
             }
         }
