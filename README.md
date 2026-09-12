@@ -1,6 +1,7 @@
 # Auto Sleep Droid
 
 [![Stand with Palestine](https://img.shields.io/badge/🇵🇸%20%20Stand%20With%20Palestine-007A3D?style=flat-square&color=brightgreen)](https://www.islamic-relief.org.uk/giving/appeals/palestine/)
+[![Donate via Liberapay](https://img.shields.io/badge/Donate-Liberapay-F6C915?style=flat-square&logo=liberapay&logoColor=black)](https://liberapay.com/bas080)
 
 Auto Sleep Droid puts your phone to sleep when you fall asleep, and wakes you up when you're ready. It is a low-friction Android sleep timer and wake-up safeguard for media playback.
 
@@ -58,6 +59,8 @@ Auto Sleep Droid uses minimal permissions required to function reliably as a bac
 - **Do Not Disturb Access (`android.permission.ACCESS_NOTIFICATION_POLICY`)** *(Optional)*: Controls Do Not Disturb (DND) mode during naps and checks DND state when Auto Sleep Timer (DND) mode is enabled.
 
 ## Donate
+
+[![Donate via Liberapay](https://img.shields.io/badge/Donate-Liberapay-F6C915?style=flat-square&logo=liberapay&logoColor=black)](https://liberapay.com/bas080)
 
 If you find Auto Sleep Droid helpful, you can support development via [Liberapay](https://liberapay.com/bas080).
 
