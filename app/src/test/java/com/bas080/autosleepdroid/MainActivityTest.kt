@@ -142,6 +142,9 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
+        val shadowActivity = Shadows.shadowOf(activity)
+        while (shadowActivity.nextStartedActivity != null) {}
+
         val crashDialog = ShadowAlertDialog.getLatestAlertDialog()
         assertNotNull("Crash report dialog should be shown on launch if pending crash report exists", crashDialog)
 
@@ -150,7 +153,7 @@ class MainActivityTest {
         sendBtn.performClick()
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
-        val chooserIntent = Shadows.shadowOf(activity).nextStartedActivity
+        val chooserIntent = shadowActivity.nextStartedActivity
         assertNotNull(chooserIntent)
         assertEquals(Intent.ACTION_CHOOSER, chooserIntent?.action)
 
@@ -172,6 +175,9 @@ class MainActivityTest {
 
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
+
+        val shadowActivity = Shadows.shadowOf(activity)
+        while (shadowActivity.nextStartedActivity != null) {}
 
         val btnFeedback = activity.findViewById<View>(R.id.btn_feedback)
         assertNotNull("btn_feedback view should exist in About section", btnFeedback)
