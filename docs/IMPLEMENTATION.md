@@ -40,6 +40,7 @@ File: `app/src/main/java/com/bas080/autosleepdroid/MainService.kt`
 Responsibilities:
 
 - Create the low-importance ongoing notification (`setOngoing(true)`) representing system state without showing sleep timer duration, using concise monochrome text-style symbols (`♪` `\u266A` for fadeout time, `⏰︎` `\u23F0\uFE0E` for scheduled wake alarm) rendered in default notification text color.
+- Invoke `startForeground` with `ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK` on Android 10+ (API 29+), wrapping calls in `showOrHideNotification()` inside a `try-catch` block to handle `ForegroundServiceStartNotAllowedException` (Android 12+) or `IllegalStateException` gracefully when starting from background without foreground exemptions, logging failures to `EventLogger` while preserving internal service state and recovery on next UI launch.
 - Display "Click notification when awake" as the notification title (`setContentTitle`) during the sleep/awake window (`shouldShowAwakeAction()`), falling back to "Auto Sleep Droid" (`app_name`) outside the window.
 - Set content intent (`ACTION_NOTIFICATION_CLICK`) targeting `MainService`: if within awake window or alarm phase (`shouldShowAwakeAction()`), clicking the notification triggers "I'm Awake" (showing a toast, stopping alarms, logging sleep session, updating wake schedule, without opening `MainActivity`). Otherwise, launches `MainActivity`.
 - Expose a single notification shade action button: the sleep timer toggle ("Disable" when enabled, or "Enable" when disabled).
