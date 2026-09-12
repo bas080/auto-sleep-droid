@@ -33,6 +33,7 @@ import org.json.JSONObject
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.Calendar
+import kotlin.random.Random
 
 class MainActivity : ComponentActivity(), EventLogger.Listener {
 
@@ -874,6 +875,35 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             }
         }
         registerPreferenceListeners()
+        maybeShowRandomDonateDialog()
+    }
+
+    internal fun maybeShowRandomDonateDialog(forceShow: Boolean = false, randomRoll: Float = Random.nextFloat()) {
+        val pm = preferenceManager ?: return
+        if (pm.getBoolean(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN, false)) {
+            return
+        }
+        val crashPrefs = getSharedPreferences("crash_reports", MODE_PRIVATE)
+        if (crashPrefs.contains("pending_crash_report")) {
+            return
+        }
+        if (forceShow || randomRoll < 0.2f) {
+            showDonateDialog()
+        }
+    }
+
+    private fun showDonateDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle(R.string.dialog_donate_random_title)
+        builder.setMessage(R.string.dialog_donate_random_message)
+        builder.setPositiveButton(R.string.link_donate) { _, _ ->
+            preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN, true)?.apply()
+            openUrl("https://liberapay.com/bas080")
+        }
+        builder.setNegativeButton(R.string.btn_later) { dialog, _ ->
+            dialog.dismiss()
+        }
+        builder.show()
     }
 
     private fun registerPreferenceListeners() {
@@ -944,7 +974,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             BoolPrefSpec(PreferenceKeys.KEY_ACTIVE, true),
             BoolPrefSpec(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false),
             BoolPrefSpec(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false),
-            BoolPrefSpec(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)
+            BoolPrefSpec(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false),
+            BoolPrefSpec(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN, false)
         )
 
         private val EXPORTED_INT_PREFS = arrayOf(

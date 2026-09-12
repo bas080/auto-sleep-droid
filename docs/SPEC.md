@@ -48,6 +48,7 @@ When in the sleep/awake window (`T - 1.2 * minSleepDuration` until alarm dismiss
     - About section featuring Version row, Feedback row (prompts user whether to include event logs in their email), and Links row.
     - Section headings (Timer, Alarm, Health Connect, Do Not Disturb, Backup, About) remain fully visible and opaque at all times.
   - Action links under a "Links" header: Manual, Logs, and Donate.
+  - Random witty donation dialog that pops up occasionally when opening the app, presenting two options: **Donate** (opens the Liberapay donation link and permanently hides future donation prompts) and **Later** (dismisses the dialog while allowing future occasional prompts).
   - Full-screen non-dialog overlay views for Manual and Event Logs featuring a Back button pinned to the bottom right corner.
 - Notification Shade Controls:
   - The notification displays a single action button: the sleep timer toggle ("Disable" when enabled, or "Enable" when disabled).
