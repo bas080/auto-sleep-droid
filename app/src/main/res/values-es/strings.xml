@@ -123,4 +123,7 @@
     <string name="btn_health_connect_permissions">Gestionar permisos</string>
     <string name="label_event_logs">Registros de eventos</string>
     <string name="desc_event_logs">Actividad del sistema y temporizador en tiempo real</string>
+    <string name="dialog_donate_random_title">¿Disfrutas de Auto Sleep Droid?</string>
+    <string name="dialog_donate_random_message">Auto Sleep Droid es gratis, de código abierto y sin anuncios. Si te ayuda a dormir como un bebé (o al menos como un adulto bien descansado), ¡considera apoyar su desarrollo!</string>
+    <string name="btn_later">Más tarde</string>
 </resources>
