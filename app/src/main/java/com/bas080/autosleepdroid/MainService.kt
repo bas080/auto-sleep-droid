@@ -29,7 +29,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 
-class MainService : Service() {
+open class MainService : Service() {
 
     enum class State {
         OFF,
@@ -1335,9 +1335,26 @@ class MainService : Service() {
         updateNotification()
     }
 
+    open fun startForegroundNotification(id: Int, notification: Notification) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                id,
+                notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            )
+        } else {
+            startForeground(id, notification)
+        }
+    }
+
     private fun showOrHideNotification() {
-        startForeground(NOTIFICATION_ID, buildNotification())
-        isForeground = true
+        try {
+            startForegroundNotification(NOTIFICATION_ID, buildNotification())
+            isForeground = true
+        } catch (e: Exception) {
+            EventLogger.log(this, "Failed to start foreground service: ${e.message}")
+            isForeground = false
+        }
     }
 
     private fun updateNotification() {
