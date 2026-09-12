@@ -21,4 +21,5 @@ object PreferenceKeys {
     const val KEY_HEALTH_CONNECT_ENABLED: String = "health_connect_enabled"
     const val KEY_HC_MIN_DURATION_MINUTES: String = "hc_min_duration_minutes"
     const val KEY_WAKEUP_LAST_SCHEDULED_MS: String = "wakeup_last_scheduled_ms"
+    const val KEY_LAST_AWAKE_TIME_MS: String = "last_awake_time_ms"
 }

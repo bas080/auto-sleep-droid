@@ -1018,4 +1018,46 @@ class MainServiceTest {
         val scheduledMs = preferences.getLong(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L)
         assertTrue("Next wake alarm must be rescheduled after clicking awake", scheduledMs > now)
     }
+
+    @Test
+    fun testRepeatedNotificationClicksAfterAwakeDoNotDuplicateAwakeAction() {
+        val now = System.currentTimeMillis()
+        val calWake = Calendar.getInstance()
+        calWake.timeInMillis = now
+        val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = calWake.get(Calendar.MINUTE)
+
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", wakeHour)
+            .putInt("wake_up_goal_minute", wakeMin)
+            .putInt("current_wake_hour", wakeHour)
+            .putInt("current_wake_minute", wakeMin)
+            .putLong("sleep_start_time_ms", now - 4 * 3600_000L)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val clickIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_NOTIFICATION_CLICK)
+
+        service.onStartCommand(clickIntent, 0, 1)
+
+        assertEquals(context.getString(R.string.toast_awake_registered), ShadowToast.getTextOfLatestToast())
+        assertTrue("last_awake_time_ms should be saved", preferences.getLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, 0L) > 0L)
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val shadowNotificationManager = Shadows.shadowOf(notificationManager)
+        val updatedNotification = shadowNotificationManager.getNotification(1001)
+        assertNotNull(updatedNotification)
+
+        val shadowPendingIntent = Shadows.shadowOf(updatedNotification.contentIntent)
+        assertTrue("Content intent after awake registered must toggle to an Activity PendingIntent", shadowPendingIntent.isActivity)
+        assertEquals(MainActivity::class.java.name, shadowPendingIntent.savedIntent.component?.className)
+
+        service.onStartCommand(clickIntent, 0, 1)
+
+        assertFalse("shouldShowAwakeAction should now return false", service.shouldShowAwakeAction())
+    }
 }
