@@ -217,6 +217,69 @@ class MainActivityTest {
     }
 
     @Test
+    fun testRandomDonateDialogShownWhenTriggeredAndNotHidden() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        activity.maybeShowRandomDonateDialog(forceShow = true)
+
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull("Random donate dialog should be displayed when forceShow is true and not hidden", dialog)
+        val shadowDialog = Shadows.shadowOf(dialog)
+        assertTrue("Dialog title should match witty donate title", shadowDialog.title.toString().contains("Enjoying Auto Sleep Droid"))
+    }
+
+    @Test
+    fun testRandomDonateDialogDonateButtonHidesInFutureAndLaunchesIntent() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        activity.maybeShowRandomDonateDialog(forceShow = true)
+
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull(dialog)
+
+        val donateBtn = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        assertNotNull(donateBtn)
+        donateBtn.performClick()
+
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        val prefs = activity.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
+        assertTrue("donate_dialog_hidden preference must be true after clicking Donate", prefs.getBoolean("donate_dialog_hidden", false))
+
+        val intent = Shadows.shadowOf(activity).nextStartedActivity
+        assertNotNull(intent)
+        assertEquals(Intent.ACTION_VIEW, intent?.action)
+        assertEquals("https://liberapay.com/bas080", intent?.dataString)
+
+        val dialogCountBefore = ShadowAlertDialog.getShownDialogs().size
+        activity.maybeShowRandomDonateDialog(forceShow = true)
+        val dialogCountAfter = ShadowAlertDialog.getShownDialogs().size
+        assertEquals("Donate dialog should not show again after donate_dialog_hidden is true", dialogCountBefore, dialogCountAfter)
+    }
+
+    @Test
+    fun testRandomDonateDialogLaterButtonDismissesWithoutHidingInFuture() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        activity.maybeShowRandomDonateDialog(forceShow = true)
+
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull(dialog)
+
+        val laterBtn = dialog.getButton(DialogInterface.BUTTON_NEGATIVE)
+        assertNotNull(laterBtn)
+        laterBtn.performClick()
+
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        val prefs = activity.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
+        assertFalse("donate_dialog_hidden preference must remain false after clicking Later", prefs.getBoolean("donate_dialog_hidden", false))
+    }
+
+    @Test
     fun testLinksDialogDonateLaunchesIntent() {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().get()

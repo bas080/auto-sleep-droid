@@ -22,4 +22,5 @@ object PreferenceKeys {
     const val KEY_HC_MIN_DURATION_MINUTES: String = "hc_min_duration_minutes"
     const val KEY_WAKEUP_LAST_SCHEDULED_MS: String = "wakeup_last_scheduled_ms"
     const val KEY_LAST_AWAKE_TIME_MS: String = "last_awake_time_ms"
+    const val KEY_DONATE_DIALOG_HIDDEN: String = "donate_dialog_hidden"
 }

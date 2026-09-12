@@ -131,4 +131,11 @@
     <string name="btn_health_connect_permissions">Manage Permissions</string>
     <string name="label_event_logs">Event logs</string>
     <string name="desc_event_logs">Real-time system and sleep timer event activity</string>
+    <string name="dialog_donate_random_title">Enjoying Auto Sleep Droid?</string>
+    <string name="dialog_donate_random_message_1">Auto Sleep Droid is free, open source, and ad-free. If it helps you sleep like a baby (or at least a well-rested adult), consider supporting its development!</string>
+    <string name="dialog_donate_random_message_2">Counting sheep is free, but coding sleep timers takes caffeine! If Auto Sleep Droid has saved your battery or sanity, consider throwing a coin to the developer.</string>
+    <string name="dialog_donate_random_message_3">Good sleep is priceless. Bad apps are annoying. Auto Sleep Droid tries to be neither! If you are enjoying peaceful nights, buy the dev a virtual coffee.</string>
+    <string name="dialog_donate_random_message_4">No ads, no tracking, no subscriptions, no paywalls. Just honest code to help you sleep. If that brings you peace of mind, consider tossing a tip!</string>
+    <string name="dialog_donate_random_message_5">Saved from 3 AM podcast blasts playing all night? If Auto Sleep Droid has been your silent bedtime hero, show some love with a small donation!</string>
+    <string name="btn_later">Later</string>
 </resources>
