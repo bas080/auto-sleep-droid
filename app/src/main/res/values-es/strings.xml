@@ -124,6 +124,10 @@
     <string name="label_event_logs">Registros de eventos</string>
     <string name="desc_event_logs">Actividad del sistema y temporizador en tiempo real</string>
     <string name="dialog_donate_random_title">¿Disfrutas de Auto Sleep Droid?</string>
-    <string name="dialog_donate_random_message">Auto Sleep Droid es gratis, de código abierto y sin anuncios. Si te ayuda a dormir como un bebé (o al menos como un adulto bien descansado), ¡considera apoyar su desarrollo!</string>
+    <string name="dialog_donate_random_message_1">Auto Sleep Droid es gratis, de código abierto y sin anuncios. Si te ayuda a dormir como un bebé (o al menos como un adulto bien descansado), ¡considera apoyar su desarrollo!</string>
+    <string name="dialog_donate_random_message_2">Contar ovejas es gratis, ¡pero programar temporizadores requiere cafeína! Si Auto Sleep Droid ha salvado tu batería o tu cordura, considera enviar una propina al desarrollador.</string>
+    <string name="dialog_donate_random_message_3">Un buen sueño no tiene precio. Las aplicaciones malas son molestas. ¡Auto Sleep Droid intenta no ser ninguna de las dos! Si disfrutas de noches tranquilas, invítale un café al desarrollador.</string>
+    <string name="dialog_donate_random_message_4">Sin anuncios, sin rastreo, sin suscripciones, sin muros de pago. Solo código honesto para ayudarte a dormir. Si eso te da tranquilidad, ¡considera dejar una contribución!</string>
+    <string name="dialog_donate_random_message_5">¿Te has salvado de podcasts sonando a las 3 AM toda la noche? Si Auto Sleep Droid ha sido tu héroe silencioso a la hora de dormir, ¡muestra tu apoyo con una pequeña donación!</string>
     <string name="btn_later">Más tarde</string>
 </resources>

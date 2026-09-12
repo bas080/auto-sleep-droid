@@ -125,7 +125,7 @@ Main Configuration Controls & Action Links:
   - Backup section featuring Export settings row (`btn_export`) and Import settings row (`btn_import`).
   - About section featuring Version row (`btn_version`), Feedback row (`btn_feedback`, which presents a prompt dialog asking if the user wants to include event logs in their email), and Links row (`btn_links`).
 - Links header & action list dialog: Manual, Logs, and Donate.
-- Random Donate Dialog: `maybeShowRandomDonateDialog()` is invoked during `onResume()`. When `donate_dialog_hidden` preference is `false`, it evaluates a random roll (20% chance). Triggering presents an `AlertDialog` with witty message text and two options: "Donate" (sets `donate_dialog_hidden` to `true` and launches Liberapay URL) and "Later" (dismisses without updating the preference).
+- Random Donate Dialog: `maybeShowRandomDonateDialog()` is invoked during `onResume()`. When `donate_dialog_hidden` preference is `false`, it evaluates a random roll (20% chance). Triggering presents an `AlertDialog` with one of 5 witty message variants chosen at random and two options: "Donate" (sets `donate_dialog_hidden` to `true` and launches Liberapay URL) and "Later" (dismisses without updating the preference).
 - Full-screen Manual & Event Logs Views: Overlay `RelativeLayout` views in `activity_main.xml` with a Back button pinned to the bottom-right corner, displaying formatted HTML manual text or real-time monospace event logs.
 - Crash Reporting: Prompts user on launch via `AlertDialog` if a pending uncaught exception was saved in `SharedPreferences`.
 - Export Settings Action: Serializes current preferences into a Schema Version 1 JSON string, launches system share action (`ACTION_SEND`).
