@@ -110,6 +110,27 @@ jobs:
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
+      - name: Create draft release for pull request
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          TAG_NAME="pr-${PR_NUM}"
+          cp app/build/outputs/apk/release/app-release.apk "auto-sleep-droid-${TAG_NAME}.apk"
+
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            gh release edit "${TAG_NAME}" --target "${GITHUB_SHA}" --title "PR #${PR_NUM}: ${BRANCH_NAME}" --draft=true
+            gh release upload "${TAG_NAME}" "auto-sleep-droid-${TAG_NAME}.apk" --clobber
+          else
+            gh release create "${TAG_NAME}" "auto-sleep-droid-${TAG_NAME}.apk" \
+              --target "${GITHUB_SHA}" \
+              --title "PR #${PR_NUM}: ${BRANCH_NAME}" \
+              --notes "Draft release build for PR #${PR_NUM} (${BRANCH_NAME}). Not visible to the public." \
+              --draft=true
+          fi
+
       - name: Create or update latest release (master push)
         if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
         env:
