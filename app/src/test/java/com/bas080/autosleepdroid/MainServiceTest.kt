@@ -1060,4 +1060,42 @@ class MainServiceTest {
 
         assertFalse("shouldShowAwakeAction should now return false", service.shouldShowAwakeAction())
     }
+
+    @Test
+    fun testChangingCurrentWakeTimeUpdatesNotificationAndSchedulesAlarmViaWatchEffect() {
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", 6)
+            .putInt("wake_up_goal_minute", 30)
+            .putInt("current_wake_hour", 7)
+            .putInt("current_wake_minute", 0)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        controller.create().get()
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val shadowNotificationManager = Shadows.shadowOf(notificationManager)
+
+        val notification1 = shadowNotificationManager.getNotification(1001)
+        assertNotNull(notification1)
+
+        preferences.edit()
+            .putInt("current_wake_hour", 8)
+            .putInt("current_wake_minute", 15)
+            .remove("wakeup_last_scheduled_ms")
+            .apply()
+
+        val notification2 = shadowNotificationManager.getNotification(1001)
+        assertNotNull(notification2)
+        val text2 = notification2.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
+
+        val cal815 = Calendar.getInstance()
+        cal815.set(Calendar.HOUR_OF_DAY, 8)
+        cal815.set(Calendar.MINUTE, 15)
+        val expectedTimeStr = android.text.format.DateFormat.getTimeFormat(context).format(cal815.time)
+        assertTrue("Notification text should be updated with new wake time ($expectedTimeStr): $text2", text2.contains(expectedTimeStr))
+
+        assertTrue("Next wake alarm timestamp should be updated in preferences", preferences.contains(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS))
+    }
 }
