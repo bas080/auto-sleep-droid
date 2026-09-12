@@ -727,6 +727,7 @@ class MainService : Service() {
 
         val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
         val timerStartTime = prefs.getLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, 0L)
+        val lastAwakeTime = prefs.getLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, 0L)
         val wakeTime = System.currentTimeMillis()
 
         var startTime = 0L
@@ -734,7 +735,7 @@ class MainService : Service() {
             startTime = timerStartTime
         } else if (sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
             startTime = sleepStartTime
-        } else if (isWakeAlarmEnabled()) {
+        } else if (isWakeAlarmEnabled() && (lastAwakeTime == 0L || wakeTime - lastAwakeTime >= 12 * 3600_000L)) {
             val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
             startTime = wakeTime - (minSleepMin * 60_000L)
         }
@@ -766,6 +767,7 @@ class MainService : Service() {
 
         dismissAutoSleepAlarm()
         updateNextWakeUpTimeOnDismissOrExpiry()
+        preferences?.edit()?.putLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, System.currentTimeMillis())?.apply()
         checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
 
         updateListenersRegistration()
@@ -915,6 +917,7 @@ class MainService : Service() {
         if (prefs != null) {
             val editor = prefs.edit()
             editor.putLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, now)
+            editor.remove(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS)
 
             if (isWakeAlarmEnabled()) {
                 val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)

@@ -35,7 +35,7 @@ All notification content is concise and directly visible in the notification bod
 
 The only visible action on the notification is the sleep timer toggle ("Enable" / "Disable").
 Monochrome text-style alarm icons (`⏰︎ <time>`) and music note symbols (`♪ <time>`) are displayed concisely in default notification text color.
-When in the sleep/awake window (`T - 1.2 * minSleepDuration` until alarm dismissed), the notification title displays "Click notification when awake". Clicking the notification body during this window registers "I'm Awake" (with toast feedback), stops active alarms, updates wake schedule, and does not open the main UI. Clicking outside the awake window or after "I'm Awake" was already clicked opens the main UI.
+When in the sleep/awake window (`T - 1.2 * minSleepDuration` until alarm dismissed and prior to registering awake), the notification title displays "Click notification when awake". Clicking the notification body during this window registers "I'm Awake" (with toast feedback), stops active alarms, updates wake schedule, and does not open the main UI. Clicking outside the awake window or after "I'm Awake" was already clicked opens the main UI.
 
 ## User interface
 - Main Application Screen (`MainActivity`):

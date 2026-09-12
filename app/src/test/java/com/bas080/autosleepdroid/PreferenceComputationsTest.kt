@@ -137,4 +137,32 @@ class PreferenceComputationsTest {
         assertEquals(SessionPhase.ALARM, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
         assertTrue("Awake action should be shown when wakeup alarm is snoozed", preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
     }
+
+    @Test
+    fun testShouldShowAwakeActionReturnsFalseWhenLastAwakeTimeMsIsRecorded() {
+        val now = System.currentTimeMillis()
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = now
+        val wakeHour = cal.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = cal.get(Calendar.MINUTE)
+
+        rawPreferences.edit()
+            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true)
+            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, wakeHour)
+            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, wakeMin)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, wakeHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, wakeMin)
+            .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 480)
+            .commit()
+
+        assertTrue("Awake action should initially be shown during awake window",
+            preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+
+        rawPreferences.edit()
+            .putLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, now)
+            .commit()
+
+        assertFalse("Awake action should return false after awake action is registered",
+            preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+    }
 }

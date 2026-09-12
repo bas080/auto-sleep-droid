@@ -131,7 +131,14 @@ object PreferenceComputations {
             val rangeStart = currentWakeTime - (minSleepDurationMs / 2)
             val rangeEnd = currentWakeTime + (minSleepDurationMs / 2)
 
-            now in rangeStart..rangeEnd
+            if (now !in rangeStart..rangeEnd) return@ComputedValue false
+
+            val lastAwakeTime = getter.getLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, 0L)
+            if (lastAwakeTime > 0L && (now - lastAwakeTime < 12 * 3600_000L || lastAwakeTime >= rangeStart)) {
+                return@ComputedValue false
+            }
+
+            true
         }
 
     val IS_AUTO_TIMER_ENABLED: PreferenceManager.ComputedValue<Boolean> =
