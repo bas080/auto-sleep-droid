@@ -137,8 +137,10 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           PR_NUMBER="${{ github.event.pull_request.number }}"
+          RELEASE_TITLE="${PR_TITLE:-PR #${PR_NUMBER}}"
           RELEASE_TAG="pr-${PR_NUMBER}"
           APK_NAME="auto-sleep-droid-pr-${PR_NUMBER}.apk"
           cp app/build/outputs/apk/release/app-release.apk "${APK_NAME}"
@@ -147,12 +149,12 @@ jobs:
           git push origin "refs/tags/${RELEASE_TAG}" --force || true
 
           if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            gh release edit "${RELEASE_TAG}" --title "PR #${PR_NUMBER}" --draft=true
+            gh release edit "${RELEASE_TAG}" --title "${RELEASE_TITLE}" --draft=true
             gh release upload "${RELEASE_TAG}" "${APK_NAME}" --clobber
           else
             gh release create "${RELEASE_TAG}" "${APK_NAME}" \
               --target "${GITHUB_SHA}" \
-              --title "PR #${PR_NUMBER}" \
+              --title "${RELEASE_TITLE}" \
               --notes "Draft release APK for PR #${PR_NUMBER}." \
               --draft=true
           fi
