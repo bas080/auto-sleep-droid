@@ -262,6 +262,116 @@ class MainServiceTest {
     }
 
     @Test
+    fun testSnoozeWakeUpAlarmWorksWithBothVolumeUpAndVolumeDownIntents() {
+        preferences.edit()
+            .putBoolean("show_notification", true)
+            .putBoolean("wake_up_goal_enabled", true)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val shadowNotificationManager = Shadows.shadowOf(notificationManager)
+
+        val receiverField = MainService::class.java.getDeclaredField("volumeReceiver")
+        receiverField.isAccessible = true
+
+        // 1) Test Volume UP broadcast intent while ringing
+        val triggerIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_WAKEUP_ALARM_EXPIRY)
+        service.onStartCommand(triggerIntent, 0, 1)
+
+        var receiver = receiverField.get(service) as android.content.BroadcastReceiver?
+        assertNotNull(receiver)
+        val volumeUpIntent = Intent("android.media.VOLUME_CHANGED_ACTION").apply {
+            putExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", android.media.AudioManager.STREAM_MUSIC)
+            putExtra("android.media.EXTRA_VOLUME_STREAM_VALUE", 8)
+            putExtra("android.media.EXTRA_PREV_VOLUME_STREAM_VALUE", 7)
+        }
+        receiver?.onReceive(service, volumeUpIntent)
+
+        var snoozedNotification = shadowNotificationManager.getNotification(1001)
+        assertNotNull(snoozedNotification)
+        assertTrue("Notification text when snoozed via Volume UP should contain 'Snoozed 9m'",
+            snoozedNotification.extras.getCharSequence(Notification.EXTRA_TEXT).toString().contains("Snoozed 9m"))
+
+        // 2) Trigger alarm again and test Volume DOWN broadcast intent
+        service.onStartCommand(triggerIntent, 0, 1)
+        receiver = receiverField.get(service) as android.content.BroadcastReceiver?
+        assertNotNull(receiver)
+        val volumeDownIntent = Intent("android.media.VOLUME_CHANGED_ACTION").apply {
+            putExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", android.media.AudioManager.STREAM_MUSIC)
+            putExtra("android.media.EXTRA_VOLUME_STREAM_VALUE", 6)
+            putExtra("android.media.EXTRA_PREV_VOLUME_STREAM_VALUE", 7)
+        }
+        receiver?.onReceive(service, volumeDownIntent)
+
+        snoozedNotification = shadowNotificationManager.getNotification(1001)
+        assertNotNull(snoozedNotification)
+        assertTrue("Notification text when snoozed via Volume DOWN should contain 'Snoozed 9m'",
+            snoozedNotification.extras.getCharSequence(Notification.EXTRA_TEXT).toString().contains("Snoozed 9m"))
+    }
+
+    @Test
+    fun testActiveTimerResetWorksWithBothVolumeUpAndVolumeDown() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val now = System.currentTimeMillis()
+        val initialEndsAt = now + 30 * 60_000L
+        service.startTimer(30, initialEndsAt, true)
+        assertEquals(MainService.State.ACTIVE, service.state)
+        assertEquals(initialEndsAt, service.timerEndsAt)
+
+        // 1) Test Volume UP (volume increases from 5 to 7)
+        val volumeUpTime = now + 5000L
+        service.onVolumeChanged(7, volumeUpTime)
+        val expectedEndsAtVolumeUp = volumeUpTime + 30 * 60_000L
+        assertTrue("Timer expiration must be reset on Volume UP",
+            Math.abs(expectedEndsAtVolumeUp - service.timerEndsAt) < 1000L)
+
+        // 2) Test Volume DOWN (volume decreases from 7 to 4)
+        val volumeDownTime = now + 10000L
+        service.onVolumeChanged(4, volumeDownTime)
+        val expectedEndsAtVolumeDown = volumeDownTime + 30 * 60_000L
+        assertTrue("Timer expiration must be reset on Volume DOWN",
+            Math.abs(expectedEndsAtVolumeDown - service.timerEndsAt) < 1000L)
+    }
+
+    @Test
+    fun testFadingTimerResetWorksWithBothVolumeUpAndVolumeDown() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val now = System.currentTimeMillis()
+        service.initializeTimerState(true, 30, now - 1000L, 10, true, now)
+
+        // 1) Verify initial fade state
+        assertTrue("Timer should be in FADING state", service.isFading)
+
+        // Test Volume UP during fade (volume increases from 10 to 12)
+        val volumeUpTime = now + 1000L
+        service.onVolumeChanged(12, volumeUpTime)
+        assertFalse("Fade must be cancelled on Volume UP", service.isFading)
+        assertEquals("Timer state must return to ACTIVE after Volume UP reset", MainService.State.ACTIVE, service.state)
+        assertTrue("Timer expiration must be reset on Volume UP from fade",
+            service.timerEndsAt > now + 25 * 60_000L)
+
+        // 2) Start fade again
+        service.beginFadeOut(10)
+        assertTrue("Timer should be in FADING state again", service.isFading)
+
+        // Test Volume DOWN during fade (volume decreases from 10 to 8)
+        val volumeDownTime = now + 2000L
+        service.onVolumeChanged(8, volumeDownTime)
+        assertFalse("Fade must be cancelled on Volume DOWN", service.isFading)
+        assertEquals("Timer state must return to ACTIVE after Volume DOWN reset", MainService.State.ACTIVE, service.state)
+        assertTrue("Timer expiration must be reset on Volume DOWN from fade",
+            service.timerEndsAt > now + 25 * 60_000L)
+    }
+
+    @Test
     fun testDisablingSleepTimerPreservesScheduledWakeAlarm() {
         preferences.edit()
             .putBoolean("active", true)
