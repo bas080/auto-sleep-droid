@@ -92,6 +92,13 @@ class DurationInputView : LinearLayout {
         picker ?: return
         val editText = findEditTextInPicker(picker)
         editText?.inputType = InputType.TYPE_CLASS_NUMBER
+        val label = if (picker === pickerHours) {
+            context.getString(R.string.label_hours)
+        } else {
+            context.getString(R.string.label_minutes)
+        }
+        picker.contentDescription = label
+        editText?.contentDescription = label
     }
 
     fun setChildInputIds(hoursId: Int, minutesId: Int) {
