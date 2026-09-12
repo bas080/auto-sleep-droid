@@ -49,7 +49,7 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      (needs.trigger-release.result == 'success' || needs.trigger-release.result == 'skipped') &&
+      !failed() &&
       (
         github.event_name == 'pull_request' ||
         (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
