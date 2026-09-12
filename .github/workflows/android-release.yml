@@ -49,7 +49,7 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
-      !failed() &&
+      needs.trigger-release.result != 'failure' &&
       (
         github.event_name == 'pull_request' ||
         (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
@@ -131,6 +131,30 @@ jobs:
               --notes "Latest debug APK built from ${BRANCH_NAME}." \
               --draft=false \
               --latest=true
+          fi
+
+      - name: Create or update draft release (pull request)
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          RELEASE_TAG="pr-${PR_NUMBER}"
+          APK_NAME="auto-sleep-droid-pr-${PR_NUMBER}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "${APK_NAME}"
+
+          git tag -f "${RELEASE_TAG}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${RELEASE_TAG}" --force || true
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release edit "${RELEASE_TAG}" --title "PR #${PR_NUMBER}" --draft=true
+            gh release upload "${RELEASE_TAG}" "${APK_NAME}" --clobber
+          else
+            gh release create "${RELEASE_TAG}" "${APK_NAME}" \
+              --target "${GITHUB_SHA}" \
+              --title "PR #${PR_NUMBER}" \
+              --notes "Draft release APK for PR #${PR_NUMBER}." \
+              --draft=true
           fi
 
       - name: Create versioned GitHub release (tag push)
