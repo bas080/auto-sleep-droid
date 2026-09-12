@@ -893,9 +893,18 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun showDonateDialog() {
+        val messages = intArrayOf(
+            R.string.dialog_donate_random_message_1,
+            R.string.dialog_donate_random_message_2,
+            R.string.dialog_donate_random_message_3,
+            R.string.dialog_donate_random_message_4,
+            R.string.dialog_donate_random_message_5
+        )
+        val selectedMessageRes = messages.random()
+
         val builder = AlertDialog.Builder(this)
         builder.setTitle(R.string.dialog_donate_random_title)
-        builder.setMessage(R.string.dialog_donate_random_message)
+        builder.setMessage(selectedMessageRes)
         builder.setPositiveButton(R.string.link_donate) { _, _ ->
             preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN, true)?.apply()
             openUrl("https://liberapay.com/bas080")
