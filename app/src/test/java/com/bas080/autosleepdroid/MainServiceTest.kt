@@ -1208,4 +1208,30 @@ class MainServiceTest {
 
         assertTrue("Next wake alarm timestamp should be updated in preferences", preferences.contains(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS))
     }
+
+    private class FailingForegroundMainService : MainService() {
+        override fun startForegroundNotification(id: Int, notification: Notification) {
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                throw android.app.ForegroundServiceStartNotAllowedException("Service.startForeground() not allowed due to mAllowStartForeground false")
+            } else {
+                throw IllegalStateException("Foreground service start not allowed")
+            }
+        }
+    }
+
+    @Test
+    fun testShowOrHideNotificationCatchesForegroundServiceStartNotAllowedException() {
+        val controller = Robolectric.buildService(FailingForegroundMainService::class.java)
+        val service = controller.create().get()
+
+        val showOrHideMethod = MainService::class.java.getDeclaredMethod("showOrHideNotification")
+        showOrHideMethod.isAccessible = true
+
+        // Invoking showOrHideNotification on FailingForegroundMainService triggers startForeground which throws ForegroundServiceStartNotAllowedException
+        showOrHideMethod.invoke(service)
+
+        val events = EventLogger.getEvents(context)
+        val hasLoggedFailure = events.any { it.contains("Failed to start foreground service") }
+        assertTrue("EventLogger should record the foreground service start failure", hasLoggedFailure)
+    }
 }
