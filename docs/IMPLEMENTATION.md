@@ -117,7 +117,7 @@ Main Configuration Controls & Action Links:
 - Single-screen configuration UI:
   - Section headings (`headerTimer`, `headerAlarm`, `headerHealthConnect`, `headerDnd`, `headerBackup`, `headerAbout`) remain enabled (`true`) with full opacity (`1.0f`) at all times.
   - Sleep timer enable/disable Switch (`active` preference).
-  - Sleep timer duration input using custom `DurationInputView` (`input_duration`, incorporating `NumberPicker` hour and minute wheel pickers configured via `configure(minHours, maxHours, minuteStep)`, saving `duration_minutes` preference, displaying formatted duration value on `text_duration_value`). Timer duration controls remain enabled when the sleep timer switch is OFF.
+  - Sleep timer duration input using custom `DurationInputView` (`input_duration`, incorporating `NumberPicker` hour and minute wheel pickers configured via `configure(minHours, maxHours, minuteStep)`, saving `duration_minutes` preference, displaying formatted duration value on `text_duration_value`). `DurationInputView` provides accessible, high-contrast unit labels ("Hours", "Minutes") and content descriptions for TalkBack screen readers while supporting numeric soft keyboard input. Timer duration controls remain enabled when the sleep timer switch is OFF.
   - Wake-up alarm enable Switch (`wake_up_goal_enabled` preference, labeled "Wake-up alarm").
   - Target wake-up goal time Button (`btn_target_time`, displaying formatted system time and opening `TimePickerDialog` on click).
   - Minimum sleep duration input using custom `DurationInputView` (`input_min_sleep`, saving `min_sleep_duration_minutes` preference).

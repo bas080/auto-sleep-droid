@@ -3,15 +3,57 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:gravity="center">
+    android:gravity="center"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
 
-    <NumberPicker
-        android:id="@+id/picker_hours"
+    <LinearLayout
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
 
-    <NumberPicker
-        android:id="@+id/picker_minutes"
+        <NumberPicker
+            android:id="@+id/picker_hours"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/label_hours" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/label_hours"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <NumberPicker
+            android:id="@+id/picker_minutes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/label_minutes" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/label_minutes"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 </LinearLayout>
