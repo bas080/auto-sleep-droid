@@ -121,7 +121,7 @@ Main Configuration Controls & Action Links:
   - Wake-up alarm enable Switch (`wake_up_goal_enabled` preference, labeled "Wake-up alarm").
   - Target wake-up goal time Button (`btn_target_time`, displaying formatted system time and opening `TimePickerDialog` on click).
   - Minimum sleep duration input using custom `DurationInputView` (`input_min_sleep`, saving `min_sleep_duration_minutes` preference).
-  - Do Not Disturb section featuring Auto sleep timer Switch (`row_auto_timer`, enabling automated DND tracking without forcing navigation away to system settings).
+  - Do Not Disturb section featuring Sync with Do Not Disturb switch (`row_auto_timer`, enabling automated DND tracking without forcing navigation away to system settings).
   - Backup section featuring Export settings row (`btn_export`) and Import settings row (`btn_import`).
   - About section featuring Version row (`btn_version`), Feedback row (`btn_feedback`, which presents a prompt dialog asking if the user wants to include event logs in their email), and Links row (`btn_links`).
 - Links header & action list dialog: Manual, Logs, and Donate.
