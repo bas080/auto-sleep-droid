@@ -83,7 +83,7 @@ class PreferenceComputationsTest {
             .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, wakeMin)
             .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, wakeHour)
             .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, wakeMin)
-            .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 600)
+            .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 480)
             .putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now - 3600_000L)
             .commit()
 
