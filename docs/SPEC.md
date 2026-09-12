@@ -43,7 +43,7 @@ When in the sleep/awake window (`T - 1.2 * minSleepDuration` until alarm dismiss
     - Sleep timer enable/disable switch and timer duration input (0-12h with 5m steps using hour and minute wheel pickers). Timer duration controls remain enabled when the sleep timer switch is OFF.
     - Wake-up alarm enable switch ("Wake-up alarm"), target wake-up time picker button, current wake-up time button, and minimum sleep duration input.
     - Health Connect synchronization switch and minimum session duration input.
-    - Do Not Disturb section featuring Auto sleep timer switch.
+    - Do Not Disturb section featuring Sync with Do Not Disturb switch.
     - Backup section featuring Export settings row and Import settings row.
     - About section featuring Version row, Feedback row (prompts user whether to include event logs in their email), and Links row.
     - Section headings (Timer, Alarm, Health Connect, Do Not Disturb, Backup, About) remain fully visible and opaque at all times.
