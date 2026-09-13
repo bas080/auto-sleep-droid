@@ -913,9 +913,39 @@ class MainActivityTest {
     }
 
     @Test
+    fun testHealthConnectPermissionRevokedInSettingsDisablesSyncOnResume() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val prefs = application.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("health_connect_enabled", true).commit()
+
+        HealthConnectManager.setClientForTesting(null, true)
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        val switchHealthConnect = activity.findViewById<Switch>(R.id.switch_health_connect)
+        assertNotNull(switchHealthConnect)
+        assertFalse("Health Connect switch should be updated to OFF when permission is revoked", switchHealthConnect.isChecked)
+        assertFalse("health_connect_enabled preference must be false after revocation detected on resume", prefs.getBoolean("health_connect_enabled", true))
+
+        val events = EventLogger.getEvents(activity)
+        assertTrue("Event log must record permission revocation", events.any { it.contains("Health Connect permission revoked; disabling sync") })
+    }
+
+    @Test
     fun testProgrammaticHealthConnectUiUpdateDoesNotLogOrCheckPermissions() {
         val application = ApplicationProvider.getApplicationContext<Application>()
         EventLogger.clear(application)
+
+        val mockClient = org.mockito.Mockito.mock(androidx.health.connect.client.HealthConnectClient::class.java)
+        val mockPermissionController = org.mockito.Mockito.mock(androidx.health.connect.client.PermissionController::class.java)
+        org.mockito.Mockito.`when`(mockClient.permissionController).thenReturn(mockPermissionController)
+        kotlinx.coroutines.runBlocking {
+            org.mockito.Mockito.`when`(mockPermissionController.getGrantedPermissions()).thenReturn(HealthConnectManager.REQUIRED_PERMISSIONS)
+        }
+        HealthConnectManager.setClientForTesting(mockClient, true)
 
         val prefs = application.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
         prefs.edit().putBoolean("health_connect_enabled", true).commit()
@@ -923,9 +953,11 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
         val events = EventLogger.getEvents(activity)
         val hcEvents = events.filter { it.contains("Health Connect") }
-        assertTrue("Programmatic UI update when health_connect_enabled is true must not generate log entries, found: $hcEvents", hcEvents.isEmpty())
+        assertTrue("Programmatic UI update when health_connect_enabled is true and permission granted must not generate log entries, found: $hcEvents", hcEvents.isEmpty())
     }
 
     @Test
