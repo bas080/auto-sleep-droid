@@ -45,7 +45,7 @@ When in the sleep/awake window (`T - 1.2 * minSleepDuration` until alarm dismiss
     - Health Connect synchronization switch and minimum session duration input.
     - Do Not Disturb section featuring Sync with Do Not Disturb switch.
     - Backup section featuring Export settings row and Import settings row.
-    - About section featuring Version row, Feedback row (prompts user whether to include event logs in their email), and Links row.
+    - About section featuring Version row, Feedback row (prompts user whether to include event logs in their email, creating structured email templates with guiding questions), and Links row.
     - Section headings (Timer, Alarm, Health Connect, Do Not Disturb, Backup, About) remain fully visible and opaque at all times.
   - Action links under a "Links" header: Manual, Logs, and Donate.
   - Random witty donation dialog that pops up occasionally when opening the app (randomly selecting one of 5 witty message variants), presenting two options: **Donate** (opens the Liberapay donation link and permanently hides future donation prompts) and **Later** (dismisses the dialog while allowing future occasional prompts).

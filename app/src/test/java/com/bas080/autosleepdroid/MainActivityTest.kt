@@ -160,8 +160,10 @@ class MainActivityTest {
         val sendIntent = IntentCompat.getParcelableExtra(chooserIntent!!, Intent.EXTRA_INTENT, Intent::class.java)
         assertNotNull(sendIntent)
         assertEquals(Intent.ACTION_SENDTO, sendIntent?.action)
+        assertTrue(sendIntent?.getStringExtra(Intent.EXTRA_SUBJECT)?.contains("Auto Sleep Droid Crash Report") == true)
         val bodyText = sendIntent?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
         assertTrue(bodyText.contains("NullPointerException"))
+        assertTrue("Crash report email must contain guiding questions", bodyText.contains("What were you doing right before the app crashed?"))
         assertTrue("Crash report email must include Logs section", bodyText.contains("Logs:"))
         assertTrue("Crash report email must contain logged events", bodyText.contains("Sample logged event before crash"))
 
@@ -201,6 +203,7 @@ class MainActivityTest {
         assertTrue(sendIntent?.dataString?.startsWith("mailto:bas080@hotmail.com") == true)
         assertTrue(sendIntent?.getStringExtra(Intent.EXTRA_SUBJECT)?.contains("Auto Sleep Droid Feedback") == true)
         val bodyWithLogs = sendIntent?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
+        assertTrue("Feedback email should contain guiding questions", bodyWithLogs.contains("What feature or aspect of the app are you giving feedback on?"))
         assertTrue("Feedback email with logs included should contain Logs section", bodyWithLogs.contains("Logs:"))
         assertTrue("Feedback email should contain logged events", bodyWithLogs.contains("User feedback test log"))
 
