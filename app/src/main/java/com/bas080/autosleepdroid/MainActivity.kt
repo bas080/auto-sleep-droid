@@ -249,12 +249,29 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     fun sendFeedbackEmail(crashReport: String? = null, includeLogs: Boolean = false) {
-        val subject = "Auto Sleep Droid Feedback (v${BuildConfig.VERSION_NAME})"
-        val bodyBuilder = StringBuilder()
-        if (!crashReport.isNullOrEmpty()) {
-            bodyBuilder.append("Crash Report:\n").append(crashReport).append("\n\n")
+        val isCrash = !crashReport.isNullOrEmpty()
+        val subject = if (isCrash) {
+            "Auto Sleep Droid Crash Report (v${BuildConfig.VERSION_NAME})"
+        } else {
+            "Auto Sleep Droid Feedback (v${BuildConfig.VERSION_NAME})"
         }
-        if (includeLogs || !crashReport.isNullOrEmpty()) {
+
+        val bodyBuilder = StringBuilder()
+
+        if (isCrash) {
+            bodyBuilder.append("Please answer the questions below to help us troubleshoot and fix the error:\n")
+            bodyBuilder.append("- What were you doing right before the app crashed?\n")
+            bodyBuilder.append("- How often does this crash occur (e.g., every time, occasionally, first time)?\n")
+            bodyBuilder.append("- Were any specific features active (e.g., Do Not Disturb sync, Wake-up goal, Health Connect)?\n\n")
+            bodyBuilder.append("Crash Report:\n").append(crashReport).append("\n\n")
+        } else {
+            bodyBuilder.append("Please answer the questions below to help us improve Auto Sleep Droid:\n")
+            bodyBuilder.append("- What feature or aspect of the app are you giving feedback on?\n")
+            bodyBuilder.append("- What happened, or what would you like to see improved?\n")
+            bodyBuilder.append("- If reporting a bug, what steps can reproduce the issue?\n\n")
+        }
+
+        if (includeLogs || isCrash) {
             val events = EventLogger.getEvents(this)
             if (events.isNotEmpty()) {
                 bodyBuilder.append("Logs:\n")
@@ -264,6 +281,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 bodyBuilder.append("\n")
             }
         }
+
         bodyBuilder.append("---\nApp Version: ").append(BuildConfig.VERSION_NAME)
             .append("\nAndroid Version: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")")
             .append("\nDevice: ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL)
