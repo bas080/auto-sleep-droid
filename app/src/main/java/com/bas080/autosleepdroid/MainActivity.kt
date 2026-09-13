@@ -860,6 +860,17 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                     EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission not granted; disabling sync")
                 }
             }
+        } else {
+            val healthConnectEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
+            if (healthConnectEnabled) {
+                HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
+                    if (!hasPermission) {
+                        preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)?.apply()
+                        switchHealthConnect?.isChecked = false
+                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission revoked; disabling sync")
+                    }
+                }
+            }
         }
         registerPreferenceListeners()
         maybeShowRandomDonateDialog()
