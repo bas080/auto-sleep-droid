@@ -913,6 +913,22 @@ class MainActivityTest {
     }
 
     @Test
+    fun testProgrammaticHealthConnectUiUpdateDoesNotLogOrCheckPermissions() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        EventLogger.clear(application)
+
+        val prefs = application.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("health_connect_enabled", true).commit()
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val events = EventLogger.getEvents(activity)
+        val hcEvents = events.filter { it.contains("Health Connect") }
+        assertTrue("Programmatic UI update when health_connect_enabled is true must not generate log entries, found: $hcEvents", hcEvents.isEmpty())
+    }
+
+    @Test
     fun testProgrammaticToggleDoesNotOpenSettingsPages() {
         HealthConnectManager.setClientForTesting(null, true)
         val controller = Robolectric.buildActivity(MainActivity::class.java)
