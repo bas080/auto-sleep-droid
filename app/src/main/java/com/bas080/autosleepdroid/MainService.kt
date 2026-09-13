@@ -577,6 +577,9 @@ open class MainService : Service() {
                 }
                 updateNotification()
                 checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
+            } else if (ACTION_UPDATE_NOTIFICATION == action) {
+                EventLogger.log(this, "Notification update trigger received")
+                updateNotification()
             } else if (ACTION_AWAKE == action) {
                 handleAwakeAction()
             } else if (ACTION_NOTIFICATION_CLICK == action) {
@@ -853,6 +856,38 @@ open class MainService : Service() {
         } catch (e: Exception) {
             EventLogger.log(this, "Failed to schedule wake-up alarm: ${e.message}")
         }
+
+        scheduleNotificationUpdateForAwakeWindow(targetAlarmTimeMs)
+    }
+
+    private fun scheduleNotificationUpdateForAwakeWindow(targetAlarmTimeMs: Long) {
+        val am = alarmManager ?: return
+        val minSleepMin = preferences?.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+            ?: AppDefaults.MIN_SLEEP_DURATION_MINUTES
+        val minSleepMs = minSleepMin * 60_000L
+        val awakeWindowStart = targetAlarmTimeMs - (minSleepMs / 2)
+        val now = System.currentTimeMillis()
+
+        if (awakeWindowStart > now) {
+            val updateIntent = Intent(this, MainService::class.java).setAction(ACTION_UPDATE_NOTIFICATION)
+            val updatePendingIntent = PendingIntent.getService(
+                this, 107, updateIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            try {
+                if (Build.VERSION.SDK_INT >= 31) {
+                    if (am.canScheduleExactAlarms()) {
+                        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, awakeWindowStart, updatePendingIntent)
+                    } else {
+                        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, awakeWindowStart, updatePendingIntent)
+                    }
+                } else {
+                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, awakeWindowStart, updatePendingIntent)
+                }
+            } catch (e: SecurityException) {
+                EventLogger.log(this, "SecurityException scheduling notification update alarm")
+            }
+        }
     }
 
     private fun dismissAutoSleepAlarm() {
@@ -866,6 +901,16 @@ open class MainService : Service() {
             if (operationIntent != null) {
                 am.cancel(operationIntent)
                 operationIntent.cancel()
+            }
+
+            val updateTriggerIntent = Intent(this, MainService::class.java).setAction(ACTION_UPDATE_NOTIFICATION)
+            val updateOperation = PendingIntent.getService(
+                this, 107, updateTriggerIntent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+            if (updateOperation != null) {
+                am.cancel(updateOperation)
+                updateOperation.cancel()
             }
         }
 
@@ -1441,6 +1486,7 @@ open class MainService : Service() {
         const val ACTION_WAKEUP_ALARM_EXPIRY = "com.bas080.autosleepdroid.AUTO_SLEEP_ALARM_EXPIRY"
         const val ACTION_AWAKE = "com.bas080.autosleepdroid.AWAKE"
         const val ACTION_NOTIFICATION_CLICK = "com.bas080.autosleepdroid.NOTIFICATION_CLICK"
+        const val ACTION_UPDATE_NOTIFICATION = "com.bas080.autosleepdroid.UPDATE_NOTIFICATION"
         const val EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION"
         const val ALARM_SEARCH_NAME = "Auto Sleep"
         const val KEY_WAKEUP_LAST_SCHEDULED_MS = PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS

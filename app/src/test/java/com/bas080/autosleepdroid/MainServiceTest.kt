@@ -1,5 +1,6 @@
 package com.bas080.autosleepdroid
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
@@ -1233,5 +1234,86 @@ class MainServiceTest {
         val events = EventLogger.getEvents(context)
         val hasLoggedFailure = events.any { it.contains("Failed to start foreground service") }
         assertTrue("EventLogger should record the foreground service start failure", hasLoggedFailure)
+    }
+
+    @Test
+    @Suppress("DEPRECATION")
+    fun testNotificationUpdateAlarmScheduledForAwakeWindowStart() {
+        val now = System.currentTimeMillis()
+        val calWake = Calendar.getInstance()
+        calWake.timeInMillis = now + 4 * 3600_000L
+        calWake.set(Calendar.SECOND, 0)
+        calWake.set(Calendar.MILLISECOND, 0)
+        val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = calWake.get(Calendar.MINUTE)
+
+        preferences.edit()
+            .putBoolean(PreferenceKeys.KEY_ACTIVE, true)
+            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true)
+            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, wakeHour)
+            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, wakeMin)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, wakeHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, wakeMin)
+            .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 120)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        controller.create().get()
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val shadowAlarmManager = Shadows.shadowOf(alarmManager)
+
+        val scheduledAlarms = shadowAlarmManager.scheduledAlarms
+        var foundUpdateAlarm = false
+        var updateAlarmTriggerTime = 0L
+        for (i in 0 until scheduledAlarms.size) {
+            val alarm = scheduledAlarms[i]
+            val shadowPendingIntent = Shadows.shadowOf(alarm.operation)
+            if (shadowPendingIntent.savedIntent.action == MainService.ACTION_UPDATE_NOTIFICATION) {
+                foundUpdateAlarm = true
+                updateAlarmTriggerTime = alarm.triggerAtTime
+                break
+            }
+        }
+        assertTrue("Notification update alarm with ACTION_UPDATE_NOTIFICATION should be scheduled", foundUpdateAlarm)
+
+        val minSleepMs = 120 * 60_000L
+        val expectedAwakeWindowStart = calWake.timeInMillis - (minSleepMs / 2)
+        assertEquals("Notification update alarm trigger time should match start of awake window", expectedAwakeWindowStart, updateAlarmTriggerTime)
+    }
+
+    @Test
+    fun testActionUpdateNotificationRefreshesNotificationTitleToAwakePrompt() {
+        val now = System.currentTimeMillis()
+        val calWake = Calendar.getInstance()
+        calWake.timeInMillis = now + 30 * 60_000L
+        val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = calWake.get(Calendar.MINUTE)
+
+        preferences.edit()
+            .putBoolean(PreferenceKeys.KEY_ACTIVE, true)
+            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true)
+            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, wakeHour)
+            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, wakeMin)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, wakeHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, wakeMin)
+            .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 120)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val updateIntent = Intent(context, MainService::class.java).apply {
+            action = MainService.ACTION_UPDATE_NOTIFICATION
+        }
+        service.onStartCommand(updateIntent, 0, 1)
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val shadowNotificationManager = Shadows.shadowOf(notificationManager)
+        val notification = shadowNotificationManager.getNotification(1001)
+
+        assertNotNull(notification)
+        val title = notification.extras.getCharSequence(Notification.EXTRA_TITLE).toString()
+        assertEquals("Notification title should update to 'Click notification when awake'", context.getString(R.string.notification_click_when_awake), title)
     }
 }
