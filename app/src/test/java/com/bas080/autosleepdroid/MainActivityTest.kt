@@ -39,7 +39,11 @@ class MainActivityTest {
     fun setUp() {
         val application = ApplicationProvider.getApplicationContext<Application>()
         Shadows.shadowOf(application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        application.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE).edit().clear().commit()
+        application.getSharedPreferences("crash_reports", Context.MODE_PRIVATE).edit().clear().commit()
+        application.getSharedPreferences("donate", Context.MODE_PRIVATE).edit().clear().commit()
         EventLogger.clear(application)
+        ShadowAlertDialog.reset()
     }
 
     @Test
