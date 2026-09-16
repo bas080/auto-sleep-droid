@@ -60,6 +60,7 @@ open class MainService : Service() {
     private var isForeground = false
     private var lastTimerEndsAt = 0L
     private var lastSelfDndChangeTimeMs = 0L
+    private var wakeLock: android.os.PowerManager.WakeLock? = null
 
     var state = State.OFF
         private set
@@ -569,6 +570,7 @@ open class MainService : Service() {
             } else if (ACTION_WAKEUP_ALARM_EXPIRY == action) {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep wake-up alarm triggered")
                 if (isWakeAlarmEnabled()) {
+                    acquireWakeLock()
                     setWakeUpAlarmState(true, false)
                     updateListenersRegistration()
                     playWakeUpAlarmSound()
@@ -647,6 +649,7 @@ open class MainService : Service() {
         if (newState == State.OFF) {
             unregisterAudioPlaybackCallback()
             stopWakeUpAlarmSound()
+            releaseWakeLock()
             cancelSnoozeAlarm()
             setWakeUpAlarmState(false, false)
             onCancelAlarm()
@@ -765,6 +768,7 @@ open class MainService : Service() {
         processSleepSession()
 
         stopWakeUpAlarmSound()
+        releaseWakeLock()
         cancelSnoozeAlarm()
         setWakeUpAlarmState(false, false)
 
@@ -1181,6 +1185,40 @@ open class MainService : Service() {
         return ringtone
     }
 
+    private fun acquireWakeLock() {
+        releaseWakeLock()
+        try {
+            val powerManager = getSystemService(POWER_SERVICE) as? android.os.PowerManager
+            if (powerManager != null) {
+                @Suppress("DEPRECATION")
+                val lock = powerManager.newWakeLock(
+                    android.os.PowerManager.FULL_WAKE_LOCK or
+                            android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                            android.os.PowerManager.ON_AFTER_RELEASE,
+                    "AutoSleepDroid:WakeAlarmLock"
+                )
+                lock.acquire(30_000L)
+                wakeLock = lock
+                EventLogger.log(this, "Acquired screen wake lock for wake-up alarm")
+            }
+        } catch (e: Exception) {
+            EventLogger.log(this, "Failed to acquire wake lock: ${e.message}")
+        }
+    }
+
+    private fun releaseWakeLock() {
+        try {
+            wakeLock?.let {
+                if (it.isHeld) {
+                    it.release()
+                }
+            }
+        } catch (e: Exception) {
+            EventLogger.log(this, "Failed to release wake lock: ${e.message}")
+        }
+        wakeLock = null
+    }
+
     private fun stopWakeUpAlarmSound() {
         alarmCrescendoRunnable?.let {
             handler.removeCallbacks(it)
@@ -1238,6 +1276,7 @@ open class MainService : Service() {
     private fun snoozeWakeUpAlarmViaVolumeKey() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed via volume button")
         stopWakeUpAlarmSound()
+        releaseWakeLock()
         snoozeWakeUpAlarm()
         setWakeUpAlarmState(false, true)
         onTriggerVibration()
@@ -1466,6 +1505,7 @@ open class MainService : Service() {
     override fun onDestroy() {
         EventLogger.log(this, EventLogger.LEVEL_LOW, "MainService destroyed")
         stopWakeUpAlarmSound()
+        releaseWakeLock()
         setWakeUpAlarmState(false, false)
         unregisterVolumeObserver()
         unregisterDndReceiver()

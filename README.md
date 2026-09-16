@@ -54,6 +54,7 @@ Auto Sleep Droid uses minimal permissions required to function reliably as a bac
 - **Audio Settings (`MODIFY_AUDIO_SETTINGS`)** *(Required)*: Fades music volume down to zero at expiry and restores pre-fade volume after pausing.
 - **Vibration (`VIBRATE`)** *(Optional)*: Provides faint haptic feedback confirming your actions (turning off/on, volume button resets, and phone flips).
 - **Alarms & Reminders (`SCHEDULE_EXACT_ALARM` & `SET_ALARM`)** *(Required)*: Schedules exact backup alarms so the timer expires on time and wake alarms ring reliably even when Android enters Doze mode or battery saver.
+- **Wake Lock (`WAKE_LOCK`)** *(Required)*: Temporarily turns on the device display screen when the wake-up alarm rings so physical volume buttons can snooze the alarm immediately without requiring a manual power button press first.
 - **Run at Startup (`RECEIVE_BOOT_COMPLETED`)** *(Optional)*: Restores your timer state automatically when your device reboots.
 - **Health Connect Write Sleep (`android.permission.health.WRITE_SLEEP`)** *(Optional)*: Persists sleep, nap, and wake times as sleep sessions to Android Health Connect when Health Connect synchronization is enabled.
 - **Do Not Disturb Access (`android.permission.ACCESS_NOTIFICATION_POLICY`)** *(Optional)*: Controls Do Not Disturb (DND) mode during naps and checks DND state when Auto Sleep Timer (DND) mode is enabled.
