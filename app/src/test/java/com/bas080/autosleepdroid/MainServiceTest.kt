@@ -1283,6 +1283,42 @@ class MainServiceTest {
     }
 
     @Test
+    fun testWakeUpAlarmExpiryAcquiresWakeLockAndReleasesOnSnoozeOrStop() {
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", 6)
+            .putInt("wake_up_goal_minute", 30)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val wakeLockField = MainService::class.java.getDeclaredField("wakeLock")
+        wakeLockField.isAccessible = true
+
+        var wakeLock = wakeLockField.get(service) as android.os.PowerManager.WakeLock?
+        assertTrue("Wake lock should be null before alarm triggers", wakeLock == null || !wakeLock.isHeld)
+
+        val triggerIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_WAKEUP_ALARM_EXPIRY)
+        service.onStartCommand(triggerIntent, 0, 1)
+
+        wakeLock = wakeLockField.get(service) as android.os.PowerManager.WakeLock?
+        assertNotNull("Wake lock should be created when alarm triggers", wakeLock)
+        val shadowWakeLock = Shadows.shadowOf(wakeLock)
+        assertTrue("Wake lock should be held when alarm triggers", shadowWakeLock.timesHeld > 0)
+
+        val volumeReceiverField = MainService::class.java.getDeclaredField("volumeReceiver")
+        volumeReceiverField.isAccessible = true
+        val receiver = volumeReceiverField.get(service) as android.content.BroadcastReceiver?
+        assertNotNull(receiver)
+        receiver?.onReceive(service, Intent("android.media.VOLUME_CHANGED_ACTION"))
+
+        wakeLock = wakeLockField.get(service) as android.os.PowerManager.WakeLock?
+        assertTrue("Wake lock should be released after snoozing alarm", wakeLock == null || shadowWakeLock.timesHeld == 0)
+    }
+
+    @Test
     fun testActionUpdateNotificationRefreshesNotificationTitleToAwakePrompt() {
         val now = System.currentTimeMillis()
         val calWake = Calendar.getInstance()
