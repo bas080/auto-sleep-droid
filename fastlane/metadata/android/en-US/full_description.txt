@@ -4,10 +4,9 @@ Listen to your favorite podcasts, audiobooks, music, or videos without playing a
 
 Features:
 - Controlled directly from the main screen or notification shade.
-- Quick Nap Alarm feature to easily set or cancel nap timers.
 - Smart Wake-Up Goal safeguard to protect minimum sleep duration.
 - Compatible with YouTube, Spotify, podcast players, and most audio/video apps using system media controls.
 - Fades volume down gently before pausing playback.
-- Screen-free countdown reset using physical volume buttons or phone flip gesture.
+- Screen-free countdown reset using physical volume buttons.
 - Automatically listens for media playback.
 - Open source with no trackers or analytics.

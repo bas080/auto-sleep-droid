@@ -4,10 +4,9 @@ Escucha tus pódcasts, audiolibros, música o videos favoritos sin reproducir au
 
 Características:
 - Controlado directamente desde la pantalla principal o la barra de notificaciones.
-- Función de alarma para siesta rápida para configurar o cancelar fácilmente.
 - Objetivo de despertar con protección de duración mínima de sueño.
 - Compatible con YouTube, Spotify, reproductores de pódcasts y la mayoría de aplicaciones mediante controles de medios del sistema.
 - Atenúa suavemente el volumen antes de pausar la reproducción.
-- Reinicio de temporizador sin mirar la pantalla usando los botones físicos de volumen o gesto de voltear el teléfono.
+- Reinicio de temporizador sin mirar la pantalla usando los botones físicos de volumen.
 - Detecta automáticamente la reproducción de medios.
 - Código abierto sin rastreadores ni analíticas.
