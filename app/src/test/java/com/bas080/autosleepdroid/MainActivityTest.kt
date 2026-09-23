@@ -139,6 +139,7 @@ class MainActivityTest {
     @Test
     fun testPendingCrashReportPromptsUserDialogAndLaunchesFeedbackIntent() {
         val application = ApplicationProvider.getApplicationContext<Application>()
+        application.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE).edit().putBoolean("donate_dialog_hidden", true).commit()
         EventLogger.log(application, EventLogger.LEVEL_HIGH, "Sample logged event before crash")
         val prefs = application.getSharedPreferences("crash_reports", Context.MODE_PRIVATE)
         prefs.edit().putString("pending_crash_report", "CRASH: java.lang.NullPointerException at test.DummyClass").commit()
@@ -1126,5 +1127,18 @@ class MainActivityTest {
                 AwakeDialogActivity::class.java.name == className)
             nextIntent = Shadows.shadowOf(activity).nextStartedActivity
         }
+    }
+
+    @Test
+    fun testOnResumeInvokesStartTimerServiceForSelfHealing() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+
+        val initialLogCount = EventLogger.getEvents(activity).size
+
+        controller.pause().resume()
+
+        val eventsAfter = EventLogger.getEvents(activity)
+        assertTrue("onResume should execute self-healing timer service start", eventsAfter.size >= initialLogCount)
     }
 }

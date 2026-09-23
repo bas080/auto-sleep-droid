@@ -123,7 +123,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         })
 
         requestNotificationPermissionOnStartupIfNeeded()
-        startTimerService()
         requestExactAlarmPermissionIfNeeded()
         checkAndPromptCrashReport()
     }

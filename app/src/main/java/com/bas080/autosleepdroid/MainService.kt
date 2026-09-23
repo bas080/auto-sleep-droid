@@ -1432,12 +1432,18 @@ open class MainService : Service() {
     }
 
     private fun showOrHideNotification() {
+        val notification = buildNotification()
         try {
-            startForegroundNotification(NOTIFICATION_ID, buildNotification())
+            startForegroundNotification(NOTIFICATION_ID, notification)
             isForeground = true
         } catch (e: Exception) {
             EventLogger.log(this, "Failed to start foreground service: ${e.message}")
             isForeground = false
+            try {
+                val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
+                notificationManager?.notify(NOTIFICATION_ID, notification)
+            } catch (ignored: Exception) {
+            }
         }
     }
 

@@ -1222,6 +1222,10 @@ class MainServiceTest {
 
     @Test
     fun testShowOrHideNotificationCatchesForegroundServiceStartNotAllowedException() {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val shadowNotificationManager = Shadows.shadowOf(notificationManager)
+        shadowNotificationManager.setNotificationsEnabled(true)
+
         val controller = Robolectric.buildService(FailingForegroundMainService::class.java)
         val service = controller.create().get()
 
@@ -1234,6 +1238,9 @@ class MainServiceTest {
         val events = EventLogger.getEvents(context)
         val hasLoggedFailure = events.any { it.contains("Failed to start foreground service") }
         assertTrue("EventLogger should record the foreground service start failure", hasLoggedFailure)
+
+        val postedNotification = shadowNotificationManager.getNotification(null, 1001) ?: shadowNotificationManager.getNotification(1001)
+        assertNotNull("Notification should still be posted via NotificationManager fallback when startForeground fails", postedNotification)
     }
 
     @Test
