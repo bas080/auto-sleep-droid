@@ -65,6 +65,8 @@ object PreferenceComputations {
                 calCurrent.set(Calendar.MILLISECOND, 0)
                 if (now - calCurrent.timeInMillis > 12 * 3600_000L) {
                     calCurrent.add(Calendar.DAY_OF_YEAR, 1)
+                } else if (calCurrent.timeInMillis - now > 12 * 3600_000L) {
+                    calCurrent.add(Calendar.DAY_OF_YEAR, -1)
                 }
                 currentWakeTime = calCurrent.timeInMillis
 
@@ -125,6 +127,8 @@ object PreferenceComputations {
             calCurrent.set(Calendar.MILLISECOND, 0)
             if (now - calCurrent.timeInMillis > 12 * 3600_000L) {
                 calCurrent.add(Calendar.DAY_OF_YEAR, 1)
+            } else if (calCurrent.timeInMillis - now > 12 * 3600_000L) {
+                calCurrent.add(Calendar.DAY_OF_YEAR, -1)
             }
             val currentWakeTime = calCurrent.timeInMillis
 
