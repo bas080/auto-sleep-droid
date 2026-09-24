@@ -1029,41 +1029,25 @@ open class MainService : Service() {
             calCurrent.set(Calendar.MINUTE, currentMin)
             calCurrent.set(Calendar.SECOND, 0)
             calCurrent.set(Calendar.MILLISECOND, 0)
-            if (calCurrent.timeInMillis <= now) {
+            if (now - calCurrent.timeInMillis > 12 * 3600_000L) {
                 calCurrent.add(Calendar.DAY_OF_YEAR, 1)
+            } else if (calCurrent.timeInMillis - now > 12 * 3600_000L) {
+                calCurrent.add(Calendar.DAY_OF_YEAR, -1)
             }
 
-            val calGoal = Calendar.getInstance()
-            calGoal.timeInMillis = now
-            calGoal.set(Calendar.HOUR_OF_DAY, goalHour)
-            calGoal.set(Calendar.MINUTE, goalMin)
-            calGoal.set(Calendar.SECOND, 0)
-            calGoal.set(Calendar.MILLISECOND, 0)
-            if (calGoal.timeInMillis <= now) {
-                calGoal.add(Calendar.DAY_OF_YEAR, 1)
-            }
-            if (calGoal.timeInMillis > calCurrent.timeInMillis + 12 * 3600_000L) {
-                calGoal.add(Calendar.DAY_OF_YEAR, -1)
-            }
+            val currentAlarmMs = calCurrent.timeInMillis
 
-            val baseWakeMs = if (calCurrent.timeInMillis >= calGoal.timeInMillis) calGoal.timeInMillis else calCurrent.timeInMillis
-            val targetWakeMs = Math.max(baseWakeMs, requiredWakeTime)
-
-            if (targetWakeMs != calCurrent.timeInMillis) {
-                val calTarget = Calendar.getInstance()
-                calTarget.timeInMillis = targetWakeMs
-                val newHour = calTarget.get(Calendar.HOUR_OF_DAY)
-                val newMin = calTarget.get(Calendar.MINUTE)
+            if (requiredWakeTime > currentAlarmMs) {
+                val calRequired = Calendar.getInstance()
+                calRequired.timeInMillis = requiredWakeTime
+                val pushedHour = calRequired.get(Calendar.HOUR_OF_DAY)
+                val pushedMin = calRequired.get(Calendar.MINUTE)
                 prefs.edit()
-                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, newHour)
-                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, newMin)
+                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, pushedHour)
+                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, pushedMin)
                     .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
                     .apply()
-                if (targetWakeMs > calCurrent.timeInMillis) {
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Pushed wake alarm forward to ${formatTime(newHour, newMin)} due to min sleep safeguard")
-                } else {
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Moved wake alarm closer to goal time: ${formatTime(newHour, newMin)}")
-                }
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Pushed wake alarm forward to ${formatTime(pushedHour, pushedMin)} due to min sleep safeguard")
             }
         }
 

@@ -924,7 +924,7 @@ class MainServiceTest {
     }
 
     @Test
-    fun testOnTimerRescheduledMovesWakeAlarmCloserToGoalTimeWhenBedtimeAllows() {
+    fun testOnTimerRescheduledDoesNotMoveWakeAlarmEarlier() {
         val now = System.currentTimeMillis()
         val minSleepMin = 450
 
@@ -955,8 +955,8 @@ class MainServiceTest {
 
         service.onTimerRescheduled()
 
-        assertEquals(goalHour, preferences.getInt("current_wake_hour", -1))
-        assertEquals(goalMin, preferences.getInt("current_wake_minute", -1))
+        assertEquals(currentHour, preferences.getInt("current_wake_hour", -1))
+        assertEquals(currentMin, preferences.getInt("current_wake_minute", -1))
     }
 
     @Test

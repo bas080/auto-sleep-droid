@@ -94,8 +94,11 @@ object PreferenceComputations {
                     minWakeTimeMillis = timerEndsAt + effectiveMinSleepMs
                 }
 
-                val baseWakeMs = if (calCurrent.timeInMillis >= calGoal.timeInMillis) calGoal.timeInMillis else calCurrent.timeInMillis
-                currentWakeTime = Math.max(baseWakeMs, minWakeTimeMillis)
+                if (minWakeTimeMillis > calCurrent.timeInMillis) {
+                    currentWakeTime = minWakeTimeMillis
+                } else {
+                    currentWakeTime = calCurrent.timeInMillis
+                }
             }
 
             val sleepStartTime = getter.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
