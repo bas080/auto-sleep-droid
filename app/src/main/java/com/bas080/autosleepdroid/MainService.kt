@@ -1007,15 +1007,15 @@ open class MainService : Service() {
             val timerDuration = prefs.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES)
             val minSleepMs = minSleepMin * 60_000L
             val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
-            val requiredWakeTime: Long
-            if (newTimerEndsAt > 0L) {
+            val hasOngoingSession = sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)
+
+            val requiredWakeTime: Long = if (hasOngoingSession) {
+                Math.max(sleepStartTime + minSleepMs, newTimerEndsAt)
+            } else if (newTimerEndsAt > 0L) {
                 val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
-                requiredWakeTime = newTimerEndsAt + effectiveMinSleepMs
-            } else if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
-                val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
-                requiredWakeTime = sleepStartTime + effectiveMinSleepMs
+                newTimerEndsAt + effectiveMinSleepMs
             } else {
-                requiredWakeTime = now + minSleepMs
+                now + minSleepMs
             }
 
             val goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
@@ -1604,13 +1604,14 @@ open class MainService : Service() {
 
             val timerDuration = prefs.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES)
             val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
+            val hasOngoingSession = sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)
+
             var minWakeTimeMillis = 0L
-            if (timerEndsAt > 0L) {
+            if (hasOngoingSession) {
+                minWakeTimeMillis = Math.max(sleepStartTime + minSleepMin * 60_000L, timerEndsAt)
+            } else if (timerEndsAt > 0L) {
                 val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
                 minWakeTimeMillis = timerEndsAt + effectiveMinSleepMs
-            } else if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
-                val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
-                minWakeTimeMillis = sleepStartTime + effectiveMinSleepMs
             }
 
             val scheduledAlarmMillis = Math.max(calCurrent.timeInMillis, minWakeTimeMillis)
