@@ -165,4 +165,28 @@ class PreferenceComputationsTest {
         assertFalse("Awake action should return false after awake action is registered",
             preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
     }
+
+    @Test
+    fun testSessionPhaseAndAwakeActionAcrossMidnightBoundary() {
+        val now = System.currentTimeMillis()
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = now
+        cal.add(Calendar.MINUTE, -10)
+        val wakeHour = cal.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = cal.get(Calendar.MINUTE)
+
+        rawPreferences.edit()
+            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true)
+            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, wakeHour)
+            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, wakeMin)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, wakeHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, wakeMin)
+            .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 480)
+            .putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now - 8 * 3600_000L)
+            .commit()
+
+        assertEquals(SessionPhase.ALARM, preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE))
+        assertTrue("Awake action should be shown when wake time passed 10 minutes ago across midnight boundary",
+            preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
+    }
 }
