@@ -91,9 +91,9 @@ When in the sleep/awake window (`T - 1.2 * minSleepDuration` until alarm dismiss
 - If the app process was terminated or the device was rebooted during an active timer countdown, restore the exact remaining countdown (or trigger immediate fade if timestamp passed).
 - If the app was explicitly in the **Off** state prior to reboot, keep it in the **Off** state.
 
-## Background Service Launch Fault Tolerance & Self-Healing Recovery
-- **Fault Tolerance**: If modern Android background execution restrictions prevent `MainService` from starting in the foreground when created in the background, non-fatal background service launch errors are logged to the Event Logger, and status notifications are posted via fallback system notification channels.
-- **Self-Healing Recovery**: Returning to or launching `MainActivity` automatically re-invokes the foreground timer service while the app is in the foreground, seamlessly promoting `MainService` back to a foreground service.
+## Error Handling Philosophy & Recovery
+- **Fail-Fast Policy**: Do not use `try-catch` blocks to swallow runtime errors or service launch exceptions that result in a degraded state of the app. All unexpected exceptions must fail fast and surface to the global uncaught exception handler (`AutoSleepApplication`) to present crash report details to the user.
+- **Self-Healing Recovery**: Returning to or launching `MainActivity` automatically re-invokes the foreground timer service while the app is in the foreground, promoting `MainService` to a foreground service.
 
 ## Import & Export Settings
 - **Purpose**: Enable users to back up, restore, or transfer app configuration across devices.
