@@ -138,6 +138,7 @@ class MainActivityTest {
 
     @Test
     fun testPendingCrashReportPromptsUserDialogAndLaunchesFeedbackIntent() {
+        ShadowAlertDialog.reset()
         val application = ApplicationProvider.getApplicationContext<Application>()
         EventLogger.log(application, EventLogger.LEVEL_HIGH, "Sample logged event before crash")
         val prefs = application.getSharedPreferences("crash_reports", Context.MODE_PRIVATE)
@@ -157,9 +158,16 @@ class MainActivityTest {
         sendBtn.performClick()
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
-        val chooserIntent = shadowActivity.nextStartedActivity
-        assertNotNull(chooserIntent)
-        assertEquals(Intent.ACTION_CHOOSER, chooserIntent?.action)
+        var chooserIntent: Intent? = null
+        var nextIntent: Intent? = shadowActivity.nextStartedActivity
+        while (nextIntent != null) {
+            if (Intent.ACTION_CHOOSER == nextIntent.action) {
+                chooserIntent = nextIntent
+                break
+            }
+            nextIntent = shadowActivity.nextStartedActivity
+        }
+        assertNotNull("Chooser intent must be launched when clicking send feedback", chooserIntent)
 
         val sendIntent = IntentCompat.getParcelableExtra(chooserIntent!!, Intent.EXTRA_INTENT, Intent::class.java)
         assertNotNull(sendIntent)

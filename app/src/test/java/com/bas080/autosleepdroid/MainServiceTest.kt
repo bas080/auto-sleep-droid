@@ -665,7 +665,6 @@ class MainServiceTest {
             .putInt("current_wake_minute", 30)
             .putInt("min_sleep_duration_minutes", minSleepMin)
             .putInt("duration_minutes", timerDurationMin)
-            .putLong("sleep_start_time_ms", now - 2 * 3600_000L)
             .commit()
 
         val cal = MainService.calculateScheduledAlarm(context, now, timerEndsAt)
@@ -911,7 +910,7 @@ class MainServiceTest {
 
         service.onTimerRescheduled()
 
-        val requiredWakeTimeMs = timerEndsAt + Math.max(0L, (minSleepMin - timerDurationMin) * 60_000L)
+        val requiredWakeTimeMs = Math.max(now + minSleepMin * 60_000L, timerEndsAt)
         val calRequired = Calendar.getInstance()
         calRequired.timeInMillis = requiredWakeTimeMs
 
@@ -958,6 +957,80 @@ class MainServiceTest {
 
         assertEquals(currentHour, preferences.getInt("current_wake_hour", -1))
         assertEquals(currentMin, preferences.getInt("current_wake_minute", -1))
+    }
+
+    @Test
+    fun testMidNightAudioPlaybackDoesNotPushAlarmForward() {
+        val now = System.currentTimeMillis()
+        val minSleepMin = 450
+
+        val bedtimeMs = now - 4 * 3600_000L
+
+        val calWake = Calendar.getInstance()
+        calWake.timeInMillis = now + (3 * 3600_000L + 30 * 60_000L)
+        val wakeHour = calWake.get(Calendar.HOUR_OF_DAY)
+        val wakeMin = calWake.get(Calendar.MINUTE)
+
+        val timerDurationMin = 20
+        val timerEndsAt = now + timerDurationMin * 60_000L
+
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", wakeHour)
+            .putInt("wake_up_goal_minute", wakeMin)
+            .putInt("current_wake_hour", wakeHour)
+            .putInt("current_wake_minute", wakeMin)
+            .putInt("min_sleep_duration_minutes", minSleepMin)
+            .putLong("sleep_start_time_ms", bedtimeMs)
+            .putInt("duration_minutes", timerDurationMin)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        service.startTimer(timerDurationMin, timerEndsAt, true)
+        service.onTimerRescheduled()
+
+        assertEquals("Current wake hour must not be pushed forward on mid-night audio playback",
+            wakeHour, preferences.getInt("current_wake_hour", -1))
+        assertEquals("Current wake minute must not be pushed forward on mid-night audio playback",
+            wakeMin, preferences.getInt("current_wake_minute", -1))
+    }
+
+    @Test
+    fun testOnTimerRescheduledPreservesCustomEarlyWakeAlarm() {
+        val now = System.currentTimeMillis()
+        val minSleepMin = 450
+
+        val calEarlyCurrent = Calendar.getInstance()
+        calEarlyCurrent.timeInMillis = now + 6 * 3600_000L
+        val earlyHour = calEarlyCurrent.get(Calendar.HOUR_OF_DAY)
+        val earlyMin = calEarlyCurrent.get(Calendar.MINUTE)
+
+        val calGoal = Calendar.getInstance()
+        calGoal.timeInMillis = now + 8 * 3600_000L
+        val goalHour = calGoal.get(Calendar.HOUR_OF_DAY)
+        val goalMin = calGoal.get(Calendar.MINUTE)
+
+        val bedtimeMs = now - 2 * 3600_000L
+
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", goalHour)
+            .putInt("wake_up_goal_minute", goalMin)
+            .putInt("current_wake_hour", earlyHour)
+            .putInt("current_wake_minute", earlyMin)
+            .putInt("min_sleep_duration_minutes", minSleepMin)
+            .putLong("sleep_start_time_ms", bedtimeMs)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        service.onTimerRescheduled()
+
+        assertEquals(earlyHour, preferences.getInt("current_wake_hour", -1))
+        assertEquals(earlyMin, preferences.getInt("current_wake_minute", -1))
     }
 
     @Test
