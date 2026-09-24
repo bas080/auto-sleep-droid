@@ -357,8 +357,8 @@ open class MainService : Service() {
         }
         createNotificationChannel()
 
-        setupPreferenceListeners()
         initializeStateAndNotification()
+        setupPreferenceListeners()
     }
 
     private fun setupPreferenceListeners() {
@@ -1420,14 +1420,18 @@ open class MainService : Service() {
     }
 
     open fun startForegroundNotification(id: Int, notification: Notification) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                id,
-                notification,
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-            )
-        } else {
-            startForeground(id, notification)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    id,
+                    notification,
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                )
+            } else {
+                startForeground(id, notification)
+            }
+        } catch (e: Exception) {
+            EventLogger.log(this, "Failed to start foreground service: ${e.message}")
         }
     }
 

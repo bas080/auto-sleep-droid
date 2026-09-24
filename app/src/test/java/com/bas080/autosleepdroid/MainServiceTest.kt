@@ -1237,6 +1237,18 @@ class MainServiceTest {
     }
 
     @Test
+    fun testOnCreateCatchesForegroundServiceStartNotAllowedException() {
+        val controller = Robolectric.buildService(FailingForegroundMainService::class.java)
+        // Creating service invokes onCreate() which invokes startForegroundNotification / showOrHideNotification
+        val service = controller.create().get()
+        assertNotNull("MainService should be created successfully even if startForeground throws exception", service)
+
+        val events = EventLogger.getEvents(context)
+        val hasLoggedFailure = events.any { it.contains("Failed to start foreground service") }
+        assertTrue("EventLogger should record the foreground service start failure during onCreate", hasLoggedFailure)
+    }
+
+    @Test
     @Suppress("DEPRECATION")
     fun testNotificationUpdateAlarmScheduledForAwakeWindowStart() {
         val now = System.currentTimeMillis()
