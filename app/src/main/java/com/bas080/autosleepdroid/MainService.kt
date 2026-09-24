@@ -1432,13 +1432,8 @@ open class MainService : Service() {
     }
 
     private fun showOrHideNotification() {
-        try {
-            startForegroundNotification(NOTIFICATION_ID, buildNotification())
-            isForeground = true
-        } catch (e: Exception) {
-            EventLogger.log(this, "Failed to start foreground service: ${e.message}")
-            isForeground = false
-        }
+        startForegroundNotification(NOTIFICATION_ID, buildNotification())
+        isForeground = true
     }
 
     private fun updateNotification() {
