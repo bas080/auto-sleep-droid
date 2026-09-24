@@ -102,6 +102,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        checkAndPromptCrashReport()
+
         setContentView(R.layout.activity_main)
 
         preferenceManager = PreferenceManager(getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE))
@@ -125,7 +127,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         requestNotificationPermissionOnStartupIfNeeded()
         startTimerService()
         requestExactAlarmPermissionIfNeeded()
-        checkAndPromptCrashReport()
     }
 
     private fun checkAndPromptCrashReport() {
