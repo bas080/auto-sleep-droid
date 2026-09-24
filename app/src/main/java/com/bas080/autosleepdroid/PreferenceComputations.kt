@@ -57,6 +57,18 @@ object PreferenceComputations {
                 val currentHour = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)
                 val currentMin = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
 
+                val calGoal = Calendar.getInstance()
+                calGoal.timeInMillis = now
+                calGoal.set(Calendar.HOUR_OF_DAY, goalHour)
+                calGoal.set(Calendar.MINUTE, goalMin)
+                calGoal.set(Calendar.SECOND, 0)
+                calGoal.set(Calendar.MILLISECOND, 0)
+                if (now - calGoal.timeInMillis > 12 * 3600_000L) {
+                    calGoal.add(Calendar.DAY_OF_YEAR, 1)
+                } else if (calGoal.timeInMillis - now > 12 * 3600_000L) {
+                    calGoal.add(Calendar.DAY_OF_YEAR, -1)
+                }
+
                 val calCurrent = Calendar.getInstance()
                 calCurrent.timeInMillis = now
                 calCurrent.set(Calendar.HOUR_OF_DAY, currentHour)
@@ -68,7 +80,6 @@ object PreferenceComputations {
                 } else if (calCurrent.timeInMillis - now > 12 * 3600_000L) {
                     calCurrent.add(Calendar.DAY_OF_YEAR, -1)
                 }
-                currentWakeTime = calCurrent.timeInMillis
 
                 val timerDuration = getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES)
                 val timerEndsAt = getter.getLong(PreferenceKeys.KEY_TIMER_ENDS_AT, 0L)
@@ -81,9 +92,9 @@ object PreferenceComputations {
                     val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
                     minWakeTimeMillis = sleepStartTime + effectiveMinSleepMs
                 }
-                if (minWakeTimeMillis > currentWakeTime) {
-                    currentWakeTime = minWakeTimeMillis
-                }
+
+                val baseWakeMs = if (calCurrent.timeInMillis >= calGoal.timeInMillis) calGoal.timeInMillis else calCurrent.timeInMillis
+                currentWakeTime = Math.max(baseWakeMs, minWakeTimeMillis)
             }
 
             val sleepStartTime = getter.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)

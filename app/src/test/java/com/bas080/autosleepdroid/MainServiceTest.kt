@@ -925,7 +925,7 @@ class MainServiceTest {
     }
 
     @Test
-    fun testOnTimerRescheduledDoesNotMoveWakeAlarmEarlier() {
+    fun testOnTimerRescheduledMovesWakeAlarmCloserToGoalTimeWhenBedtimeAllows() {
         val now = System.currentTimeMillis()
         val minSleepMin = 450
 
@@ -956,8 +956,44 @@ class MainServiceTest {
 
         service.onTimerRescheduled()
 
-        assertEquals(currentHour, preferences.getInt("current_wake_hour", -1))
-        assertEquals(currentMin, preferences.getInt("current_wake_minute", -1))
+        assertEquals(goalHour, preferences.getInt("current_wake_hour", -1))
+        assertEquals(goalMin, preferences.getInt("current_wake_minute", -1))
+    }
+
+    @Test
+    fun testOnTimerRescheduledPreservesCustomEarlyWakeAlarm() {
+        val now = System.currentTimeMillis()
+        val minSleepMin = 450
+
+        val calEarlyCurrent = Calendar.getInstance()
+        calEarlyCurrent.timeInMillis = now + 6 * 3600_000L
+        val earlyHour = calEarlyCurrent.get(Calendar.HOUR_OF_DAY)
+        val earlyMin = calEarlyCurrent.get(Calendar.MINUTE)
+
+        val calGoal = Calendar.getInstance()
+        calGoal.timeInMillis = now + 8 * 3600_000L
+        val goalHour = calGoal.get(Calendar.HOUR_OF_DAY)
+        val goalMin = calGoal.get(Calendar.MINUTE)
+
+        val bedtimeMs = now - 2 * 3600_000L
+
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", goalHour)
+            .putInt("wake_up_goal_minute", goalMin)
+            .putInt("current_wake_hour", earlyHour)
+            .putInt("current_wake_minute", earlyMin)
+            .putInt("min_sleep_duration_minutes", minSleepMin)
+            .putLong("sleep_start_time_ms", bedtimeMs)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        service.onTimerRescheduled()
+
+        assertEquals(earlyHour, preferences.getInt("current_wake_hour", -1))
+        assertEquals(earlyMin, preferences.getInt("current_wake_minute", -1))
     }
 
     @Test
