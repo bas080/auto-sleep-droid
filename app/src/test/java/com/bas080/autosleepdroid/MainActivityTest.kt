@@ -149,11 +149,20 @@ class MainActivityTest {
         val shadowActivity = Shadows.shadowOf(activity)
         while (shadowActivity.nextStartedActivity != null) {}
 
-        val crashDialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertNotNull("Crash report dialog should be shown on launch if pending crash report exists", crashDialog)
+        val feedbackOverlay = activity.findViewById<View>(R.id.feedback_overlay_container)
+        val titleText = activity.findViewById<TextView>(R.id.feedback_title_text)
+        val contentEdit = activity.findViewById<EditText>(R.id.feedback_text_content)
+        val sendBtn = activity.findViewById<Button>(R.id.btn_send_feedback_email)
 
-        val sendBtn = crashDialog.getButton(DialogInterface.BUTTON_POSITIVE)
-        assertNotNull(sendBtn)
+        assertEquals("Feedback overlay UI should be visible on launch if pending crash report exists", View.VISIBLE, feedbackOverlay.visibility)
+        assertEquals(activity.getString(R.string.dialog_crash_title), titleText.text.toString())
+
+        val bodyText = contentEdit.text.toString()
+        assertTrue(bodyText.contains("NullPointerException"))
+        assertTrue("Crash report email must contain guiding questions", bodyText.contains("What were you doing right before the app crashed?"))
+        assertTrue("Crash report email must include Logs section", bodyText.contains("Logs:"))
+        assertTrue("Crash report email must contain logged events", bodyText.contains("Sample logged event before crash"))
+
         sendBtn.performClick()
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
@@ -165,13 +174,8 @@ class MainActivityTest {
         assertNotNull(sendIntent)
         assertEquals(Intent.ACTION_SENDTO, sendIntent?.action)
         assertTrue(sendIntent?.getStringExtra(Intent.EXTRA_SUBJECT)?.contains("Auto Sleep Droid Crash Report") == true)
-        val bodyText = sendIntent?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-        assertTrue(bodyText.contains("NullPointerException"))
-        assertTrue("Crash report email must contain guiding questions", bodyText.contains("What were you doing right before the app crashed?"))
-        assertTrue("Crash report email must include Logs section", bodyText.contains("Logs:"))
-        assertTrue("Crash report email must contain logged events", bodyText.contains("Sample logged event before crash"))
 
-        assertFalse("Pending crash report should be cleared after sending report", prefs.contains("pending_crash_report"))
+        assertTrue("Pending crash report should be retained after sending report unless explicitly discarded", prefs.contains("pending_crash_report"))
     }
 
     @Test
@@ -181,10 +185,10 @@ class MainActivityTest {
         prefs.edit().putString("pending_crash_report", "CRASH: java.lang.IllegalStateException at lifecycle.Test").commit()
 
         val controller = Robolectric.buildActivity(MainActivity::class.java)
-        controller.create()
+        val activity = controller.create().get()
 
-        val crashDialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertNotNull("Crash report dialog must be shown immediately during Activity onCreate lifecycle phase", crashDialog)
+        val feedbackOverlay = activity.findViewById<View>(R.id.feedback_overlay_container)
+        assertEquals("Crash report overlay must be shown immediately during Activity onCreate lifecycle phase", View.VISIBLE, feedbackOverlay.visibility)
     }
 
     @Test
@@ -194,17 +198,18 @@ class MainActivityTest {
         prefs.edit().putString("pending_crash_report", "CRASH: java.lang.NullPointerException at test.DummyClass").commit()
 
         val controller = Robolectric.buildActivity(MainActivity::class.java)
-        controller.create().resume().get()
+        val activity = controller.create().resume().get()
 
-        val crashDialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertNotNull("Crash report dialog should be shown on launch if pending crash report exists", crashDialog)
+        val btnDiscard = activity.findViewById<Button>(R.id.btn_discard_crash)
+        assertNotNull(btnDiscard)
+        assertEquals(View.VISIBLE, btnDiscard.visibility)
 
-        val cancelBtn = crashDialog.getButton(DialogInterface.BUTTON_NEGATIVE)
-        assertNotNull(cancelBtn)
-        cancelBtn.performClick()
+        btnDiscard.performClick()
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
-        assertFalse("Pending crash report should be cleared when user explicitly declines", prefs.contains("pending_crash_report"))
+        assertFalse("Pending crash report should be cleared when user explicitly discards", prefs.contains("pending_crash_report"))
+        val btnReportCrash = activity.findViewById<View>(R.id.btn_report_crash)
+        assertEquals(View.GONE, btnReportCrash.visibility)
     }
 
     @Test
@@ -222,11 +227,21 @@ class MainActivityTest {
         assertNotNull("btn_feedback view should exist in About section", btnFeedback)
 
         btnFeedback.performClick()
-        val feedbackDialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertNotNull("Feedback click should show crash_report/feedback dialog UI", feedbackDialog)
 
-        val sendBtn = feedbackDialog.getButton(DialogInterface.BUTTON_POSITIVE)
-        assertNotNull(sendBtn)
+        val feedbackOverlay = activity.findViewById<View>(R.id.feedback_overlay_container)
+        val titleText = activity.findViewById<TextView>(R.id.feedback_title_text)
+        val contentEdit = activity.findViewById<EditText>(R.id.feedback_text_content)
+        val sendBtn = activity.findViewById<Button>(R.id.btn_send_feedback_email)
+
+        assertEquals(View.VISIBLE, feedbackOverlay.visibility)
+        assertEquals(activity.getString(R.string.link_feedback), titleText.text.toString())
+
+        val bodyWithLogs = contentEdit.text.toString()
+        assertTrue("Feedback form should contain guiding questions", bodyWithLogs.contains("What feature or aspect of the app are you giving feedback on?"))
+        assertTrue("Feedback form with logs included should contain Logs section", bodyWithLogs.contains("Logs:"))
+        assertTrue("Feedback form should contain logged events", bodyWithLogs.contains("User feedback test log"))
+        assertFalse("Feedback form should NOT contain stack trace", bodyWithLogs.contains("Crash Report:"))
+
         sendBtn.performClick()
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
@@ -242,11 +257,6 @@ class MainActivityTest {
         assertNotNull(emails)
         assertEquals("bas080@hotmail.com", emails?.get(0))
         assertTrue(sendIntent?.getStringExtra(Intent.EXTRA_SUBJECT)?.contains("Auto Sleep Droid Feedback") == true)
-        val bodyWithLogs = sendIntent?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-        assertTrue("Feedback email should contain guiding questions", bodyWithLogs.contains("What feature or aspect of the app are you giving feedback on?"))
-        assertTrue("Feedback email with logs included should contain Logs section", bodyWithLogs.contains("Logs:"))
-        assertTrue("Feedback email should contain logged events", bodyWithLogs.contains("User feedback test log"))
-        assertFalse("Feedback email should NOT contain stack trace", bodyWithLogs.contains("Crash Report:"))
     }
 
     @Test
@@ -261,15 +271,34 @@ class MainActivityTest {
         assertNotNull(btnFeedback)
 
         btnFeedback.performClick()
-        val feedbackDialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertNotNull(feedbackDialog)
 
-        val cancelBtn = feedbackDialog.getButton(DialogInterface.BUTTON_NEGATIVE)
-        assertNotNull(cancelBtn)
-        cancelBtn.performClick()
+        val btnBack = activity.findViewById<Button>(R.id.btn_feedback_back)
+        assertNotNull(btnBack)
+        btnBack.performClick()
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
-        assertEquals("Clicking Cancel on feedback dialog should not launch email chooser", null, shadowActivity.nextStartedActivity)
+        val feedbackOverlay = activity.findViewById<View>(R.id.feedback_overlay_container)
+        assertEquals(View.GONE, feedbackOverlay.visibility)
+        assertEquals("Clicking Back on feedback overlay should not launch email chooser", null, shadowActivity.nextStartedActivity)
+    }
+
+    @Test
+    fun testReportCrashRowVisibleWhenPendingCrashReportExists() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val prefs = application.getSharedPreferences("crash_reports", Context.MODE_PRIVATE)
+        prefs.edit().putString("pending_crash_report", "CRASH: java.lang.NullPointerException at test.DummyClass").commit()
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val btnReportCrash = activity.findViewById<View>(R.id.btn_report_crash)
+        assertNotNull(btnReportCrash)
+        assertEquals(View.VISIBLE, btnReportCrash.visibility)
+
+        btnReportCrash.performClick()
+
+        val feedbackOverlay = activity.findViewById<View>(R.id.feedback_overlay_container)
+        assertEquals(View.VISIBLE, feedbackOverlay.visibility)
     }
 
     @Test

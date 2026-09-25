@@ -41,6 +41,13 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private var manualOverlayContainer: View? = null
     private var manualTextContent: TextView? = null
     private var logsOverlayContainer: View? = null
+    private var feedbackOverlayContainer: View? = null
+    private var feedbackTitleText: TextView? = null
+    private var feedbackTextContent: EditText? = null
+    private var btnDiscardCrash: Button? = null
+    private var btnSendFeedbackEmail: Button? = null
+    private var btnFeedbackBack: Button? = null
+    private var btnReportCrash: View? = null
 
     private var headerDnd: View? = null
     private var headerTimer: View? = null
@@ -102,13 +109,13 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        checkAndPromptCrashReport()
-
         setContentView(R.layout.activity_main)
+        bindViews()
+
+        checkAndPromptCrashReport()
 
         preferenceManager = PreferenceManager(getSharedPreferences(PreferenceKeys.PREFERENCES_NAME, MODE_PRIVATE))
 
-        bindViews()
         setupHeaderAndLinks()
         setupConfigControls()
 
@@ -116,6 +123,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             override fun handleOnBackPressed() {
                 if ((manualOverlayContainer != null && manualOverlayContainer!!.visibility == View.VISIBLE)
                     || (logsOverlayContainer != null && logsOverlayContainer!!.visibility == View.VISIBLE)
+                    || (feedbackOverlayContainer != null && feedbackOverlayContainer!!.visibility == View.VISIBLE)
                 ) {
                     hideOverlays()
                 } else {
@@ -123,6 +131,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 }
             }
         })
+        updateReportCrashRowVisibility()
 
         requestNotificationPermissionOnStartupIfNeeded()
         startTimerService()
@@ -138,28 +147,18 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val prefs = getSharedPreferences("crash_reports", MODE_PRIVATE)
         val pendingReport = prefs.getString("pending_crash_report", null)
         if (pendingReport != null) {
-            showFeedbackDialog(pendingReport)
+            showFeedbackOverlay(crashReport = pendingReport)
         }
     }
 
-    private fun showFeedbackDialog(crashReport: String? = null) {
-        val isCrash = !crashReport.isNullOrEmpty()
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle(if (isCrash) R.string.dialog_crash_title else R.string.link_feedback)
-        builder.setMessage(if (isCrash) getString(R.string.dialog_crash_message) else getString(R.string.dialog_feedback_logs_message))
-        builder.setPositiveButton(R.string.btn_send_report) { _, _ ->
-            if (isCrash) {
-                getSharedPreferences("crash_reports", MODE_PRIVATE).edit().remove("pending_crash_report").apply()
-            }
-            sendFeedbackEmail(crashReport = crashReport, includeLogs = true)
-        }
-        builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ ->
-            if (isCrash) {
-                getSharedPreferences("crash_reports", MODE_PRIVATE).edit().remove("pending_crash_report").apply()
-            }
-            dialog.dismiss()
-        }
-        builder.show()
+    fun showFeedbackDialog(crashReport: String? = null) {
+        showFeedbackOverlay(crashReport)
+    }
+
+    private fun updateReportCrashRowVisibility() {
+        val prefs = getSharedPreferences("crash_reports", MODE_PRIVATE)
+        val pendingReport = prefs.getString("pending_crash_report", null)
+        btnReportCrash?.visibility = if (pendingReport != null) View.VISIBLE else View.GONE
     }
 
     private fun requestNotificationPermissionOnStartupIfNeeded() {
@@ -176,6 +175,13 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         manualOverlayContainer = findViewById(R.id.manual_overlay_container)
         manualTextContent = findViewById(R.id.manual_text_content)
         logsOverlayContainer = findViewById(R.id.logs_overlay_container)
+        feedbackOverlayContainer = findViewById(R.id.feedback_overlay_container)
+        feedbackTitleText = findViewById(R.id.feedback_title_text)
+        feedbackTextContent = findViewById(R.id.feedback_text_content)
+        btnDiscardCrash = findViewById(R.id.btn_discard_crash)
+        btnSendFeedbackEmail = findViewById(R.id.btn_send_feedback_email)
+        btnFeedbackBack = findViewById(R.id.btn_feedback_back)
+        btnReportCrash = findViewById(R.id.btn_report_crash)
 
         headerDnd = findViewById(R.id.header_dnd)
         headerTimer = findViewById(R.id.header_timer)
@@ -233,22 +239,106 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         btnVersion?.setOnClickListener { openUrl("https://github.com/bas080/auto-sleep-droid/releases") }
 
-        btnFeedback?.setOnClickListener { showFeedbackDialog(crashReport = null) }
+        btnFeedback?.setOnClickListener { showFeedbackOverlay(crashReport = null) }
+
+        btnReportCrash?.setOnClickListener {
+            val prefs = getSharedPreferences("crash_reports", MODE_PRIVATE)
+            val pendingReport = prefs.getString("pending_crash_report", null)
+            showFeedbackOverlay(crashReport = pendingReport)
+        }
+
+        btnFeedbackBack?.setOnClickListener { hideOverlays() }
 
         btnLinks?.setOnClickListener { showLinksDialog() }
     }
 
-    private fun showFeedbackDialog() {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle(R.string.link_feedback)
-        builder.setMessage(R.string.dialog_feedback_logs_message)
-        builder.setPositiveButton(R.string.btn_send_report) { _, _ ->
-            sendFeedbackEmail(includeLogs = true)
+    fun showFeedbackOverlay(crashReport: String? = null) {
+        val isCrash = !crashReport.isNullOrEmpty()
+        feedbackTitleText?.setText(if (isCrash) R.string.dialog_crash_title else R.string.link_feedback)
+        btnDiscardCrash?.visibility = if (isCrash) View.VISIBLE else View.GONE
+
+        val bodyBuilder = StringBuilder()
+        if (isCrash) {
+            bodyBuilder.append("Please answer the questions below to help us troubleshoot and fix the error:\n")
+            bodyBuilder.append("- What were you doing right before the app crashed?\n")
+            bodyBuilder.append("- How often does this crash occur (e.g., every time, occasionally, first time)?\n")
+            bodyBuilder.append("- Were any specific features active (e.g., Do Not Disturb sync, Wake-up goal, Health Connect)?\n\n")
+            bodyBuilder.append("Crash Report:\n").append(crashReport).append("\n\n")
+        } else {
+            bodyBuilder.append("Please answer the questions below to help us improve Auto Sleep Droid:\n")
+            bodyBuilder.append("- What feature or aspect of the app are you giving feedback on?\n")
+            bodyBuilder.append("- What happened, or what would you like to see improved?\n")
+            bodyBuilder.append("- If reporting a bug, what steps can reproduce the issue?\n\n")
         }
-        builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ ->
-            dialog.dismiss()
+
+        val events = EventLogger.getEvents(this)
+        if (events.isNotEmpty()) {
+            bodyBuilder.append("Logs:\n")
+            for (event in events) {
+                bodyBuilder.append(EventLogger.formatColoredEvent(this, event).toString()).append("\n")
+            }
+            bodyBuilder.append("\n")
         }
-        builder.show()
+
+        bodyBuilder.append("---\nApp Version: ").append(BuildConfig.VERSION_NAME)
+            .append("\nAndroid Version: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")")
+            .append("\nDevice: ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL)
+
+        feedbackTextContent?.setText(bodyBuilder.toString())
+
+        btnSendFeedbackEmail?.setOnClickListener {
+            val editedText = feedbackTextContent?.text?.toString() ?: bodyBuilder.toString()
+            val subject = if (isCrash) {
+                "Auto Sleep Droid Crash Report (v${BuildConfig.VERSION_NAME})"
+            } else {
+                "Auto Sleep Droid Feedback (v${BuildConfig.VERSION_NAME})"
+            }
+            sendFeedbackEmailWithText(subject, editedText)
+        }
+
+        btnDiscardCrash?.setOnClickListener {
+            getSharedPreferences("crash_reports", MODE_PRIVATE).edit().remove("pending_crash_report").apply()
+            updateReportCrashRowVisibility()
+            hideOverlays()
+        }
+
+        feedbackOverlayContainer?.visibility = View.VISIBLE
+        manualOverlayContainer?.visibility = View.GONE
+        logsOverlayContainer?.visibility = View.GONE
+        mainContentContainer?.visibility = View.GONE
+    }
+
+    private fun sendFeedbackEmailWithText(subject: String, body: String) {
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:bas080@hotmail.com")
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("bas080@hotmail.com"))
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, body)
+        }
+
+        try {
+            startActivity(Intent.createChooser(intent, getString(R.string.link_feedback)))
+        } catch (e: Exception) {
+            val fallbackIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "message/rfc822"
+                putExtra(Intent.EXTRA_EMAIL, arrayOf("bas080@hotmail.com"))
+                putExtra(Intent.EXTRA_SUBJECT, subject)
+                putExtra(Intent.EXTRA_TEXT, body)
+            }
+            try {
+                startActivity(Intent.createChooser(fallbackIntent, getString(R.string.link_feedback)))
+            } catch (ex: Exception) {
+                EventLogger.log(this, "Failed to launch email client: " + ex.message)
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
+                if (clipboard != null) {
+                    val clip = ClipData.newPlainText("Crash / Feedback Report", body)
+                    clipboard.setPrimaryClip(clip)
+                    Toast.makeText(this, "No email app found. Report copied to clipboard.", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "No email app found", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     private fun showLinksDialog() {
@@ -365,6 +455,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private fun hideOverlays() {
         manualOverlayContainer?.visibility = View.GONE
         logsOverlayContainer?.visibility = View.GONE
+        feedbackOverlayContainer?.visibility = View.GONE
         mainContentContainer?.visibility = View.VISIBLE
     }
 
@@ -904,6 +995,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     override fun onResume() {
         super.onResume()
+        updateReportCrashRowVisibility()
         EventLogger.setListener(this)
         refreshEventLog()
         if (isRequestingHealthConnectPermission) {
