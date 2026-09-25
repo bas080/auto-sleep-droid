@@ -25,7 +25,6 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
@@ -974,11 +973,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             }
         }
 
-        val container = FrameLayout(this)
-        val paddingHorizontalPx = (24 * resources.displayMetrics.density).toInt()
-        container.setPadding(paddingHorizontalPx, 0, paddingHorizontalPx, 0)
-        container.addView(input)
-        builder.setView(container)
+        builder.setView(input)
 
         builder.setPositiveButton(R.string.dialog_import_action) { _, _ ->
             val importStr = input.text.toString().trim()
