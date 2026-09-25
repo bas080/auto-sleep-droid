@@ -253,15 +253,17 @@ class MainActivityTest {
         val sendIntent = IntentCompat.getParcelableExtra(chooserIntent!!, Intent.EXTRA_INTENT, Intent::class.java)
         assertNotNull(sendIntent)
         assertEquals(Intent.ACTION_SENDTO, sendIntent?.action)
-        assertEquals("mailto:bas080@hotmail.com", sendIntent?.dataString)
+        assertTrue(sendIntent?.dataString?.startsWith("mailto:bas080@hotmail.com?") == true)
 
         val mailtoUri = sendIntent?.data
         assertNotNull("mailto URI should not be null", mailtoUri)
         assertEquals("mailto", mailtoUri?.scheme)
-        assertEquals("bas080@hotmail.com", mailtoUri?.schemeSpecificPart)
-        val parsedUri = android.net.Uri.parse(sendIntent?.dataString)
+        val dataStr = sendIntent?.dataString ?: ""
+        val parsedUri = android.net.Uri.parse(dataStr)
         assertNotNull("dataString should be parseable into a valid Uri", parsedUri)
         assertEquals("mailto", parsedUri.scheme)
+        assertTrue("mailto URI string should contain subject query parameter", dataStr.contains("subject="))
+        assertTrue("mailto URI string should contain body query parameter", dataStr.contains("body="))
 
         val emails = sendIntent?.getStringArrayExtra(Intent.EXTRA_EMAIL)
         assertNotNull(emails)

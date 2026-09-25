@@ -361,8 +361,9 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun sendFeedbackEmailWithText(subject: String, body: String) {
+        val mailtoUriStr = "mailto:bas080@hotmail.com?subject=" + Uri.encode(subject) + "&body=" + Uri.encode(body)
         val intent = Intent(Intent.ACTION_SENDTO).apply {
-            data = Uri.parse("mailto:bas080@hotmail.com")
+            data = Uri.parse(mailtoUriStr)
             putExtra(Intent.EXTRA_EMAIL, arrayOf("bas080@hotmail.com"))
             putExtra(Intent.EXTRA_SUBJECT, subject)
             putExtra(Intent.EXTRA_TEXT, body)
