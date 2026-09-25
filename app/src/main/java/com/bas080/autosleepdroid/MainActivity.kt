@@ -24,6 +24,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
@@ -533,7 +534,9 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         val durationInputView = DurationInputView(this)
         durationInputView.configure(minHours, maxHours, minuteStep)
-        durationInputView.setPadding(48, 24, 48, 24)
+        val paddingHorizontalPx = (24 * resources.displayMetrics.density).toInt()
+        val paddingVerticalPx = (12 * resources.displayMetrics.density).toInt()
+        durationInputView.setPadding(paddingHorizontalPx, paddingVerticalPx, paddingHorizontalPx, paddingVerticalPx)
         durationInputView.setTotalMinutes(currentMinutes)
 
         val builder = AlertDialog.Builder(this)
@@ -951,7 +954,11 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             }
         }
 
-        builder.setView(input)
+        val container = FrameLayout(this)
+        val paddingHorizontalPx = (24 * resources.displayMetrics.density).toInt()
+        container.setPadding(paddingHorizontalPx, 0, paddingHorizontalPx, 0)
+        container.addView(input)
+        builder.setView(container)
 
         builder.setPositiveButton(R.string.dialog_import_action) { _, _ ->
             val importStr = input.text.toString().trim()
