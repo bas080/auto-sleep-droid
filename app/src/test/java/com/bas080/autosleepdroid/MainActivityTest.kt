@@ -171,7 +171,20 @@ class MainActivityTest {
         assertTrue("Crash report email must include Logs section", bodyText.contains("Logs:"))
         assertTrue("Crash report email must contain logged events", bodyText.contains("Sample logged event before crash"))
 
-        assertTrue("Pending crash report should be retained when sending report", prefs.contains("pending_crash_report"))
+        assertFalse("Pending crash report should be cleared after sending report", prefs.contains("pending_crash_report"))
+    }
+
+    @Test
+    fun testCrashReportCheckRunsFirstInOnCreateLifecycle() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val prefs = application.getSharedPreferences("crash_reports", Context.MODE_PRIVATE)
+        prefs.edit().putString("pending_crash_report", "CRASH: java.lang.IllegalStateException at lifecycle.Test").commit()
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        controller.create()
+
+        val crashDialog = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull("Crash report dialog must be shown immediately during Activity onCreate lifecycle phase", crashDialog)
     }
 
     @Test
@@ -195,7 +208,7 @@ class MainActivityTest {
     }
 
     @Test
-    fun testFeedbackButtonPromptsIncludeLogsDialogAndLaunchesIntent() {
+    fun testFeedbackButtonDirectlyLaunchesFeedbackEmailIntent() {
         val application = ApplicationProvider.getApplicationContext<Application>()
         EventLogger.log(application, EventLogger.LEVEL_HIGH, "User feedback test log")
 
@@ -209,12 +222,6 @@ class MainActivityTest {
         assertNotNull("btn_feedback view should exist in About section", btnFeedback)
 
         btnFeedback.performClick()
-        val promptDialog = ShadowAlertDialog.getLatestAlertDialog()
-        assertNotNull("Feedback click should show include logs prompt dialog", promptDialog)
-
-        val sendBtn = promptDialog.getButton(DialogInterface.BUTTON_POSITIVE)
-        assertNotNull(sendBtn)
-        sendBtn.performClick()
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
         val chooserIntent = Shadows.shadowOf(activity).nextStartedActivity
@@ -224,7 +231,10 @@ class MainActivityTest {
         val sendIntent = IntentCompat.getParcelableExtra(chooserIntent!!, Intent.EXTRA_INTENT, Intent::class.java)
         assertNotNull(sendIntent)
         assertEquals(Intent.ACTION_SENDTO, sendIntent?.action)
-        assertTrue(sendIntent?.dataString?.startsWith("mailto:bas080@hotmail.com") == true)
+        assertEquals("mailto:bas080@hotmail.com", sendIntent?.dataString)
+        val emails = sendIntent?.getStringArrayExtra(Intent.EXTRA_EMAIL)
+        assertNotNull(emails)
+        assertEquals("bas080@hotmail.com", emails?.get(0))
         assertTrue(sendIntent?.getStringExtra(Intent.EXTRA_SUBJECT)?.contains("Auto Sleep Droid Feedback") == true)
         val bodyWithLogs = sendIntent?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
         assertTrue("Feedback email should contain guiding questions", bodyWithLogs.contains("What feature or aspect of the app are you giving feedback on?"))

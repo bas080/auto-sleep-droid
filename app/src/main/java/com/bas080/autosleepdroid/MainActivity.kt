@@ -142,6 +142,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             builder.setTitle(R.string.dialog_crash_title)
             builder.setMessage(R.string.dialog_crash_message)
             builder.setPositiveButton(R.string.btn_send_report) { _, _ ->
+                prefs.edit().remove("pending_crash_report").apply()
                 sendFeedbackEmail(pendingReport)
             }
             builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ ->
@@ -223,7 +224,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         btnVersion?.setOnClickListener { openUrl("https://github.com/bas080/auto-sleep-droid/releases") }
 
-        btnFeedback?.setOnClickListener { promptFeedbackIncludeLogs() }
+        btnFeedback?.setOnClickListener { sendFeedbackEmail(includeLogs = true) }
 
         btnLinks?.setOnClickListener { showLinksDialog() }
     }
@@ -232,8 +233,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val builder = AlertDialog.Builder(this)
         builder.setTitle(R.string.link_feedback)
         builder.setMessage(R.string.dialog_feedback_logs_message)
-        builder.setPositiveButton(R.string.btn_send_report) { _, _ -> sendFeedbackEmail(includeLogs = true) }
-        builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ -> dialog.dismiss() }
+        builder.setPositiveButton(R.string.dialog_yes) { _, _ -> sendFeedbackEmail(includeLogs = true) }
+        builder.setNegativeButton(R.string.dialog_no) { _, _ -> sendFeedbackEmail(includeLogs = false) }
         builder.show()
     }
 
@@ -262,7 +263,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
      * Feedback operates identically to crash reporting (guiding questions, event logs, app/android version, device info)
      * but omits the crash stack trace.
      */
-    fun sendFeedbackEmail(crashReport: String? = null, includeLogs: Boolean = false) {
+    fun sendFeedbackEmail(crashReport: String? = null, includeLogs: Boolean = true) {
         val isCrash = !crashReport.isNullOrEmpty()
         val subject = if (isCrash) {
             "Auto Sleep Droid Crash Report (v${BuildConfig.VERSION_NAME})"
@@ -302,21 +303,28 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         val bodyTemplate = bodyBuilder.toString()
 
-        val mailtoUri = Uri.parse(
-            "mailto:bas080@hotmail.com" +
-                    "?subject=" + Uri.encode(subject) +
-                    "&body=" + Uri.encode(bodyTemplate)
-        )
-
-        val intent = Intent(Intent.ACTION_SENDTO, mailtoUri)
-        intent.putExtra(Intent.EXTRA_SUBJECT, subject)
-        intent.putExtra(Intent.EXTRA_TEXT, bodyTemplate)
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:bas080@hotmail.com")
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("bas080@hotmail.com"))
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, bodyTemplate)
+        }
 
         try {
             startActivity(Intent.createChooser(intent, getString(R.string.link_feedback)))
         } catch (e: Exception) {
-            EventLogger.log(this, "Failed to launch email client: " + e.message)
-            Toast.makeText(this, "No email app found", Toast.LENGTH_SHORT).show()
+            val fallbackIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "message/rfc822"
+                putExtra(Intent.EXTRA_EMAIL, arrayOf("bas080@hotmail.com"))
+                putExtra(Intent.EXTRA_SUBJECT, subject)
+                putExtra(Intent.EXTRA_TEXT, bodyTemplate)
+            }
+            try {
+                startActivity(Intent.createChooser(fallbackIntent, getString(R.string.link_feedback)))
+            } catch (ex: Exception) {
+                EventLogger.log(this, "Failed to launch email client: " + ex.message)
+                Toast.makeText(this, "No email app found", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
