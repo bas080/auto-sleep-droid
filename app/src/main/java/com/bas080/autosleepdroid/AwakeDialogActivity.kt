@@ -6,6 +6,8 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.ContextThemeWrapper
+import android.view.Gravity
+import android.widget.TextView
 
 class AwakeDialogActivity : Activity() {
     var alertDialog: AlertDialog? = null
@@ -37,5 +39,6 @@ class AwakeDialogActivity : Activity() {
         }
         alertDialog = dialog
         dialog.show()
+        dialog.findViewById<TextView>(android.R.id.title)?.gravity = Gravity.CENTER
     }
 }

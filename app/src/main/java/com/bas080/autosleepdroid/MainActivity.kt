@@ -20,6 +20,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.text.Html
 import android.text.SpannableStringBuilder
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -367,18 +368,20 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                         Toast.makeText(this, "No email app found. Report copied to clipboard.", Toast.LENGTH_LONG).show()
                     } catch (clipEx: Exception) {
                         EventLogger.log(this, "Failed to copy to clipboard: " + clipEx.message)
-                        AlertDialog.Builder(this)
+                        val dialog = AlertDialog.Builder(this)
                             .setTitle("Could Not Send Report")
                             .setMessage("No email app or clipboard handler was found on this device.")
                             .setPositiveButton(R.string.dialog_ok, null)
                             .show()
+                        centerDialogTitle(dialog)
                     }
                 } else {
-                    AlertDialog.Builder(this)
+                    val dialog = AlertDialog.Builder(this)
                         .setTitle("Could Not Send Report")
                         .setMessage("No email app or clipboard handler was found on this device.")
                         .setPositiveButton(R.string.dialog_ok, null)
                         .show()
+                    centerDialogTitle(dialog)
                 }
             }
         }
@@ -401,7 +404,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             }
         }
         builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ -> dialog.dismiss() }
-        builder.show()
+        val dialog = builder.show()
+        centerDialogTitle(dialog)
     }
 
     /**
@@ -551,7 +555,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             }
         }
         builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ -> dialog.dismiss() }
-        builder.show()
+        val dialog = builder.show()
+        centerDialogTitle(dialog)
     }
 
     private fun setupConfigControls() {
@@ -961,7 +966,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
         builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ -> dialog.dismiss() }
 
-        builder.show()
+        val dialog = builder.show()
+        centerDialogTitle(dialog)
     }
 
     private fun importSettings(jsonStr: String?) {
@@ -1107,7 +1113,12 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         builder.setNegativeButton(R.string.btn_later) { dialog, _ ->
             dialog.dismiss()
         }
-        builder.show()
+        val dialog = builder.show()
+        centerDialogTitle(dialog)
+    }
+
+    private fun centerDialogTitle(dialog: AlertDialog) {
+        dialog.findViewById<TextView>(android.R.id.title)?.gravity = Gravity.CENTER
     }
 
     private fun registerPreferenceListeners() {
