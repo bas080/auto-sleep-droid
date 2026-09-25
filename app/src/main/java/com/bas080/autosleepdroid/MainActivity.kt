@@ -303,9 +303,16 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             val textToCopy = feedbackTextContent?.text?.toString() ?: bodyBuilder.toString()
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             if (clipboard != null) {
-                val clip = ClipData.newPlainText("Crash / Feedback Report", textToCopy)
-                clipboard.setPrimaryClip(clip)
-                Toast.makeText(this, R.string.toast_report_copied, Toast.LENGTH_SHORT).show()
+                try {
+                    val clip = ClipData.newPlainText("Crash / Feedback Report", textToCopy)
+                    clipboard.setPrimaryClip(clip)
+                    Toast.makeText(this, R.string.toast_report_copied, Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    EventLogger.log(this, "Failed to copy report to clipboard: " + e.message)
+                    Toast.makeText(this, "Could not copy report to clipboard", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Clipboard service not available", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -354,11 +361,24 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 EventLogger.log(this, "Failed to launch email client: " + ex.message)
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
                 if (clipboard != null) {
-                    val clip = ClipData.newPlainText("Crash / Feedback Report", body)
-                    clipboard.setPrimaryClip(clip)
-                    Toast.makeText(this, "No email app found. Report copied to clipboard.", Toast.LENGTH_LONG).show()
+                    try {
+                        val clip = ClipData.newPlainText("Crash / Feedback Report", body)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(this, "No email app found. Report copied to clipboard.", Toast.LENGTH_LONG).show()
+                    } catch (clipEx: Exception) {
+                        EventLogger.log(this, "Failed to copy to clipboard: " + clipEx.message)
+                        AlertDialog.Builder(this)
+                            .setTitle("Could Not Send Report")
+                            .setMessage("No email app or clipboard handler was found on this device.")
+                            .setPositiveButton(R.string.dialog_ok, null)
+                            .show()
+                    }
                 } else {
-                    Toast.makeText(this, "No email app found", Toast.LENGTH_SHORT).show()
+                    AlertDialog.Builder(this)
+                        .setTitle("Could Not Send Report")
+                        .setMessage("No email app or clipboard handler was found on this device.")
+                        .setPositiveButton(R.string.dialog_ok, null)
+                        .show()
                 }
             }
         }
