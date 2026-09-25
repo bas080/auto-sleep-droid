@@ -138,19 +138,28 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val prefs = getSharedPreferences("crash_reports", MODE_PRIVATE)
         val pendingReport = prefs.getString("pending_crash_report", null)
         if (pendingReport != null) {
-            val builder = AlertDialog.Builder(this)
-            builder.setTitle(R.string.dialog_crash_title)
-            builder.setMessage(R.string.dialog_crash_message)
-            builder.setPositiveButton(R.string.btn_send_report) { _, _ ->
-                prefs.edit().remove("pending_crash_report").apply()
-                sendFeedbackEmail(pendingReport)
-            }
-            builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ ->
-                prefs.edit().remove("pending_crash_report").apply()
-                dialog.dismiss()
-            }
-            builder.show()
+            showFeedbackDialog(pendingReport)
         }
+    }
+
+    private fun showFeedbackDialog(crashReport: String? = null) {
+        val isCrash = !crashReport.isNullOrEmpty()
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle(R.string.dialog_crash_title)
+        builder.setMessage(if (isCrash) getString(R.string.dialog_crash_message) else getString(R.string.desc_feedback))
+        builder.setPositiveButton(R.string.btn_send_report) { _, _ ->
+            if (isCrash) {
+                getSharedPreferences("crash_reports", MODE_PRIVATE).edit().remove("pending_crash_report").apply()
+            }
+            sendFeedbackEmail(crashReport = crashReport, includeLogs = true)
+        }
+        builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ ->
+            if (isCrash) {
+                getSharedPreferences("crash_reports", MODE_PRIVATE).edit().remove("pending_crash_report").apply()
+            }
+            dialog.dismiss()
+        }
+        builder.show()
     }
 
     private fun requestNotificationPermissionOnStartupIfNeeded() {
@@ -224,7 +233,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         btnVersion?.setOnClickListener { openUrl("https://github.com/bas080/auto-sleep-droid/releases") }
 
-        btnFeedback?.setOnClickListener { showFeedbackDialog() }
+        btnFeedback?.setOnClickListener { showFeedbackDialog(crashReport = null) }
 
         btnLinks?.setOnClickListener { showLinksDialog() }
     }
