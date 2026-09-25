@@ -81,7 +81,7 @@ jobs:
           cache: 'gradle'
 
       - name: Run unit tests
-        run: ./gradlew test --parallel
+        run: ./gradlew test lintDebug --parallel
 
       - name: Build APK
         env:
