@@ -350,17 +350,7 @@
             android:textColor="?android:attr/textColorPrimary"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:paddingBottom="4dp" />
-
-        <TextView
-            android:id="@+id/feedback_privacy_notice"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/feedback_title_text"
-            android:text="@string/desc_feedback_privacy_notice"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textSize="12sp"
-            android:paddingBottom="8dp" />
+            android:paddingBottom="12dp" />
 
         <LinearLayout
             android:id="@+id/logs_bottom_bar"
@@ -422,7 +412,17 @@
             android:textColor="?android:attr/textColorPrimary"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:paddingBottom="12dp" />
+            android:paddingBottom="4dp" />
+
+        <TextView
+            android:id="@+id/feedback_privacy_notice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/feedback_title_text"
+            android:text="@string/desc_feedback_privacy_notice"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="12sp"
+            android:paddingBottom="8dp" />
 
         <LinearLayout
             android:id="@+id/feedback_bottom_bar"
