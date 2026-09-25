@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private var feedbackTitleText: TextView? = null
     private var feedbackTextContent: EditText? = null
     private var btnDiscardCrash: Button? = null
+    private var btnCopyFeedback: Button? = null
     private var btnSendFeedbackEmail: Button? = null
     private var btnFeedbackBack: Button? = null
     private var btnReportCrash: View? = null
@@ -179,6 +180,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         feedbackTitleText = findViewById(R.id.feedback_title_text)
         feedbackTextContent = findViewById(R.id.feedback_text_content)
         btnDiscardCrash = findViewById(R.id.btn_discard_crash)
+        btnCopyFeedback = findViewById(R.id.btn_copy_feedback)
         btnSendFeedbackEmail = findViewById(R.id.btn_send_feedback_email)
         btnFeedbackBack = findViewById(R.id.btn_feedback_back)
         btnReportCrash = findViewById(R.id.btn_report_crash)
@@ -296,6 +298,16 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             .append("\nAvailable Storage: ").append(availStorageMb).append(" MB")
 
         feedbackTextContent?.setText(bodyBuilder.toString())
+
+        btnCopyFeedback?.setOnClickListener {
+            val textToCopy = feedbackTextContent?.text?.toString() ?: bodyBuilder.toString()
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            if (clipboard != null) {
+                val clip = ClipData.newPlainText("Crash / Feedback Report", textToCopy)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, R.string.toast_report_copied, Toast.LENGTH_SHORT).show()
+            }
+        }
 
         btnSendFeedbackEmail?.setOnClickListener {
             val editedText = feedbackTextContent?.text?.toString() ?: bodyBuilder.toString()

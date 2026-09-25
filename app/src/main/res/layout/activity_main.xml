@@ -431,6 +431,13 @@
                 android:text="@string/btn_discard" />
 
             <Button
+                android:id="@+id/btn_copy_feedback"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/btn_copy" />
+
+            <Button
                 android:id="@+id/btn_send_feedback_email"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

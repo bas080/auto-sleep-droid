@@ -82,6 +82,8 @@
     <string name="version_label">v%1$s</string>
     <string name="btn_back">Back</string>
     <string name="btn_discard">Discard</string>
+    <string name="btn_copy">Copy</string>
+    <string name="toast_report_copied">Report copied to clipboard</string>
     <string name="link_manual">Manual</string>
     <string name="link_logs">Logs</string>
     <string name="link_feedback">Feedback</string>
