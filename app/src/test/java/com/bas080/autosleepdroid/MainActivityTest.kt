@@ -208,7 +208,7 @@ class MainActivityTest {
     }
 
     @Test
-    fun testFeedbackButtonDirectlyLaunchesFeedbackEmailIntent() {
+    fun testFeedbackButtonShowsFeedbackDialogAndLaunchesEmailIntent() {
         val application = ApplicationProvider.getApplicationContext<Application>()
         EventLogger.log(application, EventLogger.LEVEL_HIGH, "User feedback test log")
 
@@ -222,6 +222,12 @@ class MainActivityTest {
         assertNotNull("btn_feedback view should exist in About section", btnFeedback)
 
         btnFeedback.performClick()
+        val feedbackDialog = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull("Feedback click should show crash_report/feedback dialog UI", feedbackDialog)
+
+        val sendBtn = feedbackDialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        assertNotNull(sendBtn)
+        sendBtn.performClick()
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
         val chooserIntent = Shadows.shadowOf(activity).nextStartedActivity
@@ -241,6 +247,53 @@ class MainActivityTest {
         assertTrue("Feedback email with logs included should contain Logs section", bodyWithLogs.contains("Logs:"))
         assertTrue("Feedback email should contain logged events", bodyWithLogs.contains("User feedback test log"))
         assertFalse("Feedback email should NOT contain stack trace", bodyWithLogs.contains("Crash Report:"))
+    }
+
+    @Test
+    fun testFeedbackDialogCancelDismissesWithoutLaunchingEmail() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val shadowActivity = Shadows.shadowOf(activity)
+        while (shadowActivity.nextStartedActivity != null) {}
+
+        val btnFeedback = activity.findViewById<View>(R.id.btn_feedback)
+        assertNotNull(btnFeedback)
+
+        btnFeedback.performClick()
+        val feedbackDialog = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull(feedbackDialog)
+
+        val cancelBtn = feedbackDialog.getButton(DialogInterface.BUTTON_NEGATIVE)
+        assertNotNull(cancelBtn)
+        cancelBtn.performClick()
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        assertEquals("Clicking Cancel on feedback dialog should not launch email chooser", null, shadowActivity.nextStartedActivity)
+    }
+
+    @Test
+    fun testSendFeedbackEmailWithoutLogsOmitsLogsSection() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        EventLogger.log(application, EventLogger.LEVEL_HIGH, "Ignored event log")
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val shadowActivity = Shadows.shadowOf(activity)
+        while (shadowActivity.nextStartedActivity != null) {}
+
+        activity.sendFeedbackEmail(crashReport = null, includeLogs = false)
+
+        val chooserIntent = shadowActivity.nextStartedActivity
+        assertNotNull(chooserIntent)
+        assertEquals(Intent.ACTION_CHOOSER, chooserIntent?.action)
+
+        val sendIntent = IntentCompat.getParcelableExtra(chooserIntent!!, Intent.EXTRA_INTENT, Intent::class.java)
+        assertNotNull(sendIntent)
+        val bodyText = sendIntent?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
+        assertFalse("Feedback email without logs should NOT contain Logs section", bodyText.contains("Logs:"))
+        assertFalse("Feedback email should NOT contain stack trace", bodyText.contains("Crash Report:"))
     }
 
     @Test
