@@ -145,8 +145,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private fun showFeedbackDialog(crashReport: String? = null) {
         val isCrash = !crashReport.isNullOrEmpty()
         val builder = AlertDialog.Builder(this)
-        builder.setTitle(R.string.dialog_crash_title)
-        builder.setMessage(if (isCrash) getString(R.string.dialog_crash_message) else getString(R.string.desc_feedback))
+        builder.setTitle(if (isCrash) R.string.dialog_crash_title else R.string.link_feedback)
+        builder.setMessage(if (isCrash) getString(R.string.dialog_crash_message) else getString(R.string.dialog_feedback_logs_message))
         builder.setPositiveButton(R.string.btn_send_report) { _, _ ->
             if (isCrash) {
                 getSharedPreferences("crash_reports", MODE_PRIVATE).edit().remove("pending_crash_report").apply()
@@ -336,7 +336,14 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 startActivity(Intent.createChooser(fallbackIntent, getString(R.string.link_feedback)))
             } catch (ex: Exception) {
                 EventLogger.log(this, "Failed to launch email client: " + ex.message)
-                Toast.makeText(this, "No email app found", Toast.LENGTH_SHORT).show()
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
+                if (clipboard != null) {
+                    val clip = ClipData.newPlainText("Crash / Feedback Report", bodyTemplate)
+                    clipboard.setPrimaryClip(clip)
+                    Toast.makeText(this, "No email app found. Report copied to clipboard.", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "No email app found", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
