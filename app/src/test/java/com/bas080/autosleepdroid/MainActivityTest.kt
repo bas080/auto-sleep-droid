@@ -305,6 +305,54 @@ class MainActivityTest {
     }
 
     @Test
+    fun testDiagnosticMetadataFormattingContainsRequiredDeviceAndSystemFields() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val btnFeedback = activity.findViewById<View>(R.id.btn_feedback)
+        assertNotNull(btnFeedback)
+        btnFeedback.performClick()
+
+        val contentEdit = activity.findViewById<EditText>(R.id.feedback_text_content)
+        assertNotNull(contentEdit)
+        val payload = contentEdit.text.toString()
+
+        assertTrue("Payload should contain App Version", payload.contains("App Version: "))
+        assertTrue("Payload should contain Version Code", payload.contains("Code "))
+        assertTrue("Payload should contain Android Version", payload.contains("Android Version: "))
+        assertTrue("Payload should contain Device Model", payload.contains("Device: "))
+        assertTrue("Payload should contain Free Memory in MB", payload.contains("Free Memory: ") && payload.contains("MB"))
+        assertTrue("Payload should contain Available Storage in MB", payload.contains("Available Storage: ") && payload.contains("MB"))
+    }
+
+    @Test
+    fun testBreadcrumbPayloadFormattingPrependsEventsToReportPayload() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        EventLogger.clear(application)
+        EventLogger.log(application, EventLogger.LEVEL_HIGH, "User toggled sleep timer")
+        EventLogger.log(application, EventLogger.LEVEL_NORMAL, "Wake-up goal adjusted")
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val btnFeedback = activity.findViewById<View>(R.id.btn_feedback)
+        assertNotNull(btnFeedback)
+        btnFeedback.performClick()
+
+        val contentEdit = activity.findViewById<EditText>(R.id.feedback_text_content)
+        assertNotNull(contentEdit)
+        val payload = contentEdit.text.toString()
+
+        assertTrue("Payload should contain Logs section", payload.contains("Logs:"))
+        assertTrue("Payload should contain first breadcrumb event", payload.contains("User toggled sleep timer"))
+        assertTrue("Payload should contain second breadcrumb event", payload.contains("Wake-up goal adjusted"))
+
+        val logsIndex = payload.indexOf("Logs:")
+        val metadataIndex = payload.indexOf("App Version:")
+        assertTrue("Breadcrumb logs should be prepended before diagnostic metadata section", logsIndex < metadataIndex)
+    }
+
+    @Test
     fun testSendFeedbackEmailWithoutLogsOmitsLogsSection() {
         val application = ApplicationProvider.getApplicationContext<Application>()
         EventLogger.log(application, EventLogger.LEVEL_HIGH, "Ignored event log")
