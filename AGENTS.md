@@ -6,11 +6,6 @@ Instructions and guidelines for AI coding agents and human developers working in
 
 Auto Sleep Droid is an Android sleep timer app controlled entirely from the notification shade with a live event log UI in `MainActivity`.
 
-## Project Documentation
-
-- [SPEC.md](docs/SPEC.md): product requirements and acceptance criteria.
-- [IMPLEMENTATION.md](docs/IMPLEMENTATION.md): architecture, runtime flows, persistence, permissions, build/release details, and guidance for future developers and AI agents.
-
 ## Build & Test Instructions
 
 ### Common Commands
@@ -24,10 +19,12 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 
 ## Key Codebase Conventions
 
-- **UX Design Decisions:** Consult `docs/SPEC.md` whenever making UX design decisions to ensure alignment with product requirements, target user workflows, and acceptance criteria.
+- **Architecture & Language:** Auto Sleep Droid is written 100% in Kotlin for Android 8.0+ (minSdk 26, targetSdk 34) using unidirectional data flow. Avoid Java interop annotations (`@JvmStatic`, `@JvmField`, `@JvmOverloads`). Custom Android views (`SettingRowView`, `DurationInputView`) use explicit Kotlin secondary constructors (`constructor(context: Context)`, `constructor(context: Context, attrs: AttributeSet?)`, etc.) to support XML layout inflation without `@JvmOverloads`.
+- **Foreground Service & PendingIntents:** `MainService` is a foreground service declared with `foregroundServiceType="mediaPlayback"`. All `PendingIntent` instances targeting `MainService` use `PendingIntent.getForegroundService` on API 26+ with explicit nullable return types (`PendingIntent?`) so background alarm/notification triggers grant foreground start permissions without throwing `ForegroundServiceStartNotAllowedException`.
+- **External System Settings Intents:** Launch external system settings screens (Do Not Disturb, Exact Alarm, Health Connect) with `Intent.FLAG_ACTIVITY_NEW_TASK` so they open in a separate task window outside Auto Sleep Droid's activity stack.
+- **Logging Subsystem:** `EventLogger` writes timestamped logs directly to append-only internal app file storage (`event_logs.txt`) without keeping log lists in memory.
 - **Action Toast Feedback:** Actions that change something (such as toggling timer state, setting duration, dismissing/snoozing alarms, marking awake) should always be accompanied with a toast.
 - **Reactive UI Updates with `watchEffect`:** All UI updates in activities and services should use `preferenceManager.watchEffect` to ensure that UI changes are fully reactive.
-- **Documentation Boundaries:** `docs/SPEC.md` is central to designing the app and any changes to the spec or product behavior require updating `docs/SPEC.md`. Always update `docs/SPEC.md` whenever user requirements, specifications, or product behaviors are described or changed. `docs/SPEC.md` must focus purely on product requirements, acceptance criteria, and user-visible behavior without technical implementation details (such as Android API names, classes, or code constructs). Technical implementation details and things implicit in the code should be documented in `docs/IMPLEMENTATION.md` so future agents can clearly understand how the code works; favor writing in `docs/IMPLEMENTATION.md` over writing code docs or inline comments.
 - **No Text Codeblock Diagrams:** Do not render ASCII or text-art codeblock diagrams in documentation files. Text diagrams are not computer parseable and are less desired.
 - **UI & Notification Strings:** Do not include trailing punctuation, colons, or ellipses in UI and notification string resource values (`strings.xml`).
 - **Localization:** Maintain default English resources in `app/src/main/res/values/strings.xml` and Spanish translations in `app/src/main/res/values-es/strings.xml`.
@@ -37,7 +34,7 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 - **Reproducible & F-Droid Builds:** Keep `dependenciesInfo` (`includeInApk = false`, `includeInBundle = false`) disabled in `app/build.gradle` for F-Droid compliance. Whenever making changes affecting build configurations, Gradle plugins, or metadata, verify that unsigned release builds (`./gradlew assembleRelease` or `fdroid build --stop --test com.bas080.autosleepdroid`) assemble cleanly without keystore environment variables and run `fdroid lint com.bas080.autosleepdroid` to ensure F-Droid build compatibility.
 - **Releases:** Follow `scripts/release.sh <version>` for bumping versions and tagging manually, or trigger a release via GitHub Actions `workflow_dispatch` with a `version` parameter. GitHub Actions (`.github/workflows/android-release.yml`) executes `scripts/release.sh`, bumps versions, pushes `master` and the version tag (`v<version>`), and triggers the release workflow on the newly pushed tag to build APKs and publish releases automatically. Point to GitHub Releases in Fastlane description metadata rather than per-version changelogs.
 - **Commit Messages:** Do not use prefixes such as `ci:`, `feat:`, `fix:`, or `chore:`. Write plain, clear titles written for normal human readers (e.g. `Add dark mode support` instead of `feat: add dark mode support`). Always check `git diff` before writing human readable, spec-focused commit messages and submission titles/descriptions to ensure accuracy.
-- **User Manual Asset:** The user manual is bundled in `app/src/main/assets/manual.html` and must be kept in sync whenever changes affecting user-visible behavior or features occur or whenever `docs/SPEC.md` is updated. Do not use nested lists (`<ul>` inside `<li>`) in `manual.html` or user documentation; favor flat, single-level lists, paragraphs, or separate subheadings instead.
+- **User Manual Asset:** The user manual is bundled in `app/src/main/assets/manual.html` and must be kept in sync whenever changes affecting user-visible behavior or features occur. Do not use nested lists (`<ul>` inside `<li>`) in `manual.html` or user documentation; favor flat, single-level lists, paragraphs, or separate subheadings instead.
 - **Permissions Declaration & Documentation:** Whenever feature logic relies on system permissions or policy access (e.g. Do Not Disturb access), always ensure `<uses-permission>` is declared in `AndroidManifest.xml` AND documented in the "Permissions Used" section in `README.md` (specifying whether each permission is required or optional).
 - **Minimal Null Guards & Exception Handling:** Write code with the least amount of null guards and `try-catch` blocks necessary. Allow exceptions to be thrown when the application enters an invalid state so that the global error handler can intercept the error, record diagnostic context/stack traces, and prompt the user appropriately rather than silently swallowing errors or continuing in a corrupted state.
 - **Background System Crash Analysis & Fault Tolerance:**
