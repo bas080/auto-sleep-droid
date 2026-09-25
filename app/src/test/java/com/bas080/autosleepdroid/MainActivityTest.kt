@@ -253,7 +253,18 @@ class MainActivityTest {
         val sendIntent = IntentCompat.getParcelableExtra(chooserIntent!!, Intent.EXTRA_INTENT, Intent::class.java)
         assertNotNull(sendIntent)
         assertEquals(Intent.ACTION_SENDTO, sendIntent?.action)
-        assertEquals("mailto:bas080@hotmail.com", sendIntent?.dataString)
+        assertTrue(sendIntent?.dataString?.startsWith("mailto:bas080@hotmail.com?") == true)
+
+        val mailtoUri = sendIntent?.data
+        assertNotNull("mailto URI should not be null", mailtoUri)
+        assertEquals("mailto", mailtoUri?.scheme)
+        val dataStr = sendIntent?.dataString ?: ""
+        val parsedUri = android.net.Uri.parse(dataStr)
+        assertNotNull("dataString should be parseable into a valid Uri", parsedUri)
+        assertEquals("mailto", parsedUri.scheme)
+        assertTrue("mailto URI string should contain subject query parameter", dataStr.contains("subject="))
+        assertTrue("mailto URI string should contain body query parameter", dataStr.contains("body="))
+
         val emails = sendIntent?.getStringArrayExtra(Intent.EXTRA_EMAIL)
         assertNotNull(emails)
         assertEquals("bas080@hotmail.com", emails?.get(0))
@@ -369,6 +380,30 @@ class MainActivityTest {
         val logsIndex = payload.indexOf("Logs:")
         val metadataIndex = payload.indexOf("App Version:")
         assertTrue("Breadcrumb logs should be prepended before diagnostic metadata section", logsIndex < metadataIndex)
+    }
+
+    @Test
+    fun testFeedbackPayloadLimitsLogsToLast50Lines() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        EventLogger.clear(application)
+        for (i in 1..70) {
+            EventLogger.log(activity, EventLogger.LEVEL_NORMAL, String.format("Test log line %02d", i))
+        }
+
+        val payload = activity.buildFeedbackPayload(activity, "User feedback test", null, true)
+
+        assertTrue("Payload should contain Logs section", payload.contains("Logs:"))
+        assertFalse("Log line 01 should be truncated/excluded as it is outside last 50 lines", payload.contains("Test log line 01"))
+        assertFalse("Log line 20 should be truncated/excluded as it is outside last 50 lines", payload.contains("Test log line 20"))
+        assertTrue("Log line 21 should be included as line 21..70 is last 50 lines", payload.contains("Test log line 21"))
+        assertTrue("Log line 70 should be included as it is the most recent line", payload.contains("Test log line 70"))
+
+        val logsSection = payload.substringAfter("Logs:\n").substringBefore("\n\n---")
+        val lines = logsSection.lines().filter { it.isNotBlank() }
+        assertEquals("Logs section in payload must contain exactly 50 lines", 50, lines.size)
     }
 
     @Test
