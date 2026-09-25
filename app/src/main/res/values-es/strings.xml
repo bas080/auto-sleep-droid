@@ -67,6 +67,8 @@
     <string name="label_version">Versión</string>
     <string name="desc_version">Ver notas de la versión y buscar actualizaciones</string>
     <string name="desc_feedback">Enviar comentarios o informar de problemas por correo</string>
+    <string name="label_report_crash">Informar de error</string>
+    <string name="desc_report_crash">Revisar y enviar detalles del último informe de error</string>
     <string name="label_links">Enlaces</string>
     <string name="desc_links">Manual, registros y donación</string>
     <string name="label_export">Exportar ajustes</string>
@@ -95,6 +97,10 @@
     <string name="dialog_crash_title">Informe de error</string>
     <string name="dialog_crash_message">Auto Sleep Droid se cerró inesperadamente la última vez. ¿Deseas enviar un informe de error para ayudarnos a solucionarlo?</string>
     <string name="btn_send_report">Enviar informe</string>
+    <string name="btn_discard">Descartar</string>
+    <string name="btn_copy">Copiar</string>
+    <string name="toast_report_copied">Informe copiado al portapapeles</string>
+    <string name="desc_feedback_privacy_notice">Revisa o edita el texto del informe a continuación antes de enviarlo o copiarlo. Se incluyen los registros de eventos y metadatos del sistema para ayudar a solucionar problemas.</string>
     <string name="label_enable_timer">Temporizador de apagado</string>
     <string name="desc_enable_timer">Activa o desactiva el temporizador de apagado</string>
     <string name="label_current_wake_time">Hora de despertar actual</string>
@@ -120,6 +126,8 @@
     <string name="toast_health_connect_not_available">Health Connect no está disponible en este dispositivo</string>
     <string name="toast_health_connect_enabled">Sincronización con Health Connect activada</string>
     <string name="toast_health_connect_disabled">Sincronización con Health Connect desactivada</string>
+    <string name="label_hc_min_duration">Duración mín. de sesión</string>
+    <string name="desc_hc_min_duration">Duración mínima requerida antes de guardar las sesiones de sueño en Health Connect</string>
     <string name="btn_health_connect_permissions">Gestionar permisos</string>
     <string name="label_event_logs">Registros de eventos</string>
     <string name="desc_event_logs">Actividad del sistema y temporizador en tiempo real</string>
@@ -129,5 +137,11 @@
     <string name="dialog_donate_random_message_3">Un buen sueño no tiene precio. Las aplicaciones malas son molestas. ¡Auto Sleep Droid intenta no ser ninguna de las dos! Si disfrutas de noches tranquilas, invítale un café al desarrollador.</string>
     <string name="dialog_donate_random_message_4">Sin anuncios, sin rastreo, sin suscripciones, sin muros de pago. Solo código honesto para ayudarte a dormir. Si eso te da tranquilidad, ¡considera dejar una contribución!</string>
     <string name="dialog_donate_random_message_5">¿Te has salvado de podcasts sonando a las 3 AM toda la noche? Si Auto Sleep Droid ha sido tu héroe silencioso a la hora de dormir, ¡muestra tu apoyo con una pequeña donación!</string>
+    <string name="label_awake">Ya estoy despierto</string>
+    <string name="desc_awake">Registrar sesión de sueño y actualizar programación de alarma para mañana</string>
+    <string name="action_awake">Ya estoy despierto</string>
+    <string name="dialog_awake_title">¿Estás despierto?</string>
+    <string name="dialog_awake_message">¿Registrar tu sesión de sueño y cancelar la alarma de despertar de hoy?</string>
+    <string name="toast_awake_registered">¡Buenos días! Sesión de sueño registrada y alarma actualizada.</string>
     <string name="btn_later">Más tarde</string>
 </resources>
