@@ -177,7 +177,7 @@ class MainServiceTest {
         assertNotNull(notification)
 
         val shadowPendingIntent = Shadows.shadowOf(notification.contentIntent)
-        assertTrue("Content intent in awake window must be a Service PendingIntent", shadowPendingIntent.isService)
+        assertTrue("Content intent in awake window must be a Service PendingIntent", shadowPendingIntent.isService || shadowPendingIntent.isForegroundService)
         val intent = shadowPendingIntent.savedIntent
         assertEquals(MainService.ACTION_NOTIFICATION_CLICK, intent.action)
         assertEquals(MainService::class.java.name, intent.component?.className)
@@ -1054,7 +1054,7 @@ class MainServiceTest {
 
         assertNotNull("awakeIntent pendingIntent must be non-null", pendingIntent)
         val shadowPendingIntent = Shadows.shadowOf(pendingIntent)
-        assertTrue("awakeIntent must be a service PendingIntent", shadowPendingIntent.isService)
+        assertTrue("awakeIntent must be a service PendingIntent", shadowPendingIntent.isService || shadowPendingIntent.isForegroundService)
         val intent = shadowPendingIntent.savedIntent
         assertEquals(MainService.ACTION_AWAKE, intent.action)
         assertEquals(MainService::class.java.name, intent.component?.className)
@@ -1246,6 +1246,20 @@ class MainServiceTest {
         val events = EventLogger.getEvents(context)
         val hasLoggedFailure = events.any { it.contains("Failed to start foreground service") }
         assertTrue("EventLogger should record the foreground service start failure during onCreate", hasLoggedFailure)
+    }
+
+    @Test
+    fun testGetServicePendingIntentUsesForegroundServiceOnApi26AndAbove() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val awakeIntentMethod = MainService::class.java.getDeclaredMethod("awakeIntent")
+        awakeIntentMethod.isAccessible = true
+        val pendingIntent = awakeIntentMethod.invoke(service) as android.app.PendingIntent?
+
+        assertNotNull("PendingIntent should not be null", pendingIntent)
+        val shadowPendingIntent = Shadows.shadowOf(pendingIntent)
+        assertTrue("PendingIntent should be a foreground service PendingIntent on API 26+", shadowPendingIntent.isForegroundService || shadowPendingIntent.isService)
     }
 
     @Test
