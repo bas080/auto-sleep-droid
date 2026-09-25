@@ -1319,4 +1319,20 @@ class MainActivityTest {
         assertFalse(crashPrefs.contains("pending_crash_report"))
         assertEquals(View.GONE, overlay.visibility)
     }
+
+    @Test
+    fun testNapFeatureAndSensorClassesAbsence() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = appContext.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
+
+        assertFalse("nap_enabled preference must not exist", prefs.contains("nap_enabled"))
+        assertFalse("nap_start_time_ms preference must not exist", prefs.contains("nap_start_time_ms"))
+
+        val napActivityClass = try {
+            Class.forName("com.bas080.autosleepdroid.NapDialogActivity")
+        } catch (e: ClassNotFoundException) {
+            null
+        }
+        assertTrue("NapDialogActivity class must be completely removed", napActivityClass == null)
+    }
 }
