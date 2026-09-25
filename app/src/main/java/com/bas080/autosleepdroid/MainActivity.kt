@@ -224,17 +224,21 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         btnVersion?.setOnClickListener { openUrl("https://github.com/bas080/auto-sleep-droid/releases") }
 
-        btnFeedback?.setOnClickListener { sendFeedbackEmail(includeLogs = true) }
+        btnFeedback?.setOnClickListener { showFeedbackDialog() }
 
         btnLinks?.setOnClickListener { showLinksDialog() }
     }
 
-    private fun promptFeedbackIncludeLogs() {
+    private fun showFeedbackDialog() {
         val builder = AlertDialog.Builder(this)
         builder.setTitle(R.string.link_feedback)
         builder.setMessage(R.string.dialog_feedback_logs_message)
-        builder.setPositiveButton(R.string.dialog_yes) { _, _ -> sendFeedbackEmail(includeLogs = true) }
-        builder.setNegativeButton(R.string.dialog_no) { _, _ -> sendFeedbackEmail(includeLogs = false) }
+        builder.setPositiveButton(R.string.btn_send_report) { _, _ ->
+            sendFeedbackEmail(includeLogs = true)
+        }
+        builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ ->
+            dialog.dismiss()
+        }
         builder.show()
     }
 
