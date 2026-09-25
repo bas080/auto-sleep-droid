@@ -129,17 +129,25 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         requestExactAlarmPermissionIfNeeded()
     }
 
+    /**
+     * Checks for pending crash report as early as possible in the Activity lifecycle (at the top of onCreate,
+     * prior to layout inflation, view binding, preference loading, or service initialization) to ensure
+     * crash reporting prompt is displayed even if other features crash during startup.
+     */
     private fun checkAndPromptCrashReport() {
         val prefs = getSharedPreferences("crash_reports", MODE_PRIVATE)
         val pendingReport = prefs.getString("pending_crash_report", null)
         if (pendingReport != null) {
-            prefs.edit().remove("pending_crash_report").apply()
-
             val builder = AlertDialog.Builder(this)
             builder.setTitle(R.string.dialog_crash_title)
             builder.setMessage(R.string.dialog_crash_message)
-            builder.setPositiveButton(R.string.btn_send_report) { _, _ -> sendFeedbackEmail(pendingReport) }
-            builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ -> dialog.dismiss() }
+            builder.setPositiveButton(R.string.btn_send_report) { _, _ ->
+                sendFeedbackEmail(pendingReport)
+            }
+            builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ ->
+                prefs.edit().remove("pending_crash_report").apply()
+                dialog.dismiss()
+            }
             builder.show()
         }
     }
@@ -222,10 +230,10 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     private fun promptFeedbackIncludeLogs() {
         val builder = AlertDialog.Builder(this)
-        builder.setTitle(R.string.dialog_feedback_logs_title)
+        builder.setTitle(R.string.link_feedback)
         builder.setMessage(R.string.dialog_feedback_logs_message)
-        builder.setPositiveButton(R.string.dialog_yes) { _, _ -> sendFeedbackEmail(includeLogs = true) }
-        builder.setNegativeButton(R.string.dialog_no) { _, _ -> sendFeedbackEmail(includeLogs = false) }
+        builder.setPositiveButton(R.string.btn_send_report) { _, _ -> sendFeedbackEmail(includeLogs = true) }
+        builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ -> dialog.dismiss() }
         builder.show()
     }
 
@@ -249,6 +257,11 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         builder.show()
     }
 
+    /**
+     * Constructs and launches feedback/crash report emails via ACTION_SENDTO.
+     * Feedback operates identically to crash reporting (guiding questions, event logs, app/android version, device info)
+     * but omits the crash stack trace.
+     */
     fun sendFeedbackEmail(crashReport: String? = null, includeLogs: Boolean = false) {
         val isCrash = !crashReport.isNullOrEmpty()
         val subject = if (isCrash) {

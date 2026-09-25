@@ -171,7 +171,27 @@ class MainActivityTest {
         assertTrue("Crash report email must include Logs section", bodyText.contains("Logs:"))
         assertTrue("Crash report email must contain logged events", bodyText.contains("Sample logged event before crash"))
 
-        assertFalse("Pending crash report should be cleared after prompting user", prefs.contains("pending_crash_report"))
+        assertTrue("Pending crash report should be retained when sending report", prefs.contains("pending_crash_report"))
+    }
+
+    @Test
+    fun testPendingCrashReportClearedWhenUserExplicitlyDeclines() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val prefs = application.getSharedPreferences("crash_reports", Context.MODE_PRIVATE)
+        prefs.edit().putString("pending_crash_report", "CRASH: java.lang.NullPointerException at test.DummyClass").commit()
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        controller.create().resume().get()
+
+        val crashDialog = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull("Crash report dialog should be shown on launch if pending crash report exists", crashDialog)
+
+        val cancelBtn = crashDialog.getButton(DialogInterface.BUTTON_NEGATIVE)
+        assertNotNull(cancelBtn)
+        cancelBtn.performClick()
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        assertFalse("Pending crash report should be cleared when user explicitly declines", prefs.contains("pending_crash_report"))
     }
 
     @Test
@@ -192,9 +212,9 @@ class MainActivityTest {
         val promptDialog = ShadowAlertDialog.getLatestAlertDialog()
         assertNotNull("Feedback click should show include logs prompt dialog", promptDialog)
 
-        val yesBtn = promptDialog.getButton(DialogInterface.BUTTON_POSITIVE)
-        assertNotNull(yesBtn)
-        yesBtn.performClick()
+        val sendBtn = promptDialog.getButton(DialogInterface.BUTTON_POSITIVE)
+        assertNotNull(sendBtn)
+        sendBtn.performClick()
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
         val chooserIntent = Shadows.shadowOf(activity).nextStartedActivity
@@ -210,23 +230,7 @@ class MainActivityTest {
         assertTrue("Feedback email should contain guiding questions", bodyWithLogs.contains("What feature or aspect of the app are you giving feedback on?"))
         assertTrue("Feedback email with logs included should contain Logs section", bodyWithLogs.contains("Logs:"))
         assertTrue("Feedback email should contain logged events", bodyWithLogs.contains("User feedback test log"))
-
-        btnFeedback.performClick()
-        val promptDialogNo = ShadowAlertDialog.getLatestAlertDialog()
-        assertNotNull(promptDialogNo)
-
-        val noBtn = promptDialogNo.getButton(DialogInterface.BUTTON_NEGATIVE)
-        assertNotNull(noBtn)
-        noBtn.performClick()
-        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
-
-        val chooserIntentNo = Shadows.shadowOf(activity).nextStartedActivity
-        assertNotNull(chooserIntentNo)
-
-        val sendIntentNo = IntentCompat.getParcelableExtra(chooserIntentNo!!, Intent.EXTRA_INTENT, Intent::class.java)
-        assertNotNull(sendIntentNo)
-        val bodyWithoutLogs = sendIntentNo?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-        assertFalse("Feedback email without logs should NOT contain Logs section", bodyWithoutLogs.contains("Logs:"))
+        assertFalse("Feedback email should NOT contain stack trace", bodyWithLogs.contains("Crash Report:"))
     }
 
     @Test
