@@ -1297,4 +1297,26 @@ class MainActivityTest {
             nextIntent = Shadows.shadowOf(activity).nextStartedActivity
         }
     }
+
+    @Test
+    fun testStartupCrashReportDisplaysFeedbackOverlayAndDiscardButtonClearsReport() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        val crashPrefs = appContext.getSharedPreferences("crash_reports", Context.MODE_PRIVATE)
+        crashPrefs.edit().putString("pending_crash_report", "NullPointerException at line 42").commit()
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().start().resume().get()
+
+        val overlay = activity.findViewById<View>(R.id.feedback_overlay_container)
+        assertNotNull(overlay)
+        assertEquals(View.VISIBLE, overlay.visibility)
+
+        val btnDiscard = activity.findViewById<Button>(R.id.btn_discard_crash)
+        assertNotNull(btnDiscard)
+        assertEquals(View.VISIBLE, btnDiscard.visibility)
+        btnDiscard.performClick()
+
+        assertFalse(crashPrefs.contains("pending_crash_report"))
+        assertEquals(View.GONE, overlay.visibility)
+    }
 }

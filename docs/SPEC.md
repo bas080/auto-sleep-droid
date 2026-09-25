@@ -131,4 +131,4 @@ When in the sleep/awake window (`T - 1.2 * minSleepDuration` until alarm dismiss
 - Tapping **"I'm Awake"** is the sole action to stop a ringing or snoozed wake alarm, setting current wake time to `max(targetGoalTime, T - 15m)`.
 - The "I'm Awake" action is visible during the time range `currentWakeTime +/- (minSleepDuration / 2)` or when alarms are ringing/snoozed.
 - Nap feature and phone flip gesture sensors are completely removed.
-- All 121 unit tests pass 100% and release APK builds cleanly.
+- All unit tests pass 100% and release APK builds cleanly.
