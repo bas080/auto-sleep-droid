@@ -305,6 +305,29 @@ class MainActivityTest {
     }
 
     @Test
+    fun testCopyFeedbackButtonCopiesReportToClipboardAndShowsToast() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val btnFeedback = activity.findViewById<View>(R.id.btn_feedback)
+        assertNotNull(btnFeedback)
+        btnFeedback.performClick()
+
+        val btnCopy = activity.findViewById<Button>(R.id.btn_copy_feedback)
+        val contentEdit = activity.findViewById<EditText>(R.id.feedback_text_content)
+        assertNotNull(btnCopy)
+        assertNotNull(contentEdit)
+
+        val reportText = contentEdit.text.toString()
+        btnCopy.performClick()
+
+        val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        assertNotNull(clipboard.primaryClip)
+        assertEquals(reportText, clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+        assertEquals(activity.getString(R.string.toast_report_copied), ShadowToast.getTextOfLatestToast())
+    }
+
+    @Test
     fun testDiagnosticMetadataFormattingContainsRequiredDeviceAndSystemFields() {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
