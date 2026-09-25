@@ -8,6 +8,7 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.view.View
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Switch
 import android.widget.TextView
@@ -151,18 +152,15 @@ class MainActivityTest {
 
         val feedbackOverlay = activity.findViewById<View>(R.id.feedback_overlay_container)
         val titleText = activity.findViewById<TextView>(R.id.feedback_title_text)
+        val promptText = activity.findViewById<TextView>(R.id.feedback_prompt_text)
         val contentEdit = activity.findViewById<EditText>(R.id.feedback_text_content)
         val sendBtn = activity.findViewById<Button>(R.id.btn_send_feedback_email)
 
         assertEquals("Feedback overlay UI should be visible on launch if pending crash report exists", View.VISIBLE, feedbackOverlay.visibility)
         assertEquals(activity.getString(R.string.dialog_crash_title), titleText.text.toString())
+        assertEquals(activity.getString(R.string.prompt_crash_report), promptText.text.toString())
 
-        val bodyText = contentEdit.text.toString()
-        assertTrue(bodyText.contains("NullPointerException"))
-        assertTrue("Crash report email must contain guiding questions", bodyText.contains("What were you doing right before the app crashed?"))
-        assertTrue("Crash report email must include Logs section", bodyText.contains("Logs:"))
-        assertTrue("Crash report email must contain logged events", bodyText.contains("Sample logged event before crash"))
-
+        contentEdit.setText("App crashed when toggling timer")
         sendBtn.performClick()
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
@@ -173,6 +171,11 @@ class MainActivityTest {
         val sendIntent = IntentCompat.getParcelableExtra(chooserIntent!!, Intent.EXTRA_INTENT, Intent::class.java)
         assertNotNull(sendIntent)
         assertEquals(Intent.ACTION_SENDTO, sendIntent?.action)
+        val bodyText = sendIntent?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
+        assertTrue(bodyText.contains("App crashed when toggling timer"))
+        assertTrue(bodyText.contains("NullPointerException"))
+        assertTrue("Crash report email must include Logs section", bodyText.contains("Logs:"))
+        assertTrue("Crash report email must contain logged events", bodyText.contains("Sample logged event before crash"))
         assertTrue(sendIntent?.getStringExtra(Intent.EXTRA_SUBJECT)?.contains("Auto Sleep Droid Crash Report") == true)
 
         assertTrue("Pending crash report should be retained after sending report unless explicitly discarded", prefs.contains("pending_crash_report"))
@@ -230,20 +233,15 @@ class MainActivityTest {
 
         val feedbackOverlay = activity.findViewById<View>(R.id.feedback_overlay_container)
         val titleText = activity.findViewById<TextView>(R.id.feedback_title_text)
+        val promptText = activity.findViewById<TextView>(R.id.feedback_prompt_text)
         val contentEdit = activity.findViewById<EditText>(R.id.feedback_text_content)
         val sendBtn = activity.findViewById<Button>(R.id.btn_send_feedback_email)
 
         assertEquals(View.VISIBLE, feedbackOverlay.visibility)
         assertEquals(activity.getString(R.string.link_feedback), titleText.text.toString())
+        assertEquals(activity.getString(R.string.prompt_feedback), promptText.text.toString())
 
-        val bodyWithLogs = contentEdit.text.toString()
-        assertTrue("Feedback form should contain guiding questions", bodyWithLogs.contains("What feature or aspect of the app are you giving feedback on?"))
-        assertTrue("Feedback form with logs included should contain Logs section", bodyWithLogs.contains("Logs:"))
-        assertTrue("Feedback form should contain logged events", bodyWithLogs.contains("User feedback test log"))
-        assertTrue("Feedback form should contain Version Code", bodyWithLogs.contains("Code "))
-        assertTrue("Feedback form should contain Free Memory", bodyWithLogs.contains("Free Memory:"))
-        assertTrue("Feedback form should contain Available Storage", bodyWithLogs.contains("Available Storage:"))
-        assertFalse("Feedback form should NOT contain stack trace", bodyWithLogs.contains("Crash Report:"))
+        contentEdit.setText("Love the app!")
 
         sendBtn.performClick()
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
@@ -260,6 +258,15 @@ class MainActivityTest {
         assertNotNull(emails)
         assertEquals("bas080@hotmail.com", emails?.get(0))
         assertTrue(sendIntent?.getStringExtra(Intent.EXTRA_SUBJECT)?.contains("Auto Sleep Droid Feedback") == true)
+
+        val bodyWithLogs = sendIntent?.getStringExtra(Intent.EXTRA_TEXT) ?: ""
+        assertTrue("Feedback email payload should contain user input", bodyWithLogs.contains("Love the app!"))
+        assertTrue("Feedback form with logs included should contain Logs section", bodyWithLogs.contains("Logs:"))
+        assertTrue("Feedback form should contain logged events", bodyWithLogs.contains("User feedback test log"))
+        assertTrue("Feedback form should contain Version Code", bodyWithLogs.contains("Code "))
+        assertTrue("Feedback form should contain Free Memory", bodyWithLogs.contains("Free Memory:"))
+        assertTrue("Feedback form should contain Available Storage", bodyWithLogs.contains("Available Storage:"))
+        assertFalse("Feedback form should NOT contain stack trace", bodyWithLogs.contains("Crash Report:"))
     }
 
     @Test
@@ -318,12 +325,13 @@ class MainActivityTest {
         assertNotNull(btnCopy)
         assertNotNull(contentEdit)
 
-        val reportText = contentEdit.text.toString()
+        contentEdit.setText("User feedback test")
+        val expectedReportText = activity.buildFeedbackPayload(activity, "User feedback test", null, true)
         btnCopy.performClick()
 
         val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
         assertNotNull(clipboard.primaryClip)
-        assertEquals(reportText, clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+        assertEquals(expectedReportText, clipboard.primaryClip?.getItemAt(0)?.text?.toString())
         assertEquals(activity.getString(R.string.toast_report_copied), ShadowToast.getTextOfLatestToast())
     }
 
@@ -332,13 +340,7 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
-        val btnFeedback = activity.findViewById<View>(R.id.btn_feedback)
-        assertNotNull(btnFeedback)
-        btnFeedback.performClick()
-
-        val contentEdit = activity.findViewById<EditText>(R.id.feedback_text_content)
-        assertNotNull(contentEdit)
-        val payload = contentEdit.text.toString()
+        val payload = activity.buildFeedbackPayload(activity, "Test message", null, true)
 
         assertTrue("Payload should contain App Version", payload.contains("App Version: "))
         assertTrue("Payload should contain Version Code", payload.contains("Code "))
@@ -358,13 +360,7 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
-        val btnFeedback = activity.findViewById<View>(R.id.btn_feedback)
-        assertNotNull(btnFeedback)
-        btnFeedback.performClick()
-
-        val contentEdit = activity.findViewById<EditText>(R.id.feedback_text_content)
-        assertNotNull(contentEdit)
-        val payload = contentEdit.text.toString()
+        val payload = activity.buildFeedbackPayload(activity, "User input", null, true)
 
         assertTrue("Payload should contain Logs section", payload.contains("Logs:"))
         assertTrue("Payload should contain first breadcrumb event", payload.contains("User toggled sleep timer"))
@@ -373,6 +369,38 @@ class MainActivityTest {
         val logsIndex = payload.indexOf("Logs:")
         val metadataIndex = payload.indexOf("App Version:")
         assertTrue("Breadcrumb logs should be prepended before diagnostic metadata section", logsIndex < metadataIndex)
+    }
+
+    @Test
+    fun testUncheckingLogsCheckboxExcludesLogsFromPayload() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        EventLogger.clear(application)
+        EventLogger.log(application, EventLogger.LEVEL_HIGH, "Event log that should be omitted")
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val btnFeedback = activity.findViewById<View>(R.id.btn_feedback)
+        btnFeedback.performClick()
+
+        val chkLogs = activity.findViewById<CheckBox>(R.id.chk_include_logs)
+        assertNotNull(chkLogs)
+        assertTrue("Include logs checkbox should be checked by default", chkLogs.isChecked)
+
+        chkLogs.isChecked = false
+
+        val contentEdit = activity.findViewById<EditText>(R.id.feedback_text_content)
+        contentEdit.setText("Feedback without logs")
+
+        val btnCopy = activity.findViewById<Button>(R.id.btn_copy_feedback)
+        btnCopy.performClick()
+
+        val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val copiedText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+
+        assertFalse("Payload without logs should NOT contain Logs section", copiedText.contains("Logs:"))
+        assertFalse("Payload without logs should NOT contain event logs", copiedText.contains("Event log that should be omitted"))
+        assertTrue("Payload without logs should still contain user message", copiedText.contains("Feedback without logs"))
     }
 
     @Test
