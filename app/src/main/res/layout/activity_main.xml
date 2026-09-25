@@ -350,7 +350,17 @@
             android:textColor="?android:attr/textColorPrimary"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:paddingBottom="12dp" />
+            android:paddingBottom="4dp" />
+
+        <TextView
+            android:id="@+id/feedback_privacy_notice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/feedback_title_text"
+            android:text="@string/desc_feedback_privacy_notice"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="12sp"
+            android:paddingBottom="8dp" />
 
         <LinearLayout
             android:id="@+id/logs_bottom_bar"
@@ -455,7 +465,7 @@
             android:id="@+id/feedback_scroll_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_below="@id/feedback_title_text"
+            android:layout_below="@id/feedback_privacy_notice"
             android:layout_above="@id/feedback_bottom_bar"
             android:layout_marginBottom="8dp">
 
