@@ -42,12 +42,6 @@
             </intent-filter>
         </activity-alias>
 
-        <activity
-            android:name=".AwakeDialogActivity"
-            android:exported="false"
-            android:taskAffinity=""
-            android:excludeFromRecents="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <service
             android:name=".MainService"
