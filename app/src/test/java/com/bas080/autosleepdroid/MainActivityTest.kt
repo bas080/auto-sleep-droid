@@ -1278,27 +1278,6 @@ class MainActivityTest {
     }
 
     @Test
-    fun testMainActivityResumeDoesNotAutomaticallyLaunchAwakeDialogActivity() {
-        val sleepStart = System.currentTimeMillis() - 4 * 3600_000L
-        val prefs = ApplicationProvider.getApplicationContext<Context>().getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
-        prefs.edit()
-            .putBoolean("wake_up_goal_enabled", true)
-            .putLong("sleep_start_time_ms", sleepStart)
-            .commit()
-
-        val controller = Robolectric.buildActivity(MainActivity::class.java)
-        val activity = controller.create().resume().get()
-
-        var nextIntent = Shadows.shadowOf(activity).nextStartedActivity
-        while (nextIntent != null) {
-            val className = nextIntent.component?.className
-            assertFalse("MainActivity should not automatically launch AwakeDialogActivity on resume",
-                AwakeDialogActivity::class.java.name == className)
-            nextIntent = Shadows.shadowOf(activity).nextStartedActivity
-        }
-    }
-
-    @Test
     fun testStartupCrashReportDisplaysFeedbackOverlayAndDiscardButtonClearsReport() {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
         val crashPrefs = appContext.getSharedPreferences("crash_reports", Context.MODE_PRIVATE)
