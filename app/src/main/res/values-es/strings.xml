@@ -79,6 +79,10 @@
     <string name="dialog_no">No</string>
     <string name="version_label">v%1$s</string>
     <string name="btn_back">Volver</string>
+    <string name="label_include_logs">Incluir registros de eventos</string>
+    <string name="feedback_input_hint">Escribe tu mensaje o comentarios aquí…</string>
+    <string name="prompt_feedback">Por favor describe qué sucedió o sobre qué función deseas opinar:</string>
+    <string name="prompt_crash_report">Por favor describe qué estabas haciendo justo antes del fallo:</string>
     <string name="link_manual">Manual</string>
     <string name="link_logs">Registros</string>
     <string name="link_feedback">Comentarios</string>
