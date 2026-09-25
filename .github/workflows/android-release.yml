@@ -51,7 +51,27 @@ jobs:
           cache: 'gradle'
 
       - name: Run unit tests
-        run: ./gradlew test lintDebug --parallel
+        run: |
+          EXTRA_ARGS=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ([[ "${{ github.event_name }}" = "push" ]] && [[ "${{ github.ref }}" == refs/tags/v* ]]); then
+            echo "Release run detected. Enabling Fastlane screenshot generation."
+            EXTRA_ARGS="-Dgenerate.screenshots=true"
+          fi
+          ./gradlew test lintDebug $EXTRA_ARGS --parallel
+
+      - name: Commit Updated Screenshots
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+        run: |
+          if [[ -n $(git status --porcelain fastlane/metadata/) ]]; then
+            echo "Fastlane screenshot metadata updated by tests. Committing changes..."
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add fastlane/metadata/
+            git commit -m "Update Fastlane feature screenshots [skip ci]" || true
+            git push origin master || true
+          else
+            echo "No changes to Fastlane screenshot metadata."
+          fi
 
       - name: Build APK
         env:
