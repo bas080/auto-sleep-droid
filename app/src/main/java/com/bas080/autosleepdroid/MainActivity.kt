@@ -442,69 +442,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             "Auto Sleep Droid Feedback (v${BuildConfig.VERSION_NAME})"
         }
 
-        val bodyBuilder = StringBuilder()
-
-        if (isCrash) {
-            bodyBuilder.append("Please answer the questions below to help us troubleshoot and fix the error:\n")
-            bodyBuilder.append("- What were you doing right before the app crashed?\n")
-            bodyBuilder.append("- How often does this crash occur (e.g., every time, occasionally, first time)?\n")
-            bodyBuilder.append("- Were any specific features active (e.g., Do Not Disturb sync, Wake-up goal, Health Connect)?\n\n")
-            bodyBuilder.append("Crash Report:\n").append(crashReport).append("\n\n")
-        } else {
-            bodyBuilder.append("Please answer the questions below to help us improve Auto Sleep Droid:\n")
-            bodyBuilder.append("- What feature or aspect of the app are you giving feedback on?\n")
-            bodyBuilder.append("- What happened, or what would you like to see improved?\n")
-            bodyBuilder.append("- If reporting a bug, what steps can reproduce the issue?\n\n")
-        }
-
-        if (includeLogs || isCrash) {
-            val events = EventLogger.getEvents(this)
-            if (events.isNotEmpty()) {
-                val lastEvents = events.takeLast(50)
-                bodyBuilder.append("Logs:\n")
-                for (event in lastEvents) {
-                    bodyBuilder.append(EventLogger.formatColoredEvent(this, event).toString()).append("\n")
-                }
-                bodyBuilder.append("\n")
-            }
-        }
-
-        bodyBuilder.append("---\nApp Version: ").append(BuildConfig.VERSION_NAME)
-            .append("\nAndroid Version: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")")
-            .append("\nDevice: ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL)
-
-        val bodyTemplate = bodyBuilder.toString()
-
-        val intent = Intent(Intent.ACTION_SENDTO).apply {
-            data = Uri.parse("mailto:bas080@hotmail.com")
-            putExtra(Intent.EXTRA_EMAIL, arrayOf("bas080@hotmail.com"))
-            putExtra(Intent.EXTRA_SUBJECT, subject)
-            putExtra(Intent.EXTRA_TEXT, bodyTemplate)
-        }
-
-        try {
-            startActivity(Intent.createChooser(intent, getString(R.string.link_feedback)))
-        } catch (e: Exception) {
-            val fallbackIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "message/rfc822"
-                putExtra(Intent.EXTRA_EMAIL, arrayOf("bas080@hotmail.com"))
-                putExtra(Intent.EXTRA_SUBJECT, subject)
-                putExtra(Intent.EXTRA_TEXT, bodyTemplate)
-            }
-            try {
-                startActivity(Intent.createChooser(fallbackIntent, getString(R.string.link_feedback)))
-            } catch (ex: Exception) {
-                EventLogger.log(this, "Failed to launch email client: " + ex.message)
-                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
-                if (clipboard != null) {
-                    val clip = ClipData.newPlainText("Crash / Feedback Report", bodyTemplate)
-                    clipboard.setPrimaryClip(clip)
-                    Toast.makeText(this, "No email app found. Report copied to clipboard.", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(this, "No email app found", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
+        val body = buildFeedbackPayload(this, "", crashReport, includeLogs)
+        sendFeedbackEmailWithText(subject, body)
     }
 
     private fun showManualScreen() {

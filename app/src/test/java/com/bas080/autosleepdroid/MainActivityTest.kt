@@ -254,6 +254,15 @@ class MainActivityTest {
         assertNotNull(sendIntent)
         assertEquals(Intent.ACTION_SENDTO, sendIntent?.action)
         assertEquals("mailto:bas080@hotmail.com", sendIntent?.dataString)
+
+        val mailtoUri = sendIntent?.data
+        assertNotNull("mailto URI should not be null", mailtoUri)
+        assertEquals("mailto", mailtoUri?.scheme)
+        assertEquals("bas080@hotmail.com", mailtoUri?.schemeSpecificPart)
+        val parsedUri = android.net.Uri.parse(sendIntent?.dataString)
+        assertNotNull("dataString should be parseable into a valid Uri", parsedUri)
+        assertEquals("mailto", parsedUri.scheme)
+
         val emails = sendIntent?.getStringArrayExtra(Intent.EXTRA_EMAIL)
         assertNotNull(emails)
         assertEquals("bas080@hotmail.com", emails?.get(0))
