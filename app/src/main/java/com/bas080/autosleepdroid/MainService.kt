@@ -679,7 +679,7 @@ open class MainService : Service() {
         audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0)
     }
 
-    private fun getServicePendingIntent(requestCode: Int, intent: Intent, flags: Int): PendingIntent {
+    private fun getServicePendingIntent(requestCode: Int, intent: Intent, flags: Int): PendingIntent? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             PendingIntent.getForegroundService(this, requestCode, intent, flags)
         } else {
@@ -693,7 +693,7 @@ open class MainService : Service() {
         val pendingIntent = getServicePendingIntent(
             100, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        ) ?: return
 
         try {
             if (Build.VERSION.SDK_INT >= 31) {
@@ -850,7 +850,7 @@ open class MainService : Service() {
         val pendingIntent = getServicePendingIntent(
             101, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        ) ?: return
 
         val showIntent = Intent(this, MainActivity::class.java)
         val showPendingIntent = PendingIntent.getActivity(
@@ -885,7 +885,7 @@ open class MainService : Service() {
             val updatePendingIntent = getServicePendingIntent(
                 107, updateIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
+            ) ?: return
             try {
                 if (Build.VERSION.SDK_INT >= 31) {
                     if (am.canScheduleExactAlarms()) {
@@ -1261,7 +1261,7 @@ open class MainService : Service() {
         val pendingIntent = getServicePendingIntent(
             106, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        ) ?: return
 
         val showIntent = Intent(this, MainActivity::class.java)
         val showPendingIntent = PendingIntent.getActivity(
@@ -1391,7 +1391,7 @@ open class MainService : Service() {
             getServicePendingIntent(
                 20, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
+            )!!
         } else {
             val intent = Intent(this, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -1462,7 +1462,7 @@ open class MainService : Service() {
         return getServicePendingIntent(
             5, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        )!!
     }
 
     private fun turnOnIntent(): PendingIntent {
@@ -1470,7 +1470,7 @@ open class MainService : Service() {
         return getServicePendingIntent(
             7, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        )!!
     }
 
     private fun awakeIntent(): PendingIntent {
@@ -1478,7 +1478,7 @@ open class MainService : Service() {
         return getServicePendingIntent(
             16, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        )!!
     }
 
     private fun formatTargetTime(): String {
