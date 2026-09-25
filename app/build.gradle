@@ -50,6 +50,11 @@ android {
         allWarningsAsErrors = true
     }
 
+    lint {
+        abortOnError true
+        checkReleaseBuilds true
+    }
+
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
@@ -75,4 +80,10 @@ dependencies {
     testImplementation "androidx.test:core:1.6.1"
     testImplementation "androidx.test.ext:junit:1.2.1"
     testImplementation "org.mockito:mockito-core:5.11.0"
+}
+
+afterEvaluate {
+    tasks.matching { it.name.startsWith("test") }.configureEach {
+        dependsOn("lintDebug")
+    }
 }
