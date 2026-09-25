@@ -37,5 +37,10 @@ class AutoSleepApplicationTest {
             }
         }
         assertTrue("EventLogger must record uncaught exception message", foundCrashLog)
+
+        val prefs = context.getSharedPreferences("crash_reports", Context.MODE_PRIVATE)
+        val pendingReport = prefs.getString("pending_crash_report", null)
+        assertNotNull(pendingReport)
+        assertTrue(pendingReport!!.contains("CRASH at"))
     }
 }

@@ -262,6 +262,16 @@
                     app:rowDescription="@string/desc_feedback"
                     app:rowType="none" />
 
+                <!-- Report Crash Row -->
+                <com.bas080.autosleepdroid.SettingRowView
+                    android:id="@+id/btn_report_crash"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    app:rowTitle="@string/label_report_crash"
+                    app:rowDescription="@string/desc_report_crash"
+                    app:rowType="none" />
+
                 <!-- Links Section -->
                 <com.bas080.autosleepdroid.SettingRowView
                     android:id="@+id/btn_links"
@@ -380,6 +390,96 @@
                 android:fontFamily="monospace"
                 android:textSize="12sp"
                 android:textIsSelectable="true" />
+        </ScrollView>
+    </RelativeLayout>
+
+    <!-- Full-screen Feedback / Crash Report View Container -->
+    <RelativeLayout
+        android:id="@+id/feedback_overlay_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?android:attr/windowBackground"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/feedback_title_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true"
+            android:text="@string/link_feedback"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:paddingBottom="4dp" />
+
+        <TextView
+            android:id="@+id/feedback_privacy_notice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/feedback_title_text"
+            android:text="@string/desc_feedback_privacy_notice"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="12sp"
+            android:paddingBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/feedback_bottom_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/btn_discard_crash"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:visibility="gone"
+                android:text="@string/btn_discard" />
+
+            <Button
+                android:id="@+id/btn_copy_feedback"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/btn_copy" />
+
+            <Button
+                android:id="@+id/btn_send_feedback_email"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/btn_send_report" />
+
+            <Button
+                android:id="@+id/btn_feedback_back"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/btn_back" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/feedback_scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@id/feedback_privacy_notice"
+            android:layout_above="@id/feedback_bottom_bar"
+            android:layout_marginBottom="8dp">
+
+            <EditText
+                android:id="@+id/feedback_text_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textSize="14sp"
+                android:lineSpacingExtra="2dp"
+                android:gravity="top|start"
+                android:background="@null"
+                android:inputType="textMultiLine"
+                android:importantForAutofill="no" />
         </ScrollView>
     </RelativeLayout>
 

@@ -11,7 +11,8 @@ class AutoSleepApplication : Application() {
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
-                val logMsg = "CRASH on thread '${thread.name}': ${Log.getStackTraceString(throwable)}"
+                val timeStr = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+                val logMsg = "CRASH at $timeStr on thread '${thread.name}':\n${Log.getStackTraceString(throwable)}"
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, logMsg)
 
                 val prefs = getSharedPreferences("crash_reports", MODE_PRIVATE)

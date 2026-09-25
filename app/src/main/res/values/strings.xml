@@ -67,6 +67,8 @@
     <string name="label_version">Version</string>
     <string name="desc_version">View release notes and check for updates</string>
     <string name="desc_feedback">Send feedback or report issues via email</string>
+    <string name="label_report_crash">Report crash</string>
+    <string name="desc_report_crash">Review and send last crash report details</string>
     <string name="label_links">Links</string>
     <string name="desc_links">Manual, event logs, and donation</string>
     <string name="label_export">Export settings</string>
@@ -79,6 +81,10 @@
     <string name="dialog_no">No</string>
     <string name="version_label">v%1$s</string>
     <string name="btn_back">Back</string>
+    <string name="btn_discard">Discard</string>
+    <string name="btn_copy">Copy</string>
+    <string name="toast_report_copied">Report copied to clipboard</string>
+    <string name="desc_feedback_privacy_notice">Inspect or edit report text below before sending or copying. Event logs and system metadata are included to help troubleshoot issues.</string>
     <string name="link_manual">Manual</string>
     <string name="link_logs">Logs</string>
     <string name="link_feedback">Feedback</string>
