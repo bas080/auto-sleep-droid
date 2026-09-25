@@ -1378,4 +1378,31 @@ class MainServiceTest {
         val title = notification.extras.getCharSequence(Notification.EXTRA_TITLE).toString()
         assertEquals("Notification title should update to 'Click notification when awake'", context.getString(R.string.notification_click_when_awake), title)
     }
+
+    @Test
+    fun testDndInterruptionFilterChangedBroadcastTogglesTimerState() {
+        preferences.edit()
+            .putBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, true)
+            .putBoolean(PreferenceKeys.KEY_ACTIVE, false)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val checkMethod = MainService::class.java.getDeclaredMethod("checkAndApplyDndAutoTimer")
+        checkMethod.isAccessible = true
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val shadowNm = Shadows.shadowOf(notificationManager)
+        val filterMethod = ShadowNotificationManager::class.java.getDeclaredMethod("setInterruptionFilter", Int::class.javaPrimitiveType)
+        filterMethod.isAccessible = true
+
+        filterMethod.invoke(shadowNm, NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+        checkMethod.invoke(service)
+        assertTrue(preferences.getBoolean(PreferenceKeys.KEY_ACTIVE, false))
+
+        filterMethod.invoke(shadowNm, NotificationManager.INTERRUPTION_FILTER_ALL)
+        checkMethod.invoke(service)
+        assertFalse(preferences.getBoolean(PreferenceKeys.KEY_ACTIVE, true))
+    }
 }

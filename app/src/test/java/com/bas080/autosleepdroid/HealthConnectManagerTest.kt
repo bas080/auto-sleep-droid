@@ -125,14 +125,11 @@ class HealthConnectManagerTest {
     }
 
     @Test
-    fun testNapAndSleepSessionStartKeyPersistence() {
+    fun testHcMinDurationMinutesThresholdPreferencePersistence() {
         val prefs = context.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
-        val now = System.currentTimeMillis()
+        assertEquals(AppDefaults.HC_MIN_DURATION_MINUTES, prefs.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, AppDefaults.HC_MIN_DURATION_MINUTES))
 
-        prefs.edit().putLong("nap_start_time_ms", now).apply()
-        assertEquals(now, prefs.getLong("nap_start_time_ms", 0L))
-
-        prefs.edit().remove("nap_start_time_ms").apply()
-        assertEquals(0L, prefs.getLong("nap_start_time_ms", 0L))
+        prefs.edit().putInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 30).apply()
+        assertEquals(30, prefs.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, AppDefaults.HC_MIN_DURATION_MINUTES))
     }
 }

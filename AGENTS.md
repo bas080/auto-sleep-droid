@@ -10,14 +10,6 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 
 - [SPEC.md](docs/SPEC.md): product requirements and acceptance criteria.
 - [IMPLEMENTATION.md](docs/IMPLEMENTATION.md): architecture, runtime flows, persistence, permissions, build/release details, and guidance for future developers and AI agents.
-- [USER_PERSONA_AND_NEEDS.md](docs/USER_PERSONA_AND_NEEDS.md): user personas, target audience needs, mental models, reasoning, and product workflows. Consult this document whenever UX design decisions have to be made.
-- [EVENTS_AND_STATES.md](docs/EVENTS_AND_STATES.md): comprehensive reference of system states, input/sensor events, state transitions, transition matrix, state diagram, and event log formats.
-- [PERFORMANCE.md](docs/PERFORMANCE.md): performance analysis, optimizations implemented, and recommendations for future increases.
-- [NOTIFICATION_INPUT_OPTIONS.md](docs/NOTIFICATION_INPUT_OPTIONS.md): analysis of notification duration input options, framework constraints, and string parsing.
-- [NOTIFICATION_GOAL_INPUT_OPTIONS.md](docs/NOTIFICATION_GOAL_INPUT_OPTIONS.md): options, constraints, parsing specifications, and architectural design for setting target wake-up goal alarms from notifications.
-- [UPDATE_NOTIFICATIONS.md](docs/UPDATE_NOTIFICATIONS.md): technical architecture, UX design, GitHub REST API integration, WorkManager check scheduling, and version comparison for non-store update notifications.
-- [IMPORT_EXPORT.md](docs/IMPORT_EXPORT.md): specification, data schema format (JSON Schema v1), UI layout placement, clipboard/dialog workflows, and architecture for the Import/Export feature.
-- [GOOGLE_PLAY_RELEASE.md](docs/GOOGLE_PLAY_RELEASE.md): research on feasibility, prerequisites, tooling, workflow configurations, and Google Play policy requirements for releasing via GitHub Workflows.
 
 ## Build & Test Instructions
 
@@ -32,7 +24,7 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 
 ## Key Codebase Conventions
 
-- **UX Design Decisions:** Consult `docs/USER_PERSONA_AND_NEEDS.md` whenever making UX design decisions to ensure alignment with target user personas, mental models, zero-gaze nighttime interaction principles, and user needs.
+- **UX Design Decisions:** Consult `docs/SPEC.md` whenever making UX design decisions to ensure alignment with product requirements, target user workflows, and acceptance criteria.
 - **Action Toast Feedback:** Actions that change something (such as toggling timer state, setting duration, dismissing/snoozing alarms, marking awake) should always be accompanied with a toast.
 - **Reactive UI Updates with `watchEffect`:** All UI updates in activities and services should use `preferenceManager.watchEffect` to ensure that UI changes are fully reactive.
 - **Documentation Boundaries:** `docs/SPEC.md` is central to designing the app and any changes to the spec or product behavior require updating `docs/SPEC.md`. Always update `docs/SPEC.md` whenever user requirements, specifications, or product behaviors are described or changed. `docs/SPEC.md` must focus purely on product requirements, acceptance criteria, and user-visible behavior without technical implementation details (such as Android API names, classes, or code constructs). Technical implementation details and things implicit in the code should be documented in `docs/IMPLEMENTATION.md` so future agents can clearly understand how the code works; favor writing in `docs/IMPLEMENTATION.md` over writing code docs or inline comments.
