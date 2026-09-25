@@ -280,9 +280,20 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             bodyBuilder.append("\n")
         }
 
+        val actManager = getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+        val memInfo = android.app.ActivityManager.MemoryInfo()
+        actManager?.getMemoryInfo(memInfo)
+        val availMemMb = memInfo.availMem / (1024 * 1024)
+
+        val stat = android.os.StatFs(filesDir.absolutePath)
+        val availStorageMb = stat.availableBytes / (1024 * 1024)
+
         bodyBuilder.append("---\nApp Version: ").append(BuildConfig.VERSION_NAME)
+            .append(" (Code ").append(BuildConfig.VERSION_CODE).append(")")
             .append("\nAndroid Version: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")")
             .append("\nDevice: ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL)
+            .append("\nFree Memory: ").append(availMemMb).append(" MB")
+            .append("\nAvailable Storage: ").append(availStorageMb).append(" MB")
 
         feedbackTextContent?.setText(bodyBuilder.toString())
 

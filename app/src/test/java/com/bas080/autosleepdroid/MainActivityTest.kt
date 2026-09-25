@@ -240,6 +240,9 @@ class MainActivityTest {
         assertTrue("Feedback form should contain guiding questions", bodyWithLogs.contains("What feature or aspect of the app are you giving feedback on?"))
         assertTrue("Feedback form with logs included should contain Logs section", bodyWithLogs.contains("Logs:"))
         assertTrue("Feedback form should contain logged events", bodyWithLogs.contains("User feedback test log"))
+        assertTrue("Feedback form should contain Version Code", bodyWithLogs.contains("Code "))
+        assertTrue("Feedback form should contain Free Memory", bodyWithLogs.contains("Free Memory:"))
+        assertTrue("Feedback form should contain Available Storage", bodyWithLogs.contains("Available Storage:"))
         assertFalse("Feedback form should NOT contain stack trace", bodyWithLogs.contains("Crash Report:"))
 
         sendBtn.performClick()
