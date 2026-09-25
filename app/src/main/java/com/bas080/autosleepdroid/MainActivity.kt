@@ -23,6 +23,7 @@ import android.text.SpannableStringBuilder
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.Switch
@@ -43,7 +44,9 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private var logsOverlayContainer: View? = null
     private var feedbackOverlayContainer: View? = null
     private var feedbackTitleText: TextView? = null
+    private var feedbackPromptText: TextView? = null
     private var feedbackTextContent: EditText? = null
+    private var chkIncludeLogs: CheckBox? = null
     private var btnDiscardCrash: Button? = null
     private var btnCopyFeedback: Button? = null
     private var btnSendFeedbackEmail: Button? = null
@@ -178,7 +181,9 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         logsOverlayContainer = findViewById(R.id.logs_overlay_container)
         feedbackOverlayContainer = findViewById(R.id.feedback_overlay_container)
         feedbackTitleText = findViewById(R.id.feedback_title_text)
-        feedbackTextContent = findViewById(R.id.feedback_text_content)
+        feedbackPromptText = findViewById<TextView>(R.id.feedback_prompt_text)
+        feedbackTextContent = findViewById<EditText>(R.id.feedback_text_content)
+        chkIncludeLogs = findViewById<CheckBox>(R.id.chk_include_logs)
         btnDiscardCrash = findViewById(R.id.btn_discard_crash)
         btnCopyFeedback = findViewById(R.id.btn_copy_feedback)
         btnSendFeedbackEmail = findViewById(R.id.btn_send_feedback_email)
@@ -254,40 +259,40 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         btnLinks?.setOnClickListener { showLinksDialog() }
     }
 
-    fun showFeedbackOverlay(crashReport: String? = null) {
-        val isCrash = !crashReport.isNullOrEmpty()
-        feedbackTitleText?.setText(if (isCrash) R.string.dialog_crash_title else R.string.link_feedback)
-        btnDiscardCrash?.visibility = if (isCrash) View.VISIBLE else View.GONE
-
+    fun buildFeedbackPayload(
+        context: Context,
+        userMessage: String,
+        crashReport: String?,
+        includeLogs: Boolean
+    ): String {
         val bodyBuilder = StringBuilder()
-        if (isCrash) {
-            bodyBuilder.append("Please answer the questions below to help us troubleshoot and fix the error:\n")
-            bodyBuilder.append("- What were you doing right before the app crashed?\n")
-            bodyBuilder.append("- How often does this crash occur (e.g., every time, occasionally, first time)?\n")
-            bodyBuilder.append("- Were any specific features active (e.g., Do Not Disturb sync, Wake-up goal, Health Connect)?\n\n")
+
+        val trimmedMessage = userMessage.trim()
+        if (trimmedMessage.isNotEmpty()) {
+            bodyBuilder.append("User Feedback / Details:\n").append(trimmedMessage).append("\n\n")
+        }
+
+        if (!crashReport.isNullOrEmpty()) {
             bodyBuilder.append("Crash Report:\n").append(crashReport).append("\n\n")
-        } else {
-            bodyBuilder.append("Please answer the questions below to help us improve Auto Sleep Droid:\n")
-            bodyBuilder.append("- What feature or aspect of the app are you giving feedback on?\n")
-            bodyBuilder.append("- What happened, or what would you like to see improved?\n")
-            bodyBuilder.append("- If reporting a bug, what steps can reproduce the issue?\n\n")
         }
 
-        val events = EventLogger.getEvents(this)
-        if (events.isNotEmpty()) {
-            bodyBuilder.append("Logs:\n")
-            for (event in events) {
-                bodyBuilder.append(EventLogger.formatColoredEvent(this, event).toString()).append("\n")
+        if (includeLogs) {
+            val events = EventLogger.getEvents(context)
+            if (events.isNotEmpty()) {
+                bodyBuilder.append("Logs:\n")
+                for (event in events) {
+                    bodyBuilder.append(EventLogger.formatColoredEvent(context, event).toString()).append("\n")
+                }
+                bodyBuilder.append("\n")
             }
-            bodyBuilder.append("\n")
         }
 
-        val actManager = getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+        val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
         val memInfo = android.app.ActivityManager.MemoryInfo()
         actManager?.getMemoryInfo(memInfo)
         val availMemMb = memInfo.availMem / (1024 * 1024)
 
-        val stat = android.os.StatFs(filesDir.absolutePath)
+        val stat = android.os.StatFs(context.filesDir.absolutePath)
         val availStorageMb = stat.availableBytes / (1024 * 1024)
 
         bodyBuilder.append("---\nApp Version: ").append(BuildConfig.VERSION_NAME)
@@ -297,10 +302,23 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             .append("\nFree Memory: ").append(availMemMb).append(" MB")
             .append("\nAvailable Storage: ").append(availStorageMb).append(" MB")
 
-        feedbackTextContent?.setText(bodyBuilder.toString())
+        return bodyBuilder.toString()
+    }
+
+    fun showFeedbackOverlay(crashReport: String? = null) {
+        val isCrash = !crashReport.isNullOrEmpty()
+        feedbackTitleText?.setText(if (isCrash) R.string.dialog_crash_title else R.string.link_feedback)
+        feedbackPromptText?.setText(if (isCrash) R.string.prompt_crash_report else R.string.prompt_feedback)
+        btnDiscardCrash?.visibility = if (isCrash) View.VISIBLE else View.GONE
+
+        feedbackTextContent?.setText("")
+        chkIncludeLogs?.isChecked = true
 
         btnCopyFeedback?.setOnClickListener {
-            val textToCopy = feedbackTextContent?.text?.toString() ?: bodyBuilder.toString()
+            val userInput = feedbackTextContent?.text?.toString() ?: ""
+            val shouldIncludeLogs = chkIncludeLogs?.isChecked ?: true
+            val textToCopy = buildFeedbackPayload(this, userInput, crashReport, shouldIncludeLogs)
+
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             if (clipboard != null) {
                 try {
@@ -317,7 +335,9 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
 
         btnSendFeedbackEmail?.setOnClickListener {
-            val editedText = feedbackTextContent?.text?.toString() ?: bodyBuilder.toString()
+            val userInput = feedbackTextContent?.text?.toString() ?: ""
+            val shouldIncludeLogs = chkIncludeLogs?.isChecked ?: true
+            val editedText = buildFeedbackPayload(this, userInput, crashReport, shouldIncludeLogs)
             val subject = if (isCrash) {
                 "Auto Sleep Droid Crash Report (v${BuildConfig.VERSION_NAME})"
             } else {

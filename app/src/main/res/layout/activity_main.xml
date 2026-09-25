@@ -469,17 +469,43 @@
             android:layout_above="@id/feedback_bottom_bar"
             android:layout_marginBottom="8dp">
 
-            <EditText
-                android:id="@+id/feedback_text_content"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="?android:attr/textColorPrimary"
-                android:textSize="14sp"
-                android:lineSpacingExtra="2dp"
-                android:gravity="top|start"
-                android:background="@null"
-                android:inputType="textMultiLine"
-                android:importantForAutofill="no" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/feedback_prompt_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/prompt_feedback"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="14sp"
+                    android:paddingBottom="8dp" />
+
+                <EditText
+                    android:id="@+id/feedback_text_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minLines="5"
+                    android:gravity="top|start"
+                    android:hint="@string/feedback_input_hint"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textColorHint="?android:attr/textColorSecondary"
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="2dp"
+                    android:inputType="textMultiLine"
+                    android:importantForAutofill="no" />
+
+                <CheckBox
+                    android:id="@+id/chk_include_logs"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/label_include_logs"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:checked="true" />
+            </LinearLayout>
         </ScrollView>
     </RelativeLayout>
 

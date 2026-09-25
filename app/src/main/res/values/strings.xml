@@ -84,7 +84,11 @@
     <string name="btn_discard">Discard</string>
     <string name="btn_copy">Copy</string>
     <string name="toast_report_copied">Report copied to clipboard</string>
-    <string name="desc_feedback_privacy_notice">Inspect or edit report text below before sending or copying. Event logs and system metadata are included to help troubleshoot issues.</string>
+    <string name="desc_feedback_privacy_notice">Inspect or edit your message below before sending or copying. Diagnostic logs and system metadata can be included to help troubleshoot issues.</string>
+    <string name="label_include_logs">Include event logs</string>
+    <string name="feedback_input_hint">Type your message or feedback here…</string>
+    <string name="prompt_feedback">Please describe what happened or what feature you are giving feedback on:</string>
+    <string name="prompt_crash_report">Please describe what you were doing right before the crash:</string>
     <string name="link_manual">Manual</string>
     <string name="link_logs">Logs</string>
     <string name="link_feedback">Feedback</string>
