@@ -280,8 +280,9 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         if (includeLogs) {
             val events = EventLogger.getEvents(context)
             if (events.isNotEmpty()) {
+                val lastEvents = events.takeLast(50)
                 bodyBuilder.append("Logs:\n")
-                for (event in events) {
+                for (event in lastEvents) {
                     bodyBuilder.append(EventLogger.formatColoredEvent(context, event).toString()).append("\n")
                 }
                 bodyBuilder.append("\n")
@@ -459,8 +460,9 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         if (includeLogs || isCrash) {
             val events = EventLogger.getEvents(this)
             if (events.isNotEmpty()) {
+                val lastEvents = events.takeLast(50)
                 bodyBuilder.append("Logs:\n")
-                for (event in events) {
+                for (event in lastEvents) {
                     bodyBuilder.append(EventLogger.formatColoredEvent(this, event).toString()).append("\n")
                 }
                 bodyBuilder.append("\n")

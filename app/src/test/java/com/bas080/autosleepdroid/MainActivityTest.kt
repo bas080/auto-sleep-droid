@@ -372,6 +372,30 @@ class MainActivityTest {
     }
 
     @Test
+    fun testFeedbackPayloadLimitsLogsToLast50Lines() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        EventLogger.clear(application)
+        for (i in 1..70) {
+            EventLogger.log(activity, EventLogger.LEVEL_NORMAL, String.format("Test log line %02d", i))
+        }
+
+        val payload = activity.buildFeedbackPayload(activity, "User feedback test", null, true)
+
+        assertTrue("Payload should contain Logs section", payload.contains("Logs:"))
+        assertFalse("Log line 01 should be truncated/excluded as it is outside last 50 lines", payload.contains("Test log line 01"))
+        assertFalse("Log line 20 should be truncated/excluded as it is outside last 50 lines", payload.contains("Test log line 20"))
+        assertTrue("Log line 21 should be included as line 21..70 is last 50 lines", payload.contains("Test log line 21"))
+        assertTrue("Log line 70 should be included as it is the most recent line", payload.contains("Test log line 70"))
+
+        val logsSection = payload.substringAfter("Logs:\n").substringBefore("\n\n---")
+        val lines = logsSection.lines().filter { it.isNotBlank() }
+        assertEquals("Logs section in payload must contain exactly 50 lines", 50, lines.size)
+    }
+
+    @Test
     fun testUncheckingLogsCheckboxExcludesLogsFromPayload() {
         val application = ApplicationProvider.getApplicationContext<Application>()
         EventLogger.clear(application)
