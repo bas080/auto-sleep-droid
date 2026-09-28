@@ -1,3 +1,5 @@
+@file:Suppress("LargeClass", "TooManyFunctions", "MaxLineLength", "MagicNumber")
+
 package com.bas080.autosleepdroid
 
 import android.Manifest

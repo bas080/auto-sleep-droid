@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber")
+
 package com.bas080.autosleepdroid
 
 import android.content.Context
