@@ -116,4 +116,74 @@ class EventLoggerTest {
         assertTrue(EventLogger.getEvents(context).isEmpty())
         assertFalse(logFile.exists())
     }
+
+    @Test
+    fun testContextlessLoggingAndAppCtxFallback() {
+        EventLogger.clear(context)
+
+        // Calling getEvents/clear with null context when appContext is null
+        EventLogger.clear(null)
+        assertTrue(EventLogger.getEvents(null).isEmpty())
+        assertFalse(EventLogger.isDarkMode(null))
+
+        // Log with context sets appContext internally
+        EventLogger.log(context, "Set appContext message")
+        assertEquals(1, EventLogger.getEvents(null).size)
+
+        // Now call contextless log overloads
+        EventLogger.log(EventLogger.LEVEL_HIGH, "Contextless high level log")
+        EventLogger.log("Contextless normal log")
+
+        val events = EventLogger.getEvents(null)
+        assertEquals(3, events.size)
+        assertTrue(events[1].contains("Contextless high level log"))
+        assertTrue(events[2].contains("Contextless normal log"))
+
+        // Single argument formatColoredEvent
+        val formatted = EventLogger.formatColoredEvent(events[1])
+        assertTrue(formatted.toString().contains("Contextless high level log"))
+
+        // Format null/empty line
+        assertEquals("", EventLogger.formatColoredEvent(null).toString())
+        assertEquals("", EventLogger.formatColoredEvent("").toString())
+
+        // Clear with null context when appContext was set
+        EventLogger.clear(null)
+        assertTrue(EventLogger.getEvents(context).isEmpty())
+    }
+
+    @Test
+    fun testListenerCallbackDispatch() {
+        val loggedEvents = mutableListOf<String>()
+        EventLogger.setListener { event -> loggedEvents.add(event) }
+
+        EventLogger.log(context, "Test listener message")
+        org.robolectric.shadows.ShadowLooper.runUiThreadTasks()
+
+        assertEquals(1, loggedEvents.size)
+        assertTrue(loggedEvents[0].contains("Test listener message"))
+
+        EventLogger.setListener(null)
+    }
+
+    @Test
+    fun testPruneFileWhenMaxBytesExceeded() {
+        EventLogger.clear(context)
+        val logFile = File(context.filesDir, "event_logs.txt")
+
+        // Write content > 1,000,000 bytes with 100 lines
+        val largeContent = StringBuilder()
+        for (i in 1..100) {
+            largeContent.append("Line $i ").append("a".repeat(10000)).append("\n")
+        }
+        logFile.writeText(largeContent.toString())
+        assertTrue(logFile.length() >= 1_000_000L)
+
+        // Next log triggers pruneFile to keep only the last 50 lines
+        EventLogger.log(context, "New line after prune")
+
+        val lines = logFile.readLines().filter { it.trim().isNotEmpty() }
+        assertEquals(51, lines.size)
+        assertTrue(lines.last().contains("New line after prune"))
+    }
 }

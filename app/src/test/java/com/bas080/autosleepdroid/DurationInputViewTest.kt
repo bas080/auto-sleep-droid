@@ -82,6 +82,110 @@ class DurationInputViewTest {
         assertEquals(150, durationInputView.getTotalMinutes())
     }
 
+    @Test
+    fun testConstructorsAndChildIds() {
+        val viewAttr = DurationInputView(context, null)
+        assertNotNull(viewAttr.getHoursPicker())
+        assertNotNull(viewAttr.getMinutesPicker())
+
+        val viewStyle = DurationInputView(context, null, 0)
+        assertNotNull(viewStyle.getHoursPicker())
+
+        viewStyle.setChildInputIds(101, 102)
+        assertEquals(101, viewStyle.getHoursPicker()?.id)
+        assertEquals(102, viewStyle.getMinutesPicker()?.id)
+    }
+
+    @Test
+    fun testSetEnabledDisablesChildPickers() {
+        durationInputView.setEnabled(false)
+        assertEquals(false, durationInputView.getHoursPicker()?.isEnabled)
+        assertEquals(false, durationInputView.getMinutesPicker()?.isEnabled)
+
+        durationInputView.setEnabled(true)
+        assertEquals(true, durationInputView.getHoursPicker()?.isEnabled)
+        assertEquals(true, durationInputView.getMinutesPicker()?.isEnabled)
+    }
+
+    @Test
+    fun testMinuteStepOneConfigurationAndSetTotalMinutes() {
+        durationInputView.configure(0, 12, 1)
+
+        val minutesPicker = durationInputView.getMinutesPicker()
+        org.junit.Assert.assertNull(minutesPicker?.displayedValues)
+        assertEquals(0, minutesPicker?.minValue)
+        assertEquals(59, minutesPicker?.maxValue)
+
+        durationInputView.setTotalMinutes(125)
+        assertEquals(2, durationInputView.getHoursPicker()?.value)
+        assertEquals(5, durationInputView.getMinutesPicker()?.value)
+        assertEquals(125, durationInputView.getTotalMinutes())
+
+        // Negative or excessive setTotalMinutes
+        durationInputView.setTotalMinutes(-10)
+        assertEquals(-1, durationInputView.getTotalMinutes())
+
+        durationInputView.setTotalMinutes(2000)
+        assertEquals(12, durationInputView.getHoursPicker()?.value) // max hours 12
+    }
+
+    @Test
+    fun testOnDurationChangeListenerCallbacks() {
+        var changedMinutes = 0
+        var invalidFired = false
+
+        durationInputView.configure(0, 12, 5)
+        durationInputView.setOnDurationChangeListener(object : DurationInputView.FullOnDurationChangeListener {
+            override fun onDurationChanged(totalMinutes: Int) {
+                changedMinutes = totalMinutes
+            }
+
+            override fun onInvalidDuration() {
+                invalidFired = true
+            }
+        })
+
+        // Setting value triggers listener when total > 0
+        durationInputView.setTotalMinutes(0) // total 0
+        durationInputView.getHoursPicker()?.value = 0
+        durationInputView.getMinutesPicker()?.value = 0
+
+        // Trigger value change programmatically
+        durationInputView.getHoursPicker()?.value = 1
+        durationInputView.getMinutesPicker()?.value = 2 // 2 * 5 = 10m -> 70m
+
+        val handleMethod = DurationInputView::class.java.getDeclaredMethod("handleDurationChange")
+        handleMethod.isAccessible = true
+        handleMethod.invoke(durationInputView)
+
+        assertEquals(70, changedMinutes)
+
+        // Set 0 hours & 0 minutes to test invalid duration callback
+        durationInputView.getHoursPicker()?.value = 0
+        durationInputView.getMinutesPicker()?.value = 0
+        handleMethod.invoke(durationInputView)
+
+        assertEquals(true, invalidFired)
+    }
+
+    @Test
+    fun testApplyParsedValuesWithInvalidOrOutOfRangeTypedText() {
+        durationInputView.configure(0, 12, 5)
+        durationInputView.setTotalMinutes(60)
+
+        val hoursEditText = findEditTextInPicker(durationInputView.getHoursPicker())
+        val minutesEditText = findEditTextInPicker(durationInputView.getMinutesPicker())
+
+        // Non-numeric text
+        hoursEditText?.setText("abc")
+        minutesEditText?.setText("xyz")
+        assertEquals(60, durationInputView.getTotalMinutes())
+
+        // Out of range hours
+        hoursEditText?.setText("99")
+        assertEquals(60, durationInputView.getTotalMinutes())
+    }
+
     private fun findEditTextInPicker(picker: NumberPicker?): EditText? {
         picker ?: return null
         val inputId = android.content.res.Resources.getSystem().getIdentifier("numberpicker_input", "id", "android")
