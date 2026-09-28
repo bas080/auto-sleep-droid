@@ -182,4 +182,31 @@ class HealthConnectManagerTest {
 
         HealthConnectManager.setClientForTesting(null, null)
     }
+
+    @Test
+    fun testWriteSleepSession_SessionZeroDuration_FailsValidation() {
+        val successRef = AtomicBoolean(true)
+        val errorRef = AtomicReference<String>()
+
+        val now = System.currentTimeMillis()
+        HealthConnectManager.writeSleepSession(context, now, now) { success, error ->
+            successRef.set(success)
+            errorRef.set(error)
+        }
+
+        assertFalse(successRef.get())
+        assertNotNull(errorRef.get())
+        assertTrue(errorRef.get()!!.contains("Invalid timestamps"))
+    }
+
+    @Test
+    fun testHasSleepWritePermission_UnavailableSdk_ReturnsFalse() {
+        HealthConnectManager.setClientForTesting(null, false)
+        val resultRef = AtomicBoolean(true)
+        HealthConnectManager.hasSleepWritePermission(context) { hasPermission ->
+            resultRef.set(hasPermission)
+        }
+        assertFalse(resultRef.get())
+        HealthConnectManager.setClientForTesting(null, null)
+    }
 }

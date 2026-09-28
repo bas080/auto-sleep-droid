@@ -60,7 +60,46 @@ class SettingRowViewTest {
     }
 
     @Test
-    fun testSettingRowViewConstructors() {
+    fun testProgrammaticIsCheckedChangeDoesNotTriggerOnCheckedChangeListener() {
+        val rowView = SettingRowView(context)
+        var callbackTriggered = false
+
+        rowView.setOnCheckedChangeListener {
+            callbackTriggered = true
+        }
+
+        assertFalse(rowView.isChecked)
+        rowView.isChecked = true
+        assertTrue(rowView.isChecked)
+        assertFalse("Programmatic assignment to isChecked must NOT fire onCheckedChangeListener", callbackTriggered)
+
+        rowView.isChecked = false
+        assertFalse(rowView.isChecked)
+        assertFalse("Programmatic assignment to isChecked must NOT fire onCheckedChangeListener", callbackTriggered)
+    }
+
+    @Test
+    fun testUserRowClickTriggersOnCheckedChangeListener() {
+        val rowView = SettingRowView(context)
+        rowView.findViewById<Switch>(R.id.setting_row_switch).visibility = android.view.View.VISIBLE
+        var lastCheckedState: Boolean? = null
+
+        rowView.setOnCheckedChangeListener { isChecked ->
+            lastCheckedState = isChecked
+        }
+
+        assertFalse(rowView.isChecked)
+        rowView.performClick()
+        assertTrue(rowView.isChecked)
+        assertEquals(true, lastCheckedState)
+
+        rowView.performClick()
+        assertFalse(rowView.isChecked)
+        assertEquals(false, lastCheckedState)
+    }
+
+    @Test
+    fun testSettingRowViewConstructorsAndSetChildViewsEnabled() {
         val row1 = SettingRowView(context, null)
         assertNotNull(row1)
 
@@ -70,7 +109,12 @@ class SettingRowViewTest {
         val row3 = SettingRowView(context, null, 0, 0)
         assertNotNull(row3)
 
+        // Disable row when switch is present
+        row3.findViewById<Switch>(R.id.setting_row_switch).visibility = android.view.View.VISIBLE
         row3.isEnabled = false
-        assertFalse(row3.isEnabled)
+        assertFalse(row3.findViewById<Switch>(R.id.setting_row_switch).isEnabled)
+
+        row3.isEnabled = true
+        assertTrue(row3.findViewById<Switch>(R.id.setting_row_switch).isEnabled)
     }
 }

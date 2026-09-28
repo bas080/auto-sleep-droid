@@ -19,6 +19,23 @@ class SettingRowView : LinearLayout {
     private lateinit var valueTextView: TextView
     private lateinit var switchView: Switch
 
+    private var onUserCheckedChangeListener: ((Boolean) -> Unit)? = null
+    private var isProgrammaticChange = false
+
+    var isChecked: Boolean
+        get() = if (::switchView.isInitialized) switchView.isChecked else false
+        set(value) {
+            if (::switchView.isInitialized && switchView.isChecked != value) {
+                isProgrammaticChange = true
+                switchView.isChecked = value
+                isProgrammaticChange = false
+            }
+        }
+
+    fun setOnCheckedChangeListener(listener: ((Boolean) -> Unit)?) {
+        onUserCheckedChangeListener = listener
+    }
+
     constructor(context: Context) : super(context) {
         initView(context, null, 0, 0)
     }
@@ -51,6 +68,18 @@ class SettingRowView : LinearLayout {
         descriptionTextView = findViewById(R.id.setting_row_description)
         valueTextView = findViewById(R.id.setting_row_value)
         switchView = findViewById(R.id.setting_row_switch)
+
+        switchView.setOnCheckedChangeListener { _, isChecked ->
+            if (!isProgrammaticChange) {
+                onUserCheckedChangeListener?.invoke(isChecked)
+            }
+        }
+
+        setOnClickListener {
+            if (isEnabled && switchView.visibility == View.VISIBLE) {
+                switchView.toggle()
+            }
+        }
 
         if (attrs != null) {
             applyStyledAttributes(context, attrs, defStyleAttr, defStyleRes)

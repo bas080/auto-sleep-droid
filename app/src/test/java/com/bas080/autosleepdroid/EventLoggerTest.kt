@@ -186,4 +186,33 @@ class EventLoggerTest {
         assertEquals(51, lines.size)
         assertTrue(lines.last().contains("New line after prune"))
     }
+
+    @Test
+    fun testUncoveredFormattingAndListenerEdgeCases() {
+        // Line without timestamp space or markers
+        val rawLine = "RawUnformattedMessage"
+        val formattedRaw = EventLogger.formatColoredEvent(context, rawLine)
+        assertEquals("RawUnformattedMessage", formattedRaw.toString())
+
+        // Line with single word and space
+        val singleWordLine = "12:00:00 "
+        val formattedSingle = EventLogger.formatColoredEvent(context, singleWordLine)
+        assertTrue(formattedSingle.toString().contains("12:00:00"))
+
+        // Listener dispatch from non-main thread
+        val loggedEvents = mutableListOf<String>()
+        EventLogger.setListener { event -> loggedEvents.add(event) }
+
+        val thread = Thread {
+            EventLogger.log(context, "Background thread log")
+        }
+        thread.start()
+        thread.join()
+
+        org.robolectric.shadows.ShadowLooper.runUiThreadTasks()
+        assertEquals(1, loggedEvents.size)
+        assertTrue(loggedEvents[0].contains("Background thread log"))
+
+        EventLogger.setListener(null)
+    }
 }

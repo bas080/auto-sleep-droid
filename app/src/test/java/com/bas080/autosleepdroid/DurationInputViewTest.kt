@@ -212,6 +212,44 @@ class DurationInputViewTest {
         assertEquals(75, view3.getTotalMinutes())
     }
 
+    @Test
+    fun testDurationInputViewEdgeCasesAndUncoveredBranches() {
+        val view = DurationInputView(context)
+        view.configure(0, 12, 5)
+
+        // Test setTotalMinutes when remainingMins stepIdx >= count
+        val viewStep5 = DurationInputView(context)
+        viewStep5.configure(0, 12, 5)
+        viewStep5.setTotalMinutes(59) // 59 / 5 = 11.8 -> rounded to 12 (count = 12, count - 1 = 11)
+        assertEquals(55, viewStep5.getTotalMinutes())
+
+        // Test minuteStep == 1 typed text bounds
+        val viewStep1 = DurationInputView(context)
+        viewStep1.configure(0, 12, 1)
+        val minEditText1 = findEditTextInPicker(viewStep1.getMinutesPicker())
+
+        minEditText1?.setText("45")
+        assertEquals(45, viewStep1.getTotalMinutes())
+
+        minEditText1?.setText("99") // Out of 0..59 range -> ignored
+        assertEquals(45, viewStep1.getTotalMinutes())
+
+        // Test null listener on handleDurationChange
+        viewStep5.setOnDurationChangeListener(null)
+        viewStep5.getHoursPicker()?.value = 2
+
+        // Test simple OnDurationChangeListener (not FullOnDurationChangeListener) when total == 0
+        var callbackCount = 0
+        viewStep5.setOnDurationChangeListener { callbackCount++ }
+        viewStep5.setTotalMinutes(0)
+        viewStep5.getHoursPicker()?.value = 0
+        viewStep5.getMinutesPicker()?.value = 0
+        val handleMethod = DurationInputView::class.java.getDeclaredMethod("handleDurationChange")
+        handleMethod.isAccessible = true
+        handleMethod.invoke(viewStep5)
+        assertEquals(0, callbackCount)
+    }
+
     private fun findEditTextInPicker(picker: NumberPicker?): EditText? {
         picker ?: return null
         val inputId = android.content.res.Resources.getSystem().getIdentifier("numberpicker_input", "id", "android")
