@@ -20,50 +20,11 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 
 ## Key Codebase Conventions
 
-- **Architecture & Language:** Auto Sleep Droid is written 100% in Kotlin for Android 8.0+ (minSdk 26, targetSdk 34) using unidirectional data flow. Avoid Java interop annotations (`@JvmStatic`, `@JvmField`, `@JvmOverloads`). Custom Android views (`SettingRowView`, `DurationInputView`) use explicit Kotlin secondary constructors (`constructor(context: Context)`, `constructor(context: Context, attrs: AttributeSet?)`, etc.) to support XML layout inflation without `@JvmOverloads`.
-- **Code Complexity & Static Analysis:** Detekt (`io.gitlab.arturbosch.detekt`) is configured as the code complexity static analysis tool in `config/detekt/detekt.yml`. It enforces Kotlin best practice complexity rules (cyclomatic complexity, cognitive complexity, function length, nested block depth, parameter list size, condition complexity). Detekt runs automatically on `./gradlew test` and in CI.
-- **Foreground Service & PendingIntents:** `MainService` is a foreground service declared with `foregroundServiceType="mediaPlayback"`. All `PendingIntent` instances targeting `MainService` use `PendingIntent.getForegroundService` on API 26+ with explicit nullable return types (`PendingIntent?`) so background alarm/notification triggers grant foreground start permissions without throwing `ForegroundServiceStartNotAllowedException`.
-- **External System Settings Intents:** Launch external system settings screens (Do Not Disturb, Exact Alarm, Health Connect) with `Intent.FLAG_ACTIVITY_NEW_TASK` so they open in a separate task window outside Auto Sleep Droid's activity stack.
-- **Logging Subsystem:** `EventLogger` writes timestamped logs directly to append-only internal app file storage (`event_logs.txt`) without keeping log lists in memory.
-- **Action Toast Feedback:** Actions that change something (such as toggling timer state, setting duration, dismissing/snoozing alarms, marking awake) should always be accompanied with a toast.
-- **Reactive UI Updates with `watchEffect`:** All UI updates in activities and services should use `preferenceManager.watchEffect` to ensure that UI changes are fully reactive.
-- **No Text Codeblock Diagrams:** Do not render ASCII or text-art codeblock diagrams in documentation files. Text diagrams are not computer parseable and are less desired.
-- **UI & Notification Strings:** Do not include trailing punctuation, colons, or ellipses in UI and notification string resource values (`strings.xml`).
-- **Localization:** Maintain default English resources in `app/src/main/res/values/strings.xml` and Spanish translations in `app/src/main/res/values-es/strings.xml`.
-- **Test-Driven Development (TDD):** When attempting a fix, follow a TDD approach where possible: write a test that fails first, and then implement the fix to make that test pass.
-- **Code Testability over Reflection:** Prefer refactoring production code for testability (e.g. extracting testable logic into utility classes or methods, or increasing visibility) over using reflection in unit tests. Reflection should only be used when refactoring does not solve the problem.
-- **Unit Tests:** Do not add unit tests or test dependencies unless explicitly instructed by the user.
-- **Reproducible & F-Droid Builds:** Keep `dependenciesInfo` (`includeInApk = false`, `includeInBundle = false`) disabled in `app/build.gradle` for F-Droid compliance. Whenever making changes affecting build configurations, Gradle plugins, or metadata, verify that unsigned release builds (`./gradlew assembleRelease` or `fdroid build --stop --test com.bas080.autosleepdroid`) assemble cleanly without keystore environment variables and run `fdroid lint com.bas080.autosleepdroid` to ensure F-Droid build compatibility.
-- **Releases:** Follow `scripts/release.sh <version>` for bumping versions and tagging manually, or trigger a release via GitHub Actions `workflow_dispatch` with a `version` parameter. GitHub Actions (`.github/workflows/android-release.yml`) uses a single job to execute `scripts/release.sh`, bump versions, push `master` and the version tag (`v<version>`), run tests, build APKs, and publish releases automatically. Point to GitHub Releases in Fastlane description metadata rather than per-version changelogs.
-- **Commit Messages:** Do not use prefixes such as `ci:`, `feat:`, `fix:`, or `chore:`. Write plain, clear titles written for normal human readers (e.g. `Add dark mode support` instead of `feat: add dark mode support`). Always check `git diff` before writing human readable, spec-focused commit messages and submission titles/descriptions to ensure accuracy.
-- **User Manual Asset:** The user manual is bundled in `app/src/main/assets/manual.html` and must be kept in sync whenever changes affecting user-visible behavior or features occur. Do not use nested lists (`<ul>` inside `<li>`) in `manual.html` or user documentation; favor flat, single-level lists, paragraphs, or separate subheadings instead.
-- **Permissions Declaration & Documentation:** Whenever feature logic relies on system permissions or policy access (e.g. Do Not Disturb access), always ensure `<uses-permission>` is declared in `AndroidManifest.xml` AND documented in the "Permissions Used" section in `README.md` (specifying whether each permission is required or optional).
-- **Minimal Null Guards & Exception Handling:** Write code with the least amount of null guards and `try-catch` blocks necessary. Allow exceptions to be thrown when the application enters an invalid state so that the global error handler can intercept the error, record diagnostic context/stack traces, and prompt the user appropriately rather than silently swallowing errors or continuing in a corrupted state.
-- **Background System Crash Analysis & Fault Tolerance:**
-  When analyzing crash reports caused by background framework constraints (such as `ForegroundServiceStartNotAllowedException` or `ForegroundServiceDidNotStartInTimeException` background execution limits), consult [`docs/FOREGROUND_SERVICE_CRASHES.md`](docs/FOREGROUND_SERVICE_CRASHES.md) for detailed root cause analysis and resolution patterns:
-  - *Root Cause & Context:* Identify whether the crash stems from modern OS restrictions when the app or service is executing in the background without user-initiated foreground privileges (e.g., system `START_STICKY` service restarts or deferred broadcast triggers).
-  - *Workability & State Integrity:* Evaluate whether catching the exception allows the component to remain in a workable, consistent state. Defensive handling should log the failure context to `EventLogger` while preserving internal state machine logic, timers, alarms, and background listeners without bringing down the process.
-  - *Self-Healing Recovery:* Design recovery mechanisms so the app self-heals seamlessly upon the next user interaction (e.g., re-invoking `startForegroundService()` when `MainActivity` enters the foreground).
-  - *API & Manifest Alignment:* Ensure modern SDK parameter requirements (such as `ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK` on API 29+) match declared AndroidManifest configurations.
-- **Android Backwards Compatibility & `@Suppress("DEPRECATION")` Guidelines:**
-  1. *Version Fallback Branches for Devices Below a Certain API Level:* When an application supports older Android versions (within its configured `minSdk` range) and a framework API is deprecated in newer SDKs (e.g. API 31), write version-conditional logic:
-     ```kotlin
-     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-         // Modern API for Android 12+ (API 31+)
-         val vibratorManager = context.getSystemService(VibratorManager::class.java)
-         vibratorManager?.defaultVibrator
-     } else {
-         // Fallback for Android 8.0 - 11 (API 26 to 30)
-         // Here Context.VIBRATOR_SERVICE is deprecated in newer SDKs,
-         // but required to support devices running Android 8-11.
-         @Suppress("DEPRECATION")
-         context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-     }
-     ```
-     In these version fallback branches, `@Suppress("DEPRECATION")` is legitimate and expected because you intentionally invoke legacy framework calls to support older devices within your `minSdk` range.
-  2. *When Refactoring Is Preferred Over `@Suppress`:* There are two key cases where refactoring without `@Suppress` is preferable:
-     - **AndroidX Compatibility Libraries:** AndroidX provides backward-compatible wrappers (`IntentCompat`, `OnBackPressedDispatcher`, `ActivityResultContracts`, `NotificationCompat`) that handle API level checks internally down to low API levels. Using AndroidX abstractions removes deprecations while preserving full backward compatibility.
-     - **APIs Already Supported Across `minSdk`:** If an API check guards logic for API 21 or 24, but the app's `minSdk` is 26, the fallback branch is dead code on all supported devices. Removing the dead branch eliminates both the unreachable code and the deprecation warning.
-  3. *Summary:*
-     - Using `@Suppress("DEPRECATION")` is valid whenever you maintain explicit backward-compatibility fallbacks for older devices within your `minSdk` target.
-     - Using AndroidX / Modern APIs is preferred when AndroidX helpers exist or when the modern API is natively supported across your entire `minSdk` range.
+- **User Experience & Feedback:** Every user-initiated state change (toggling timer, adjusting duration, snoozing/dismissing alarms, marking awake) must provide clear feedback via toast notifications and immediate reactive UI updates.
+- **UI & Notification Formatting:** Keep UI and notification text clean and consistent. Avoid trailing colons, punctuation, or ellipses in `strings.xml`. Maintain English (`values/strings.xml`) and Spanish (`values-es/strings.xml`) translations.
+- **User Manual & Permissions:** Keep the bundled user manual (`app/src/main/assets/manual.html`) synchronized whenever user-visible features change. Any newly required system permission must be declared in `AndroidManifest.xml` and explained in `README.md`.
+- **System & Task Navigation:** Launch external system settings screens (Do Not Disturb, Alarms, Health Connect) as separate tasks so users can seamlessly switch back to the app.
+- **Reliability & Error Handling:** Ensure background services and alarms execute reliably without crashing. Let unexpected failures surface to the global error handler for diagnostic reporting rather than swallowing exceptions.
+- **Code Quality & Static Analysis:** Maintain low code complexity and high maintainability. Detekt (`io.gitlab.arturbosch.detekt`) enforces complexity best practices via `config/detekt/detekt.yml` during tests and CI.
+- **F-Droid & Build Compatibility:** Ensure builds remain reproducible and F-Droid compliant (`fdroid lint`). Unsigned release builds (`./gradlew assembleRelease`) must assemble cleanly without requiring local keystore configuration.
+- **Clear Commit Messages:** Write concise, plain commit titles for human readers without conventional commit prefixes (e.g., `Add dark mode support` instead of `feat: add dark mode support`).
