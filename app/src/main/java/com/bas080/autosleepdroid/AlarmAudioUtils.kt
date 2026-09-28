@@ -1,9 +1,7 @@
 package com.bas080.autosleepdroid
 
 import android.media.AudioAttributes
-import android.media.AudioManager
 import android.media.Ringtone
-import android.os.Build
 
 object AlarmAudioUtils {
 

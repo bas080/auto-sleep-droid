@@ -1,6 +1,5 @@
 package com.bas080.autosleepdroid
 
-import android.content.Context
 import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
