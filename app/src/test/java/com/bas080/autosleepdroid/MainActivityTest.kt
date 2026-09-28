@@ -77,6 +77,12 @@ class MainActivityTest {
         val activity = controller.create().resume().get()
 
         EventLogger.log(activity, EventLogger.LEVEL_HIGH, "Test event log entry")
+
+        val btnLinks = activity.findViewById<View>(R.id.btn_links)
+        btnLinks.performClick()
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+        Shadows.shadowOf(dialog).clickOnItem(1)
+
         val eventLogText = activity.findViewById<TextView>(R.id.event_log_text)
         assertNotNull(eventLogText)
         assertTrue(eventLogText.text.toString().contains("Test event log entry"))

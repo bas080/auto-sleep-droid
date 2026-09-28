@@ -994,7 +994,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         super.onResume()
         updateReportCrashRowVisibility()
         EventLogger.setListener(this)
-        refreshEventLog()
         startTimerService()
         checkHealthConnectOnResume()
         registerPreferenceListeners()
@@ -1124,10 +1123,12 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     override fun onEventLogged(event: String) {
-        eventLogText?.let {
-            it.append(EventLogger.formatColoredEvent(this, event))
-            it.append("\n")
-            scrollToBottom()
+        if (logsOverlayContainer?.visibility == View.VISIBLE) {
+            eventLogText?.let {
+                it.append(EventLogger.formatColoredEvent(this, event))
+                it.append("\n")
+                scrollToBottom()
+            }
         }
     }
 
