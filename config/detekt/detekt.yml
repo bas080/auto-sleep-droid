@@ -75,6 +75,6 @@ style:
     max: 2
     excludedFunctions: ['equals']
   UnusedPrivateMember:
-    active: false
+    active: true
   UnusedPrivateProperty:
-    active: false
+    active: true
