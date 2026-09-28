@@ -1,4 +1,4 @@
-@file:Suppress("LargeClass", "TooManyFunctions", "MaxLineLength", "MagicNumber")
+@file:Suppress("LargeClass", "TooManyFunctions", "MaxLineLength")
 
 package com.bas080.autosleepdroid
 
@@ -174,7 +174,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun requestNotificationPermissionOnStartupIfNeeded() {
-        if (Build.VERSION.SDK_INT >= 33) {
+        if (Build.VERSION.SDK_INT >= BUILD_VERSION_TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 EventLogger.log(this, EventLogger.LEVEL_LOW, "Requesting notification permission on app startup")
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -280,7 +280,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         if (includeLogs) {
             val events = EventLogger.getEvents(context)
             if (events.isNotEmpty()) {
-                val lastEvents = events.takeLast(50)
+                val lastEvents = events.takeLast(MAX_FEEDBACK_LOG_ENTRIES)
                 bodyBuilder.append("Logs:\n")
                 for (event in lastEvents) {
                     bodyBuilder.append(EventLogger.formatColoredEvent(context, event).toString()).append("\n")
@@ -292,10 +292,10 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val actManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
         val memInfo = android.app.ActivityManager.MemoryInfo()
         actManager?.getMemoryInfo(memInfo)
-        val availMemMb = memInfo.availMem / (1024 * 1024)
+        val availMemMb = memInfo.availMem / (BYTES_PER_KB * BYTES_PER_KB)
 
         val stat = android.os.StatFs(context.filesDir.absolutePath)
-        val availStorageMb = stat.availableBytes / (1024 * 1024)
+        val availStorageMb = stat.availableBytes / (BYTES_PER_KB * BYTES_PER_KB)
 
         bodyBuilder.append("---\nApp Version: ").append(BuildConfig.VERSION_NAME)
             .append(" (Code ").append(BuildConfig.VERSION_CODE).append(")")
@@ -507,8 +507,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         val durationInputView = DurationInputView(this)
         durationInputView.configure(bounds.minHours, bounds.maxHours, bounds.minuteStep)
-        val paddingHorizontalPx = (24 * resources.displayMetrics.density).toInt()
-        val paddingVerticalPx = (12 * resources.displayMetrics.density).toInt()
+        val paddingHorizontalPx = (PADDING_DIALOG_HORIZONTAL_DP * resources.displayMetrics.density).toInt()
+        val paddingVerticalPx = (PADDING_DIALOG_VERTICAL_DP * resources.displayMetrics.density).toInt()
         durationInputView.setPadding(paddingHorizontalPx, paddingVerticalPx, paddingHorizontalPx, paddingVerticalPx)
         durationInputView.setTotalMinutes(currentMinutes)
 
@@ -558,7 +558,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 R.string.label_duration,
                 PreferenceKeys.KEY_DURATION_MINUTES,
                 AppDefaults.DURATION_MINUTES,
-                DurationPickerBounds(0, 12, 5)
+                DurationPickerBounds(0, MAX_TIMER_HOURS, TIMER_STEP_MINUTES)
             ) { minutes ->
                 textDurationValue?.text = DurationUtils.formatDurationString(minutes)
             }
@@ -618,7 +618,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 R.string.label_min_sleep,
                 PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
                 AppDefaults.MIN_SLEEP_DURATION_MINUTES,
-                DurationPickerBounds(0, 16, 15)
+                DurationPickerBounds(0, MAX_MIN_SLEEP_HOURS, MIN_SLEEP_STEP_MINUTES)
             ) { minutes ->
                 preferenceManager?.edit()?.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)?.apply()
                 textMinSleepValue?.text = DurationUtils.formatDurationString(minutes)
@@ -645,7 +645,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 R.string.label_hc_min_duration,
                 PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES,
                 AppDefaults.HC_MIN_DURATION_MINUTES,
-                DurationPickerBounds(0, 2, 5)
+                DurationPickerBounds(0, MAX_HC_HOURS, HC_STEP_MINUTES)
             ) { minutes ->
                 textHcMinDurationValue?.text = DurationUtils.formatDurationString(minutes)
             }
@@ -766,7 +766,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         if (view !is SettingRowView) {
             view.isClickable = enabled
             view.isFocusable = enabled
-            view.alpha = if (enabled) 1.0f else 0.38f
+            view.alpha = if (enabled) ALPHA_ENABLED else ALPHA_DISABLED
             if (view is ViewGroup) {
                 for (i in 0 until view.childCount) {
                     setChildViewsEnabled(view.getChildAt(i), enabled)
@@ -895,7 +895,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val pm = preferenceManager ?: return
         try {
             val json = JSONObject()
-            json.put("version", 1)
+            json.put("version", EXPORT_IMPORT_SCHEMA_VERSION)
             for (spec in EXPORTED_BOOL_PREFS) {
                 json.put(spec.key, pm.getBoolean(spec.key, spec.defaultValue))
             }
@@ -928,7 +928,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         val input = EditText(this).apply {
             isSingleLine = false
-            setLines(4)
+            setLines(IMPORT_INPUT_LINES)
         }
 
         getClipboardJsonText()?.let { input.setText(it) }
@@ -962,7 +962,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         try {
             val json = JSONObject(jsonStr)
-            if (!json.has("version") || json.getInt("version") != 1) {
+            if (!json.has("version") || json.getInt("version") != EXPORT_IMPORT_SCHEMA_VERSION) {
                 throw JSONException("Unsupported schema version")
             }
 
@@ -1009,7 +1009,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     internal fun requestExactAlarmPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT >= 31) {
+        if (Build.VERSION.SDK_INT >= BUILD_VERSION_S) {
             val alarmManager = getSystemService(ALARM_SERVICE) as android.app.AlarmManager?
             if (alarmManager != null && !alarmManager.canScheduleExactAlarms()) {
                 EventLogger.log(this, EventLogger.LEVEL_LOW, "Opening exact alarm settings")
@@ -1081,7 +1081,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val pm = preferenceManager ?: return
         val isHidden = pm.getBoolean(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN, false)
         val hasCrash = getSharedPreferences("crash_reports", MODE_PRIVATE).contains("pending_crash_report")
-        val shouldShow = forceShow || randomRoll < 0.2f
+        val shouldShow = forceShow || randomRoll < DONATE_DIALOG_PROBABILITY
 
         if (!isHidden && !hasCrash && shouldShow) {
             showDonateDialog()
@@ -1194,6 +1194,24 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     companion object {
+        private const val BUILD_VERSION_S = 31
+        private const val BUILD_VERSION_TIRAMISU = 33
+        private const val MAX_FEEDBACK_LOG_ENTRIES = 50
+        private const val BYTES_PER_KB = 1024L
+        private const val PADDING_DIALOG_HORIZONTAL_DP = 24
+        private const val PADDING_DIALOG_VERTICAL_DP = 12
+        private const val MAX_TIMER_HOURS = 12
+        private const val TIMER_STEP_MINUTES = 5
+        private const val MAX_MIN_SLEEP_HOURS = 16
+        private const val MIN_SLEEP_STEP_MINUTES = 15
+        private const val MAX_HC_HOURS = 2
+        private const val HC_STEP_MINUTES = 5
+        private const val ALPHA_ENABLED = 1.0f
+        private const val ALPHA_DISABLED = 0.38f
+        private const val EXPORT_IMPORT_SCHEMA_VERSION = 1
+        private const val IMPORT_INPUT_LINES = 4
+        private const val DONATE_DIALOG_PROBABILITY = 0.2f
+
         private val EXPORTED_BOOL_PREFS = arrayOf(
             BoolPrefSpec(PreferenceKeys.KEY_ACTIVE, true),
             BoolPrefSpec(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false),

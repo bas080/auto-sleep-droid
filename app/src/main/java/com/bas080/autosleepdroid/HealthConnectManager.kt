@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions", "MagicNumber")
+@file:Suppress("TooManyFunctions")
 
 package com.bas080.autosleepdroid
 
@@ -17,6 +17,9 @@ import java.time.Instant
 import java.time.ZoneId
 
 object HealthConnectManager {
+
+    private const val MS_PER_MINUTE = 60_000L
+    private const val MAX_SLEEP_DURATION_MINUTES = 1440
 
     @Volatile
     private var testClient: HealthConnectClient? = null
@@ -188,8 +191,8 @@ object HealthConnectManager {
         if (startTimeMs <= 0 || endTimeMs <= startTimeMs) {
             return "Invalid timestamps: startTime=$startTimeMs, endTime=$endTimeMs"
         }
-        val durationMinutes = ((endTimeMs - startTimeMs) / 60_000L).toInt()
-        return if (durationMinutes < 1 || durationMinutes > 1440) {
+        val durationMinutes = ((endTimeMs - startTimeMs) / MS_PER_MINUTE).toInt()
+        return if (durationMinutes < 1 || durationMinutes > MAX_SLEEP_DURATION_MINUTES) {
             "Invalid sleep duration: ${durationMinutes}m"
         } else {
             null
@@ -225,7 +228,7 @@ object HealthConnectManager {
                 )
 
                 client.insertRecords(listOf(record))
-                val durationMinutes = ((endTimeMs - startTimeMs) / 60_000L).toInt()
+                val durationMinutes = ((endTimeMs - startTimeMs) / MS_PER_MINUTE).toInt()
                 val formatted = DurationUtils.formatDurationString(durationMinutes)
                 val logMsg = "Successfully persisted sleep session ($formatted)"
                 EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: $logMsg")

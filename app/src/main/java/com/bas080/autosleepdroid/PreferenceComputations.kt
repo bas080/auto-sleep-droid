@@ -1,8 +1,12 @@
-@file:Suppress("MagicNumber")
-
 package com.bas080.autosleepdroid
 
 import java.util.Calendar
+
+private const val INIT_WINDOW_FACTOR = 1.2
+private const val PRE_ALARM_WINDOW_FACTOR = 0.5
+private const val MS_PER_MINUTE = 60_000L
+private const val HOURS_12_IN_MS = 12 * 3600_000L
+private const val HOURS_14_IN_MS = 14 * 3600_000L
 
 enum class SessionPhase {
     IDLE,
@@ -18,8 +22,8 @@ fun getSessionPhase(
     isSessionOngoing: Boolean,
     isAlarmRingingOrSnoozed: Boolean = false
 ): SessionPhase {
-    val windowStart = currentWakeTime - (minSleepDuration * 1.2).toLong()
-    val preAlarmStart = currentWakeTime - (minSleepDuration * 0.5).toLong()
+    val windowStart = currentWakeTime - (minSleepDuration * INIT_WINDOW_FACTOR).toLong()
+    val preAlarmStart = currentWakeTime - (minSleepDuration * PRE_ALARM_WINDOW_FACTOR).toLong()
 
     return when {
         isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime) -> SessionPhase.ALARM
@@ -45,7 +49,7 @@ object PreferenceComputations {
                 PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
                 AppDefaults.MIN_SLEEP_DURATION_MINUTES
             )
-            val minSleepDurationMs = minSleepMin * 60_000L
+            val minSleepDurationMs = minSleepMin * MS_PER_MINUTE
 
             var currentWakeTime = 0L
 
@@ -61,9 +65,9 @@ object PreferenceComputations {
                 calCurrent.set(Calendar.MINUTE, currentMin)
                 calCurrent.set(Calendar.SECOND, 0)
                 calCurrent.set(Calendar.MILLISECOND, 0)
-                if (now - calCurrent.timeInMillis > 12 * 3600_000L) {
+                if (now - calCurrent.timeInMillis > HOURS_12_IN_MS) {
                     calCurrent.add(Calendar.DAY_OF_YEAR, 1)
-                } else if (calCurrent.timeInMillis - now > 12 * 3600_000L) {
+                } else if (calCurrent.timeInMillis - now > HOURS_12_IN_MS) {
                     calCurrent.add(Calendar.DAY_OF_YEAR, -1)
                 }
                 currentWakeTime = calCurrent.timeInMillis
@@ -73,10 +77,10 @@ object PreferenceComputations {
                 val sleepStartTime = getter.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
                 var minWakeTimeMillis = 0L
                 if (timerEndsAt > 0L) {
-                    val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
+                    val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * MS_PER_MINUTE)
                     minWakeTimeMillis = timerEndsAt + effectiveMinSleepMs
-                } else if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
-                    val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
+                } else if (sleepStartTime > 0L && (now - sleepStartTime < HOURS_14_IN_MS)) {
+                    val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * MS_PER_MINUTE)
                     minWakeTimeMillis = sleepStartTime + effectiveMinSleepMs
                 }
                 if (minWakeTimeMillis > currentWakeTime) {
@@ -91,8 +95,8 @@ object PreferenceComputations {
             val isWakeupSnoozed = getter.getBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_SNOOZED, false)
             val isAlarmRingingOrSnoozed = isWakeupRinging || isWakeupSnoozed
 
-            val isSessionOngoing = (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) ||
-                    (timerStartTime > 0L && (now - timerStartTime < 14 * 3600_000L)) ||
+            val isSessionOngoing = (sleepStartTime > 0L && (now - sleepStartTime < HOURS_14_IN_MS)) ||
+                    (timerStartTime > 0L && (now - timerStartTime < HOURS_14_IN_MS)) ||
                     (timerEndsAt > 0L) ||
                     isAlarmRingingOrSnoozed
 
@@ -113,7 +117,7 @@ object PreferenceComputations {
                 PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
                 AppDefaults.MIN_SLEEP_DURATION_MINUTES
             )
-            val minSleepDurationMs = minSleepMin * 60_000L
+            val minSleepDurationMs = minSleepMin * MS_PER_MINUTE
 
             val goalHour = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
             val goalMin = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
@@ -126,9 +130,9 @@ object PreferenceComputations {
             calCurrent.set(Calendar.MINUTE, currentMin)
             calCurrent.set(Calendar.SECOND, 0)
             calCurrent.set(Calendar.MILLISECOND, 0)
-            if (now - calCurrent.timeInMillis > 12 * 3600_000L) {
+            if (now - calCurrent.timeInMillis > HOURS_12_IN_MS) {
                 calCurrent.add(Calendar.DAY_OF_YEAR, 1)
-            } else if (calCurrent.timeInMillis - now > 12 * 3600_000L) {
+            } else if (calCurrent.timeInMillis - now > HOURS_12_IN_MS) {
                 calCurrent.add(Calendar.DAY_OF_YEAR, -1)
             }
             val currentWakeTime = calCurrent.timeInMillis
@@ -139,7 +143,7 @@ object PreferenceComputations {
             if (now !in rangeStart..rangeEnd) return@ComputedValue false
 
             val lastAwakeTime = getter.getLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, 0L)
-            if (lastAwakeTime > 0L && (now - lastAwakeTime < 12 * 3600_000L || lastAwakeTime >= rangeStart)) {
+            if (lastAwakeTime > 0L && (now - lastAwakeTime < HOURS_12_IN_MS || lastAwakeTime >= rangeStart)) {
                 return@ComputedValue false
             }
 
