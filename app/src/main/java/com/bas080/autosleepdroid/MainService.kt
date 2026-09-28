@@ -1,6 +1,8 @@
-@file:Suppress("LargeClass", "TooManyFunctions", "MaxLineLength", "MagicNumber")
+@file:Suppress("LargeClass", "TooManyFunctions", "MaxLineLength")
 
 package com.bas080.autosleepdroid
+
+
 
 import android.app.AlarmManager
 import android.app.Notification
@@ -26,6 +28,29 @@ import android.os.Vibrator
 import android.widget.Toast
 import java.util.Calendar
 import java.util.Date
+
+private const val BUILD_VERSION_P = 28
+private const val BUILD_VERSION_Q = 29
+private const val BUILD_VERSION_S = 31
+private const val MS_PER_MINUTE = 60_000L
+private const val MINUTES_PER_HOUR = 60
+private const val MS_PER_SECOND = 1000L
+private const val HOURS_12_IN_MS = 12 * 3600_000L
+private const val HOURS_14_IN_MS = 14 * 3600_000L
+private const val EARLY_WAKE_OFFSET_MINUTES = 15
+private const val WAKE_LOCK_TIMEOUT_MS = 30_000L
+private const val VIBRATION_DURATION_MS = 70L
+private const val MIN_AUDIBLE_VOLUME_RATIO = 0.3f
+private const val WINDOW_FACTOR = 1.2
+private const val REQUEST_CODE_DEFAULT = 100
+private const val REQUEST_CODE_WAKE_ALARM = 101
+private const val REQUEST_CODE_SHOW_INTENT = 102
+private const val REQUEST_CODE_SNOOZE = 106
+private const val REQUEST_CODE_UPDATE_NOTIF = 107
+private const val REQUEST_CODE_DISMISS = 20
+private const val REQUEST_CODE_TEST_5 = 5
+private const val REQUEST_CODE_TEST_16 = 16
+private const val REQUEST_CODE_TEST_7 = 7
 
 open class MainService : Service() {
 
@@ -141,7 +166,7 @@ open class MainService : Service() {
         when {
             savedEndsAt > now -> startTimer(configuredDurationMinutes, savedEndsAt, false)
             savedEndsAt > 0L && savedEndsAt <= now -> beginFadeOut(initialVolume)
-            musicActive -> startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
+            musicActive -> startTimer(configuredDurationMinutes, now + configuredDurationMinutes * MS_PER_MINUTE, true)
             else -> transitionTo(State.WAITING)
         }
     }
@@ -160,7 +185,7 @@ open class MainService : Service() {
         when (state) {
             State.OFF -> reloadForOffState(newDuration, musicActive, now)
             State.WAITING -> reloadForWaitingState(newDuration, musicActive, now)
-            State.ACTIVE -> if (newDuration != configuredDurationMinutes) startTimer(newDuration, now + newDuration * 60_000L, true)
+            State.ACTIVE -> if (newDuration != configuredDurationMinutes) startTimer(newDuration, now + newDuration * MS_PER_MINUTE, true)
             State.FADING -> configuredDurationMinutes = newDuration
         }
     }
@@ -168,7 +193,7 @@ open class MainService : Service() {
     private fun reloadForOffState(newDuration: Int, musicActive: Boolean, now: Long) {
         configuredDurationMinutes = newDuration
         if (musicActive) {
-            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * MS_PER_MINUTE, true)
         } else {
             onPersistState(true, configuredDurationMinutes, 0L)
             transitionTo(State.WAITING)
@@ -178,7 +203,7 @@ open class MainService : Service() {
     private fun reloadForWaitingState(newDuration: Int, musicActive: Boolean, now: Long) {
         configuredDurationMinutes = newDuration
         if (musicActive) {
-            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * MS_PER_MINUTE, true)
         } else {
             updateNotification()
         }
@@ -200,7 +225,7 @@ open class MainService : Service() {
         }
         onPersistState(true, configuredDurationMinutes, timerEndsAt)
         if (musicActive) {
-            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * MS_PER_MINUTE, true)
         } else {
             transitionTo(State.WAITING)
         }
@@ -218,7 +243,7 @@ open class MainService : Service() {
         }
 
         if (musicActive) {
-            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * MS_PER_MINUTE, true)
         } else {
             onPersistState(true, configuredDurationMinutes, 0L)
             transitionTo(State.WAITING)
@@ -244,7 +269,7 @@ open class MainService : Service() {
 
     fun handleAlarmExpiryState(currentVolume: Int, now: Long = System.currentTimeMillis()) {
         if (isEnabled && state == State.ACTIVE) {
-            if (timerEndsAt > 0L && now < timerEndsAt - 1000L) {
+            if (timerEndsAt > 0L && now < timerEndsAt - MS_PER_SECOND) {
                 return
             }
             beginFadeOut(currentVolume)
@@ -317,7 +342,7 @@ open class MainService : Service() {
         EventLogger.log("Restored pre-fade volume to $volumeBeforeFade")
         lastObservedVolume = volumeBeforeFade
         if (isValidDuration(configuredDurationMinutes)) {
-            startTimer(configuredDurationMinutes, System.currentTimeMillis() + configuredDurationMinutes * 60_000L, true)
+            startTimer(configuredDurationMinutes, System.currentTimeMillis() + configuredDurationMinutes * MS_PER_MINUTE, true)
         } else {
             transitionTo(State.WAITING)
         }
@@ -339,7 +364,7 @@ open class MainService : Service() {
         }
 
         if (isEnabled && state == State.WAITING && musicActive) {
-            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * MS_PER_MINUTE, true)
         }
     }
 
@@ -366,7 +391,7 @@ open class MainService : Service() {
     private fun resetTimerForVolumeChange(now: Long) {
         if (state != State.FADING && isValidDuration(configuredDurationMinutes)) {
             onTriggerVibration()
-            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * MS_PER_MINUTE, true)
         }
     }
 
@@ -377,7 +402,7 @@ open class MainService : Service() {
         alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager?
         preferenceManager = PreferenceManager(getSharedPreferences(PREFERENCES, MODE_PRIVATE))
         preferences = preferenceManager?.sharedPreferences
-        vibrator = if (Build.VERSION.SDK_INT >= 31) {
+        vibrator = if (Build.VERSION.SDK_INT >= BUILD_VERSION_S) {
             val vibratorManager = getSystemService(android.os.VibratorManager::class.java)
             vibratorManager?.defaultVibrator
         } else {
@@ -414,7 +439,7 @@ open class MainService : Service() {
 
         preferenceManager?.watchEffect { getter ->
             getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)
-            getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15)
+            getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, AppDefaults.HC_MIN_DURATION_MINUTES)
             updateNotification()
         }
     }
@@ -754,12 +779,12 @@ open class MainService : Service() {
         val am = alarmManager ?: return
         val intent = Intent(this, MainService::class.java).setAction(ACTION_ALARM_EXPIRY)
         val pendingIntent = getServicePendingIntent(
-            100, intent,
+            REQUEST_CODE_DEFAULT, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         ) ?: return
 
         try {
-            if (Build.VERSION.SDK_INT >= 31) {
+            if (Build.VERSION.SDK_INT >= BUILD_VERSION_S) {
                 if (am.canScheduleExactAlarms()) {
                     am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
                 } else {
@@ -778,7 +803,7 @@ open class MainService : Service() {
         val am = alarmManager ?: return
         val intent = Intent(this, MainService::class.java).setAction(ACTION_ALARM_EXPIRY)
         val pendingIntent = getServicePendingIntent(
-            100, intent,
+            REQUEST_CODE_DEFAULT, intent,
             PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
         )
         if (pendingIntent != null) {
@@ -806,8 +831,8 @@ open class MainService : Service() {
         val startTime = calculateSleepSessionStartTime(prefs, wakeTime)
 
         if (startTime > 0L && wakeTime > startTime) {
-            val durationMinutes = (wakeTime - startTime) / 60_000L
-            if (healthConnectEnabled && durationMinutes >= hcMinDurationMinutes && (wakeTime - startTime < 14 * 3600_000L)) {
+            val durationMinutes = (wakeTime - startTime) / MS_PER_MINUTE
+            if (healthConnectEnabled && durationMinutes >= hcMinDurationMinutes && (wakeTime - startTime < HOURS_14_IN_MS)) {
                 HealthConnectManager.writeSleepSession(this, startTime, wakeTime, null)
             }
         }
@@ -821,8 +846,8 @@ open class MainService : Service() {
         val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
         val timerStartTime = prefs.getLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, 0L)
 
-        val validTimer = timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)
-        val validSleep = sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)
+        val validTimer = timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < HOURS_14_IN_MS)
+        val validSleep = sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < HOURS_14_IN_MS)
 
         return when {
             validTimer -> timerStartTime
@@ -833,10 +858,10 @@ open class MainService : Service() {
 
     private fun calculateFallbackSleepStartTime(prefs: SharedPreferences, wakeTime: Long): Long {
         val lastAwakeTime = prefs.getLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, 0L)
-        val isWindowValid = lastAwakeTime == 0L || wakeTime - lastAwakeTime >= 12 * 3600_000L
+        val isWindowValid = lastAwakeTime == 0L || wakeTime - lastAwakeTime >= HOURS_12_IN_MS
         if (isWakeAlarmEnabled() && isWindowValid) {
             val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
-            return wakeTime - (minSleepMin * 60_000L)
+            return wakeTime - (minSleepMin * MS_PER_MINUTE)
         }
         return 0L
     }
@@ -876,15 +901,15 @@ open class MainService : Service() {
         val prefs = preferences ?: return
         val goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
         val goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
-        val goalMins = goalHour * 60 + goalMin
+        val goalMins = goalHour * MINUTES_PER_HOUR + goalMin
 
         val cal = Calendar.getInstance()
-        cal.add(Calendar.MINUTE, -15)
-        val calcMins = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+        cal.add(Calendar.MINUTE, -EARLY_WAKE_OFFSET_MINUTES)
+        val calcMins = cal.get(Calendar.HOUR_OF_DAY) * MINUTES_PER_HOUR + cal.get(Calendar.MINUTE)
 
         val finalMins = Math.max(goalMins, calcMins)
-        val newHour = finalMins / 60
-        val newMin = finalMins % 60
+        val newHour = finalMins / MINUTES_PER_HOUR
+        val newMin = finalMins % MINUTES_PER_HOUR
 
         prefs.edit()
             .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, newHour)
@@ -916,13 +941,13 @@ open class MainService : Service() {
         val am = alarmManager ?: return
         val intent = Intent(this, MainService::class.java).setAction(ACTION_WAKEUP_ALARM_EXPIRY)
         val pendingIntent = getServicePendingIntent(
-            101, intent,
+            REQUEST_CODE_WAKE_ALARM, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         ) ?: return
 
         val showIntent = Intent(this, MainActivity::class.java)
         val showPendingIntent = PendingIntent.getActivity(
-            this, 102, showIntent,
+            this, REQUEST_CODE_SHOW_INTENT, showIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -944,7 +969,7 @@ open class MainService : Service() {
         val am = alarmManager ?: return
         val minSleepMin = preferences?.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
             ?: AppDefaults.MIN_SLEEP_DURATION_MINUTES
-        val minSleepMs = minSleepMin * 60_000L
+        val minSleepMs = minSleepMin * MS_PER_MINUTE
         val awakeWindowStart = targetAlarmTimeMs - (minSleepMs / 2)
         val now = System.currentTimeMillis()
 
@@ -956,12 +981,12 @@ open class MainService : Service() {
     private fun setNotificationUpdateAlarm(am: AlarmManager, awakeWindowStart: Long) {
         val updateIntent = Intent(this, MainService::class.java).setAction(ACTION_UPDATE_NOTIFICATION)
         val updatePendingIntent = getServicePendingIntent(
-            107, updateIntent,
+            REQUEST_CODE_UPDATE_NOTIF, updateIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         ) ?: return
 
         try {
-            if (Build.VERSION.SDK_INT >= 31 && am.canScheduleExactAlarms()) {
+            if (Build.VERSION.SDK_INT >= BUILD_VERSION_S && am.canScheduleExactAlarms()) {
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, awakeWindowStart, updatePendingIntent)
             } else {
                 am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, awakeWindowStart, updatePendingIntent)
@@ -976,7 +1001,7 @@ open class MainService : Service() {
         if (am != null) {
             val alarmTriggerIntent = Intent(this, MainService::class.java).setAction(ACTION_WAKEUP_ALARM_EXPIRY)
             val operationIntent = getServicePendingIntent(
-                101, alarmTriggerIntent,
+                REQUEST_CODE_WAKE_ALARM, alarmTriggerIntent,
                 PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
             )
             if (operationIntent != null) {
@@ -986,7 +1011,7 @@ open class MainService : Service() {
 
             val updateTriggerIntent = Intent(this, MainService::class.java).setAction(ACTION_UPDATE_NOTIFICATION)
             val updateOperation = getServicePendingIntent(
-                107, updateTriggerIntent,
+                REQUEST_CODE_UPDATE_NOTIF, updateTriggerIntent,
                 PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
             )
             if (updateOperation != null) {
@@ -1003,7 +1028,7 @@ open class MainService : Service() {
         if (am != null) {
             val snoozeTriggerIntent = Intent(this, MainService::class.java).setAction(ACTION_WAKEUP_ALARM_EXPIRY)
             val snoozeOperation = getServicePendingIntent(
-                106, snoozeTriggerIntent,
+                REQUEST_CODE_SNOOZE, snoozeTriggerIntent,
                 PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
             )
             if (snoozeOperation != null) {
@@ -1016,10 +1041,10 @@ open class MainService : Service() {
     fun onTriggerVibration() {
         val v = vibrator
         if (v != null && v.hasVibrator()) {
-            if (Build.VERSION.SDK_INT >= 29) {
+            if (Build.VERSION.SDK_INT >= BUILD_VERSION_Q) {
                 v.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
             } else {
-                v.vibrate(VibrationEffect.createOneShot(70L, VibrationEffect.DEFAULT_AMPLITUDE))
+                v.vibrate(VibrationEffect.createOneShot(VIBRATION_DURATION_MS, VibrationEffect.DEFAULT_AMPLITUDE))
             }
         }
     }
@@ -1060,8 +1085,8 @@ open class MainService : Service() {
 
         if (isWakeAlarmEnabled()) {
             val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
-            val minSleepMs = minSleepMin * 60_000L
-            val windowMs = (1.2 * minSleepMs).toLong()
+            val minSleepMs = minSleepMin * MS_PER_MINUTE
+            val windowMs = (WINDOW_FACTOR * minSleepMs).toLong()
 
             val goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
             val goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
@@ -1079,7 +1104,7 @@ open class MainService : Service() {
     }
 
     private fun shouldRecordSleepStart(now: Long, existingSleepStart: Long, currentAlarmMs: Long, windowMs: Long): Boolean {
-        val isNoSessionOrOld = existingSleepStart == 0L || now - existingSleepStart >= 14 * 3600_000L
+        val isNoSessionOrOld = existingSleepStart == 0L || now - existingSleepStart >= HOURS_14_IN_MS
         val isWithinWindow = now >= currentAlarmMs - windowMs && now <= currentAlarmMs
         return isNoSessionOrOld && isWithinWindow
     }
@@ -1087,12 +1112,12 @@ open class MainService : Service() {
     private fun applyMinSleepSafeguardOnTimerReschedule(prefs: SharedPreferences, now: Long) {
         val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
         val timerDuration = prefs.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES)
-        val minSleepMs = minSleepMin * 60_000L
+        val minSleepMs = minSleepMin * MS_PER_MINUTE
         val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
 
         val requiredWakeTime = when {
-            timerEndsAt > 0L -> timerEndsAt + Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
-            sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L) -> sleepStartTime + Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
+            timerEndsAt > 0L -> timerEndsAt + Math.max(0L, (minSleepMin - timerDuration) * MS_PER_MINUTE)
+            sleepStartTime > 0L && (now - sleepStartTime < HOURS_14_IN_MS) -> sleepStartTime + Math.max(0L, (minSleepMin - timerDuration) * MS_PER_MINUTE)
             else -> now + minSleepMs
         }
 
@@ -1144,7 +1169,7 @@ open class MainService : Service() {
             }
         }
         val currentVol = am.getStreamVolume(AudioManager.STREAM_ALARM)
-        val minAudibleVol = Math.max(1, Math.round(maxVol * 0.3f))
+        val minAudibleVol = Math.max(1, Math.round(maxVol * MIN_AUDIBLE_VOLUME_RATIO))
         if (currentVol < minAudibleVol) {
             try {
                 am.setStreamVolume(AudioManager.STREAM_ALARM, minAudibleVol, 0)
@@ -1241,7 +1266,7 @@ open class MainService : Service() {
 
     @Suppress("TooGenericExceptionCaught")
     private fun setAlarmVolume(gain: Float) {
-        if (Build.VERSION.SDK_INT >= 28) {
+        if (Build.VERSION.SDK_INT >= BUILD_VERSION_P) {
             currentAlarmRingtone?.volume = gain
         }
         try {
@@ -1276,7 +1301,7 @@ open class MainService : Service() {
                             android.os.PowerManager.ON_AFTER_RELEASE,
                     "AutoSleepDroid:WakeAlarmLock"
                 )
-                lock.acquire(30_000L)
+                lock.acquire(WAKE_LOCK_TIMEOUT_MS)
                 wakeLock = lock
                 EventLogger.log(this, "Acquired screen wake lock for wake-up alarm")
             }
@@ -1332,13 +1357,13 @@ open class MainService : Service() {
 
         val intent = Intent(this, MainService::class.java).setAction(ACTION_WAKEUP_ALARM_EXPIRY)
         val pendingIntent = getServicePendingIntent(
-            106, intent,
+            REQUEST_CODE_SNOOZE, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         ) ?: return
 
         val showIntent = Intent(this, MainActivity::class.java)
         val showPendingIntent = PendingIntent.getActivity(
-            this, 102, showIntent,
+            this, REQUEST_CODE_SHOW_INTENT, showIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -1453,7 +1478,7 @@ open class MainService : Service() {
         return if (shouldShowAwakeAction()) {
             val intent = Intent(this, MainService::class.java).setAction(ACTION_NOTIFICATION_CLICK)
             getServicePendingIntent(
-                20, intent,
+                REQUEST_CODE_DISMISS, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )!!
         } else {
@@ -1461,7 +1486,7 @@ open class MainService : Service() {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             }
             PendingIntent.getActivity(
-                this, 20, intent,
+                this, REQUEST_CODE_DISMISS, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         }
@@ -1502,7 +1527,7 @@ open class MainService : Service() {
     private fun turnOffIntent(): PendingIntent {
         val intent = Intent(this, MainService::class.java).setAction(ACTION_TURN_OFF)
         return getServicePendingIntent(
-            5, intent,
+            REQUEST_CODE_TEST_5, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )!!
     }
@@ -1511,7 +1536,7 @@ open class MainService : Service() {
     private fun awakeIntent(): PendingIntent {
         val intent = Intent(this, MainService::class.java).setAction(ACTION_AWAKE)
         return getServicePendingIntent(
-            16, intent,
+            REQUEST_CODE_TEST_16, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )!!
     }
@@ -1519,7 +1544,7 @@ open class MainService : Service() {
     private fun turnOnIntent(): PendingIntent {
         val intent = Intent(this, MainService::class.java).setAction(ACTION_TURN_ON)
         return getServicePendingIntent(
-            7, intent,
+            REQUEST_CODE_TEST_7, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )!!
     }
@@ -1647,10 +1672,10 @@ open class MainService : Service() {
             val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
             var minWakeTimeMillis = 0L
             if (timerEndsAt > 0L) {
-                val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
+                val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * MS_PER_MINUTE)
                 minWakeTimeMillis = timerEndsAt + effectiveMinSleepMs
-            } else if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
-                val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
+            } else if (sleepStartTime > 0L && (now - sleepStartTime < HOURS_14_IN_MS)) {
+                val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * MS_PER_MINUTE)
                 minWakeTimeMillis = sleepStartTime + effectiveMinSleepMs
             }
 

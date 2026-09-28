@@ -1,5 +1,3 @@
-@file:Suppress("MagicNumber")
-
 package com.bas080.autosleepdroid
 
 import android.content.Context
@@ -33,12 +31,12 @@ class SettingRowView : LinearLayout {
         initView(context, attrs, defStyleAttr, 0)
     }
 
-    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int) : super(
-        context,
-        attrs,
-        defStyleAttr,
-        defStyleRes
-    ) {
+    constructor(
+        context: Context,
+        attrs: AttributeSet?,
+        defStyleAttr: Int,
+        defStyleRes: Int
+    ) : super(context, attrs, defStyleAttr, defStyleRes) {
         initView(context, attrs, defStyleAttr, defStyleRes)
     }
 
@@ -61,11 +59,23 @@ class SettingRowView : LinearLayout {
 
     private fun setupViewDimensions(context: Context) {
         val metrics = resources.displayMetrics
-        val minHeightPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 64f, metrics).toInt()
+        val minHeightPx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            MIN_HEIGHT_DP,
+            metrics
+        ).toInt()
         minimumHeight = minHeightPx
 
-        val paddingHorizPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16f, metrics).toInt()
-        val paddingVertPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, metrics).toInt()
+        val paddingHorizPx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            PADDING_HORIZONTAL_DP,
+            metrics
+        ).toInt()
+        val paddingVertPx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            PADDING_VERTICAL_DP,
+            metrics
+        ).toInt()
         setPaddingRelative(paddingHorizPx, paddingVertPx, paddingHorizPx, paddingVertPx)
 
         isClickable = true
@@ -80,7 +90,12 @@ class SettingRowView : LinearLayout {
     }
 
     private fun applyStyledAttributes(context: Context, attrs: AttributeSet, defStyleAttr: Int, defStyleRes: Int) {
-        val a: TypedArray = context.obtainStyledAttributes(attrs, R.styleable.SettingRowView, defStyleAttr, defStyleRes)
+        val a: TypedArray = context.obtainStyledAttributes(
+            attrs,
+            R.styleable.SettingRowView,
+            defStyleAttr,
+            defStyleRes
+        )
         try {
             val title = a.getText(R.styleable.SettingRowView_rowTitle)
             if (title != null) titleTextView.text = title
@@ -105,10 +120,10 @@ class SettingRowView : LinearLayout {
     }
 
     private fun configureRowType(rowType: Int, switchId: Int, valueId: Int, value: CharSequence?) {
-        if (rowType == 2 || switchId != View.NO_ID) {
+        if (rowType == ROW_TYPE_SWITCH || switchId != View.NO_ID) {
             switchView.visibility = View.VISIBLE
             valueTextView.visibility = View.GONE
-        } else if (rowType == 1 || valueId != View.NO_ID || value != null) {
+        } else if (rowType == ROW_TYPE_VALUE || valueId != View.NO_ID || value != null) {
             valueTextView.visibility = View.VISIBLE
             switchView.visibility = View.GONE
         } else {
@@ -121,7 +136,7 @@ class SettingRowView : LinearLayout {
         super.setEnabled(enabled)
         isClickable = enabled
         isFocusable = enabled
-        alpha = if (enabled) 1.0f else 0.38f
+        alpha = if (enabled) ALPHA_ENABLED else ALPHA_DISABLED
         for (i in 0 until childCount) {
             setChildViewsEnabled(getChildAt(i), enabled)
         }
@@ -142,5 +157,15 @@ class SettingRowView : LinearLayout {
                 setChildViewsEnabled(view.getChildAt(i), enabled)
             }
         }
+    }
+
+    companion object {
+        private const val MIN_HEIGHT_DP = 64f
+        private const val PADDING_HORIZONTAL_DP = 16f
+        private const val PADDING_VERTICAL_DP = 8f
+        private const val ROW_TYPE_VALUE = 1
+        private const val ROW_TYPE_SWITCH = 2
+        private const val ALPHA_ENABLED = 1.0f
+        private const val ALPHA_DISABLED = 0.38f
     }
 }
