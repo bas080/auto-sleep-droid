@@ -170,9 +170,12 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
     }
 
     fun unregisterListener(key: String?, listener: OnPreferenceChangeListener?) {
-        if (key == null || listener == null) return
-        val listeners = listenersMap[key]
-        listeners?.remove(listener)
+        if (key == null) {
+            unregisterListener(listener)
+            return
+        }
+        if (listener == null) return
+        listenersMap[key]?.remove(listener)
     }
 
     fun watchEffect(effect: PreferenceEffect?): EffectHandle {

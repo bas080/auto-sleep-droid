@@ -23,24 +23,24 @@ complexity:
     threshold: 15
   LargeClass:
     active: true
-    threshold: 800
+    threshold: 600
     excludes: ['**/MainService.kt', '**/MainActivity.kt']
   LongMethod:
     active: true
     threshold: 60
   LongParameterList:
     active: true
-    functionThreshold: 7
-    constructorThreshold: 7
+    functionThreshold: 6
+    constructorThreshold: 6
     ignoreDataClasses: true
   NestedBlockDepth:
     active: true
     threshold: 4
   TooManyFunctions:
     active: true
-    thresholdInFiles: 60
-    thresholdInClasses: 60
-    thresholdInObjects: 20
+    thresholdInFiles: 30
+    thresholdInClasses: 25
+    thresholdInObjects: 15
     excludes: ['**/MainService.kt', '**/MainActivity.kt']
 
 comments:
