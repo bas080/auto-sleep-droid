@@ -186,6 +186,32 @@ class DurationInputViewTest {
         assertEquals(60, durationInputView.getTotalMinutes())
     }
 
+    @Test
+    fun testCommitPickerInputFocusedAndStepVariations() {
+        val view = DurationInputView(context)
+
+        // Focus branches in commitPickerInput
+        view.configure(0, 12, 5)
+        val hoursEditText = findEditTextInPicker(view.getHoursPicker())
+        hoursEditText?.requestFocus()
+        hoursEditText?.setText("3")
+        assertEquals(180, view.getTotalMinutes())
+
+        // Minute step == 1 typed text
+        val view2 = DurationInputView(context)
+        view2.configure(0, 12, 1)
+        val minEditTextStep1 = findEditTextInPicker(view2.getMinutesPicker())
+        minEditTextStep1?.setText("25")
+        assertEquals(25, view2.getTotalMinutes())
+
+        // Minute step > 1 valid step typed text
+        val view3 = DurationInputView(context)
+        view3.configure(0, 12, 5)
+        view3.setTotalMinutes(60)
+        view3.getMinutesPicker()?.value = 3
+        assertEquals(75, view3.getTotalMinutes())
+    }
+
     private fun findEditTextInPicker(picker: NumberPicker?): EditText? {
         picker ?: return null
         val inputId = android.content.res.Resources.getSystem().getIdentifier("numberpicker_input", "id", "android")

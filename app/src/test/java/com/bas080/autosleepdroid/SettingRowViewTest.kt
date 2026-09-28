@@ -58,4 +58,19 @@ class SettingRowViewTest {
         switchView.toggle()
         assertTrue(switchView.isChecked)
     }
+
+    @Test
+    fun testSettingRowViewConstructors() {
+        val row1 = SettingRowView(context, null)
+        assertNotNull(row1)
+
+        val row2 = SettingRowView(context, null, 0)
+        assertNotNull(row2)
+
+        val row3 = SettingRowView(context, null, 0, 0)
+        assertNotNull(row3)
+
+        row3.isEnabled = false
+        assertFalse(row3.isEnabled)
+    }
 }
