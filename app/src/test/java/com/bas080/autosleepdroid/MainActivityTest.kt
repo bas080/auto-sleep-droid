@@ -1384,12 +1384,16 @@ class MainActivityTest {
     }
 
     @Test
-    fun testDisableHealthConnectSwitchAndClearPermissions() {
+    fun testResumeWithExistingPreferencesDoesNotGenerateLogEvents() {
         val application = ApplicationProvider.getApplicationContext<Application>()
         val prefs = application.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("health_connect_enabled", true).commit()
+        prefs.edit()
+            .putBoolean("auto_timer_enabled", true)
+            .putBoolean("wake_up_goal_enabled", true)
+            .putBoolean("active", true)
+            .commit()
 
-        HealthConnectManager.setClientForTesting(null, true)
+        EventLogger.clear(application)
 
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
