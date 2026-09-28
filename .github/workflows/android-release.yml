@@ -50,6 +50,9 @@ jobs:
           java-version: "17"
           cache: 'gradle'
 
+      - name: Run detekt complexity analysis
+        run: ./gradlew detekt
+
       - name: Run unit tests
         run: |
           EXTRA_ARGS=""
