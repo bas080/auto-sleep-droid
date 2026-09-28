@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions", "MagicNumber")
+@file:Suppress("TooManyFunctions")
 
 package com.bas080.autosleepdroid
 
@@ -19,8 +19,8 @@ class DurationInputView : LinearLayout {
     private var durationChangeListener: OnDurationChangeListener? = null
 
     private var minHours = 0
-    private var maxHours = 24
-    private var minuteStep = 1
+    private var maxHours = DEFAULT_MAX_HOURS
+    private var minuteStep = DEFAULT_MINUTE_STEP
 
     fun interface OnDurationChangeListener {
         fun onDurationChanged(totalMinutes: Int)
@@ -55,7 +55,7 @@ class DurationInputView : LinearLayout {
         pickerHours?.setOnValueChangedListener(valueChangeListener)
         pickerMinutes?.setOnValueChangedListener(valueChangeListener)
 
-        configure(0, 24, 1)
+        configure(0, DEFAULT_MAX_HOURS, DEFAULT_MINUTE_STEP)
     }
 
     fun configure(minHours: Int, maxHours: Int, minuteStep: Int) {
@@ -74,14 +74,14 @@ class DurationInputView : LinearLayout {
         pickerMinutes?.let { minutesPicker ->
             minutesPicker.displayedValues = null
             if (this.minuteStep > 1) {
-                val count = 60 / this.minuteStep
+                val count = MINUTES_IN_HOUR / this.minuteStep
                 val values = Array(count) { i -> (i * this.minuteStep).toString() }
                 minutesPicker.minValue = 0
                 minutesPicker.maxValue = count - 1
                 minutesPicker.displayedValues = values
             } else {
                 minutesPicker.minValue = 0
-                minutesPicker.maxValue = 59
+                minutesPicker.maxValue = MAX_MINUTES
                 minutesPicker.setFormatter { valNum -> valNum.toString() }
             }
             minutesPicker.wrapSelectorWheel = true
@@ -172,12 +172,12 @@ class DurationInputView : LinearLayout {
 
     private fun applyParsedMinutesValue(picker: NumberPicker, valNum: Int) {
         if (minuteStep > 1) {
-            val count = 60 / minuteStep
+            val count = MINUTES_IN_HOUR / minuteStep
             var stepIdx = Math.round(valNum.toFloat() / minuteStep)
             if (stepIdx < 0) stepIdx = 0
             if (stepIdx >= count) stepIdx = count - 1
             picker.value = stepIdx
-        } else if (valNum in 0..59) {
+        } else if (valNum in 0..MAX_MINUTES) {
             picker.value = valNum
         }
     }
@@ -203,8 +203,8 @@ class DurationInputView : LinearLayout {
 
         val h = hp.value
         val m = if (minuteStep > 1) mp.value * minuteStep else mp.value
-        val total = h * 60 + m
-        return if (total in 1..1440) total else -1
+        val total = h * MINUTES_IN_HOUR + m
+        return if (total in 1..MAX_TOTAL_MINUTES) total else -1
     }
 
     fun setTotalMinutes(totalMinutes: Int) {
@@ -213,10 +213,10 @@ class DurationInputView : LinearLayout {
 
         var mins = totalMinutes
         if (mins < 0) mins = 0
-        if (mins > 1440) mins = 1440
+        if (mins > MAX_TOTAL_MINUTES) mins = MAX_TOTAL_MINUTES
 
-        var h = mins / 60
-        val remainingMins = mins % 60
+        var h = mins / MINUTES_IN_HOUR
+        val remainingMins = mins % MINUTES_IN_HOUR
 
         if (h < minHours) h = minHours
         if (h > maxHours) h = maxHours
@@ -225,7 +225,7 @@ class DurationInputView : LinearLayout {
         syncEditText(hoursPicker)
 
         if (minuteStep > 1) {
-            val count = 60 / minuteStep
+            val count = MINUTES_IN_HOUR / minuteStep
             var stepIdx = Math.round(remainingMins.toFloat() / minuteStep)
             if (stepIdx >= count) stepIdx = count - 1
             minutesPicker.value = stepIdx
@@ -250,5 +250,13 @@ class DurationInputView : LinearLayout {
         } else if (listener is FullOnDurationChangeListener) {
             listener.onInvalidDuration()
         }
+    }
+
+    companion object {
+        private const val DEFAULT_MAX_HOURS = 24
+        private const val DEFAULT_MINUTE_STEP = 1
+        private const val MINUTES_IN_HOUR = 60
+        private const val MAX_MINUTES = 59
+        private const val MAX_TOTAL_MINUTES = 1440
     }
 }
