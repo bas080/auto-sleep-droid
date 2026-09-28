@@ -80,6 +80,7 @@ object HealthConnectManager {
         HealthPermission.getWritePermission(SleepSessionRecord::class)
     )
 
+    @Suppress("TooGenericExceptionCaught")
     fun isHealthConnectAvailable(context: Context): Boolean {
         testSdkAvailable?.let { return it }
         return try {
@@ -91,6 +92,7 @@ object HealthConnectManager {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     fun revokeAllPermissions(context: Context, callback: Callback? = null) {
         if (!isHealthConnectAvailable(context)) {
             callback?.onResult(false, "Health Connect SDK unavailable")
@@ -138,6 +140,7 @@ object HealthConnectManager {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun checkAsyncPermission(context: Context, callback: PermissionCallback) {
         CoroutineScope(Dispatchers.IO).launch {
             val hasPermission = try {
@@ -189,6 +192,7 @@ object HealthConnectManager {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun executeSleepSessionWrite(
         context: Context,
         startTimeMs: Long,

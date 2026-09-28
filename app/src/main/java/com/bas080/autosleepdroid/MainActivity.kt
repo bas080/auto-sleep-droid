@@ -349,6 +349,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun copyTextToClipboard(textToCopy: String) {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         if (clipboard != null) {
@@ -365,6 +366,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun sendFeedbackEmailWithText(subject: String, body: String) {
         val mailtoUriStr = "mailto:bas080@hotmail.com?subject=" + Uri.encode(subject) + "&body=" + Uri.encode(body)
         val intent = Intent(Intent.ACTION_SENDTO).apply {
@@ -382,6 +384,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun launchEmailFallbackOrCopy(subject: String, body: String) {
         val fallbackIntent = Intent(Intent.ACTION_SEND).apply {
             type = "message/rfc822"
@@ -397,6 +400,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun copyReportOrShowError(body: String) {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
         if (clipboard != null) {
@@ -733,6 +737,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         return false
     }
 
+    @Suppress("TooGenericExceptionCaught")
     internal fun openSettingsWithFallback(primaryAction: String, fallbackAction: String) {
         try {
             val intent = Intent(primaryAction).apply {
@@ -1165,6 +1170,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         eventScrollView?.post { eventScrollView?.fullScroll(ScrollView.FOCUS_DOWN) }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun startTimerService() {
         val serviceIntent = Intent(this, MainService::class.java)
         try {

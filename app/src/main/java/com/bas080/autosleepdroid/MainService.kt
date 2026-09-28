@@ -909,6 +909,7 @@ open class MainService : Service() {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun scheduleAlarmClockInternal(targetAlarmTimeMs: Long) {
         val am = alarmManager ?: return
         val intent = Intent(this, MainService::class.java).setAction(ACTION_WAKEUP_ALARM_EXPIRY)
@@ -1126,6 +1127,7 @@ open class MainService : Service() {
         return cal.timeInMillis
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun ensureAudibleAlarmStreamVolume() {
         val am = audioManager ?: return
         val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
@@ -1151,6 +1153,7 @@ open class MainService : Service() {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun playWakeUpAlarmSound() {
         stopWakeUpAlarmSound()
         try {
@@ -1164,6 +1167,7 @@ open class MainService : Service() {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun tryPlayMediaPlayerAlarm(): Boolean {
         val urisToTry = arrayOf(
             RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM),
@@ -1233,6 +1237,7 @@ open class MainService : Service() {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun setAlarmVolume(gain: Float) {
         if (Build.VERSION.SDK_INT >= 28) {
             currentAlarmRingtone?.volume = gain
@@ -1256,6 +1261,7 @@ open class MainService : Service() {
         return ringtone
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun acquireWakeLock() {
         releaseWakeLock()
         try {
@@ -1277,6 +1283,7 @@ open class MainService : Service() {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun releaseWakeLock() {
         try {
             wakeLock?.let {
@@ -1316,6 +1323,7 @@ open class MainService : Service() {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun snoozeWakeUpAlarm() {
         val am = alarmManager ?: return
         val snoozeTimeMs = System.currentTimeMillis() + SNOOZE_DURATION_MS
@@ -1457,6 +1465,7 @@ open class MainService : Service() {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     open fun startForegroundNotification(id: Int, notification: Notification) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -1473,6 +1482,7 @@ open class MainService : Service() {
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun showOrHideNotification() {
         try {
             startForegroundNotification(NOTIFICATION_ID, buildNotification())
