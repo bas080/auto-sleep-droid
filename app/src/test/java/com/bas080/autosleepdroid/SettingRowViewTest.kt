@@ -60,17 +60,41 @@ class SettingRowViewTest {
     }
 
     @Test
-    fun testSettingRowViewConstructors() {
-        val row1 = SettingRowView(context, null)
-        assertNotNull(row1)
+    fun testProgrammaticIsCheckedChangeDoesNotTriggerOnCheckedChangeListener() {
+        val rowView = SettingRowView(context)
+        var callbackTriggered = false
 
-        val row2 = SettingRowView(context, null, 0)
-        assertNotNull(row2)
+        rowView.setOnCheckedChangeListener {
+            callbackTriggered = true
+        }
 
-        val row3 = SettingRowView(context, null, 0, 0)
-        assertNotNull(row3)
+        assertFalse(rowView.isChecked)
+        rowView.isChecked = true
+        assertTrue(rowView.isChecked)
+        assertFalse("Programmatic assignment to isChecked must NOT fire onCheckedChangeListener", callbackTriggered)
 
-        row3.isEnabled = false
-        assertFalse(row3.isEnabled)
+        rowView.isChecked = false
+        assertFalse(rowView.isChecked)
+        assertFalse("Programmatic assignment to isChecked must NOT fire onCheckedChangeListener", callbackTriggered)
+    }
+
+    @Test
+    fun testUserRowClickTriggersOnCheckedChangeListener() {
+        val rowView = SettingRowView(context)
+        rowView.findViewById<Switch>(R.id.setting_row_switch).visibility = android.view.View.VISIBLE
+        var lastCheckedState: Boolean? = null
+
+        rowView.setOnCheckedChangeListener { isChecked ->
+            lastCheckedState = isChecked
+        }
+
+        assertFalse(rowView.isChecked)
+        rowView.performClick()
+        assertTrue(rowView.isChecked)
+        assertEquals(true, lastCheckedState)
+
+        rowView.performClick()
+        assertFalse(rowView.isChecked)
+        assertEquals(false, lastCheckedState)
     }
 }

@@ -61,13 +61,13 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private var headerBackup: View? = null
     private var headerAbout: View? = null
 
-    private var rowEnableTimer: View? = null
+    private var rowEnableTimer: SettingRowView? = null
     private var switchEnableTimer: Switch? = null
     private var inputDuration: View? = null
     private var textDurationValue: TextView? = null
-    private var rowAutoTimer: View? = null
+    private var rowAutoTimer: SettingRowView? = null
     private var switchAutoTimer: Switch? = null
-    private var rowEnableGoal: View? = null
+    private var rowEnableGoal: SettingRowView? = null
     private var switchEnableGoal: Switch? = null
     private var goalContainer: View? = null
     private var btnTargetTime: View? = null
@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private var textCurrentWakeTimeValue: TextView? = null
     private var inputMinSleep: View? = null
     private var textMinSleepValue: TextView? = null
-    private var rowHealthConnect: View? = null
+    private var rowHealthConnect: SettingRowView? = null
     private var switchHealthConnect: Switch? = null
     private var inputHcMinDuration: View? = null
     private var textHcMinDurationValue: TextView? = null
@@ -90,8 +90,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     private var uiEffectsHandle: PreferenceManager.EffectHandle? = null
     private var preferenceManager: PreferenceManager? = null
-    private var isUserInitiatedAutoTimer = false
-    private var isUserInitiatedHealthConnect = false
     private var isRequestingHealthConnectPermission = false
 
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -538,15 +536,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun setupTimerControls() {
-        rowEnableTimer?.setOnClickListener {
-            switchEnableTimer?.let { sw ->
-                sw.isPressed = true
-                sw.toggle()
-                sw.isPressed = false
-            }
-        }
-
-        switchEnableTimer?.setOnCheckedChangeListener { _, isChecked ->
+        rowEnableTimer?.setOnCheckedChangeListener { isChecked ->
             preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_ACTIVE, isChecked)?.apply()
             val goalEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) ?: false
             updateInputEnabledStates(goalEnabled)
@@ -566,25 +556,14 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun setupAutoTimerControls() {
-        rowAutoTimer?.setOnClickListener {
-            isUserInitiatedAutoTimer = true
-            switchAutoTimer?.let { sw ->
-                sw.isPressed = true
-                sw.toggle()
-                sw.isPressed = false
-            }
-        }
-
-        switchAutoTimer?.setOnCheckedChangeListener { buttonView, isChecked ->
+        rowAutoTimer?.setOnCheckedChangeListener { isChecked ->
             val pm = preferenceManager ?: return@setOnCheckedChangeListener
             val editor = pm.edit()
             editor.putBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, isChecked)
-            val isUserInitiated = buttonView.isPressed || isUserInitiatedAutoTimer
-            isUserInitiatedAutoTimer = false
-            if (isChecked && isUserInitiated) {
+            if (isChecked) {
                 val dndActive = isDndActive()
                 editor.putBoolean(PreferenceKeys.KEY_ACTIVE, dndActive)
-                switchEnableTimer?.isChecked = dndActive
+                rowEnableTimer?.isChecked = dndActive
             }
             editor.apply()
             val logMsg = if (isChecked) "Auto sleep timer (DND) enabled" else "Auto sleep timer (DND) disabled"
@@ -593,15 +572,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun setupWakeGoalControls() {
-        rowEnableGoal?.setOnClickListener {
-            switchEnableGoal?.let { sw ->
-                sw.isPressed = true
-                sw.toggle()
-                sw.isPressed = false
-            }
-        }
-
-        switchEnableGoal?.setOnCheckedChangeListener { _, isChecked ->
+        rowEnableGoal?.setOnCheckedChangeListener { isChecked ->
             preferenceManager?.sharedPreferences?.edit()
                 ?.putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, isChecked)
                 ?.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
@@ -627,17 +598,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun setupHealthConnectControls() {
-        rowHealthConnect?.setOnClickListener {
-            isUserInitiatedHealthConnect = true
-            switchHealthConnect?.let { sw ->
-                sw.isPressed = true
-                sw.toggle()
-                sw.isPressed = false
-            }
-        }
-
-        switchHealthConnect?.setOnCheckedChangeListener { buttonView, isChecked ->
-            handleHealthConnectToggle(buttonView.isPressed || isUserInitiatedHealthConnect, isChecked)
+        rowHealthConnect?.setOnCheckedChangeListener { isChecked ->
+            handleHealthConnectToggle(true, isChecked)
         }
 
         inputHcMinDuration?.setOnClickListener {
@@ -653,7 +615,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun handleHealthConnectToggle(isUserInitiated: Boolean, isChecked: Boolean) {
-        isUserInitiatedHealthConnect = false
         if (isChecked) {
             enableHealthConnect(isUserInitiated)
         } else {
@@ -665,7 +626,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     private fun enableHealthConnect(isUserInitiated: Boolean) {
         if (!HealthConnectManager.isHealthConnectAvailable(this)) {
-            switchHealthConnect?.isChecked = false
+            rowHealthConnect?.isChecked = false
             Toast.makeText(this, R.string.toast_health_connect_not_available, Toast.LENGTH_SHORT).show()
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect requested but SDK is unavailable")
             return
@@ -862,9 +823,9 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val durationMinutes = getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES)
         val autoTimer = getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false)
 
-        switchEnableTimer?.isChecked = active
+        rowEnableTimer?.isChecked = active
         textDurationValue?.text = getComputedDurationString(preferenceManager, PreferenceKeys.KEY_DURATION_MINUTES, durationMinutes)
-        switchAutoTimer?.isChecked = autoTimer
+        rowAutoTimer?.isChecked = autoTimer
     }
 
     private fun updateGoalUi(getter: PreferenceGetter) {
@@ -876,7 +837,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val currentMin = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
         val minSleepMin = getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
 
-        switchEnableGoal?.isChecked = goalEnabled
+        rowEnableGoal?.isChecked = goalEnabled
         updateTargetTimeButtonText(goalHour, goalMin)
         updateCurrentWakeTimeButtonText(currentHour, currentMin)
         textMinSleepValue?.text = getComputedDurationString(preferenceManager, PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, minSleepMin)
@@ -887,7 +848,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val healthConnectEnabled = getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)
         val hcMinDurationMin = getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, AppDefaults.HC_MIN_DURATION_MINUTES)
 
-        switchHealthConnect?.isChecked = healthConnectEnabled
+        rowHealthConnect?.isChecked = healthConnectEnabled
         textHcMinDurationValue?.text = getComputedDurationString(preferenceManager, PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, hcMinDurationMin)
     }
 
@@ -1053,11 +1014,11 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             isRequestingHealthConnectPermission = false
             if (hasPermission) {
                 preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true)?.apply()
-                switchHealthConnect?.isChecked = true
+                rowHealthConnect?.isChecked = true
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled and permission granted")
             } else {
                 preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)?.apply()
-                switchHealthConnect?.isChecked = false
+                rowHealthConnect?.isChecked = false
                 Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show()
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission not granted; disabling sync")
             }
@@ -1071,7 +1032,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
             if (!hasPermission) {
                 preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)?.apply()
-                switchHealthConnect?.isChecked = false
+                rowHealthConnect?.isChecked = false
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission revoked; disabling sync")
             }
         }
