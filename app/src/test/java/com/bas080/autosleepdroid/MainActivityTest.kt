@@ -634,11 +634,13 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
+        val rowEnable = activity.findViewById<SettingRowView>(R.id.row_enable_timer)
         val switchEnable = activity.findViewById<Switch>(R.id.switch_enable_timer)
+        assertNotNull(rowEnable)
         assertNotNull(switchEnable)
         assertTrue(switchEnable.isChecked)
 
-        switchEnable.isChecked = false
+        rowEnable.performClick()
         assertFalse(prefs.getBoolean("active", true))
 
         controller.pause().resume()
@@ -683,17 +685,17 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
-        val switchEnable = activity.findViewById<Switch>(R.id.switch_enable_timer)
+        val rowEnable = activity.findViewById<SettingRowView>(R.id.row_enable_timer)
         val inputDuration = activity.findViewById<View>(R.id.input_duration)
-        val switchAutoTimer = activity.findViewById<Switch>(R.id.switch_auto_timer)
-        val switchGoal = activity.findViewById<Switch>(R.id.switch_enable_goal)
+        val rowAutoTimer = activity.findViewById<SettingRowView>(R.id.row_auto_timer)
+        val rowGoal = activity.findViewById<SettingRowView>(R.id.row_enable_goal)
 
-        assertNotNull(switchEnable)
+        assertNotNull(rowEnable)
         assertNotNull(inputDuration)
-        assertNotNull(switchAutoTimer)
-        assertNotNull(switchGoal)
+        assertNotNull(rowAutoTimer)
+        assertNotNull(rowGoal)
 
-        switchEnable.isChecked = false
+        rowEnable.performClick()
 
         inputDuration.performClick()
         val dialog = ShadowAlertDialog.getLatestAlertDialog()
@@ -708,7 +710,7 @@ class MainActivityTest {
 
         ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
 
-        switchGoal.isChecked = true
+        rowGoal.performClick()
 
         val prefs = activity.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
         assertFalse(prefs.getBoolean("active", true))
@@ -911,11 +913,11 @@ class MainActivityTest {
         assertEquals(activity.getString(R.string.heading_backup), headerBackup.text.toString())
         assertEquals(activity.getString(R.string.heading_about), headerAbout.text.toString())
 
-        val switchEnable = activity.findViewById<Switch>(R.id.switch_enable_timer)
-        val switchGoal = activity.findViewById<Switch>(R.id.switch_enable_goal)
+        val rowEnable = activity.findViewById<SettingRowView>(R.id.row_enable_timer)
+        val rowGoal = activity.findViewById<SettingRowView>(R.id.row_enable_goal)
 
-        switchEnable.isChecked = true
-        switchGoal.isChecked = true
+        rowEnable.performClick()
+        rowGoal.performClick()
 
         assertTrue(headerDnd.isEnabled)
         assertEquals(1.0f, headerDnd.alpha, 0.01f)
@@ -924,7 +926,7 @@ class MainActivityTest {
         assertTrue(headerAlarm.isEnabled)
         assertEquals(1.0f, headerAlarm.alpha, 0.01f)
 
-        switchGoal.isChecked = false
+        rowGoal.performClick()
         assertTrue(headerDnd.isEnabled)
         assertEquals(1.0f, headerDnd.alpha, 0.01f)
         assertTrue(headerTimer.isEnabled)
@@ -932,7 +934,7 @@ class MainActivityTest {
         assertTrue(headerAlarm.isEnabled)
         assertEquals(1.0f, headerAlarm.alpha, 0.01f)
 
-        switchEnable.isChecked = false
+        rowEnable.performClick()
         assertTrue(headerDnd.isEnabled)
         assertEquals(1.0f, headerDnd.alpha, 0.01f)
         assertTrue(headerTimer.isEnabled)
@@ -940,7 +942,7 @@ class MainActivityTest {
         assertTrue(headerAlarm.isEnabled)
         assertEquals(1.0f, headerAlarm.alpha, 0.01f)
 
-        switchGoal.isChecked = true
+        rowGoal.performClick()
         assertTrue(headerAlarm.isEnabled)
         assertEquals(1.0f, headerAlarm.alpha, 0.01f)
     }
@@ -950,19 +952,18 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
-        val switchEnable = activity.findViewById<Switch>(R.id.switch_enable_timer)
+        val rowEnable = activity.findViewById<SettingRowView>(R.id.row_enable_timer)
         val headerTimer = activity.findViewById<View>(R.id.header_timer)
         val headerAlarm = activity.findViewById<View>(R.id.header_alarm)
         val inputDuration = activity.findViewById<View>(R.id.input_duration)
         val rowAutoTimer = activity.findViewById<View>(R.id.row_auto_timer)
-        val rowEnableGoal = activity.findViewById<View>(R.id.row_enable_goal)
-        val switchGoal = activity.findViewById<Switch>(R.id.switch_enable_goal)
+        val rowEnableGoal = activity.findViewById<SettingRowView>(R.id.row_enable_goal)
         val btnTargetTime = activity.findViewById<View>(R.id.btn_target_time)
         val btnCurrentWakeTime = activity.findViewById<View>(R.id.btn_current_wake_time)
         val inputMinSleep = activity.findViewById<View>(R.id.input_min_sleep)
 
-        switchGoal.isChecked = false
-        switchEnable.isChecked = false
+        rowEnableGoal.isChecked = false
+        rowEnable.isChecked = false
 
         assertTrue(headerTimer.isEnabled)
         assertEquals(1.0f, headerTimer.alpha, 0.01f)
@@ -977,7 +978,7 @@ class MainActivityTest {
         assertFalse(btnCurrentWakeTime.isEnabled)
         assertFalse(inputMinSleep.isEnabled)
 
-        switchGoal.isChecked = true
+        rowEnableGoal.performClick()
         assertTrue(headerAlarm.isEnabled)
         assertEquals(1.0f, headerAlarm.alpha, 0.01f)
         assertTrue(btnTargetTime.isEnabled)
@@ -1098,19 +1099,19 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
-        val switchEnable = activity.findViewById<Switch>(R.id.switch_enable_timer)
-        val switchGoal = activity.findViewById<Switch>(R.id.switch_enable_goal)
+        val rowEnable = activity.findViewById<SettingRowView>(R.id.row_enable_timer)
+        val rowGoal = activity.findViewById<SettingRowView>(R.id.row_enable_goal)
         val goalContainer = activity.findViewById<View>(R.id.goal_container)
         val btnTargetTime = activity.findViewById<View>(R.id.btn_target_time)
         val inputMinSleep = activity.findViewById<View>(R.id.input_min_sleep)
 
-        switchEnable.isChecked = true
-        switchGoal.isChecked = false
+        rowEnable.isChecked = true
+        rowGoal.isChecked = false
 
         assertEquals(View.VISIBLE, goalContainer.visibility)
         val inputDuration = activity.findViewById<View>(R.id.input_duration)
         assertTrue(inputDuration.isEnabled)
-        assertTrue(switchGoal.isEnabled)
+        assertTrue(rowGoal.isEnabled)
         assertFalse(btnTargetTime.isEnabled)
         assertEquals(0.38f, btnTargetTime.alpha, 0.01f)
         assertFalse(inputMinSleep.isEnabled)
@@ -1203,20 +1204,20 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
-        val switchAutoTimer = activity.findViewById<Switch>(R.id.switch_auto_timer)
-        val switchHealthConnect = activity.findViewById<Switch>(R.id.switch_health_connect)
+        val rowAutoTimer = activity.findViewById<SettingRowView>(R.id.row_auto_timer)
+        val rowHealthConnect = activity.findViewById<SettingRowView>(R.id.row_health_connect)
 
-        assertNotNull(switchAutoTimer)
-        assertNotNull(switchHealthConnect)
+        assertNotNull(rowAutoTimer)
+        assertNotNull(rowHealthConnect)
 
         val shadowActivity = Shadows.shadowOf(activity)
         while (shadowActivity.nextStartedActivity != null) {}
 
-        switchAutoTimer.isChecked = true
+        rowAutoTimer.isChecked = true
         var nextIntent = shadowActivity.nextStartedActivity
         assertEquals("Programmatic toggle of Auto DND must not open DND settings page", null, nextIntent)
 
-        switchHealthConnect.isChecked = true
+        rowHealthConnect.isChecked = true
         nextIntent = shadowActivity.nextStartedActivity
         assertEquals("Programmatic toggle of Health Connect must not open permissions settings page", null, nextIntent)
     }
@@ -1226,15 +1227,13 @@ class MainActivityTest {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()
 
-        val switchAutoTimer = activity.findViewById<Switch>(R.id.switch_auto_timer)
-        assertNotNull(switchAutoTimer)
+        val rowAutoTimer = activity.findViewById<SettingRowView>(R.id.row_auto_timer)
+        assertNotNull(rowAutoTimer)
 
         val shadowActivity = Shadows.shadowOf(activity)
         while (shadowActivity.nextStartedActivity != null) {}
 
-        switchAutoTimer.isPressed = true
-        switchAutoTimer.isChecked = true
-        switchAutoTimer.isPressed = false
+        rowAutoTimer.performClick()
 
         val nextIntent = shadowActivity.nextStartedActivity
         assertEquals("Toggle of Auto DND must not open DND settings page", null, nextIntent)
@@ -1376,5 +1375,33 @@ class MainActivityTest {
             null
         }
         assertTrue("NapDialogActivity class must be completely removed", napActivityClass == null)
+    }
+
+    @Test
+    fun testResumeWithExistingPreferencesDoesNotGenerateLogEvents() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val prefs = application.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean("auto_timer_enabled", true)
+            .putBoolean("wake_up_goal_enabled", true)
+            .putBoolean("active", true)
+            .commit()
+
+        EventLogger.clear(application)
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val events = EventLogger.getEvents(activity)
+        val toggleLogs = events.filter {
+            it.contains("Timer enabled from UI") ||
+                it.contains("Auto sleep timer (DND) enabled") ||
+                it.contains("Wake-up goal enabled")
+        }
+
+        assertTrue(
+            "Programmatic UI sync on resume must NOT generate toggle log events, found: $toggleLogs",
+            toggleLogs.isEmpty()
+        )
     }
 }
