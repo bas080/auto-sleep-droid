@@ -189,4 +189,82 @@ class PreferenceComputationsTest {
         assertTrue("Awake action should be shown when wake time passed 10 minutes ago across midnight boundary",
             preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)!!)
     }
+
+    @Test
+    fun testPreferenceComputationsSimpleGettersAndFormatters() {
+        assertFalse(preferenceManager.getComputed(PreferenceComputations.IS_AUTO_TIMER_ENABLED)!!)
+        rawPreferences.edit().putBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, true).commit()
+        assertTrue(preferenceManager.getComputed(PreferenceComputations.IS_AUTO_TIMER_ENABLED)!!)
+
+        assertFalse(preferenceManager.getComputed(PreferenceComputations.IS_HEALTH_CONNECT_ENABLED)!!)
+        rawPreferences.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true).commit()
+        assertTrue(preferenceManager.getComputed(PreferenceComputations.IS_HEALTH_CONNECT_ENABLED)!!)
+
+        val durationComp = PreferenceComputations.formatDuration("test_dur", 45)
+        assertEquals("45m", preferenceManager.getComputed(durationComp))
+        rawPreferences.edit().putInt("test_dur", 90).commit()
+        assertEquals("1h 30m", preferenceManager.getComputed(durationComp))
+    }
+
+    @Test
+    fun testGetSessionPhaseWithTimerEndsAtAndSleepStartTimePushesWakeTime() {
+        val now = System.currentTimeMillis()
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = now
+        val currentHour = cal.get(Calendar.HOUR_OF_DAY)
+        val currentMin = cal.get(Calendar.MINUTE)
+
+        // Case: timerEndsAt pushes wake time into future
+        rawPreferences.edit()
+            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, currentHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, currentMin)
+            .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 480)
+            .putInt(PreferenceKeys.KEY_DURATION_MINUTES, 30)
+            .putLong(PreferenceKeys.KEY_TIMER_ENDS_AT, now + 1800_000L)
+            .commit()
+
+        val phase1 = preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE)
+        assertTrue(phase1 != SessionPhase.IDLE)
+
+        // Case: sleepStartTime pushes wake time into future
+        rawPreferences.edit()
+            .remove(PreferenceKeys.KEY_TIMER_ENDS_AT)
+            .putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now - 3600_000L)
+            .commit()
+
+        val phase2 = preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE)
+        assertTrue(phase2 != SessionPhase.IDLE)
+    }
+
+    @Test
+    fun testMidnightBoundaryCalculationsInSessionPhaseAndAwakeAction() {
+        val now = System.currentTimeMillis()
+        val cal14hAhead = Calendar.getInstance()
+        cal14hAhead.timeInMillis = now + 14 * 3600_000L
+        val aheadHour = cal14hAhead.get(Calendar.HOUR_OF_DAY)
+        val aheadMin = cal14hAhead.get(Calendar.MINUTE)
+
+        rawPreferences.edit()
+            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, aheadHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, aheadMin)
+            .commit()
+
+        preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE)
+        preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)
+
+        val cal14hBehind = Calendar.getInstance()
+        cal14hBehind.timeInMillis = now - 14 * 3600_000L
+        val behindHour = cal14hBehind.get(Calendar.HOUR_OF_DAY)
+        val behindMin = cal14hBehind.get(Calendar.MINUTE)
+
+        rawPreferences.edit()
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, behindHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, behindMin)
+            .commit()
+
+        preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE)
+        preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)
+    }
 }

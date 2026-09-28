@@ -43,4 +43,19 @@ class BootReceiverTest {
         val nextService = shadowApp.nextStartedService
         assertNull(nextService)
     }
+
+    @Test
+    fun testNullIntentOrActionIgnored() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val receiver = BootReceiver()
+
+        receiver.onReceive(context, null)
+
+        val emptyIntent = Intent()
+        receiver.onReceive(context, emptyIntent)
+
+        val shadowApp = Shadows.shadowOf(ApplicationProvider.getApplicationContext<Application>())
+        val nextService = shadowApp.nextStartedService
+        assertNull(nextService)
+    }
 }
