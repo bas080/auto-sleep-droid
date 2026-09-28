@@ -61,6 +61,6 @@ style:
   active: true
   excludes: ['**/test/**']
   MaxLineLength:
-    active: false
+    maxLineLength: 160
   MagicNumber:
     active: false

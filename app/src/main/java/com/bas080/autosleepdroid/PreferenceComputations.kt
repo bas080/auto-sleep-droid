@@ -39,7 +39,10 @@ object PreferenceComputations {
             val now = System.currentTimeMillis()
             val wakeAlarmEnabled = getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false)
 
-            val minSleepMin = getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+            val minSleepMin = getter.getInt(
+                PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
+                AppDefaults.MIN_SLEEP_DURATION_MINUTES
+            )
             val minSleepDurationMs = minSleepMin * 60_000L
 
             var currentWakeTime = 0L
@@ -104,7 +107,10 @@ object PreferenceComputations {
             if (isWakeupRinging || isWakeupSnoozed) return@ComputedValue true
 
             val now = System.currentTimeMillis()
-            val minSleepMin = getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+            val minSleepMin = getter.getInt(
+                PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
+                AppDefaults.MIN_SLEEP_DURATION_MINUTES
+            )
             val minSleepDurationMs = minSleepMin * 60_000L
 
             val goalHour = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)

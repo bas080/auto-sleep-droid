@@ -144,10 +144,16 @@ object EventLogger {
         return spannable
     }
 
-    private fun applyTimestampStyle(spannable: SpannableString, timestamp: String, maxLen: Int, darkMode: Boolean) {
+    private fun applyTimestampStyle(
+        spannable: SpannableString,
+        timestamp: String,
+        maxLen: Int,
+        darkMode: Boolean
+    ) {
         val timestampColor = if (darkMode) -0x777778 else -0x666667
         if (timestamp.isNotEmpty() && timestamp.length <= maxLen) {
-            spannable.setSpan(ForegroundColorSpan(timestampColor), 0, timestamp.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            val spanFlag = Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            spannable.setSpan(ForegroundColorSpan(timestampColor), 0, timestamp.length, spanFlag)
         }
     }
 
