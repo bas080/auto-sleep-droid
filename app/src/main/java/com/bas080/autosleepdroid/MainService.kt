@@ -1495,6 +1495,7 @@ open class MainService : Service() {
         )!!
     }
 
+    @Suppress("UnusedPrivateMember")
     private fun awakeIntent(): PendingIntent {
         val intent = Intent(this, MainService::class.java).setAction(ACTION_AWAKE)
         return getServicePendingIntent(

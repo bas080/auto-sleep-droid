@@ -88,7 +88,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private var eventScrollView: ScrollView? = null
     private var eventLogText: TextView? = null
 
-    private val mainHandler = Handler(Looper.getMainLooper())
     private var uiEffectsHandle: PreferenceManager.EffectHandle? = null
     private var preferenceManager: PreferenceManager? = null
     private var isUserInitiatedAutoTimer = false

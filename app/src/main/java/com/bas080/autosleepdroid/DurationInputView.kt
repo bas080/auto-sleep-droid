@@ -150,8 +150,7 @@ class DurationInputView : LinearLayout {
         val currentDisplayed = getCurrentlyDisplayedValue(picker)
         val currentValStr = picker.value.toString()
         val isSameAsCurrent = str == currentDisplayed || str == currentValStr
-        val isEdited = !isSameAsCurrent
-        return isEdited || isFocused
+        return !isSameAsCurrent && (isFocused || str.isNotEmpty())
     }
 
     private fun applyParsedPickerValue(picker: NumberPicker, str: String) {
