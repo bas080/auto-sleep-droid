@@ -39,30 +39,42 @@ complexity:
   TooManyFunctions:
     active: true
     thresholdInFiles: 30
-    thresholdInClasses: 30
-    thresholdInObjects: 20
+    thresholdInClasses: 25
+    thresholdInObjects: 15
     excludes: ['**/MainService.kt', '**/MainActivity.kt']
 
-comments:
-  active: false
-
-coroutines:
-  active: false
-
 empty-blocks:
-  active: false
+  active: true
+  excludes: ['**/test/**']
 
 exceptions:
-  active: false
-
-naming:
-  active: false
+  active: true
+  excludes: ['**/test/**']
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    active: false
 
 performance:
-  active: false
+  active: true
+  excludes: ['**/test/**']
 
 potential-bugs:
-  active: false
+  active: true
+  excludes: ['**/test/**']
 
 style:
-  active: false
+  active: true
+  excludes: ['**/test/**']
+  MaxLineLength:
+    active: false
+  MagicNumber:
+    active: false
+  WildcardImport:
+    active: false
+  ReturnCount:
+    active: false
+  UnusedPrivateMember:
+    active: false
+  UnusedPrivateProperty:
+    active: false
