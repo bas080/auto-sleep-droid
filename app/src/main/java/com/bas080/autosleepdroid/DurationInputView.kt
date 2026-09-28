@@ -182,15 +182,12 @@ class DurationInputView : LinearLayout {
     private fun findEditTextInPicker(picker: NumberPicker?): EditText? {
         picker ?: return null
         val inputId = android.content.res.Resources.getSystem().getIdentifier("numberpicker_input", "id", "android")
-        if (inputId != 0) {
-            val v = picker.findViewById<View>(inputId)
-            if (v is EditText) return v
-        }
+        val viewById = if (inputId != 0) picker.findViewById<View>(inputId) else null
+        if (viewById is EditText) return viewById
+
         for (i in 0 until picker.childCount) {
             val child = picker.getChildAt(i)
-            if (child is EditText) {
-                return child
-            }
+            if (child is EditText) return child
         }
         return null
     }
@@ -203,16 +200,9 @@ class DurationInputView : LinearLayout {
         commitPickerInput(minutesPicker)
 
         val h = hoursPicker.value
-        val m = if (minuteStep > 1) {
-            minutesPicker.value * minuteStep
-        } else {
-            minutesPicker.value
-        }
+        val m = if (minuteStep > 1) minutesPicker.value * minuteStep else minutesPicker.value
         val total = h * 60 + m
-        if (total <= 0 || total > 1440) {
-            return -1
-        }
-        return total
+        return if (total in 1..1440) total else -1
     }
 
     fun setTotalMinutes(totalMinutes: Int) {

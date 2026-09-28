@@ -928,11 +928,10 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun getClipboardJsonText(): String? {
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return null
-        val clipData = clipboard.primaryClip ?: return null
-        if (clipData.itemCount == 0) return null
-        val text = clipData.getItemAt(0).text?.toString()?.trim() ?: return null
-        return if (text.startsWith("{") && text.endsWith("}")) text else null
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val clipData = clipboard?.primaryClip
+        val text = if (clipData != null && clipData.itemCount > 0) clipData.getItemAt(0).text?.toString()?.trim() else null
+        return if (text != null && text.startsWith("{") && text.endsWith("}")) text else null
     }
 
     private fun importSettings(jsonStr: String?) {

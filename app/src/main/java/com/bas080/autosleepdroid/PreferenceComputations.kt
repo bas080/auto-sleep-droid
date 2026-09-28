@@ -16,22 +16,15 @@ fun getSessionPhase(
     isSessionOngoing: Boolean,
     isAlarmRingingOrSnoozed: Boolean = false
 ): SessionPhase {
-    if (isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime)) {
-        return SessionPhase.ALARM
-    }
-
     val windowStart = currentWakeTime - (minSleepDuration * 1.2).toLong()
     val preAlarmStart = currentWakeTime - (minSleepDuration * 0.5).toLong()
 
-    if (now >= preAlarmStart && now < currentWakeTime) {
-        return SessionPhase.PRE_ALARM_WINDOW
+    return when {
+        isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime) -> SessionPhase.ALARM
+        now >= preAlarmStart && now < currentWakeTime -> SessionPhase.PRE_ALARM_WINDOW
+        now >= windowStart && now < preAlarmStart -> SessionPhase.INITIATION_AND_ACTIVE_SLEEP
+        else -> SessionPhase.IDLE
     }
-
-    if (now >= windowStart && now < preAlarmStart) {
-        return SessionPhase.INITIATION_AND_ACTIVE_SLEEP
-    }
-
-    return SessionPhase.IDLE
 }
 
 object PreferenceComputations {
