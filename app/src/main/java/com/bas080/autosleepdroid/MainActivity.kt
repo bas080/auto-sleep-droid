@@ -108,6 +108,12 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     private class IntPrefSpec(val key: String, val defaultValue: Int, val min: Int, val max: Int)
 
+    class DurationPickerBounds(
+        val minHours: Int = 0,
+        val maxHours: Int = 24,
+        val minuteStep: Int = 1
+    )
+
     fun interface OnDurationSavedListener {
         fun onSaved(minutes: Int)
     }
@@ -126,10 +132,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if ((manualOverlayContainer != null && manualOverlayContainer!!.visibility == View.VISIBLE)
-                    || (logsOverlayContainer != null && logsOverlayContainer!!.visibility == View.VISIBLE)
-                    || (feedbackOverlayContainer != null && feedbackOverlayContainer!!.visibility == View.VISIBLE)
-                ) {
+                if (isAnyOverlayVisible()) {
                     hideOverlays()
                 } else {
                     finish()
@@ -140,6 +143,12 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         requestNotificationPermissionOnStartupIfNeeded()
         requestExactAlarmPermissionIfNeeded()
+    }
+
+    private fun isAnyOverlayVisible(): Boolean {
+        return manualOverlayContainer?.visibility == View.VISIBLE ||
+            logsOverlayContainer?.visibility == View.VISIBLE ||
+            feedbackOverlayContainer?.visibility == View.VISIBLE
     }
 
     /**
@@ -181,9 +190,9 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         logsOverlayContainer = findViewById(R.id.logs_overlay_container)
         feedbackOverlayContainer = findViewById(R.id.feedback_overlay_container)
         feedbackTitleText = findViewById(R.id.feedback_title_text)
-        feedbackPromptText = findViewById<TextView>(R.id.feedback_prompt_text)
-        feedbackTextContent = findViewById<EditText>(R.id.feedback_text_content)
-        chkIncludeLogs = findViewById<CheckBox>(R.id.chk_include_logs)
+        feedbackPromptText = findViewById(R.id.feedback_prompt_text)
+        feedbackTextContent = findViewById(R.id.feedback_text_content)
+        chkIncludeLogs = findViewById(R.id.chk_include_logs)
         btnDiscardCrash = findViewById(R.id.btn_discard_crash)
         btnCopyFeedback = findViewById(R.id.btn_copy_feedback)
         btnSendFeedbackEmail = findViewById(R.id.btn_send_feedback_email)
@@ -229,23 +238,17 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val versionText = findViewById<TextView>(R.id.app_version_text)
         versionText?.text = getString(R.string.version_label, BuildConfig.VERSION_NAME)
 
-        val btnManualBack = findViewById<Button>(R.id.btn_manual_back)
-        btnManualBack?.setOnClickListener { hideOverlays() }
+        findViewById<Button>(R.id.btn_manual_back)?.setOnClickListener { hideOverlays() }
+        findViewById<Button>(R.id.btn_logs_back)?.setOnClickListener { hideOverlays() }
 
-        val btnLogsBack = findViewById<Button>(R.id.btn_logs_back)
-        btnLogsBack?.setOnClickListener { hideOverlays() }
-
-        val btnClearLogs = findViewById<Button>(R.id.btn_clear_logs)
-        btnClearLogs?.setOnClickListener {
+        findViewById<Button>(R.id.btn_clear_logs)?.setOnClickListener {
             EventLogger.clear(this)
             eventLogText?.text = ""
         }
 
         btnExport?.setOnClickListener { exportSettings() }
         btnImport?.setOnClickListener { showImportDialog() }
-
         btnVersion?.setOnClickListener { openUrl("https://github.com/bas080/auto-sleep-droid/releases") }
-
         btnFeedback?.setOnClickListener { showFeedbackOverlay(crashReport = null) }
 
         btnReportCrash?.setOnClickListener {
@@ -255,7 +258,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
 
         btnFeedbackBack?.setOnClickListener { hideOverlays() }
-
         btnLinks?.setOnClickListener { showLinksDialog() }
     }
 
@@ -315,24 +317,20 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         feedbackTextContent?.setText("")
         chkIncludeLogs?.isChecked = true
 
+        setupFeedbackActions(crashReport, isCrash)
+
+        feedbackOverlayContainer?.visibility = View.VISIBLE
+        manualOverlayContainer?.visibility = View.GONE
+        logsOverlayContainer?.visibility = View.GONE
+        mainContentContainer?.visibility = View.GONE
+    }
+
+    private fun setupFeedbackActions(crashReport: String?, isCrash: Boolean) {
         btnCopyFeedback?.setOnClickListener {
             val userInput = feedbackTextContent?.text?.toString() ?: ""
             val shouldIncludeLogs = chkIncludeLogs?.isChecked ?: true
             val textToCopy = buildFeedbackPayload(this, userInput, crashReport, shouldIncludeLogs)
-
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            if (clipboard != null) {
-                try {
-                    val clip = ClipData.newPlainText("Crash / Feedback Report", textToCopy)
-                    clipboard.setPrimaryClip(clip)
-                    Toast.makeText(this, R.string.toast_report_copied, Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    EventLogger.log(this, "Failed to copy report to clipboard: " + e.message)
-                    Toast.makeText(this, "Could not copy report to clipboard", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                Toast.makeText(this, "Clipboard service not available", Toast.LENGTH_SHORT).show()
-            }
+            copyTextToClipboard(textToCopy)
         }
 
         btnSendFeedbackEmail?.setOnClickListener {
@@ -352,11 +350,22 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             updateReportCrashRowVisibility()
             hideOverlays()
         }
+    }
 
-        feedbackOverlayContainer?.visibility = View.VISIBLE
-        manualOverlayContainer?.visibility = View.GONE
-        logsOverlayContainer?.visibility = View.GONE
-        mainContentContainer?.visibility = View.GONE
+    private fun copyTextToClipboard(textToCopy: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        if (clipboard != null) {
+            try {
+                val clip = ClipData.newPlainText("Crash / Feedback Report", textToCopy)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, R.string.toast_report_copied, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                EventLogger.log(this, "Failed to copy report to clipboard: " + e.message)
+                Toast.makeText(this, "Could not copy report to clipboard", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "Clipboard service not available", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun sendFeedbackEmailWithText(subject: String, body: String) {
@@ -371,41 +380,48 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         try {
             startActivity(Intent.createChooser(intent, getString(R.string.link_feedback)))
         } catch (e: Exception) {
-            val fallbackIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "message/rfc822"
-                putExtra(Intent.EXTRA_EMAIL, arrayOf("bas080@hotmail.com"))
-                putExtra(Intent.EXTRA_SUBJECT, subject)
-                putExtra(Intent.EXTRA_TEXT, body)
-            }
-            try {
-                startActivity(Intent.createChooser(fallbackIntent, getString(R.string.link_feedback)))
-            } catch (ex: Exception) {
-                EventLogger.log(this, "Failed to launch email client: " + ex.message)
-                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
-                if (clipboard != null) {
-                    try {
-                        val clip = ClipData.newPlainText("Crash / Feedback Report", body)
-                        clipboard.setPrimaryClip(clip)
-                        Toast.makeText(this, "No email app found. Report copied to clipboard.", Toast.LENGTH_LONG).show()
-                    } catch (clipEx: Exception) {
-                        EventLogger.log(this, "Failed to copy to clipboard: " + clipEx.message)
-                        val dialog = AlertDialog.Builder(this)
-                            .setTitle("Could Not Send Report")
-                            .setMessage("No email app or clipboard handler was found on this device.")
-                            .setPositiveButton(R.string.dialog_ok, null)
-                            .show()
-                        centerDialogTitle(dialog)
-                    }
-                } else {
-                    val dialog = AlertDialog.Builder(this)
-                        .setTitle("Could Not Send Report")
-                        .setMessage("No email app or clipboard handler was found on this device.")
-                        .setPositiveButton(R.string.dialog_ok, null)
-                        .show()
-                    centerDialogTitle(dialog)
-                }
-            }
+            launchEmailFallbackOrCopy(subject, body)
         }
+    }
+
+    private fun launchEmailFallbackOrCopy(subject: String, body: String) {
+        val fallbackIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "message/rfc822"
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("bas080@hotmail.com"))
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, body)
+        }
+        try {
+            startActivity(Intent.createChooser(fallbackIntent, getString(R.string.link_feedback)))
+        } catch (ex: Exception) {
+            EventLogger.log(this, "Failed to launch email client: " + ex.message)
+            copyReportOrShowError(body)
+        }
+    }
+
+    private fun copyReportOrShowError(body: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
+        if (clipboard != null) {
+            try {
+                val clip = ClipData.newPlainText("Crash / Feedback Report", body)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, "No email app found. Report copied to clipboard.", Toast.LENGTH_LONG).show()
+            } catch (clipEx: Exception) {
+                EventLogger.log(this, "Failed to copy to clipboard: " + clipEx.message)
+                showNoEmailAppDialog()
+            }
+        } else {
+            showNoEmailAppDialog()
+        }
+    }
+
+    private fun showNoEmailAppDialog() {
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Could Not Send Report")
+            .setMessage("No email app or clipboard handler was found on this device.")
+            .setPositiveButton(R.string.dialog_ok, null)
+            .show()
+        centerDialogTitle(dialog)
     }
 
     private fun showLinksDialog() {
@@ -429,11 +445,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         centerDialogTitle(dialog)
     }
 
-    /**
-     * Constructs and launches feedback/crash report emails via ACTION_SENDTO.
-     * Feedback operates identically to crash reporting (guiding questions, event logs, app/android version, device info)
-     * but omits the crash stack trace.
-     */
     fun sendFeedbackEmail(crashReport: String? = null, includeLogs: Boolean = true) {
         val isCrash = !crashReport.isNullOrEmpty()
         val subject = if (isCrash) {
@@ -480,24 +491,21 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
 
         val formattedText: CharSequence = Html.fromHtml(htmlText, Html.FROM_HTML_MODE_LEGACY)
-
         textContent.text = formattedText
     }
 
-
+    @Suppress("LongParameterList")
     fun showDurationDialog(
         titleResId: Int,
         prefKey: String,
         defaultMinutes: Int,
-        minHours: Int = 0,
-        maxHours: Int = 24,
-        minuteStep: Int = 1,
+        bounds: DurationPickerBounds = DurationPickerBounds(),
         listener: OnDurationSavedListener? = null
     ) {
         val currentMinutes = preferenceManager?.getInt(prefKey, defaultMinutes) ?: defaultMinutes
 
         val durationInputView = DurationInputView(this)
-        durationInputView.configure(minHours, maxHours, minuteStep)
+        durationInputView.configure(bounds.minHours, bounds.maxHours, bounds.minuteStep)
         val paddingHorizontalPx = (24 * resources.displayMetrics.density).toInt()
         val paddingVerticalPx = (12 * resources.displayMetrics.density).toInt()
         durationInputView.setPadding(paddingHorizontalPx, paddingVerticalPx, paddingHorizontalPx, paddingVerticalPx)
@@ -520,7 +528,15 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         centerDialogTitle(dialog)
     }
 
+
     private fun setupConfigControls() {
+        setupTimerControls()
+        setupAutoTimerControls()
+        setupWakeGoalControls()
+        setupHealthConnectControls()
+    }
+
+    private fun setupTimerControls() {
         rowEnableTimer?.setOnClickListener {
             switchEnableTimer?.let { sw ->
                 sw.isPressed = true
@@ -541,12 +557,14 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 R.string.label_duration,
                 PreferenceKeys.KEY_DURATION_MINUTES,
                 AppDefaults.DURATION_MINUTES,
-                0, 12, 5
+                DurationPickerBounds(0, 12, 5)
             ) { minutes ->
                 textDurationValue?.text = DurationUtils.formatDurationString(minutes)
             }
         }
+    }
 
+    private fun setupAutoTimerControls() {
         rowAutoTimer?.setOnClickListener {
             isUserInitiatedAutoTimer = true
             switchAutoTimer?.let { sw ->
@@ -568,13 +586,12 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 switchEnableTimer?.isChecked = dndActive
             }
             editor.apply()
-            if (isChecked) {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto sleep timer (DND) enabled")
-            } else {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto sleep timer (DND) disabled")
-            }
+            val logMsg = if (isChecked) "Auto sleep timer (DND) enabled" else "Auto sleep timer (DND) disabled"
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, logMsg)
         }
+    }
 
+    private fun setupWakeGoalControls() {
         rowEnableGoal?.setOnClickListener {
             switchEnableGoal?.let { sw ->
                 sw.isPressed = true
@@ -593,7 +610,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
 
         btnTargetTime?.setOnClickListener { showTargetTimeDialog() }
-
         btnCurrentWakeTime?.setOnClickListener { showCurrentWakeTimeDialog() }
 
         inputMinSleep?.setOnClickListener {
@@ -601,13 +617,15 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 R.string.label_min_sleep,
                 PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
                 AppDefaults.MIN_SLEEP_DURATION_MINUTES,
-                0, 16, 15
+                DurationPickerBounds(0, 16, 15)
             ) { minutes ->
                 preferenceManager?.edit()?.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)?.apply()
                 textMinSleepValue?.text = DurationUtils.formatDurationString(minutes)
             }
         }
+    }
 
+    private fun setupHealthConnectControls() {
         rowHealthConnect?.setOnClickListener {
             isUserInitiatedHealthConnect = true
             switchHealthConnect?.let { sw ->
@@ -618,40 +636,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
 
         switchHealthConnect?.setOnCheckedChangeListener { buttonView, isChecked ->
-            val isUserInitiated = buttonView.isPressed || isUserInitiatedHealthConnect
-            isUserInitiatedHealthConnect = false
-            if (isChecked) {
-                if (!HealthConnectManager.isHealthConnectAvailable(this)) {
-                    switchHealthConnect?.isChecked = false
-                    Toast.makeText(this, R.string.toast_health_connect_not_available, Toast.LENGTH_SHORT).show()
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect requested but SDK is unavailable")
-                    return@setOnCheckedChangeListener
-                }
-                preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true)?.apply()
-                if (isUserInitiated) {
-                    Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show()
-                    isRequestingHealthConnectPermission = true
-                    HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
-                        if (!hasPermission) {
-                            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled; opening permissions settings")
-                            HealthConnectManager.openHealthConnectPermissions(this)
-                        } else {
-                            isRequestingHealthConnectPermission = false
-                            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled")
-                        }
-                    }
-                }
-            } else {
-                preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)?.apply()
-                if (isUserInitiated) {
-                    isRequestingHealthConnectPermission = false
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled; revoking permissions")
-                    Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show()
-                    HealthConnectManager.revokeAllPermissions(this)
-                }
-            }
-            val goalEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) ?: false
-            updateInputEnabledStates(goalEnabled, isChecked)
+            handleHealthConnectToggle(buttonView.isPressed || isUserInitiatedHealthConnect, isChecked)
         }
 
         inputHcMinDuration?.setOnClickListener {
@@ -659,11 +644,47 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 R.string.label_hc_min_duration,
                 PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES,
                 AppDefaults.HC_MIN_DURATION_MINUTES,
-                0, 2, 5
+                DurationPickerBounds(0, 2, 5)
             ) { minutes ->
                 textHcMinDurationValue?.text = DurationUtils.formatDurationString(minutes)
             }
         }
+    }
+
+    private fun handleHealthConnectToggle(isUserInitiated: Boolean, isChecked: Boolean) {
+        isUserInitiatedHealthConnect = false
+        if (isChecked) {
+            if (!HealthConnectManager.isHealthConnectAvailable(this)) {
+                switchHealthConnect?.isChecked = false
+                Toast.makeText(this, R.string.toast_health_connect_not_available, Toast.LENGTH_SHORT).show()
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect requested but SDK is unavailable")
+                return
+            }
+            preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true)?.apply()
+            if (isUserInitiated) {
+                Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show()
+                isRequestingHealthConnectPermission = true
+                HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
+                    if (!hasPermission) {
+                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled; opening permissions settings")
+                        HealthConnectManager.openHealthConnectPermissions(this)
+                    } else {
+                        isRequestingHealthConnectPermission = false
+                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled")
+                    }
+                }
+            }
+        } else {
+            preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)?.apply()
+            if (isUserInitiated) {
+                isRequestingHealthConnectPermission = false
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled; revoking permissions")
+                Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show()
+                HealthConnectManager.revokeAllPermissions(this)
+            }
+        }
+        val goalEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) ?: false
+        updateInputEnabledStates(goalEnabled, isChecked)
     }
 
     private fun updateInputEnabledStates(goalEnabled: Boolean) {
@@ -697,11 +718,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         goalContainer?.visibility = View.VISIBLE
     }
 
-    private fun isDndPermissionGranted(): Boolean {
-        val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager?
-        return nm != null && nm.isNotificationPolicyAccessGranted
-    }
-
     private fun isDndActive(): Boolean {
         val nm = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager?
         if (nm != null) {
@@ -726,14 +742,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 Toast.makeText(this, "Could not open DND settings", Toast.LENGTH_SHORT).show()
             }
         }
-    }
-
-    private fun openDndPermissionSettings() {
-        openSettingsWithFallback(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS, Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS)
-    }
-
-    private fun openDndSettings() {
-        openSettingsWithFallback(Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS, Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
     }
 
     private fun setRowEnabled(view: View?, enabled: Boolean) {
@@ -865,7 +873,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         textHcMinDurationValue?.text = getComputedDurationString(preferenceManager, PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, hcMinDurationMin)
     }
 
-
     private fun exportSettings() {
         val pm = preferenceManager ?: return
         try {
@@ -901,23 +908,12 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         builder.setTitle(R.string.dialog_import_title)
         builder.setMessage(R.string.dialog_import_message)
 
-        val input = EditText(this)
-        input.isSingleLine = false
-        input.setLines(4)
-
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
-        if (clipboard != null && clipboard.hasPrimaryClip()) {
-            val clipData = clipboard.primaryClip
-            if (clipData != null && clipData.itemCount > 0) {
-                val text = clipData.getItemAt(0).text
-                if (text != null) {
-                    val str = text.toString().trim()
-                    if (str.startsWith("{") && str.endsWith("}")) {
-                        input.setText(str)
-                    }
-                }
-            }
+        val input = EditText(this).apply {
+            isSingleLine = false
+            setLines(4)
         }
+
+        getClipboardJsonText()?.let { input.setText(it) }
 
         builder.setView(input)
 
@@ -929,6 +925,14 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         val dialog = builder.show()
         centerDialogTitle(dialog)
+    }
+
+    private fun getClipboardJsonText(): String? {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return null
+        val clipData = clipboard.primaryClip ?: return null
+        if (clipData.itemCount == 0) return null
+        val text = clipData.getItemAt(0).text?.toString()?.trim() ?: return null
+        return if (text.startsWith("{") && text.endsWith("}")) text else null
     }
 
     private fun importSettings(jsonStr: String?) {
@@ -992,10 +996,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 startActivity(intent)
             }
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
     }
 
     override fun onNewIntent(intent: Intent?) {
