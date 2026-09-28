@@ -73,7 +73,9 @@ style:
   WildcardImport:
     active: false
   ReturnCount:
-    active: false
+    active: true
+    max: 5
+    excludedFunctions: ['equals']
   UnusedPrivateMember:
     active: false
   UnusedPrivateProperty:

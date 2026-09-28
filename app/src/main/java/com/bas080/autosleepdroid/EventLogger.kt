@@ -113,9 +113,8 @@ object EventLogger {
 
     fun isDarkMode(context: Context?): Boolean {
         val ctx = context ?: appContext ?: return false
-        val resources = ctx.resources ?: return false
-        val config = resources.configuration ?: return false
-        val currentNightMode = config.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        val config = ctx.resources?.configuration
+        val currentNightMode = (config?.uiMode ?: 0) and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         return currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
     }
 

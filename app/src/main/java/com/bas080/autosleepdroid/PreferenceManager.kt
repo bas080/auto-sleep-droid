@@ -73,12 +73,9 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
             val tracked = trackedValues ?: return false
             if (tracked.isEmpty()) return false
 
-            for ((key, trackedValue) in tracked) {
-                if (isKeyStale(preferenceManager, key, trackedValue)) {
-                    return true
-                }
+            return tracked.entries.any { (key, trackedValue) ->
+                isKeyStale(preferenceManager, key, trackedValue)
             }
-            return false
         }
 
         private fun isKeyStale(preferenceManager: PreferenceManager, key: String, trackedValue: Any): Boolean {
