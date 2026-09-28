@@ -52,23 +52,26 @@ object EventLogger {
         }
 
         val line = "$timestamp $marker$message"
+        writeLogToFile(targetContext, line)
+        dispatchLogToListener(line)
+    }
 
-        if (targetContext != null) {
-            val appCtx = targetContext.applicationContext
-            val file = getLogFile(appCtx)
-            if (file.exists() && file.length() >= MAX_LOG_FILE_BYTES) {
-                pruneFile(file)
-            }
-            file.appendText(line + "\n")
+    private fun writeLogToFile(targetContext: Context?, line: String) {
+        if (targetContext == null) return
+        val appCtx = targetContext.applicationContext
+        val file = getLogFile(appCtx)
+        if (file.exists() && file.length() >= MAX_LOG_FILE_BYTES) {
+            pruneFile(file)
         }
+        file.appendText(line + "\n")
+    }
 
-        val currentListener = listener
-        if (currentListener != null) {
-            if (Looper.myLooper() == Looper.getMainLooper()) {
-                currentListener.onEventLogged(line)
-            } else {
-                Handler(Looper.getMainLooper()).post { currentListener.onEventLogged(line) }
-            }
+    private fun dispatchLogToListener(line: String) {
+        val currentListener = listener ?: return
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            currentListener.onEventLogged(line)
+        } else {
+            Handler(Looper.getMainLooper()).post { currentListener.onEventLogged(line) }
         }
     }
 
@@ -131,10 +134,7 @@ object EventLogger {
         val displayString = if (timestamp.isEmpty()) rawMessage.trim() else (timestamp + rawMessage)
         val spannable = SpannableString(displayString)
 
-        val timestampColor = if (darkMode) -0x777778 else -0x666667
-        if (timestamp.isNotEmpty() && timestamp.length <= displayString.length) {
-            spannable.setSpan(ForegroundColorSpan(timestampColor), 0, timestamp.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
+        applyTimestampStyle(spannable, timestamp, displayString.length, darkMode)
 
         val messageStart = if (timestamp.isEmpty()) 0 else timestamp.length
         if (messageStart < displayString.length) {
@@ -144,32 +144,38 @@ object EventLogger {
         return spannable
     }
 
+    private fun applyTimestampStyle(spannable: SpannableString, timestamp: String, maxLen: Int, darkMode: Boolean) {
+        val timestampColor = if (darkMode) -0x777778 else -0x666667
+        if (timestamp.isNotEmpty() && timestamp.length <= maxLen) {
+            spannable.setSpan(ForegroundColorSpan(timestampColor), 0, timestamp.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+    }
+
     private data class LogComponents(val timestamp: String, val level: Int, val message: String)
 
     private fun extractLogComponents(line: String): LogComponents {
         val spaceIdx = line.indexOf(' ')
         val secondSpaceIdx = if (spaceIdx != -1) line.indexOf(' ', spaceIdx + 1) else -1
-        val timestampEnd = if (secondSpaceIdx != -1) secondSpaceIdx else (if (spaceIdx != -1) spaceIdx else 0)
+        val timestampEnd = when {
+            secondSpaceIdx != -1 -> secondSpaceIdx
+            spaceIdx != -1 -> spaceIdx
+            else -> 0
+        }
 
         val timestamp = if (timestampEnd > 0) line.substring(0, timestampEnd) else ""
-        var rawMessage = if (timestampEnd < line.length) line.substring(timestampEnd) else ""
+        val rawMessageWithMarker = if (timestampEnd < line.length) line.substring(timestampEnd) else ""
 
-        val level = when {
-            rawMessage.contains("\u0000") -> {
-                rawMessage = rawMessage.replace("\u0000", "")
-                LEVEL_LOW
-            }
-            rawMessage.contains("\u0002") -> {
-                rawMessage = rawMessage.replace("\u0002", "")
-                LEVEL_HIGH
-            }
-            rawMessage.contains("\u0001") -> {
-                rawMessage = rawMessage.replace("\u0001", "")
-                LEVEL_NORMAL
-            }
-            else -> LEVEL_NORMAL
+        val (level, cleanMessage) = parseMessageLevel(rawMessageWithMarker)
+        return LogComponents(timestamp, level, cleanMessage)
+    }
+
+    private fun parseMessageLevel(rawMessage: String): Pair<Int, String> {
+        return when {
+            rawMessage.contains("\u0000") -> Pair(LEVEL_LOW, rawMessage.replace("\u0000", ""))
+            rawMessage.contains("\u0002") -> Pair(LEVEL_HIGH, rawMessage.replace("\u0002", ""))
+            rawMessage.contains("\u0001") -> Pair(LEVEL_NORMAL, rawMessage.replace("\u0001", ""))
+            else -> Pair(LEVEL_NORMAL, rawMessage)
         }
-        return LogComponents(timestamp, level, rawMessage)
     }
 
     private fun applyMessageStyle(

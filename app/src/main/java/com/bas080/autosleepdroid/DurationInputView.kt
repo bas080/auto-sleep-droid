@@ -135,14 +135,9 @@ class DurationInputView : LinearLayout {
 
         val editText = findEditTextInPicker(picker)
         val str = editText?.text?.toString()?.trim() ?: ""
-        val currentDisplayed = getCurrentlyDisplayedValue(picker)
-        val currentValStr = picker.value.toString()
-
-        val isSameAsCurrent = str == currentDisplayed || str == currentValStr
-        val isEdited = str.isNotEmpty() && !isSameAsCurrent
         val isFocused = picker.hasFocus() || (editText != null && editText.hasFocus())
 
-        if (str.isNotEmpty() && (isEdited || isFocused)) {
+        if (shouldApplyPickerValue(picker, str, isFocused)) {
             applyParsedPickerValue(picker, str)
         }
 
@@ -150,6 +145,15 @@ class DurationInputView : LinearLayout {
             editText?.clearFocus()
             picker.clearFocus()
         }
+    }
+
+    private fun shouldApplyPickerValue(picker: NumberPicker, str: String, isFocused: Boolean): Boolean {
+        if (str.isEmpty()) return false
+        val currentDisplayed = getCurrentlyDisplayedValue(picker)
+        val currentValStr = picker.value.toString()
+        val isSameAsCurrent = str == currentDisplayed || str == currentValStr
+        val isEdited = !isSameAsCurrent
+        return isEdited || isFocused
     }
 
     private fun applyParsedPickerValue(picker: NumberPicker, str: String) {
