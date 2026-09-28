@@ -27,7 +27,7 @@ complexity:
     excludes: ['**/MainService.kt', '**/MainActivity.kt']
   LongMethod:
     active: true
-    threshold: 60
+    threshold: 50
   LongParameterList:
     active: true
     functionThreshold: 6
@@ -74,7 +74,7 @@ style:
     active: false
   ReturnCount:
     active: true
-    max: 5
+    max: 3
     excludedFunctions: ['equals']
   UnusedPrivateMember:
     active: false
