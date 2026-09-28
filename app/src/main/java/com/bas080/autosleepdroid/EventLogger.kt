@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.bas080.autosleepdroid
 
 import android.content.Context
