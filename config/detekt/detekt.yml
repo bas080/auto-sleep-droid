@@ -48,8 +48,6 @@ empty-blocks:
 exceptions:
   active: true
   excludes: ['**/test/**']
-  TooGenericExceptionCaught:
-    active: false
   SwallowedException:
     active: true
 
