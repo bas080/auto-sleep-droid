@@ -142,34 +142,40 @@ class DurationInputView : LinearLayout {
         val isEdited = str.isNotEmpty() && !isSameAsCurrent
         val isFocused = picker.hasFocus() || (editText != null && editText.hasFocus())
 
-        if ((isEdited || isFocused) && str.isNotEmpty() && !isSameAsCurrent) {
-            try {
-                val valNum = str.toInt()
-                if (picker === pickerHours) {
-                    if (valNum in minHours..maxHours) {
-                        picker.value = valNum
-                    }
-                } else if (picker === pickerMinutes) {
-                    if (minuteStep > 1) {
-                        val count = 60 / minuteStep
-                        var stepIdx = Math.round(valNum.toFloat() / minuteStep)
-                        if (stepIdx < 0) stepIdx = 0
-                        if (stepIdx >= count) stepIdx = count - 1
-                        picker.value = stepIdx
-                    } else {
-                        if (valNum in 0..59) {
-                            picker.value = valNum
-                        }
-                    }
-                }
-                syncEditText(picker)
-            } catch (ignored: NumberFormatException) {
-            }
+        if (str.isNotEmpty() && (isEdited || isFocused)) {
+            applyParsedPickerValue(picker, str)
         }
 
         if (isFocused) {
             editText?.clearFocus()
             picker.clearFocus()
+        }
+    }
+
+    private fun applyParsedPickerValue(picker: NumberPicker, str: String) {
+        try {
+            val valNum = str.toInt()
+            if (picker === pickerHours) {
+                if (valNum in minHours..maxHours) {
+                    picker.value = valNum
+                }
+            } else if (picker === pickerMinutes) {
+                applyParsedMinutesValue(picker, valNum)
+            }
+            syncEditText(picker)
+        } catch (ignored: NumberFormatException) {
+        }
+    }
+
+    private fun applyParsedMinutesValue(picker: NumberPicker, valNum: Int) {
+        if (minuteStep > 1) {
+            val count = 60 / minuteStep
+            var stepIdx = Math.round(valNum.toFloat() / minuteStep)
+            if (stepIdx < 0) stepIdx = 0
+            if (stepIdx >= count) stepIdx = count - 1
+            picker.value = stepIdx
+        } else if (valNum in 0..59) {
+            picker.value = valNum
         }
     }
 

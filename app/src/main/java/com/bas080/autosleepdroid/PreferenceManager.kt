@@ -70,42 +70,34 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
         val trackedValues: Map<String, Any>?
     ) {
         fun isStale(preferenceManager: PreferenceManager): Boolean {
-            if (trackedValues == null || trackedValues.isEmpty()) {
-                return false
-            }
-            for ((key, trackedValue) in trackedValues) {
-                if (key.startsWith("contains:")) {
-                    val actualKey = key.substring("contains:".length)
-                    val currentContains = preferenceManager.contains(actualKey)
-                    if (trackedValue != currentContains) {
-                        return true
-                    }
-                } else {
-                    if (trackedValue is Boolean) {
-                        if (trackedValue != preferenceManager.getBoolean(key, !trackedValue)) {
-                            return true
-                        }
-                    } else if (trackedValue is Int) {
-                        if (trackedValue != preferenceManager.getInt(key, trackedValue + 1)) {
-                            return true
-                        }
-                    } else if (trackedValue is Long) {
-                        if (trackedValue != preferenceManager.getLong(key, trackedValue + 1L)) {
-                            return true
-                        }
-                    } else if (trackedValue === NULL_SENTINEL) {
-                        if (preferenceManager.contains(key)) {
-                            return true
-                        }
-                    } else if (trackedValue is String) {
-                        val current = preferenceManager.getString(key, null)
-                        if (trackedValue != current) {
-                            return true
-                        }
-                    }
+            val tracked = trackedValues ?: return false
+            if (tracked.isEmpty()) return false
+
+            for ((key, trackedValue) in tracked) {
+                if (isKeyStale(preferenceManager, key, trackedValue)) {
+                    return true
                 }
             }
             return false
+        }
+
+        private fun isKeyStale(preferenceManager: PreferenceManager, key: String, trackedValue: Any): Boolean {
+            if (key.startsWith("contains:")) {
+                val actualKey = key.substring("contains:".length)
+                return trackedValue != preferenceManager.contains(actualKey)
+            }
+            return isValueStale(preferenceManager, key, trackedValue)
+        }
+
+        private fun isValueStale(preferenceManager: PreferenceManager, key: String, trackedValue: Any): Boolean {
+            return when (trackedValue) {
+                is Boolean -> trackedValue != preferenceManager.getBoolean(key, !trackedValue)
+                is Int -> trackedValue != preferenceManager.getInt(key, trackedValue + 1)
+                is Long -> trackedValue != preferenceManager.getLong(key, trackedValue + 1L)
+                NULL_SENTINEL -> preferenceManager.contains(key)
+                is String -> trackedValue != preferenceManager.getString(key, null)
+                else -> false
+            }
         }
     }
 
@@ -257,22 +249,30 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         key ?: return
 
-        if (computedCache.isNotEmpty()) {
-            for ((cacheKey, cached) in computedCache) {
-                if (cached.trackedValues != null && (cached.trackedValues.containsKey(key) || cached.trackedValues.containsKey("contains:$key"))) {
-                    computedCache.remove(cacheKey)
-                }
+        invalidateComputedOnKeyChange(key)
+        notifyEffectsOnKeyChange(key)
+        notifyListenersOnKeyChange(key)
+    }
+
+    private fun invalidateComputedOnKeyChange(key: String) {
+        if (computedCache.isEmpty()) return
+        for ((cacheKey, cached) in computedCache) {
+            if (cached.trackedValues != null && (cached.trackedValues.containsKey(key) || cached.trackedValues.containsKey("contains:$key"))) {
+                computedCache.remove(cacheKey)
             }
         }
+    }
 
-        if (activeEffects.isNotEmpty()) {
-            for (reg in activeEffects) {
-                if (!reg.isDisposed && reg.trackedKeys.contains(key)) {
-                    reg.runEffect()
-                }
+    private fun notifyEffectsOnKeyChange(key: String) {
+        if (activeEffects.isEmpty()) return
+        for (reg in activeEffects) {
+            if (!reg.isDisposed && reg.trackedKeys.contains(key)) {
+                reg.runEffect()
             }
         }
+    }
 
+    private fun notifyListenersOnKeyChange(key: String) {
         val listeners = listenersMap[key]
         if (!listeners.isNullOrEmpty()) {
             for (listener in listeners) {

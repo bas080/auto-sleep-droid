@@ -31,14 +31,33 @@ class SettingRowView : LinearLayout {
         initView(context, attrs, defStyleAttr, 0)
     }
 
-    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int) : super(context, attrs, defStyleAttr, defStyleRes) {
+    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int) : super(
+        context,
+        attrs,
+        defStyleAttr,
+        defStyleRes
+    ) {
         initView(context, attrs, defStyleAttr, defStyleRes)
     }
 
     private fun initView(context: Context, attrs: AttributeSet?, defStyleAttr: Int, defStyleRes: Int) {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
+        setupViewDimensions(context)
 
+        LayoutInflater.from(context).inflate(R.layout.view_setting_row, this, true)
+
+        titleTextView = findViewById(R.id.setting_row_title)
+        descriptionTextView = findViewById(R.id.setting_row_description)
+        valueTextView = findViewById(R.id.setting_row_value)
+        switchView = findViewById(R.id.setting_row_switch)
+
+        if (attrs != null) {
+            applyStyledAttributes(context, attrs, defStyleAttr, defStyleRes)
+        }
+    }
+
+    private fun setupViewDimensions(context: Context) {
         val minHeightPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 64f, resources.displayMetrics).toInt()
         minimumHeight = minHeightPx
 
@@ -55,56 +74,43 @@ class SettingRowView : LinearLayout {
                 setBackgroundResource(outValue.resourceId)
             }
         }
+    }
 
-        LayoutInflater.from(context).inflate(R.layout.view_setting_row, this, true)
+    private fun applyStyledAttributes(context: Context, attrs: AttributeSet, defStyleAttr: Int, defStyleRes: Int) {
+        val a: TypedArray = context.obtainStyledAttributes(attrs, R.styleable.SettingRowView, defStyleAttr, defStyleRes)
+        try {
+            val title = a.getText(R.styleable.SettingRowView_rowTitle)
+            if (title != null) titleTextView.text = title
 
-        titleTextView = findViewById(R.id.setting_row_title)
-        descriptionTextView = findViewById(R.id.setting_row_description)
-        valueTextView = findViewById(R.id.setting_row_value)
-        switchView = findViewById(R.id.setting_row_switch)
+            val description = a.getText(R.styleable.SettingRowView_rowDescription)
+            if (description != null) descriptionTextView.text = description
 
-        if (attrs != null) {
-            val a: TypedArray = context.obtainStyledAttributes(attrs, R.styleable.SettingRowView, defStyleAttr, defStyleRes)
-            try {
-                val title = a.getText(R.styleable.SettingRowView_rowTitle)
-                if (title != null) {
-                    titleTextView.text = title
-                }
+            val value = a.getText(R.styleable.SettingRowView_rowValue)
+            if (value != null) valueTextView.text = value
 
-                val description = a.getText(R.styleable.SettingRowView_rowDescription)
-                if (description != null) {
-                    descriptionTextView.text = description
-                }
+            val valueId = a.getResourceId(R.styleable.SettingRowView_valueId, View.NO_ID)
+            if (valueId != View.NO_ID) valueTextView.id = valueId
 
-                val value = a.getText(R.styleable.SettingRowView_rowValue)
-                if (value != null) {
-                    valueTextView.text = value
-                }
+            val switchId = a.getResourceId(R.styleable.SettingRowView_switchId, View.NO_ID)
+            if (switchId != View.NO_ID) switchView.id = switchId
 
-                val valueId = a.getResourceId(R.styleable.SettingRowView_valueId, View.NO_ID)
-                if (valueId != View.NO_ID) {
-                    valueTextView.id = valueId
-                }
+            val rowType = a.getInt(R.styleable.SettingRowView_rowType, 0)
+            configureRowType(rowType, switchId, valueId, value)
+        } finally {
+            a.recycle()
+        }
+    }
 
-                val switchId = a.getResourceId(R.styleable.SettingRowView_switchId, View.NO_ID)
-                if (switchId != View.NO_ID) {
-                    switchView.id = switchId
-                }
-
-                val rowType = a.getInt(R.styleable.SettingRowView_rowType, 0)
-                if (rowType == 2 || switchId != View.NO_ID) {
-                    switchView.visibility = View.VISIBLE
-                    valueTextView.visibility = View.GONE
-                } else if (rowType == 1 || valueId != View.NO_ID || value != null) {
-                    valueTextView.visibility = View.VISIBLE
-                    switchView.visibility = View.GONE
-                } else {
-                    valueTextView.visibility = View.GONE
-                    switchView.visibility = View.GONE
-                }
-            } finally {
-                a.recycle()
-            }
+    private fun configureRowType(rowType: Int, switchId: Int, valueId: Int, value: CharSequence?) {
+        if (rowType == 2 || switchId != View.NO_ID) {
+            switchView.visibility = View.VISIBLE
+            valueTextView.visibility = View.GONE
+        } else if (rowType == 1 || valueId != View.NO_ID || value != null) {
+            valueTextView.visibility = View.VISIBLE
+            switchView.visibility = View.GONE
+        } else {
+            valueTextView.visibility = View.GONE
+            switchView.visibility = View.GONE
         }
     }
 

@@ -5,7 +5,6 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.RemoteInput
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -18,14 +17,11 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
-import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.widget.Toast
-import java.text.DateFormat
-import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 
@@ -59,7 +55,6 @@ open class MainService : Service() {
     private var isWakeUpAlarmSnoozed = false
     private var isForeground = false
     private var lastTimerEndsAt = 0L
-    private var lastSelfDndChangeTimeMs = 0L
     private var wakeLock: android.os.PowerManager.WakeLock? = null
 
     var state = State.OFF
@@ -95,6 +90,26 @@ open class MainService : Service() {
         onStateChanged(newState)
     }
 
+    class InitialStateParams(
+        val savedEnabled: Boolean,
+        val savedDurationMinutes: Int,
+        val savedEndsAt: Long,
+        val initialVolume: Int,
+        val musicActive: Boolean
+    )
+
+    fun initializeTimerState(params: InitialStateParams, now: Long = System.currentTimeMillis()) {
+        initializeTimerState(
+            params.savedEnabled,
+            params.savedDurationMinutes,
+            params.savedEndsAt,
+            params.initialVolume,
+            params.musicActive,
+            now
+        )
+    }
+
+    @Suppress("LongParameterList")
     fun initializeTimerState(
         savedEnabled: Boolean,
         savedDurationMinutes: Int,
@@ -131,27 +146,30 @@ open class MainService : Service() {
             return
         }
 
-        if (state == State.OFF) {
-            configuredDurationMinutes = newDuration
-            if (musicActive) {
-                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
-            } else {
-                onPersistState(true, configuredDurationMinutes, 0L)
-                transitionTo(State.WAITING)
-            }
-        } else if (state == State.WAITING) {
-            configuredDurationMinutes = newDuration
-            if (musicActive) {
-                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
-            } else {
-                updateNotification()
-            }
-        } else if (state == State.ACTIVE) {
-            if (newDuration != configuredDurationMinutes) {
-                startTimer(newDuration, now + newDuration * 60_000L, true)
-            }
-        } else if (state == State.FADING) {
-            configuredDurationMinutes = newDuration
+        when (state) {
+            State.OFF -> reloadForOffState(newDuration, musicActive, now)
+            State.WAITING -> reloadForWaitingState(newDuration, musicActive, now)
+            State.ACTIVE -> if (newDuration != configuredDurationMinutes) startTimer(newDuration, now + newDuration * 60_000L, true)
+            State.FADING -> configuredDurationMinutes = newDuration
+        }
+    }
+
+    private fun reloadForOffState(newDuration: Int, musicActive: Boolean, now: Long) {
+        configuredDurationMinutes = newDuration
+        if (musicActive) {
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
+        } else {
+            onPersistState(true, configuredDurationMinutes, 0L)
+            transitionTo(State.WAITING)
+        }
+    }
+
+    private fun reloadForWaitingState(newDuration: Int, musicActive: Boolean, now: Long) {
+        configuredDurationMinutes = newDuration
+        if (musicActive) {
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
+        } else {
+            updateNotification()
         }
     }
 
@@ -307,10 +325,8 @@ open class MainService : Service() {
             }
         }
 
-        if (isEnabled) {
-            if (state == State.WAITING && musicActive) {
-                startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
-            }
+        if (isEnabled && state == State.WAITING && musicActive) {
+            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
         }
     }
 
@@ -333,7 +349,6 @@ open class MainService : Service() {
             }
         }
     }
-
 
     private fun resetTimerForVolumeChange(now: Long) {
         if (state != State.FADING && isValidDuration(configuredDurationMinutes)) {
@@ -517,26 +532,29 @@ open class MainService : Service() {
     }
 
     private fun registerVolumeObserver() {
-        if (volumeReceiver == null) {
-            volumeReceiver = object : android.content.BroadcastReceiver() {
-                override fun onReceive(context: Context?, intent: Intent?) {
-                    if ("android.media.VOLUME_CHANGED_ACTION" == intent?.action) {
-                        if (isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) {
-                            snoozeWakeUpAlarmViaVolumeKey()
-                        } else {
-                            val streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
-                            if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
-                                audioManager?.let {
-                                    val currentVol = it.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                    onVolumeChanged(currentVol, System.currentTimeMillis())
-                                }
-                            }
-                        }
-                    }
+        if (volumeReceiver != null) return
+        volumeReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if ("android.media.VOLUME_CHANGED_ACTION" == intent?.action) {
+                    handleVolumeChangeEvent(intent)
                 }
             }
-            val filter = android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION")
-            registerReceiver(volumeReceiver, filter)
+        }
+        val filter = android.content.IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+        registerReceiver(volumeReceiver, filter)
+    }
+
+    private fun handleVolumeChangeEvent(intent: Intent) {
+        if (isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) {
+            snoozeWakeUpAlarmViaVolumeKey()
+            return
+        }
+        val streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
+        if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
+            audioManager?.let {
+                val currentVol = it.getStreamVolume(AudioManager.STREAM_MUSIC)
+                onVolumeChanged(currentVol, System.currentTimeMillis())
+            }
         }
     }
 
@@ -550,54 +568,65 @@ open class MainService : Service() {
         }
     }
 
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent != null) {
-            val action = intent.action
-            if (ACTION_TURN_OFF == action) {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer turned off")
-                handleTurnOff(true)
-                Toast.makeText(this, R.string.toast_timer_turned_off, Toast.LENGTH_SHORT).show()
-            } else if (ACTION_TURN_ON == action) {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer turned on")
-                val musicActive = audioManager != null && audioManager!!.isMusicActive
-                handleTurnOn(musicActive, System.currentTimeMillis(), true)
-                Toast.makeText(this, R.string.toast_timer_turned_on, Toast.LENGTH_SHORT).show()
-            } else if (ACTION_ALARM_EXPIRY == action) {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "AlarmManager trigger received")
-                val currentVol = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
-                handleAlarmExpiryState(currentVol)
-            } else if (ACTION_WAKEUP_ALARM_EXPIRY == action) {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep wake-up alarm triggered")
-                if (isWakeAlarmEnabled()) {
-                    acquireWakeLock()
-                    setWakeUpAlarmState(true, false)
-                    updateListenersRegistration()
-                    playWakeUpAlarmSound()
-                } else {
-                    EventLogger.log(this, "Wake alarm disabled; skipping alarm tone")
-                }
-                updateNotification()
-                checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
-            } else if (ACTION_UPDATE_NOTIFICATION == action) {
-                EventLogger.log(this, "Notification update trigger received")
-                updateNotification()
-            } else if (ACTION_AWAKE == action) {
-                handleAwakeAction()
-            } else if (ACTION_NOTIFICATION_CLICK == action) {
-                if (shouldShowAwakeAction()) {
-                    handleAwakeAction()
-                } else {
-                    val activityIntent = Intent(this, MainActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                    }
-                    startActivity(activityIntent)
-                }
-            }
+            processStartCommandAction(intent)
         }
         return START_STICKY
     }
 
+    private fun processStartCommandAction(intent: Intent) {
+        when (intent.action) {
+            ACTION_TURN_OFF -> {
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer turned off")
+                handleTurnOff(true)
+                Toast.makeText(this, R.string.toast_timer_turned_off, Toast.LENGTH_SHORT).show()
+            }
+            ACTION_TURN_ON -> {
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer turned on")
+                val musicActive = audioManager != null && audioManager!!.isMusicActive
+                handleTurnOn(musicActive, System.currentTimeMillis(), true)
+                Toast.makeText(this, R.string.toast_timer_turned_on, Toast.LENGTH_SHORT).show()
+            }
+            ACTION_ALARM_EXPIRY -> {
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "AlarmManager trigger received")
+                val currentVol = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
+                handleAlarmExpiryState(currentVol)
+            }
+            ACTION_WAKEUP_ALARM_EXPIRY -> handleWakeUpAlarmExpiryAction()
+            ACTION_UPDATE_NOTIFICATION -> {
+                EventLogger.log(this, "Notification update trigger received")
+                updateNotification()
+            }
+            ACTION_AWAKE -> handleAwakeAction()
+            ACTION_NOTIFICATION_CLICK -> handleNotificationClickAction()
+        }
+    }
+
+    private fun handleWakeUpAlarmExpiryAction() {
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep wake-up alarm triggered")
+        if (isWakeAlarmEnabled()) {
+            acquireWakeLock()
+            setWakeUpAlarmState(true, false)
+            updateListenersRegistration()
+            playWakeUpAlarmSound()
+        } else {
+            EventLogger.log(this, "Wake alarm disabled; skipping alarm tone")
+        }
+        updateNotification()
+        checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
+    }
+
+    private fun handleNotificationClickAction() {
+        if (shouldShowAwakeAction()) {
+            handleAwakeAction()
+        } else {
+            val activityIntent = Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            }
+            startActivity(activityIntent)
+        }
+    }
 
     private fun startFadeRunnable() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Fade-out started")
@@ -646,33 +675,46 @@ open class MainService : Service() {
 
     fun onStateChanged(newState: State) {
         cancelTimerCallbacks()
-        if (newState == State.OFF) {
-            unregisterAudioPlaybackCallback()
-            stopWakeUpAlarmSound()
-            releaseWakeLock()
-            cancelSnoozeAlarm()
-            setWakeUpAlarmState(false, false)
-            onCancelAlarm()
-            updateListenersRegistration()
-            showOrHideNotification()
-        } else if (newState == State.WAITING) {
-            registerAudioPlaybackCallback()
-            onCancelAlarm()
-            updateListenersRegistration()
-            showOrHideNotification()
-        } else if (newState == State.FADING) {
-            unregisterAudioPlaybackCallback()
-            updateListenersRegistration()
-            showOrHideNotification()
-            startFadeRunnable()
-        } else if (newState == State.ACTIVE) {
-            preferences?.edit()?.putLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, System.currentTimeMillis())?.apply()
-            unregisterAudioPlaybackCallback()
-            updateListenersRegistration()
-            checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
-            showOrHideNotification()
-            scheduleExpiry()
+        when (newState) {
+            State.OFF -> handleOffStateTransition()
+            State.WAITING -> handleWaitingStateTransition()
+            State.FADING -> handleFadingStateTransition()
+            State.ACTIVE -> handleActiveStateTransition()
         }
+    }
+
+    private fun handleOffStateTransition() {
+        unregisterAudioPlaybackCallback()
+        stopWakeUpAlarmSound()
+        releaseWakeLock()
+        cancelSnoozeAlarm()
+        setWakeUpAlarmState(false, false)
+        onCancelAlarm()
+        updateListenersRegistration()
+        showOrHideNotification()
+    }
+
+    private fun handleWaitingStateTransition() {
+        registerAudioPlaybackCallback()
+        onCancelAlarm()
+        updateListenersRegistration()
+        showOrHideNotification()
+    }
+
+    private fun handleFadingStateTransition() {
+        unregisterAudioPlaybackCallback()
+        updateListenersRegistration()
+        showOrHideNotification()
+        startFadeRunnable()
+    }
+
+    private fun handleActiveStateTransition() {
+        preferences?.edit()?.putLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, System.currentTimeMillis())?.apply()
+        unregisterAudioPlaybackCallback()
+        updateListenersRegistration()
+        checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
+        showOrHideNotification()
+        scheduleExpiry()
     }
 
     fun onSetStreamVolume(volume: Int) {
@@ -738,21 +780,9 @@ open class MainService : Service() {
         val prefs = preferences ?: return
         val healthConnectEnabled = true == preferenceManager?.getComputed(PreferenceComputations.IS_HEALTH_CONNECT_ENABLED)
         val hcMinDurationMinutes = prefs.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, AppDefaults.HC_MIN_DURATION_MINUTES)
-
-        val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
-        val timerStartTime = prefs.getLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, 0L)
-        val lastAwakeTime = prefs.getLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, 0L)
         val wakeTime = System.currentTimeMillis()
 
-        var startTime = 0L
-        if (timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)) {
-            startTime = timerStartTime
-        } else if (sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
-            startTime = sleepStartTime
-        } else if (isWakeAlarmEnabled() && (lastAwakeTime == 0L || wakeTime - lastAwakeTime >= 12 * 3600_000L)) {
-            val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
-            startTime = wakeTime - (minSleepMin * 60_000L)
-        }
+        val startTime = calculateSleepSessionStartTime(prefs, wakeTime)
 
         if (startTime > 0L && wakeTime > startTime) {
             val durationMinutes = (wakeTime - startTime) / 60_000L
@@ -766,8 +796,22 @@ open class MainService : Service() {
             .apply()
     }
 
-    private fun processSleepSessionOnAlarmDismissal() {
-        processSleepSession()
+    private fun calculateSleepSessionStartTime(prefs: SharedPreferences, wakeTime: Long): Long {
+        val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
+        val timerStartTime = prefs.getLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, 0L)
+        val lastAwakeTime = prefs.getLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, 0L)
+
+        if (timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)) {
+            return timerStartTime
+        }
+        if (sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
+            return sleepStartTime
+        }
+        if (isWakeAlarmEnabled() && (lastAwakeTime == 0L || wakeTime - lastAwakeTime >= 12 * 3600_000L)) {
+            val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+            return wakeTime - (minSleepMin * 60_000L)
+        }
+        return 0L
     }
 
     private fun handleAwakeAction() {
@@ -880,25 +924,22 @@ open class MainService : Service() {
         val awakeWindowStart = targetAlarmTimeMs - (minSleepMs / 2)
         val now = System.currentTimeMillis()
 
-        if (awakeWindowStart > now) {
-            val updateIntent = Intent(this, MainService::class.java).setAction(ACTION_UPDATE_NOTIFICATION)
-            val updatePendingIntent = getServicePendingIntent(
-                107, updateIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            ) ?: return
-            try {
-                if (Build.VERSION.SDK_INT >= 31) {
-                    if (am.canScheduleExactAlarms()) {
-                        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, awakeWindowStart, updatePendingIntent)
-                    } else {
-                        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, awakeWindowStart, updatePendingIntent)
-                    }
-                } else {
-                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, awakeWindowStart, updatePendingIntent)
-                }
-            } catch (e: SecurityException) {
-                EventLogger.log(this, "SecurityException scheduling notification update alarm")
+        if (awakeWindowStart <= now) return
+
+        val updateIntent = Intent(this, MainService::class.java).setAction(ACTION_UPDATE_NOTIFICATION)
+        val updatePendingIntent = getServicePendingIntent(
+            107, updateIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        ) ?: return
+
+        try {
+            if (Build.VERSION.SDK_INT >= 31 && am.canScheduleExactAlarms()) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, awakeWindowStart, updatePendingIntent)
+            } else {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, awakeWindowStart, updatePendingIntent)
             }
+        } catch (e: SecurityException) {
+            EventLogger.log(this, "SecurityException scheduling notification update alarm")
         }
     }
 
@@ -972,101 +1013,99 @@ open class MainService : Service() {
         val now = System.currentTimeMillis()
         val prefs = preferences
         if (prefs != null) {
-            val editor = prefs.edit()
-            editor.putLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, now)
-            editor.remove(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS)
-
-            if (isWakeAlarmEnabled()) {
-                val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
-                val minSleepMs = minSleepMin * 60_000L
-                val windowMs = (1.2 * minSleepMs).toLong()
-
-                val goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
-                val goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
-                val currentHour = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)
-                val currentMin = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
-
-                val calCurrent = Calendar.getInstance()
-                calCurrent.timeInMillis = now
-                calCurrent.set(Calendar.HOUR_OF_DAY, currentHour)
-                calCurrent.set(Calendar.MINUTE, currentMin)
-                calCurrent.set(Calendar.SECOND, 0)
-                calCurrent.set(Calendar.MILLISECOND, 0)
-                if (calCurrent.timeInMillis <= now) {
-                    calCurrent.add(Calendar.DAY_OF_YEAR, 1)
-                }
-
-                val currentAlarmMs = calCurrent.timeInMillis
-                val existingSleepStart = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
-                if ((existingSleepStart == 0L || now - existingSleepStart >= 14 * 3600_000L)
-                    && now >= currentAlarmMs - windowMs && now <= currentAlarmMs
-                ) {
-                    editor.putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now)
-                }
-            }
-            editor.apply()
+            updatePrefsOnTimerReschedule(prefs, now)
         }
-        val newTimerEndsAt = timerEndsAt
-        lastTimerEndsAt = newTimerEndsAt
+        lastTimerEndsAt = timerEndsAt
         scheduleExpiry()
 
         if (isWakeAlarmEnabled() && prefs != null) {
+            applyMinSleepSafeguardOnTimerReschedule(prefs, now)
+        }
+
+        checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
+    }
+
+    private fun updatePrefsOnTimerReschedule(prefs: SharedPreferences, now: Long) {
+        val editor = prefs.edit()
+        editor.putLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, now)
+        editor.remove(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS)
+
+        if (isWakeAlarmEnabled()) {
             val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
-            val timerDuration = prefs.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES)
             val minSleepMs = minSleepMin * 60_000L
-            val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
-            val requiredWakeTime: Long
-            if (newTimerEndsAt > 0L) {
-                val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
-                requiredWakeTime = newTimerEndsAt + effectiveMinSleepMs
-            } else if (sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L)) {
-                val effectiveMinSleepMs = Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
-                requiredWakeTime = sleepStartTime + effectiveMinSleepMs
-            } else {
-                requiredWakeTime = now + minSleepMs
-            }
+            val windowMs = (1.2 * minSleepMs).toLong()
 
             val goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
             val goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
             val currentHour = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)
             val currentMin = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
 
-            val calCurrent = Calendar.getInstance()
-            calCurrent.timeInMillis = now
-            calCurrent.set(Calendar.HOUR_OF_DAY, currentHour)
-            calCurrent.set(Calendar.MINUTE, currentMin)
-            calCurrent.set(Calendar.SECOND, 0)
-            calCurrent.set(Calendar.MILLISECOND, 0)
-            if (calCurrent.timeInMillis <= now) {
-                calCurrent.add(Calendar.DAY_OF_YEAR, 1)
-            }
+            val currentAlarmMs = calculateAlarmMillisForTime(now, currentHour, currentMin)
+            val existingSleepStart = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
 
-            val currentAlarmMs = calCurrent.timeInMillis
-
-            if (requiredWakeTime > currentAlarmMs) {
-                val calRequired = Calendar.getInstance()
-                calRequired.timeInMillis = requiredWakeTime
-                val pushedHour = calRequired.get(Calendar.HOUR_OF_DAY)
-                val pushedMin = calRequired.get(Calendar.MINUTE)
-                prefs.edit()
-                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, pushedHour)
-                    .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, pushedMin)
-                    .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
-                    .apply()
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Pushed wake alarm forward to ${formatTime(pushedHour, pushedMin)} due to min sleep safeguard")
+            if (shouldRecordSleepStart(now, existingSleepStart, currentAlarmMs, windowMs)) {
+                editor.putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now)
             }
         }
-
-        checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
+        editor.apply()
     }
 
+    private fun shouldRecordSleepStart(now: Long, existingSleepStart: Long, currentAlarmMs: Long, windowMs: Long): Boolean {
+        val isNoSessionOrOld = existingSleepStart == 0L || now - existingSleepStart >= 14 * 3600_000L
+        val isWithinWindow = now >= currentAlarmMs - windowMs && now <= currentAlarmMs
+        return isNoSessionOrOld && isWithinWindow
+    }
+
+    private fun applyMinSleepSafeguardOnTimerReschedule(prefs: SharedPreferences, now: Long) {
+        val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+        val timerDuration = prefs.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES)
+        val minSleepMs = minSleepMin * 60_000L
+        val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
+
+        val requiredWakeTime = when {
+            timerEndsAt > 0L -> timerEndsAt + Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
+            sleepStartTime > 0L && (now - sleepStartTime < 14 * 3600_000L) -> sleepStartTime + Math.max(0L, (minSleepMin - timerDuration) * 60_000L)
+            else -> now + minSleepMs
+        }
+
+        val goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
+        val goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
+        val currentHour = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)
+        val currentMin = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
+
+        val currentAlarmMs = calculateAlarmMillisForTime(now, currentHour, currentMin)
+
+        if (requiredWakeTime > currentAlarmMs) {
+            val calRequired = Calendar.getInstance().apply { timeInMillis = requiredWakeTime }
+            val pushedHour = calRequired.get(Calendar.HOUR_OF_DAY)
+            val pushedMin = calRequired.get(Calendar.MINUTE)
+            prefs.edit()
+                .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, pushedHour)
+                .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, pushedMin)
+                .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
+                .apply()
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Pushed wake alarm forward to ${formatTime(pushedHour, pushedMin)} due to min sleep safeguard")
+        }
+    }
+
+    private fun calculateAlarmMillisForTime(now: Long, hour: Int, minute: Int): Long {
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = now
+        cal.set(Calendar.HOUR_OF_DAY, hour)
+        cal.set(Calendar.MINUTE, minute)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        if (cal.timeInMillis <= now) {
+            cal.add(Calendar.DAY_OF_YEAR, 1)
+        }
+        return cal.timeInMillis
+    }
 
     private fun ensureAudibleAlarmStreamVolume() {
         val am = audioManager ?: return
         val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-        if (maxVol <= 0) {
-            return
-        }
+        if (maxVol <= 0) return
+
         if (am.isStreamMute(AudioManager.STREAM_ALARM)) {
             try {
                 am.adjustStreamVolume(AudioManager.STREAM_ALARM, AudioManager.ADJUST_UNMUTE, 0)
@@ -1091,58 +1130,61 @@ open class MainService : Service() {
         stopWakeUpAlarmSound()
         try {
             ensureAudibleAlarmStreamVolume()
-            val urisToTry = arrayOf(
-                RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM),
-                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
-                RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_NOTIFICATION),
-                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            )
-
-            var started = false
-            for (uri in urisToTry) {
-                if (uri == null) continue
-                try {
-                    val player = android.media.MediaPlayer().apply {
-                        setAudioAttributes(
-                            AudioAttributes.Builder()
-                                .setUsage(AudioAttributes.USAGE_ALARM)
-                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                                .build()
-                        )
-                        setDataSource(applicationContext, uri)
-                        isLooping = true
-                        prepare()
-                        start()
-                    }
-                    alarmMediaPlayer = player
-                    started = true
-                    EventLogger.log(this, "Wake-Up Goal alarm sound started playing (MediaPlayer)")
-                    break
-                } catch (e: Exception) {
-                    EventLogger.log(this, "MediaPlayer failed for URI $uri: ${e.message}")
-                }
-            }
-
-            if (!started) {
-                val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                val ringtone = getRingtone(applicationContext, alarmUri)
-                if (ringtone != null) {
-                    AlarmAudioUtils.configureAlarmAudioAttributes(ringtone)
-                    ringtone.play()
-                    currentAlarmRingtone = ringtone
-                    EventLogger.log(this, "Wake-Up Goal alarm sound started playing (Ringtone fallback)")
-                    started = true
-                }
-            }
-
+            val started = tryPlayMediaPlayerAlarm() || tryPlayRingtoneAlarm()
             if (started) {
                 startWakeUpAlarmCrescendo()
             }
         } catch (e: Exception) {
             EventLogger.log(this, "Failed to play wake-up alarm sound: ${e.message}")
         }
+    }
+
+    private fun tryPlayMediaPlayerAlarm(): Boolean {
+        val urisToTry = arrayOf(
+            RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM),
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+            RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_NOTIFICATION),
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+        )
+
+        for (uri in urisToTry) {
+            if (uri == null) continue
+            try {
+                val player = android.media.MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    setDataSource(applicationContext, uri)
+                    isLooping = true
+                    prepare()
+                    start()
+                }
+                alarmMediaPlayer = player
+                EventLogger.log(this, "Wake-Up Goal alarm sound started playing (MediaPlayer)")
+                return true
+            } catch (e: Exception) {
+                EventLogger.log(this, "MediaPlayer failed for URI $uri: ${e.message}")
+            }
+        }
+        return false
+    }
+
+    private fun tryPlayRingtoneAlarm(): Boolean {
+        val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        val ringtone = getRingtone(applicationContext, alarmUri)
+        if (ringtone != null) {
+            AlarmAudioUtils.configureAlarmAudioAttributes(ringtone)
+            ringtone.play()
+            currentAlarmRingtone = ringtone
+            EventLogger.log(this, "Wake-Up Goal alarm sound started playing (Ringtone fallback)")
+            return true
+        }
+        return false
     }
 
     private fun startWakeUpAlarmCrescendo() {
@@ -1314,48 +1356,7 @@ open class MainService : Service() {
             getString(R.string.app_name)
         }
 
-        val parts = mutableListOf<String>()
-
-        val now = System.currentTimeMillis()
-        val wakeAlarmEnabled = isWakeAlarmEnabled()
-        val scheduledAlarm = if (wakeAlarmEnabled) calculateScheduledAlarm(this, now, timerEndsAt) else null
-        val alarmTimeStr = if (scheduledAlarm != null) {
-            formatTime(scheduledAlarm.get(Calendar.HOUR_OF_DAY), scheduledAlarm.get(Calendar.MINUTE))
-        } else null
-
-        if (isWakeUpAlarmRinging) {
-            parts.add(getString(R.string.wakeup_alarm_text))
-        } else if (isWakeUpAlarmSnoozed) {
-            parts.add(getString(R.string.wakeup_alarm_snoozed_text))
-        } else if (!isEnabled) {
-            parts.add(getString(R.string.timer_off))
-            if (alarmTimeStr != null) {
-                parts.add("\u23F0\uFE0E $alarmTimeStr")
-            }
-        } else if (isFading) {
-            val targetTimeStr = formatTargetTime()
-            if (targetTimeStr.isNotEmpty()) {
-                parts.add("\u266A $targetTimeStr")
-            }
-            if (alarmTimeStr != null) {
-                parts.add("\u23F0\uFE0E $alarmTimeStr")
-            }
-        } else if (isActive) {
-            val targetTimeStr = formatTargetTime()
-            if (targetTimeStr.isNotEmpty()) {
-                parts.add("\u266A $targetTimeStr")
-            }
-            if (alarmTimeStr != null) {
-                parts.add("\u23F0\uFE0E $alarmTimeStr")
-            }
-        } else {
-            parts.add(getString(R.string.waiting_title))
-            if (alarmTimeStr != null) {
-                parts.add("\u23F0\uFE0E $alarmTimeStr")
-            }
-        }
-
-        val contentText = parts.joinToString(" • ")
+        val contentText = buildNotificationContentText()
 
         val builder = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_zzz)
@@ -1367,7 +1368,42 @@ open class MainService : Service() {
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
 
-        val toggleAction: Notification.Action = if (isEnabled) {
+        val toggleAction = buildNotificationToggleAction()
+        builder.addAction(toggleAction)
+
+        return builder.build()
+    }
+
+    private fun buildNotificationContentText(): String {
+        val parts = mutableListOf<String>()
+
+        val now = System.currentTimeMillis()
+        val wakeAlarmEnabled = isWakeAlarmEnabled()
+        val scheduledAlarm = if (wakeAlarmEnabled) calculateScheduledAlarm(this, now, timerEndsAt) else null
+        val alarmTimeStr = scheduledAlarm?.let { formatTime(it.get(Calendar.HOUR_OF_DAY), it.get(Calendar.MINUTE)) }
+
+        val status = getNotificationStatusText()
+        if (status.isNotEmpty()) parts.add(status)
+        if (alarmTimeStr != null) parts.add("\u23F0\uFE0E $alarmTimeStr")
+
+        return parts.joinToString(" • ")
+    }
+
+    private fun getNotificationStatusText(): String {
+        return when {
+            isWakeUpAlarmRinging -> getString(R.string.wakeup_alarm_text)
+            isWakeUpAlarmSnoozed -> getString(R.string.wakeup_alarm_snoozed_text)
+            !isEnabled -> getString(R.string.timer_off)
+            isFading || isActive -> {
+                val timeStr = formatTargetTime()
+                if (timeStr.isNotEmpty()) "\u266A $timeStr" else ""
+            }
+            else -> getString(R.string.waiting_title)
+        }
+    }
+
+    private fun buildNotificationToggleAction(): Notification.Action {
+        return if (isEnabled) {
             Notification.Action.Builder(
                 Icon.createWithResource(this, android.R.drawable.ic_media_pause),
                 getString(R.string.action_turn_off),
@@ -1380,9 +1416,6 @@ open class MainService : Service() {
                 turnOnIntent()
             ).build()
         }
-        builder.addAction(toggleAction)
-
-        return builder.build()
     }
 
     private fun notificationClickIntent(): PendingIntent {
@@ -1401,30 +1434,6 @@ open class MainService : Service() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         }
-    }
-
-    private fun reloadSettingsAndUpdate() {
-        val prefs = preferences
-        if (prefs == null) {
-            updateNotification()
-            return
-        }
-
-        val savedEnabled = prefs.getBoolean(KEY_ENABLED, true)
-        val savedDuration = prefs.getInt(KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES)
-        val now = System.currentTimeMillis()
-        val musicActive = audioManager != null && audioManager!!.isMusicActive
-
-        reloadTimerSettings(savedEnabled, savedDuration, musicActive, now)
-
-        val goalEnabled = isWakeAlarmEnabled()
-        if (goalEnabled) {
-            checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
-        } else {
-            dismissAutoSleepAlarm()
-        }
-
-        updateNotification()
     }
 
     open fun startForegroundNotification(id: Int, notification: Notification) {
@@ -1465,18 +1474,18 @@ open class MainService : Service() {
         )!!
     }
 
-    private fun turnOnIntent(): PendingIntent {
-        val intent = Intent(this, MainService::class.java).setAction(ACTION_TURN_ON)
-        return getServicePendingIntent(
-            7, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )!!
-    }
-
     private fun awakeIntent(): PendingIntent {
         val intent = Intent(this, MainService::class.java).setAction(ACTION_AWAKE)
         return getServicePendingIntent(
             16, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )!!
+    }
+
+    private fun turnOnIntent(): PendingIntent {
+        val intent = Intent(this, MainService::class.java).setAction(ACTION_TURN_ON)
+        return getServicePendingIntent(
+            7, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )!!
     }
@@ -1512,7 +1521,6 @@ open class MainService : Service() {
             manager.createNotificationChannel(channel)
         }
     }
-
 
     override fun onDestroy() {
         EventLogger.log(this, EventLogger.LEVEL_LOW, "MainService destroyed")
@@ -1550,15 +1558,9 @@ open class MainService : Service() {
         private const val KEY_ENABLED = PreferenceKeys.KEY_ACTIVE
         private const val KEY_DURATION_MINUTES = PreferenceKeys.KEY_DURATION_MINUTES
         private const val KEY_TIMER_ENDS_AT = PreferenceKeys.KEY_TIMER_ENDS_AT
-        private const val REMOTE_INPUT_KEY = "duration_minutes"
         private const val PAUSE_RESET_DELAY_MS = 500L
-        private const val SENSOR_THROTTLE_MS = 300L
         private const val ALARM_CRESCENDO_DURATION_MS = AppDefaults.ALARM_CRESCENDO_DURATION_MS
         private const val ALARM_CRESCENDO_INTERVAL_MS = AppDefaults.ALARM_CRESCENDO_INTERVAL_MS
-
-        private const val ORIENTATION_UNKNOWN = 0
-        private const val ORIENTATION_FACE_UP = 1
-        private const val ORIENTATION_FACE_DOWN = 2
 
         fun isValidDuration(minutes: Int): Boolean {
             return minutes >= AppDefaults.MINUTES_MIN && minutes <= AppDefaults.MINUTES_MAX

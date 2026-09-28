@@ -36,39 +36,36 @@ object HealthConnectManager {
             android.widget.Toast.makeText(activity, R.string.toast_health_connect_not_available, android.widget.Toast.LENGTH_SHORT).show()
             return
         }
-        try {
-            val intent = Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS").apply {
+
+        val intents = listOf(
+            Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS").apply {
                 putExtra(Intent.EXTRA_PACKAGE_NAME, activity.packageName)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            Intent("androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE").apply {
+                setPackage("com.google.android.apps.healthdata")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS).apply {
+                putExtra(Intent.EXTRA_PACKAGE_NAME, activity.packageName)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = android.net.Uri.parse("package:${activity.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            activity.startActivity(intent)
-        } catch (e0: Exception) {
+        )
+
+        for (intent in intents) {
             try {
-                val intent = Intent("androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE").apply {
-                    setPackage("com.google.android.apps.healthdata")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
                 activity.startActivity(intent)
-            } catch (e1: Exception) {
-                try {
-                    val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS).apply {
-                        putExtra(Intent.EXTRA_PACKAGE_NAME, activity.packageName)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    activity.startActivity(intent)
-                } catch (e2: Exception) {
-                    try {
-                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = android.net.Uri.parse("package:${activity.packageName}")
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        activity.startActivity(intent)
-                    } catch (e3: Exception) {
-                        android.widget.Toast.makeText(activity, R.string.toast_health_connect_not_available, android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                }
+                return
+            } catch (ignored: Exception) {
+                // Try next fallback intent
             }
         }
+
+        android.widget.Toast.makeText(activity, R.string.toast_health_connect_not_available, android.widget.Toast.LENGTH_SHORT).show()
     }
 
     fun interface Callback {

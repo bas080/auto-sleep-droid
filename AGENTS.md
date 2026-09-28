@@ -10,7 +10,8 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 
 ### Common Commands
 
-- Run unit tests: `./gradlew test`
+- Run unit tests and code complexity checks: `./gradlew test`
+- Run code complexity static analysis: `./gradlew detekt`
 - Build debug APK: `./gradlew assembleDebug`
 - Build release APK (unsigned): `./gradlew assembleRelease`
 - Lint F-Droid metadata: `fdroid lint com.bas080.autosleepdroid`
@@ -20,6 +21,7 @@ Auto Sleep Droid is an Android sleep timer app controlled entirely from the noti
 ## Key Codebase Conventions
 
 - **Architecture & Language:** Auto Sleep Droid is written 100% in Kotlin for Android 8.0+ (minSdk 26, targetSdk 34) using unidirectional data flow. Avoid Java interop annotations (`@JvmStatic`, `@JvmField`, `@JvmOverloads`). Custom Android views (`SettingRowView`, `DurationInputView`) use explicit Kotlin secondary constructors (`constructor(context: Context)`, `constructor(context: Context, attrs: AttributeSet?)`, etc.) to support XML layout inflation without `@JvmOverloads`.
+- **Code Complexity & Static Analysis:** Detekt (`io.gitlab.arturbosch.detekt`) is configured as the code complexity static analysis tool in `config/detekt/detekt.yml`. It enforces Kotlin best practice complexity rules (cyclomatic complexity, cognitive complexity, function length, nested block depth, parameter list size, condition complexity). Detekt runs automatically on `./gradlew test` and in CI.
 - **Foreground Service & PendingIntents:** `MainService` is a foreground service declared with `foregroundServiceType="mediaPlayback"`. All `PendingIntent` instances targeting `MainService` use `PendingIntent.getForegroundService` on API 26+ with explicit nullable return types (`PendingIntent?`) so background alarm/notification triggers grant foreground start permissions without throwing `ForegroundServiceStartNotAllowedException`.
 - **External System Settings Intents:** Launch external system settings screens (Do Not Disturb, Exact Alarm, Health Connect) with `Intent.FLAG_ACTIVITY_NEW_TASK` so they open in a separate task window outside Auto Sleep Droid's activity stack.
 - **Logging Subsystem:** `EventLogger` writes timestamped logs directly to append-only internal app file storage (`event_logs.txt`) without keeping log lists in memory.
