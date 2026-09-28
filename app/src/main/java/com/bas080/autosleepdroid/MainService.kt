@@ -261,12 +261,18 @@ open class MainService : Service() {
     }
 
     fun runFadeStep(currentVolume: Int): Boolean {
-        if (state != State.FADING) return false
-        if (currentVolume != lastFadeVolume) {
-            cancelFadeForVolumeChange()
+        if (state != State.FADING) {
             return false
         }
+        return if (currentVolume != lastFadeVolume) {
+            cancelFadeForVolumeChange()
+            false
+        } else {
+            executeFadeStepProgress()
+        }
+    }
 
+    private fun executeFadeStepProgress(): Boolean {
         fadeStep++
         val progress = fadeStep.toFloat() / AppDefaults.TOTAL_FADE_STEPS
         val fraction = 1.0f - (1.0f - progress) * (1.0f - progress)
@@ -813,13 +819,14 @@ open class MainService : Service() {
         val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
         val timerStartTime = prefs.getLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, 0L)
 
-        if (timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)) {
-            return timerStartTime
+        val validTimer = timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)
+        val validSleep = sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)
+
+        return when {
+            validTimer -> timerStartTime
+            validSleep -> sleepStartTime
+            else -> calculateFallbackSleepStartTime(prefs, wakeTime)
         }
-        if (sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
-            return sleepStartTime
-        }
-        return calculateFallbackSleepStartTime(prefs, wakeTime)
     }
 
     private fun calculateFallbackSleepStartTime(prefs: SharedPreferences, wakeTime: Long): Long {
@@ -858,11 +865,9 @@ open class MainService : Service() {
     }
 
     fun shouldShowAwakeAction(): Boolean {
-        if (isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) {
-            return true
-        }
-        val pm = preferenceManager ?: return false
-        return true == pm.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)
+        if (isWakeUpAlarmRinging || isWakeUpAlarmSnoozed) return true
+        val pm = preferenceManager
+        return pm != null && true == pm.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)
     }
 
     private fun updateNextWakeUpTimeOnDismissOrExpiry() {
@@ -940,8 +945,12 @@ open class MainService : Service() {
         val awakeWindowStart = targetAlarmTimeMs - (minSleepMs / 2)
         val now = System.currentTimeMillis()
 
-        if (awakeWindowStart <= now) return
+        if (awakeWindowStart > now) {
+            setNotificationUpdateAlarm(am, awakeWindowStart)
+        }
+    }
 
+    private fun setNotificationUpdateAlarm(am: AlarmManager, awakeWindowStart: Long) {
         val updateIntent = Intent(this, MainService::class.java).setAction(ACTION_UPDATE_NOTIFICATION)
         val updatePendingIntent = getServicePendingIntent(
             107, updateIntent,
@@ -1587,13 +1596,21 @@ open class MainService : Service() {
         }
 
         fun calculateScheduledAlarm(context: Context?, now: Long, timerEndsAt: Long): Calendar? {
-            context ?: return null
+            if (context == null) return null
             val prefs = context.getSharedPreferences(PREFERENCES, MODE_PRIVATE)
             val wakeAlarmEnabled = prefs.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false)
-            if (!wakeAlarmEnabled) {
-                return null
+            return if (wakeAlarmEnabled) {
+                calculateScheduledAlarmInternal(prefs, now, timerEndsAt)
+            } else {
+                null
             }
+        }
 
+        private fun calculateScheduledAlarmInternal(
+            prefs: SharedPreferences,
+            now: Long,
+            timerEndsAt: Long
+        ): Calendar? {
             val goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
             val goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
             val currentHour = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)

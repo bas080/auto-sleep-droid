@@ -480,18 +480,15 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     private fun loadManualTextIfNeeded() {
         val textContent = manualTextContent ?: return
-        if (textContent.text.isNotEmpty()) {
-            return
-        }
-        val htmlText = try {
-            assets.open("manual.html").bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+        if (textContent.text.isNotEmpty()) return
+
+        try {
+            val htmlText = assets.open("manual.html").bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+            val formattedText: CharSequence = Html.fromHtml(htmlText, Html.FROM_HTML_MODE_LEGACY)
+            textContent.text = formattedText
         } catch (e: IOException) {
             EventLogger.log(this, "Failed to load manual: " + e.message)
-            return
         }
-
-        val formattedText: CharSequence = Html.fromHtml(htmlText, Html.FROM_HTML_MODE_LEGACY)
-        textContent.text = formattedText
     }
 
     @Suppress("LongParameterList")
@@ -1073,14 +1070,11 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     internal fun maybeShowRandomDonateDialog(forceShow: Boolean = false, randomRoll: Float = Random.nextFloat()) {
         val pm = preferenceManager ?: return
-        if (pm.getBoolean(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN, false)) {
-            return
-        }
-        val crashPrefs = getSharedPreferences("crash_reports", MODE_PRIVATE)
-        if (crashPrefs.contains("pending_crash_report")) {
-            return
-        }
-        if (forceShow || randomRoll < 0.2f) {
+        val isHidden = pm.getBoolean(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN, false)
+        val hasCrash = getSharedPreferences("crash_reports", MODE_PRIVATE).contains("pending_crash_report")
+        val shouldShow = forceShow || randomRoll < 0.2f
+
+        if (!isHidden && !hasCrash && shouldShow) {
             showDonateDialog()
         }
     }
