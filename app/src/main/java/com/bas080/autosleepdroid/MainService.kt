@@ -252,20 +252,16 @@ open class MainService : Service() {
     }
 
     fun runFadeStep(currentVolume: Int): Boolean {
-        if (state != State.FADING) {
-            return false
-        }
-
+        if (state != State.FADING) return false
         if (currentVolume != lastFadeVolume) {
             cancelFadeForVolumeChange()
             return false
         }
 
         fadeStep++
-        val targetVolume = 0
         val progress = fadeStep.toFloat() / AppDefaults.TOTAL_FADE_STEPS
         val fraction = 1.0f - (1.0f - progress) * (1.0f - progress)
-        val nextVolume = Math.round(volumeBeforeFade - (volumeBeforeFade - targetVolume) * fraction)
+        val nextVolume = Math.round(volumeBeforeFade - volumeBeforeFade * fraction)
 
         lastFadeVolume = nextVolume
         lastObservedVolume = nextVolume
@@ -274,11 +270,11 @@ open class MainService : Service() {
         onSetStreamVolume(nextVolume)
         suppressVolumeReset = false
 
-        if (fadeStep >= AppDefaults.TOTAL_FADE_STEPS) {
+        val finished = fadeStep >= AppDefaults.TOTAL_FADE_STEPS
+        if (finished) {
             finishExpiry()
-            return false
         }
-        return true
+        return !finished
     }
 
     fun finishExpiry() {
@@ -801,17 +797,18 @@ open class MainService : Service() {
         val timerStartTime = prefs.getLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, 0L)
         val lastAwakeTime = prefs.getLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, 0L)
 
-        if (timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)) {
-            return timerStartTime
+        val validTimer = timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)
+        val validSleep = sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)
+
+        return when {
+            validTimer -> timerStartTime
+            validSleep -> sleepStartTime
+            isWakeAlarmEnabled() && (lastAwakeTime == 0L || wakeTime - lastAwakeTime >= 12 * 3600_000L) -> {
+                val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+                wakeTime - (minSleepMin * 60_000L)
+            }
+            else -> 0L
         }
-        if (sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
-            return sleepStartTime
-        }
-        if (isWakeAlarmEnabled() && (lastAwakeTime == 0L || wakeTime - lastAwakeTime >= 12 * 3600_000L)) {
-            val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
-            return wakeTime - (minSleepMin * 60_000L)
-        }
-        return 0L
     }
 
     private fun handleAwakeAction() {
@@ -875,21 +872,19 @@ open class MainService : Service() {
         }
 
         val calAlarm = calculateScheduledAlarm(this, System.currentTimeMillis(), timerEndsAt) ?: return
-
         val targetAlarmTimeMs = calAlarm.timeInMillis
         val lastScheduled = preferences?.getLong(KEY_WAKEUP_LAST_SCHEDULED_MS, 0L) ?: 0L
 
-        if (targetAlarmTimeMs == lastScheduled) {
-            return
+        if (targetAlarmTimeMs != lastScheduled) {
+            dismissAutoSleepAlarm()
+            lastScheduledWakeupAlarmTimeMs = targetAlarmTimeMs
+            preferences?.edit()?.putLong(KEY_WAKEUP_LAST_SCHEDULED_MS, targetAlarmTimeMs)?.apply()
+            scheduleAlarmClockInternal(targetAlarmTimeMs)
         }
+    }
 
-        dismissAutoSleepAlarm()
-
-        lastScheduledWakeupAlarmTimeMs = targetAlarmTimeMs
-        preferences?.edit()?.putLong(KEY_WAKEUP_LAST_SCHEDULED_MS, targetAlarmTimeMs)?.apply()
-
+    private fun scheduleAlarmClockInternal(targetAlarmTimeMs: Long) {
         val am = alarmManager ?: return
-
         val intent = Intent(this, MainService::class.java).setAction(ACTION_WAKEUP_ALARM_EXPIRY)
         val pendingIntent = getServicePendingIntent(
             101, intent,

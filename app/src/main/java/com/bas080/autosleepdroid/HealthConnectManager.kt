@@ -155,18 +155,10 @@ object HealthConnectManager {
         endTimeMs: Long,
         callback: Callback? = null
     ) {
-        if (startTimeMs <= 0 || endTimeMs <= startTimeMs) {
-            val errorMsg = "Invalid timestamps: startTime=$startTimeMs, endTime=$endTimeMs"
-            EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: $errorMsg")
-            callback?.onResult(false, errorMsg)
-            return
-        }
-
-        val durationMinutes = ((endTimeMs - startTimeMs) / 60_000L).toInt()
-        if (durationMinutes < 1 || durationMinutes > 1440) {
-            val errorMsg = "Invalid sleep duration: ${durationMinutes}m"
-            EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: $errorMsg")
-            callback?.onResult(false, errorMsg)
+        val validationError = validateSessionTimestamps(startTimeMs, endTimeMs)
+        if (validationError != null) {
+            EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: $validationError")
+            callback?.onResult(false, validationError)
             return
         }
 
@@ -177,6 +169,26 @@ object HealthConnectManager {
             return
         }
 
+        executeSleepSessionWrite(context, startTimeMs, endTimeMs, callback)
+    }
+
+    private fun validateSessionTimestamps(startTimeMs: Long, endTimeMs: Long): String? {
+        if (startTimeMs <= 0 || endTimeMs <= startTimeMs) {
+            return "Invalid timestamps: startTime=$startTimeMs, endTime=$endTimeMs"
+        }
+        val durationMinutes = ((endTimeMs - startTimeMs) / 60_000L).toInt()
+        if (durationMinutes < 1 || durationMinutes > 1440) {
+            return "Invalid sleep duration: ${durationMinutes}m"
+        }
+        return null
+    }
+
+    private fun executeSleepSessionWrite(
+        context: Context,
+        startTimeMs: Long,
+        endTimeMs: Long,
+        callback: Callback?
+    ) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val client = getClient(context)
@@ -184,39 +196,30 @@ object HealthConnectManager {
                 if (!granted.containsAll(REQUIRED_PERMISSIONS)) {
                     val errorMsg = "Write permission not granted"
                     EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: $errorMsg")
-                    withContext(Dispatchers.Main) {
-                        callback?.onResult(false, errorMsg)
-                    }
+                    withContext(Dispatchers.Main) { callback?.onResult(false, errorMsg) }
                     return@launch
                 }
 
                 val startInstant = Instant.ofEpochMilli(startTimeMs)
                 val endInstant = Instant.ofEpochMilli(endTimeMs)
-                val startOffset = ZoneId.systemDefault().rules.getOffset(startInstant)
-                val endOffset = ZoneId.systemDefault().rules.getOffset(endInstant)
-
                 val record = SleepSessionRecord(
                     startTime = startInstant,
-                    startZoneOffset = startOffset,
+                    startZoneOffset = ZoneId.systemDefault().rules.getOffset(startInstant),
                     endTime = endInstant,
-                    endZoneOffset = endOffset,
+                    endZoneOffset = ZoneId.systemDefault().rules.getOffset(endInstant),
                     title = "Sleep"
                 )
 
                 client.insertRecords(listOf(record))
-                val formattedDuration = DurationUtils.formatDurationString(durationMinutes)
-                val logMsg = "Successfully persisted sleep session ($formattedDuration)"
+                val durationMinutes = ((endTimeMs - startTimeMs) / 60_000L).toInt()
+                val logMsg = "Successfully persisted sleep session (${DurationUtils.formatDurationString(durationMinutes)})"
                 EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: $logMsg")
 
-                withContext(Dispatchers.Main) {
-                    callback?.onResult(true, null)
-                }
+                withContext(Dispatchers.Main) { callback?.onResult(true, null) }
             } catch (e: Exception) {
                 val errorMsg = "Error writing sleep session: ${e.message}"
                 EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: $errorMsg")
-                withContext(Dispatchers.Main) {
-                    callback?.onResult(false, errorMsg)
-                }
+                withContext(Dispatchers.Main) { callback?.onResult(false, errorMsg) }
             }
         }
     }

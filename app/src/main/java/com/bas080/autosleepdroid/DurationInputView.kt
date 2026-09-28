@@ -180,16 +180,15 @@ class DurationInputView : LinearLayout {
     }
 
     private fun findEditTextInPicker(picker: NumberPicker?): EditText? {
-        picker ?: return null
+        if (picker == null) return null
         val inputId = android.content.res.Resources.getSystem().getIdentifier("numberpicker_input", "id", "android")
         val viewById = if (inputId != 0) picker.findViewById<View>(inputId) else null
         if (viewById is EditText) return viewById
 
-        for (i in 0 until picker.childCount) {
-            val child = picker.getChildAt(i)
-            if (child is EditText) return child
-        }
-        return null
+        return (0 until picker.childCount)
+            .map { picker.getChildAt(it) }
+            .filterIsInstance<EditText>()
+            .firstOrNull()
     }
 
     fun getTotalMinutes(): Int {
