@@ -179,20 +179,19 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
     }
 
     fun watchEffect(effect: PreferenceEffect?): EffectHandle {
+        return watchEffect(null, effect)
+    }
+
+    fun watchEffect(tag: Any?, effect: PreferenceEffect?): EffectHandle {
         if (effect == null) return EffectHandle { }
         val isMainThread = Looper.myLooper() == Looper.getMainLooper()
         val reg = WatchEffectRegistration(this, effect, isMainThread)
         activeEffects.add(reg)
+        if (tag != null) {
+            taggedEffects.computeIfAbsent(tag) { CopyOnWriteArraySet() }.add(reg)
+        }
         reg.runEffect()
         return reg
-    }
-
-    fun watchEffect(tag: Any?, effect: PreferenceEffect?): EffectHandle {
-        val handle = watchEffect(effect)
-        if (tag != null) {
-            taggedEffects.computeIfAbsent(tag) { CopyOnWriteArraySet() }.add(handle)
-        }
-        return handle
     }
 
     fun watchEffects(vararg effects: PreferenceEffect?): EffectHandle {

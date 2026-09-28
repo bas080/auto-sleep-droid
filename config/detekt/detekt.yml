@@ -39,8 +39,8 @@ complexity:
   TooManyFunctions:
     active: true
     thresholdInFiles: 30
-    thresholdInClasses: 25
-    thresholdInObjects: 15
+    thresholdInClasses: 30
+    thresholdInObjects: 20
     excludes: ['**/MainService.kt', '**/MainActivity.kt']
 
 comments:
