@@ -68,19 +68,7 @@ style:
     active: false
   MagicNumber:
     active: false
-  WildcardImport:
-    active: false
   ReturnCount:
     active: true
     max: 2
     excludedFunctions: ['equals']
-  UnusedImports:
-    active: true
-  UnusedPrivateClass:
-    active: true
-  UnusedPrivateMember:
-    active: true
-  UnusedPrivateProperty:
-    active: true
-  UnusedParameter:
-    active: true
