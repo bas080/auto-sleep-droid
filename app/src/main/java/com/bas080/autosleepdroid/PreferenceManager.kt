@@ -8,7 +8,9 @@ import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPreferences.OnSharedPreferenceChangeListener, PreferenceGetter {
+class PreferenceManager(
+    val sharedPreferences: SharedPreferences
+) : SharedPreferences.OnSharedPreferenceChangeListener, PreferenceGetter {
 
     fun interface OnPreferenceChangeListener {
         fun onPreferenceChanged(key: String)
@@ -257,7 +259,8 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
     private fun invalidateComputedOnKeyChange(key: String) {
         if (computedCache.isEmpty()) return
         for ((cacheKey, cached) in computedCache) {
-            if (cached.trackedValues != null && (cached.trackedValues.containsKey(key) || cached.trackedValues.containsKey("contains:$key"))) {
+            val tracked = cached.trackedValues
+            if (tracked != null && (tracked.containsKey(key) || tracked.containsKey("contains:$key"))) {
                 computedCache.remove(cacheKey)
             }
         }

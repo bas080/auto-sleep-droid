@@ -58,11 +58,12 @@ class SettingRowView : LinearLayout {
     }
 
     private fun setupViewDimensions(context: Context) {
-        val minHeightPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 64f, resources.displayMetrics).toInt()
+        val metrics = resources.displayMetrics
+        val minHeightPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 64f, metrics).toInt()
         minimumHeight = minHeightPx
 
-        val paddingHorizPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16f, resources.displayMetrics).toInt()
-        val paddingVertPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, resources.displayMetrics).toInt()
+        val paddingHorizPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16f, metrics).toInt()
+        val paddingVertPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, metrics).toInt()
         setPaddingRelative(paddingHorizPx, paddingVertPx, paddingHorizPx, paddingVertPx)
 
         isClickable = true

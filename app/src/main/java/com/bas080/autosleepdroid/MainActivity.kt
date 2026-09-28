@@ -811,7 +811,9 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             editor.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
             editor.apply()
             updateTargetTimeButtonText(hourOfDay, minute)
-            updateCurrentWakeTimeButtonText(pm.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay), pm.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute))
+            val currHour = pm.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, hourOfDay)
+            val currMin = pm.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, minute)
+            updateCurrentWakeTimeButtonText(currHour, currMin)
         }
     }
 
@@ -1199,13 +1201,28 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         )
 
         private val EXPORTED_INT_PREFS = arrayOf(
-            IntPrefSpec(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES, AppDefaults.MINUTES_MIN, AppDefaults.MINUTES_MAX),
+            IntPrefSpec(
+                PreferenceKeys.KEY_DURATION_MINUTES,
+                AppDefaults.DURATION_MINUTES,
+                AppDefaults.MINUTES_MIN,
+                AppDefaults.MINUTES_MAX
+            ),
             IntPrefSpec(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR, 0, 23),
             IntPrefSpec(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE, 0, 59),
             IntPrefSpec(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR, 0, 23),
             IntPrefSpec(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE, 0, 59),
-            IntPrefSpec(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES, AppDefaults.MINUTES_MIN, AppDefaults.MINUTES_MAX),
-            IntPrefSpec(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, AppDefaults.HC_MIN_DURATION_MINUTES, 0, AppDefaults.MINUTES_MAX)
+            IntPrefSpec(
+                PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
+                AppDefaults.MIN_SLEEP_DURATION_MINUTES,
+                AppDefaults.MINUTES_MIN,
+                AppDefaults.MINUTES_MAX
+            ),
+            IntPrefSpec(
+                PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES,
+                AppDefaults.HC_MIN_DURATION_MINUTES,
+                0,
+                AppDefaults.MINUTES_MAX
+            )
         )
     }
 }

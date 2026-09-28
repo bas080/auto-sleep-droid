@@ -33,7 +33,8 @@ object HealthConnectManager {
 
     fun openHealthConnectPermissions(activity: Activity) {
         if (!isHealthConnectAvailable(activity)) {
-            android.widget.Toast.makeText(activity, R.string.toast_health_connect_not_available, android.widget.Toast.LENGTH_SHORT).show()
+            val toastRes = R.string.toast_health_connect_not_available
+            android.widget.Toast.makeText(activity, toastRes, android.widget.Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -65,7 +66,8 @@ object HealthConnectManager {
             }
         }
 
-        android.widget.Toast.makeText(activity, R.string.toast_health_connect_not_available, android.widget.Toast.LENGTH_SHORT).show()
+        val fallbackToastRes = R.string.toast_health_connect_not_available
+        android.widget.Toast.makeText(activity, fallbackToastRes, android.widget.Toast.LENGTH_SHORT).show()
     }
 
     fun interface Callback {
@@ -222,7 +224,8 @@ object HealthConnectManager {
 
                 client.insertRecords(listOf(record))
                 val durationMinutes = ((endTimeMs - startTimeMs) / 60_000L).toInt()
-                val logMsg = "Successfully persisted sleep session (${DurationUtils.formatDurationString(durationMinutes)})"
+                val formatted = DurationUtils.formatDurationString(durationMinutes)
+                val logMsg = "Successfully persisted sleep session ($formatted)"
                 EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: $logMsg")
 
                 withContext(Dispatchers.Main) { callback?.onResult(true, null) }
