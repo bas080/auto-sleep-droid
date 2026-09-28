@@ -1,4 +1,4 @@
-@file:Suppress("LargeClass", "TooManyFunctions", "MaxLineLength")
+@file:Suppress("LargeClass", "TooManyFunctions")
 
 package com.bas080.autosleepdroid
 
@@ -245,7 +245,10 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         btnExport?.setOnClickListener { exportSettings() }
         btnImport?.setOnClickListener { showImportDialog() }
-        btnVersion?.setOnClickListener { openUrl("https://github.com/bas080/auto-sleep-droid/releases") }
+        btnVersion?.setOnClickListener {
+            val releasesUrl = "https://github.com/bas080/auto-sleep-droid/releases"
+            openUrl(releasesUrl)
+        }
         btnFeedback?.setOnClickListener { showFeedbackOverlay(crashReport = null) }
 
         btnReportCrash?.setOnClickListener {
@@ -297,7 +300,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         bodyBuilder.append("---\nApp Version: ").append(BuildConfig.VERSION_NAME)
             .append(" (Code ").append(BuildConfig.VERSION_CODE).append(")")
-            .append("\nAndroid Version: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")")
+            .append("\nAndroid Version: ").append(Build.VERSION.RELEASE)
+            .append(" (API ").append(Build.VERSION.SDK_INT).append(")")
             .append("\nDevice: ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL)
             .append("\nFree Memory: ").append(availMemMb).append(" MB")
             .append("\nAvailable Storage: ").append(availStorageMb).append(" MB")
@@ -540,7 +544,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_ACTIVE, isChecked)?.apply()
             val goalEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) ?: false
             updateInputEnabledStates(goalEnabled)
-            EventLogger.log(this, EventLogger.LEVEL_HIGH, if (isChecked) "Timer enabled from UI" else "Timer disabled from UI")
+            val msg = if (isChecked) "Timer enabled from UI" else "Timer disabled from UI"
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, msg)
         }
 
         inputDuration?.setOnClickListener {
@@ -578,7 +583,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 ?.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
                 ?.apply()
             updateInputEnabledStates(isChecked)
-            EventLogger.log(this, EventLogger.LEVEL_HIGH, if (isChecked) "Wake-up goal enabled" else "Wake-up goal disabled")
+            val msg = if (isChecked) "Wake-up goal enabled" else "Wake-up goal disabled"
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, msg)
         }
 
         btnTargetTime?.setOnClickListener { showTargetTimeDialog() }
@@ -642,7 +648,11 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private fun requestHealthConnectPermission() {
         HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
             if (!hasPermission) {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled; opening permissions settings")
+                EventLogger.log(
+                    this,
+                    EventLogger.LEVEL_HIGH,
+                    "Health Connect sync enabled; opening permissions settings"
+                )
                 HealthConnectManager.openHealthConnectPermissions(this)
             } else {
                 isRequestingHealthConnectPermission = false
@@ -662,11 +672,15 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     }
 
     private fun updateInputEnabledStates(goalEnabled: Boolean) {
-        val healthConnectEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
+        val healthConnectEnabled = preferenceManager
+            ?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
         updateInputEnabledStates(goalEnabled, healthConnectEnabled)
     }
 
-    private fun updateInputEnabledStates(goalEnabled: Boolean, healthConnectEnabled: Boolean) {
+    private fun updateInputEnabledStates(
+        goalEnabled: Boolean,
+        healthConnectEnabled: Boolean
+    ) {
         setRowEnabled(headerDnd, true)
         setRowEnabled(headerTimer, true)
         setRowEnabled(headerAlarm, true)
@@ -708,14 +722,16 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             }
             startActivity(intent)
         } catch (e: Exception) {
-            EventLogger.log(this, EventLogger.LEVEL_LOW, "Primary DND setting failed: ${e.message}")
+            val primaryMsg = "Primary DND setting failed: ${e.message}"
+            EventLogger.log(this, EventLogger.LEVEL_LOW, primaryMsg)
             try {
                 val intent = Intent(fallbackAction).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 startActivity(intent)
             } catch (ex: Exception) {
-                EventLogger.log(this, EventLogger.LEVEL_LOW, "Fallback DND setting failed: ${ex.message}")
+                val fallbackMsg = "Fallback DND setting failed: ${ex.message}"
+                EventLogger.log(this, EventLogger.LEVEL_LOW, fallbackMsg)
                 Toast.makeText(this, "Could not open DND settings", Toast.LENGTH_SHORT).show()
             }
         }
@@ -815,7 +831,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     private fun getComputedDurationString(pm: PreferenceManager?, key: String, defaultMinutes: Int): String {
         pm ?: return DurationUtils.formatDurationString(defaultMinutes)
-        return pm.getComputed(key, PreferenceComputations.formatDuration(key, defaultMinutes)) ?: DurationUtils.formatDurationString(defaultMinutes)
+        val computed = PreferenceComputations.formatDuration(key, defaultMinutes)
+        return pm.getComputed(key, computed) ?: DurationUtils.formatDurationString(defaultMinutes)
     }
 
     private fun updateTimerUi(getter: PreferenceGetter) {
@@ -824,7 +841,11 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val autoTimer = getter.getBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false)
 
         rowEnableTimer?.isChecked = active
-        textDurationValue?.text = getComputedDurationString(preferenceManager, PreferenceKeys.KEY_DURATION_MINUTES, durationMinutes)
+        textDurationValue?.text = getComputedDurationString(
+            preferenceManager,
+            PreferenceKeys.KEY_DURATION_MINUTES,
+            durationMinutes
+        )
         rowAutoTimer?.isChecked = autoTimer
     }
 
@@ -835,21 +856,35 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         val goalMin = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
         val currentHour = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)
         val currentMin = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
-        val minSleepMin = getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+        val minSleepMin = getter.getInt(
+            PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
+            AppDefaults.MIN_SLEEP_DURATION_MINUTES
+        )
 
         rowEnableGoal?.isChecked = goalEnabled
         updateTargetTimeButtonText(goalHour, goalMin)
         updateCurrentWakeTimeButtonText(currentHour, currentMin)
-        textMinSleepValue?.text = getComputedDurationString(preferenceManager, PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, minSleepMin)
+        textMinSleepValue?.text = getComputedDurationString(
+            preferenceManager,
+            PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
+            minSleepMin
+        )
         updateInputEnabledStates(goalEnabled, healthConnectEnabled)
     }
 
     private fun updateHealthConnectUi(getter: PreferenceGetter) {
         val healthConnectEnabled = getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)
-        val hcMinDurationMin = getter.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, AppDefaults.HC_MIN_DURATION_MINUTES)
+        val hcMinDurationMin = getter.getInt(
+            PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES,
+            AppDefaults.HC_MIN_DURATION_MINUTES
+        )
 
         rowHealthConnect?.isChecked = healthConnectEnabled
-        textHcMinDurationValue?.text = getComputedDurationString(preferenceManager, PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, hcMinDurationMin)
+        textHcMinDurationValue?.text = getComputedDurationString(
+            preferenceManager,
+            PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES,
+            hcMinDurationMin
+        )
     }
 
     private fun exportSettings() {
@@ -909,7 +944,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private fun getClipboardJsonText(): String? {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         val clipData = clipboard?.primaryClip
-        val text = if (clipData != null && clipData.itemCount > 0) clipData.getItemAt(0).text?.toString()?.trim() else null
+        val hasClip = clipData != null && clipData.itemCount > 0
+        val text = if (hasClip) clipData!!.getItemAt(0).text?.toString()?.trim() else null
         return if (text != null && text.startsWith("{") && text.endsWith("}")) text else null
     }
 
@@ -1019,13 +1055,18 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)?.apply()
                 rowHealthConnect?.isChecked = false
                 Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show()
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission not granted; disabling sync")
+                EventLogger.log(
+                    this,
+                    EventLogger.LEVEL_HIGH,
+                    "Health Connect permission not granted; disabling sync"
+                )
             }
         }
     }
 
     private fun checkActiveSyncOnResume() {
-        val healthConnectEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
+        val healthConnectEnabled = preferenceManager
+            ?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
         if (!healthConnectEnabled) return
 
         HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
