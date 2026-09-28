@@ -86,6 +86,7 @@ object HealthConnectManager {
             val status = HealthConnectClient.getSdkStatus(context)
             status == HealthConnectClient.SDK_AVAILABLE
         } catch (e: Exception) {
+            EventLogger.log(context, EventLogger.LEVEL_LOW, "Failed to query Health Connect SDK status: ${e.message}")
             false
         }
     }
@@ -132,7 +133,7 @@ object HealthConnectManager {
                 val granted = client.permissionController.getGrantedPermissions()
                 granted.containsAll(REQUIRED_PERMISSIONS)
             }
-        } catch (e: Exception) {
+        } catch (ignored: Exception) {
             false
         }
     }
@@ -144,6 +145,7 @@ object HealthConnectManager {
                 val granted = client.permissionController.getGrantedPermissions()
                 granted.containsAll(REQUIRED_PERMISSIONS)
             } catch (e: Exception) {
+                EventLogger.log(context, EventLogger.LEVEL_LOW, "Failed async permission check: ${e.message}")
                 false
             }
             withContext(Dispatchers.Main) {
