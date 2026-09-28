@@ -139,7 +139,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         updateReportCrashRowVisibility()
 
         requestNotificationPermissionOnStartupIfNeeded()
-        startTimerService()
         requestExactAlarmPermissionIfNeeded()
     }
 
@@ -1011,6 +1010,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         updateReportCrashRowVisibility()
         EventLogger.setListener(this)
         refreshEventLog()
+        startTimerService()
         if (isRequestingHealthConnectPermission) {
             HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
                 isRequestingHealthConnectPermission = false
@@ -1143,7 +1143,20 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
     private fun startTimerService() {
         val serviceIntent = Intent(this, MainService::class.java)
-        startForegroundService(serviceIntent)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                try {
+                    startForegroundService(serviceIntent)
+                } catch (e: Exception) {
+                    EventLogger.log(this, "startForegroundService failed, falling back to startService: ${e.message}")
+                    startService(serviceIntent)
+                }
+            } else {
+                startService(serviceIntent)
+            }
+        } catch (e: Exception) {
+            EventLogger.log(this, "Failed to start service: ${e.message}")
+        }
     }
 
     companion object {
