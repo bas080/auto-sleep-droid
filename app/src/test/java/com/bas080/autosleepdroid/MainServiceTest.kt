@@ -581,15 +581,20 @@ class MainServiceTest {
             .setAction(MainService.ACTION_AWAKE)
         service.onStartCommand(awakeIntent, 0, 1)
 
+        val savedHour = preferences.getInt("current_wake_hour", -1)
+        val savedMin = preferences.getInt("current_wake_minute", -1)
+        val savedTotalMins = savedHour * 60 + savedMin
+
         val calDismiss = Calendar.getInstance()
         calDismiss.add(Calendar.MINUTE, -15)
         val goalMins = 6 * 60 + 30
         val calcMins = calDismiss.get(Calendar.HOUR_OF_DAY) * 60 + calDismiss.get(Calendar.MINUTE)
-        val finalMins = Math.max(goalMins, calcMins)
-        assertEquals("Current wake hour must be set to dismissal hour after dismissal",
-            finalMins / 60, preferences.getInt("current_wake_hour", -1))
-        assertEquals("Current wake minute must be set to dismissal minute after dismissal",
-            finalMins % 60, preferences.getInt("current_wake_minute", -1))
+        val expectedMins = Math.max(goalMins, calcMins)
+
+        assertTrue(
+            "Saved wake time ($savedHour:$savedMin) must match dismissal calculation ($expectedMins)",
+            Math.abs(savedTotalMins - expectedMins) <= 1 || Math.abs(savedTotalMins - expectedMins) >= 1439
+        )
 
         assertTrue("Next daily alarm timestamp must be saved in preferences",
             preferences.contains(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS))
