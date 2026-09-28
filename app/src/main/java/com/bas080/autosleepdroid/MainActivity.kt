@@ -377,6 +377,7 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         try {
             startActivity(Intent.createChooser(intent, getString(R.string.link_feedback)))
         } catch (e: Exception) {
+            EventLogger.log(this, EventLogger.LEVEL_LOW, "Email chooser failed: ${e.message}")
             launchEmailFallbackOrCopy(subject, body)
         }
     }
@@ -739,12 +740,14 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             }
             startActivity(intent)
         } catch (e: Exception) {
+            EventLogger.log(this, EventLogger.LEVEL_LOW, "Primary DND setting failed: ${e.message}")
             try {
                 val intent = Intent(fallbackAction).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 startActivity(intent)
             } catch (ex: Exception) {
+                EventLogger.log(this, EventLogger.LEVEL_LOW, "Fallback DND setting failed: ${ex.message}")
                 Toast.makeText(this, "Could not open DND settings", Toast.LENGTH_SHORT).show()
             }
         }

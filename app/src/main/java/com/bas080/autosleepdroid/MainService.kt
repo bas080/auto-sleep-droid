@@ -768,7 +768,7 @@ open class MainService : Service() {
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
             }
         } catch (e: SecurityException) {
-            EventLogger.log(this, "SecurityException scheduling alarm, using fallback alarm")
+            EventLogger.log(this, "SecurityException scheduling alarm: ${e.message}")
         }
     }
 
@@ -964,7 +964,7 @@ open class MainService : Service() {
                 am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, awakeWindowStart, updatePendingIntent)
             }
         } catch (e: SecurityException) {
-            EventLogger.log(this, "SecurityException scheduling notification update alarm")
+            EventLogger.log(this, "SecurityException scheduling notification update alarm: ${e.message}")
         }
     }
 
