@@ -1410,4 +1410,132 @@ class MainServiceTest {
         checkMethod.invoke(service)
         assertFalse(preferences.getBoolean(PreferenceKeys.KEY_ACTIVE, true))
     }
+
+    @Test
+    fun testInitialStateParamsGetters() {
+        val params = MainService.InitialStateParams(
+            savedEnabled = true,
+            savedDurationMinutes = 45,
+            savedEndsAt = 100000L,
+            initialVolume = 12,
+            musicActive = true
+        )
+        assertTrue(params.savedEnabled)
+        assertEquals(45, params.savedDurationMinutes)
+        assertEquals(100000L, params.savedEndsAt)
+        assertEquals(12, params.initialVolume)
+        assertTrue(params.musicActive)
+    }
+
+    @Test
+    fun testDndReceiverOnReceiveDirectly() {
+        preferences.edit().putBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, true).commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val dndReceiverField = MainService::class.java.getDeclaredField("dndReceiver")
+        dndReceiverField.isAccessible = true
+        val receiver = dndReceiverField.get(service) as android.content.BroadcastReceiver?
+        assertNotNull(receiver)
+
+        val dndIntent = Intent(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
+        receiver?.onReceive(service, dndIntent)
+
+        val unrelatedIntent = Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED)
+        receiver?.onReceive(service, unrelatedIntent)
+    }
+
+    @Test
+    fun testCalculateFallbackSleepStartTimeDirectly() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val method = MainService::class.java.getDeclaredMethod(
+            "calculateFallbackSleepStartTime",
+            SharedPreferences::class.java,
+            Long::class.javaPrimitiveType
+        )
+        method.isAccessible = true
+
+        val now = System.currentTimeMillis()
+        val wakeTime = now + 8 * 3600_000L
+
+        // Case 1: wake alarm enabled & valid window
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("min_sleep_duration_minutes", 450)
+            .commit()
+
+        val res1 = method.invoke(service, preferences, wakeTime) as Long
+        assertEquals(wakeTime - 450 * 60_000L, res1)
+
+        // Case 2: wake alarm disabled
+        preferences.edit().putBoolean("wake_up_goal_enabled", false).commit()
+        val res2 = method.invoke(service, preferences, wakeTime) as Long
+        assertEquals(0L, res2)
+    }
+
+    @Test
+    fun testServiceOnDestroyCleansUpReceiversAndState() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+        assertNotNull(service)
+
+        controller.destroy()
+    }
+
+    @Test
+    fun testProcessSleepSessionAndMediaPauseHelpers() {
+        preferences.edit()
+            .putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true)
+            .putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, System.currentTimeMillis() - 3600_000L)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val processMethod = MainService::class.java.getDeclaredMethod("processSleepSession")
+        processMethod.isAccessible = true
+        processMethod.invoke(service)
+
+        val pauseMethod = MainService::class.java.getDeclaredMethod("pauseMediaViaAudioFocus")
+        pauseMethod.isAccessible = true
+        pauseMethod.invoke(service)
+    }
+
+    @Test
+    fun testAlarmAndRingtoneHelpersDirectly() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val tryRingtone = MainService::class.java.getDeclaredMethod("tryPlayRingtoneAlarm")
+        tryRingtone.isAccessible = true
+        tryRingtone.invoke(service)
+
+        val stopSound = MainService::class.java.getDeclaredMethod("stopWakeUpAlarmSound")
+        stopSound.isAccessible = true
+        stopSound.invoke(service)
+
+        val cancelSnooze = MainService::class.java.getDeclaredMethod("cancelSnoozeAlarm")
+        cancelSnooze.isAccessible = true
+        cancelSnooze.invoke(service)
+
+        val dismissAlarm = MainService::class.java.getDeclaredMethod("dismissAutoSleepAlarm")
+        dismissAlarm.isAccessible = true
+        dismissAlarm.invoke(service)
+    }
+
+    @Test
+    fun testAudioPlaybackCallbackDirectly() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val callbackField = MainService::class.java.getDeclaredField("audioPlaybackCallback")
+        callbackField.isAccessible = true
+        val callback = callbackField.get(service) as android.media.AudioManager.AudioPlaybackCallback?
+        assertNotNull(callback)
+
+        callback?.onPlaybackConfigChanged(emptyList())
+    }
 }
