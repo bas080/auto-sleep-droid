@@ -654,37 +654,49 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     private fun handleHealthConnectToggle(isUserInitiated: Boolean, isChecked: Boolean) {
         isUserInitiatedHealthConnect = false
         if (isChecked) {
-            if (!HealthConnectManager.isHealthConnectAvailable(this)) {
-                switchHealthConnect?.isChecked = false
-                Toast.makeText(this, R.string.toast_health_connect_not_available, Toast.LENGTH_SHORT).show()
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect requested but SDK is unavailable")
-                return
-            }
-            preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true)?.apply()
-            if (isUserInitiated) {
-                Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show()
-                isRequestingHealthConnectPermission = true
-                HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
-                    if (!hasPermission) {
-                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled; opening permissions settings")
-                        HealthConnectManager.openHealthConnectPermissions(this)
-                    } else {
-                        isRequestingHealthConnectPermission = false
-                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled")
-                    }
-                }
-            }
+            enableHealthConnect(isUserInitiated)
         } else {
-            preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)?.apply()
-            if (isUserInitiated) {
-                isRequestingHealthConnectPermission = false
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled; revoking permissions")
-                Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show()
-                HealthConnectManager.revokeAllPermissions(this)
-            }
+            disableHealthConnect(isUserInitiated)
         }
         val goalEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) ?: false
         updateInputEnabledStates(goalEnabled, isChecked)
+    }
+
+    private fun enableHealthConnect(isUserInitiated: Boolean) {
+        if (!HealthConnectManager.isHealthConnectAvailable(this)) {
+            switchHealthConnect?.isChecked = false
+            Toast.makeText(this, R.string.toast_health_connect_not_available, Toast.LENGTH_SHORT).show()
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect requested but SDK is unavailable")
+            return
+        }
+        preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true)?.apply()
+        if (isUserInitiated) {
+            Toast.makeText(this, R.string.toast_health_connect_enabled, Toast.LENGTH_SHORT).show()
+            isRequestingHealthConnectPermission = true
+            requestHealthConnectPermission()
+        }
+    }
+
+    private fun requestHealthConnectPermission() {
+        HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
+            if (!hasPermission) {
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled; opening permissions settings")
+                HealthConnectManager.openHealthConnectPermissions(this)
+            } else {
+                isRequestingHealthConnectPermission = false
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled")
+            }
+        }
+    }
+
+    private fun disableHealthConnect(isUserInitiated: Boolean) {
+        preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)?.apply()
+        if (isUserInitiated) {
+            isRequestingHealthConnectPermission = false
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync disabled; revoking permissions")
+            Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show()
+            HealthConnectManager.revokeAllPermissions(this)
+        }
     }
 
     private fun updateInputEnabledStates(goalEnabled: Boolean) {
@@ -949,24 +961,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
             }
 
             val editor = pm.sharedPreferences.edit()
-            for (spec in EXPORTED_BOOL_PREFS) {
-                editor.putBoolean(spec.key, json.optBoolean(spec.key, spec.defaultValue))
-            }
-
-            val importedGoalHour = json.optInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
-            val importedGoalMin = json.optInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
-
-            for (spec in EXPORTED_INT_PREFS) {
-                var def = spec.defaultValue
-                if (PreferenceKeys.KEY_CURRENT_WAKE_HOUR == spec.key) def = importedGoalHour
-                else if (PreferenceKeys.KEY_CURRENT_WAKE_MINUTE == spec.key) def = importedGoalMin
-
-                val valNum = json.optInt(spec.key, def)
-                if (valNum < spec.min || valNum > spec.max) {
-                    throw JSONException("${spec.key} out of range")
-                }
-                editor.putInt(spec.key, valNum)
-            }
+            importBooleanSettings(json, editor)
+            importIntSettings(json, editor)
 
             editor.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS).apply()
 
@@ -975,6 +971,29 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         } catch (e: JSONException) {
             Toast.makeText(this, R.string.toast_import_invalid, Toast.LENGTH_SHORT).show()
             EventLogger.log(this, "Failed to import settings: invalid format (${e.message})")
+        }
+    }
+
+    private fun importBooleanSettings(json: JSONObject, editor: SharedPreferences.Editor) {
+        for (spec in EXPORTED_BOOL_PREFS) {
+            editor.putBoolean(spec.key, json.optBoolean(spec.key, spec.defaultValue))
+        }
+    }
+
+    private fun importIntSettings(json: JSONObject, editor: SharedPreferences.Editor) {
+        val importedGoalHour = json.optInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
+        val importedGoalMin = json.optInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
+
+        for (spec in EXPORTED_INT_PREFS) {
+            var def = spec.defaultValue
+            if (PreferenceKeys.KEY_CURRENT_WAKE_HOUR == spec.key) def = importedGoalHour
+            else if (PreferenceKeys.KEY_CURRENT_WAKE_MINUTE == spec.key) def = importedGoalMin
+
+            val valNum = json.optInt(spec.key, def)
+            if (valNum < spec.min || valNum > spec.max) {
+                throw JSONException("${spec.key} out of range")
+            }
+            editor.putInt(spec.key, valNum)
         }
     }
 
@@ -1010,34 +1029,46 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         EventLogger.setListener(this)
         refreshEventLog()
         startTimerService()
-        if (isRequestingHealthConnectPermission) {
-            HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
-                isRequestingHealthConnectPermission = false
-                if (hasPermission) {
-                    preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true)?.apply()
-                    switchHealthConnect?.isChecked = true
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled and permission granted")
-                } else {
-                    preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)?.apply()
-                    switchHealthConnect?.isChecked = false
-                    Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show()
-                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission not granted; disabling sync")
-                }
-            }
-        } else {
-            val healthConnectEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
-            if (healthConnectEnabled) {
-                HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
-                    if (!hasPermission) {
-                        preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)?.apply()
-                        switchHealthConnect?.isChecked = false
-                        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission revoked; disabling sync")
-                    }
-                }
-            }
-        }
+        checkHealthConnectOnResume()
         registerPreferenceListeners()
         maybeShowRandomDonateDialog()
+    }
+
+    private fun checkHealthConnectOnResume() {
+        if (isRequestingHealthConnectPermission) {
+            checkPendingPermissionOnResume()
+        } else {
+            checkActiveSyncOnResume()
+        }
+    }
+
+    private fun checkPendingPermissionOnResume() {
+        HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
+            isRequestingHealthConnectPermission = false
+            if (hasPermission) {
+                preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true)?.apply()
+                switchHealthConnect?.isChecked = true
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect sync enabled and permission granted")
+            } else {
+                preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)?.apply()
+                switchHealthConnect?.isChecked = false
+                Toast.makeText(this, R.string.toast_health_connect_disabled, Toast.LENGTH_SHORT).show()
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission not granted; disabling sync")
+            }
+        }
+    }
+
+    private fun checkActiveSyncOnResume() {
+        val healthConnectEnabled = preferenceManager?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
+        if (!healthConnectEnabled) return
+
+        HealthConnectManager.hasSleepWritePermission(this) { hasPermission ->
+            if (!hasPermission) {
+                preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)?.apply()
+                switchHealthConnect?.isChecked = false
+                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission revoked; disabling sync")
+            }
+        }
     }
 
     internal fun maybeShowRandomDonateDialog(forceShow: Boolean = false, randomRoll: Float = Random.nextFloat()) {

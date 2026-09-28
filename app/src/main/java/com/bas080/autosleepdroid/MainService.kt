@@ -122,16 +122,25 @@ open class MainService : Service() {
         this.lastObservedVolume = initialVolume
         this.lastObservedMediaActive = false
 
-        if (savedEnabled && savedEndsAt > now) {
-            startTimer(configuredDurationMinutes, savedEndsAt, false)
-        } else if (savedEnabled && savedEndsAt > 0L && savedEndsAt <= now) {
-            beginFadeOut(initialVolume)
-        } else if (savedEnabled && musicActive) {
-            startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
-        } else if (savedEnabled) {
-            transitionTo(State.WAITING)
-        } else {
+        if (!savedEnabled) {
             transitionTo(State.OFF)
+            return
+        }
+
+        initializeEnabledTimerState(savedEndsAt, initialVolume, musicActive, now)
+    }
+
+    private fun initializeEnabledTimerState(
+        savedEndsAt: Long,
+        initialVolume: Int,
+        musicActive: Boolean,
+        now: Long
+    ) {
+        when {
+            savedEndsAt > now -> startTimer(configuredDurationMinutes, savedEndsAt, false)
+            savedEndsAt > 0L && savedEndsAt <= now -> beginFadeOut(initialVolume)
+            musicActive -> startTimer(configuredDurationMinutes, now + configuredDurationMinutes * 60_000L, true)
+            else -> transitionTo(State.WAITING)
         }
     }
 
@@ -573,30 +582,38 @@ open class MainService : Service() {
 
     private fun processStartCommandAction(intent: Intent) {
         when (intent.action) {
-            ACTION_TURN_OFF -> {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer turned off")
-                handleTurnOff(true)
-                Toast.makeText(this, R.string.toast_timer_turned_off, Toast.LENGTH_SHORT).show()
-            }
-            ACTION_TURN_ON -> {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer turned on")
-                val musicActive = audioManager != null && audioManager!!.isMusicActive
-                handleTurnOn(musicActive, System.currentTimeMillis(), true)
-                Toast.makeText(this, R.string.toast_timer_turned_on, Toast.LENGTH_SHORT).show()
-            }
-            ACTION_ALARM_EXPIRY -> {
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "AlarmManager trigger received")
-                val currentVol = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
-                handleAlarmExpiryState(currentVol)
-            }
+            ACTION_TURN_OFF -> handleTurnOffAction()
+            ACTION_TURN_ON -> handleTurnOnAction()
+            ACTION_ALARM_EXPIRY -> handleAlarmExpiryAction()
             ACTION_WAKEUP_ALARM_EXPIRY -> handleWakeUpAlarmExpiryAction()
-            ACTION_UPDATE_NOTIFICATION -> {
-                EventLogger.log(this, "Notification update trigger received")
-                updateNotification()
-            }
+            ACTION_UPDATE_NOTIFICATION -> handleUpdateNotificationAction()
             ACTION_AWAKE -> handleAwakeAction()
             ACTION_NOTIFICATION_CLICK -> handleNotificationClickAction()
         }
+    }
+
+    private fun handleTurnOffAction() {
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer turned off")
+        handleTurnOff(true)
+        Toast.makeText(this, R.string.toast_timer_turned_off, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun handleTurnOnAction() {
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer turned on")
+        val musicActive = audioManager != null && audioManager!!.isMusicActive
+        handleTurnOn(musicActive, System.currentTimeMillis(), true)
+        Toast.makeText(this, R.string.toast_timer_turned_on, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun handleAlarmExpiryAction() {
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "AlarmManager trigger received")
+        val currentVol = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
+        handleAlarmExpiryState(currentVol)
+    }
+
+    private fun handleUpdateNotificationAction() {
+        EventLogger.log(this, "Notification update trigger received")
+        updateNotification()
     }
 
     private fun handleWakeUpAlarmExpiryAction() {
@@ -795,20 +812,24 @@ open class MainService : Service() {
     private fun calculateSleepSessionStartTime(prefs: SharedPreferences, wakeTime: Long): Long {
         val sleepStartTime = prefs.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L)
         val timerStartTime = prefs.getLong(PreferenceKeys.KEY_TIMER_START_TIME_MS, 0L)
-        val lastAwakeTime = prefs.getLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, 0L)
 
-        val validTimer = timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)
-        val validSleep = sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)
-
-        return when {
-            validTimer -> timerStartTime
-            validSleep -> sleepStartTime
-            isWakeAlarmEnabled() && (lastAwakeTime == 0L || wakeTime - lastAwakeTime >= 12 * 3600_000L) -> {
-                val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
-                wakeTime - (minSleepMin * 60_000L)
-            }
-            else -> 0L
+        if (timerStartTime > 0L && wakeTime > timerStartTime && (wakeTime - timerStartTime < 14 * 3600_000L)) {
+            return timerStartTime
         }
+        if (sleepStartTime > 0L && wakeTime > sleepStartTime && (wakeTime - sleepStartTime < 14 * 3600_000L)) {
+            return sleepStartTime
+        }
+        return calculateFallbackSleepStartTime(prefs, wakeTime)
+    }
+
+    private fun calculateFallbackSleepStartTime(prefs: SharedPreferences, wakeTime: Long): Long {
+        val lastAwakeTime = prefs.getLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, 0L)
+        val isWindowValid = lastAwakeTime == 0L || wakeTime - lastAwakeTime >= 12 * 3600_000L
+        if (isWakeAlarmEnabled() && isWindowValid) {
+            val minSleepMin = prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+            return wakeTime - (minSleepMin * 60_000L)
+        }
+        return 0L
     }
 
     private fun handleAwakeAction() {
@@ -1191,29 +1212,25 @@ open class MainService : Service() {
 
     private fun runWakeUpAlarmCrescendoStep() {
         val elapsedTimeMs = System.currentTimeMillis() - alarmCrescendoStartTimeMs
+        val isCrescendoActive = elapsedTimeMs < ALARM_CRESCENDO_DURATION_MS && isWakeUpAlarmRinging
 
-        if (elapsedTimeMs < ALARM_CRESCENDO_DURATION_MS && isWakeUpAlarmRinging) {
+        if (isCrescendoActive) {
             val progress = Math.min(1.0f, elapsedTimeMs.toFloat() / ALARM_CRESCENDO_DURATION_MS)
-            val gain = progress * progress
-
-            if (Build.VERSION.SDK_INT >= 28) {
-                currentAlarmRingtone?.volume = gain
-            }
-            try {
-                alarmMediaPlayer?.setVolume(gain, gain)
-            } catch (ignored: Exception) {
-            }
-
+            setAlarmVolume(progress * progress)
             alarmCrescendoRunnable?.let { handler.postDelayed(it, ALARM_CRESCENDO_INTERVAL_MS) }
         } else {
-            if (Build.VERSION.SDK_INT >= 28) {
-                currentAlarmRingtone?.volume = 1.0f
-            }
-            try {
-                alarmMediaPlayer?.setVolume(1.0f, 1.0f)
-            } catch (ignored: Exception) {
-            }
+            setAlarmVolume(1.0f)
             alarmCrescendoRunnable = null
+        }
+    }
+
+    private fun setAlarmVolume(gain: Float) {
+        if (Build.VERSION.SDK_INT >= 28) {
+            currentAlarmRingtone?.volume = gain
+        }
+        try {
+            alarmMediaPlayer?.setVolume(gain, gain)
+        } catch (ignored: Exception) {
         }
     }
 

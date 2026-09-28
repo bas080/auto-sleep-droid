@@ -109,20 +109,19 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
 
         fun runEffect() {
             if (isDisposed) return
-            val runnable = Runnable {
-                if (isDisposed) return@Runnable
-                val getter = TrackingPreferenceGetter(preferenceManager)
-                effect.run(getter)
-                trackedKeys.clear()
-                for (key in getter.accessedValues.keys) {
-                    if (key.startsWith("contains:")) {
-                        trackedKeys.add(key.substring("contains:".length))
-                    } else {
-                        trackedKeys.add(key)
-                    }
-                }
-            }
+            val runnable = Runnable { executeEffect() }
             dispatch(runnable)
+        }
+
+        private fun executeEffect() {
+            if (isDisposed) return
+            val getter = TrackingPreferenceGetter(preferenceManager)
+            effect.run(getter)
+            trackedKeys.clear()
+            for (key in getter.accessedValues.keys) {
+                val cleanKey = if (key.startsWith("contains:")) key.substring("contains:".length) else key
+                trackedKeys.add(cleanKey)
+            }
         }
 
         fun dispatch(runnable: Runnable) {
