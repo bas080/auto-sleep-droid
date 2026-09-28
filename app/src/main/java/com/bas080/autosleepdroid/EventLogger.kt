@@ -52,23 +52,26 @@ object EventLogger {
         }
 
         val line = "$timestamp $marker$message"
+        writeLogToFile(targetContext, line)
+        dispatchLogToListener(line)
+    }
 
-        if (targetContext != null) {
-            val appCtx = targetContext.applicationContext
-            val file = getLogFile(appCtx)
-            if (file.exists() && file.length() >= MAX_LOG_FILE_BYTES) {
-                pruneFile(file)
-            }
-            file.appendText(line + "\n")
+    private fun writeLogToFile(targetContext: Context?, line: String) {
+        if (targetContext == null) return
+        val appCtx = targetContext.applicationContext
+        val file = getLogFile(appCtx)
+        if (file.exists() && file.length() >= MAX_LOG_FILE_BYTES) {
+            pruneFile(file)
         }
+        file.appendText(line + "\n")
+    }
 
-        val currentListener = listener
-        if (currentListener != null) {
-            if (Looper.myLooper() == Looper.getMainLooper()) {
-                currentListener.onEventLogged(line)
-            } else {
-                Handler(Looper.getMainLooper()).post { currentListener.onEventLogged(line) }
-            }
+    private fun dispatchLogToListener(line: String) {
+        val currentListener = listener ?: return
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            currentListener.onEventLogged(line)
+        } else {
+            Handler(Looper.getMainLooper()).post { currentListener.onEventLogged(line) }
         }
     }
 
@@ -99,23 +102,22 @@ object EventLogger {
         if (context != null) {
             appContext = context.applicationContext
         }
-        val targetContext = context ?: appContext ?: return emptyList()
-        val appCtx = targetContext.applicationContext
+        val targetContext = context ?: appContext
+        val appCtx = targetContext?.applicationContext ?: return emptyList()
 
         val file = getLogFile(appCtx)
-        if (!file.exists()) {
-            return emptyList()
+        return if (file.exists()) {
+            val lines = file.readLines().filter { it.trim().isNotEmpty() }
+            Collections.unmodifiableList(lines)
+        } else {
+            emptyList()
         }
-
-        val lines = file.readLines().filter { it.trim().isNotEmpty() }
-        return Collections.unmodifiableList(lines)
     }
 
     fun isDarkMode(context: Context?): Boolean {
         val ctx = context ?: appContext ?: return false
-        val resources = ctx.resources ?: return false
-        val config = resources.configuration ?: return false
-        val currentNightMode = config.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        val config = ctx.resources?.configuration
+        val currentNightMode = (config?.uiMode ?: 0) and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         return currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
     }
 
@@ -124,72 +126,98 @@ object EventLogger {
     }
 
     fun formatColoredEvent(context: Context?, line: String?): CharSequence {
-        if (line.isNullOrEmpty()) {
-            return ""
-        }
+        if (line.isNullOrEmpty()) return ""
 
         val darkMode = isDarkMode(context)
-
-        val spaceIdx = line.indexOf(' ')
-        val secondSpaceIdx = if (spaceIdx != -1) line.indexOf(' ', spaceIdx + 1) else -1
-        val timestampEnd = if (secondSpaceIdx != -1) secondSpaceIdx else (if (spaceIdx != -1) spaceIdx else 0)
-
-        var level = LEVEL_NORMAL
-        val timestamp = if (timestampEnd > 0) line.substring(0, timestampEnd) else ""
-        var rawMessage = if (timestampEnd < line.length) line.substring(timestampEnd) else ""
-
-        if (rawMessage.contains("\u0000")) {
-            level = LEVEL_LOW
-            rawMessage = rawMessage.replace("\u0000", "")
-        } else if (rawMessage.contains("\u0002")) {
-            level = LEVEL_HIGH
-            rawMessage = rawMessage.replace("\u0002", "")
-        } else if (rawMessage.contains("\u0001")) {
-            level = LEVEL_NORMAL
-            rawMessage = rawMessage.replace("\u0001", "")
-        }
+        val (timestamp, level, rawMessage) = extractLogComponents(line)
 
         val displayString = if (timestamp.isEmpty()) rawMessage.trim() else (timestamp + rawMessage)
         val spannable = SpannableString(displayString)
 
-        val timestampColor = if (darkMode) -0x777778 else -0x666667
-        if (timestamp.isNotEmpty() && timestamp.length <= displayString.length) {
-            spannable.setSpan(ForegroundColorSpan(timestampColor), 0, timestamp.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
+        applyTimestampStyle(spannable, timestamp, displayString.length, darkMode)
 
         val messageStart = if (timestamp.isEmpty()) 0 else timestamp.length
+        if (messageStart < displayString.length) {
+            applyMessageStyle(spannable, messageStart, displayString.length, level, darkMode)
+        }
 
+        return spannable
+    }
+
+    private fun applyTimestampStyle(
+        spannable: SpannableString,
+        timestamp: String,
+        maxLen: Int,
+        darkMode: Boolean
+    ) {
+        val timestampColor = if (darkMode) -0x777778 else -0x666667
+        if (timestamp.isNotEmpty() && timestamp.length <= maxLen) {
+            val spanFlag = Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            spannable.setSpan(ForegroundColorSpan(timestampColor), 0, timestamp.length, spanFlag)
+        }
+    }
+
+    private data class LogComponents(val timestamp: String, val level: Int, val message: String)
+
+    private fun extractLogComponents(line: String): LogComponents {
+        val spaceIdx = line.indexOf(' ')
+        val secondSpaceIdx = if (spaceIdx != -1) line.indexOf(' ', spaceIdx + 1) else -1
+        val timestampEnd = when {
+            secondSpaceIdx != -1 -> secondSpaceIdx
+            spaceIdx != -1 -> spaceIdx
+            else -> 0
+        }
+
+        val timestamp = if (timestampEnd > 0) line.substring(0, timestampEnd) else ""
+        val rawMessageWithMarker = if (timestampEnd < line.length) line.substring(timestampEnd) else ""
+
+        val (level, cleanMessage) = parseMessageLevel(rawMessageWithMarker)
+        return LogComponents(timestamp, level, cleanMessage)
+    }
+
+    private fun parseMessageLevel(rawMessage: String): Pair<Int, String> {
+        return when {
+            rawMessage.contains("\u0000") -> Pair(LEVEL_LOW, rawMessage.replace("\u0000", ""))
+            rawMessage.contains("\u0002") -> Pair(LEVEL_HIGH, rawMessage.replace("\u0002", ""))
+            rawMessage.contains("\u0001") -> Pair(LEVEL_NORMAL, rawMessage.replace("\u0001", ""))
+            else -> Pair(LEVEL_NORMAL, rawMessage)
+        }
+    }
+
+    private fun applyMessageStyle(
+        spannable: SpannableString,
+        start: Int,
+        end: Int,
+        level: Int,
+        darkMode: Boolean
+    ) {
         val textColor: Int
         var isBold = false
 
         if (darkMode) {
-            if (level == LEVEL_LOW) {
-                textColor = -0x555556
-            } else if (level == LEVEL_HIGH) {
-                textColor = -0x1
-                isBold = true
-            } else {
-                textColor = -0x222223
+            when (level) {
+                LEVEL_LOW -> textColor = -0x555556
+                LEVEL_HIGH -> {
+                    textColor = -0x1
+                    isBold = true
+                }
+                else -> textColor = -0x222223
             }
         } else {
-            if (level == LEVEL_LOW) {
-                textColor = -0x777778
-            } else if (level == LEVEL_HIGH) {
-                textColor = -0x1000000
-                isBold = true
-            } else {
-                textColor = -0xbbbbbc
+            when (level) {
+                LEVEL_LOW -> textColor = -0x777778
+                LEVEL_HIGH -> {
+                    textColor = -0x1000000
+                    isBold = true
+                }
+                else -> textColor = -0xbbbbbc
             }
         }
 
-        if (messageStart < displayString.length) {
-            spannable.setSpan(ForegroundColorSpan(textColor), messageStart, displayString.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            if (isBold) {
-                spannable.setSpan(StyleSpan(Typeface.BOLD), messageStart, displayString.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
+        spannable.setSpan(ForegroundColorSpan(textColor), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        if (isBold) {
+            spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-
-        return spannable
     }
 
     @Synchronized

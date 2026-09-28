@@ -1,6 +1,5 @@
 package com.bas080.autosleepdroid
 
-import android.content.Context
 import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
@@ -9,7 +8,9 @@ import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPreferences.OnSharedPreferenceChangeListener, PreferenceGetter {
+class PreferenceManager(
+    val sharedPreferences: SharedPreferences
+) : SharedPreferences.OnSharedPreferenceChangeListener, PreferenceGetter {
 
     fun interface OnPreferenceChangeListener {
         fun onPreferenceChanged(key: String)
@@ -70,42 +71,33 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
         val trackedValues: Map<String, Any>?
     ) {
         fun isStale(preferenceManager: PreferenceManager): Boolean {
-            if (trackedValues == null || trackedValues.isEmpty()) {
-                return false
-            }
-            for ((key, trackedValue) in trackedValues) {
-                if (key.startsWith("contains:")) {
-                    val actualKey = key.substring("contains:".length)
-                    val currentContains = preferenceManager.contains(actualKey)
-                    if (trackedValue != currentContains) {
-                        return true
-                    }
-                } else {
-                    if (trackedValue is Boolean) {
-                        if (trackedValue != preferenceManager.getBoolean(key, !trackedValue)) {
-                            return true
-                        }
-                    } else if (trackedValue is Int) {
-                        if (trackedValue != preferenceManager.getInt(key, trackedValue + 1)) {
-                            return true
-                        }
-                    } else if (trackedValue is Long) {
-                        if (trackedValue != preferenceManager.getLong(key, trackedValue + 1L)) {
-                            return true
-                        }
-                    } else if (trackedValue === NULL_SENTINEL) {
-                        if (preferenceManager.contains(key)) {
-                            return true
-                        }
-                    } else if (trackedValue is String) {
-                        val current = preferenceManager.getString(key, null)
-                        if (trackedValue != current) {
-                            return true
-                        }
-                    }
+            val tracked = trackedValues
+            return if (tracked.isNullOrEmpty()) {
+                false
+            } else {
+                tracked.entries.any { (key, trackedValue) ->
+                    isKeyStale(preferenceManager, key, trackedValue)
                 }
             }
-            return false
+        }
+
+        private fun isKeyStale(preferenceManager: PreferenceManager, key: String, trackedValue: Any): Boolean {
+            if (key.startsWith("contains:")) {
+                val actualKey = key.substring("contains:".length)
+                return trackedValue != preferenceManager.contains(actualKey)
+            }
+            return isValueStale(preferenceManager, key, trackedValue)
+        }
+
+        private fun isValueStale(preferenceManager: PreferenceManager, key: String, trackedValue: Any): Boolean {
+            return when (trackedValue) {
+                is Boolean -> trackedValue != preferenceManager.getBoolean(key, !trackedValue)
+                is Int -> trackedValue != preferenceManager.getInt(key, trackedValue + 1)
+                is Long -> trackedValue != preferenceManager.getLong(key, trackedValue + 1L)
+                NULL_SENTINEL -> preferenceManager.contains(key)
+                is String -> trackedValue != preferenceManager.getString(key, null)
+                else -> false
+            }
         }
     }
 
@@ -120,20 +112,19 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
 
         fun runEffect() {
             if (isDisposed) return
-            val runnable = Runnable {
-                if (isDisposed) return@Runnable
-                val getter = TrackingPreferenceGetter(preferenceManager)
-                effect.run(getter)
-                trackedKeys.clear()
-                for (key in getter.accessedValues.keys) {
-                    if (key.startsWith("contains:")) {
-                        trackedKeys.add(key.substring("contains:".length))
-                    } else {
-                        trackedKeys.add(key)
-                    }
-                }
-            }
+            val runnable = Runnable { executeEffect() }
             dispatch(runnable)
+        }
+
+        private fun executeEffect() {
+            if (isDisposed) return
+            val getter = TrackingPreferenceGetter(preferenceManager)
+            effect.run(getter)
+            trackedKeys.clear()
+            for (key in getter.accessedValues.keys) {
+                val cleanKey = if (key.startsWith("contains:")) key.substring("contains:".length) else key
+                trackedKeys.add(cleanKey)
+            }
         }
 
         fun dispatch(runnable: Runnable) {
@@ -178,26 +169,28 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
     }
 
     fun unregisterListener(key: String?, listener: OnPreferenceChangeListener?) {
-        if (key == null || listener == null) return
-        val listeners = listenersMap[key]
-        listeners?.remove(listener)
+        if (key == null) {
+            unregisterListener(listener)
+            return
+        }
+        if (listener == null) return
+        listenersMap[key]?.remove(listener)
     }
 
     fun watchEffect(effect: PreferenceEffect?): EffectHandle {
+        return watchEffect(null, effect)
+    }
+
+    fun watchEffect(tag: Any?, effect: PreferenceEffect?): EffectHandle {
         if (effect == null) return EffectHandle { }
         val isMainThread = Looper.myLooper() == Looper.getMainLooper()
         val reg = WatchEffectRegistration(this, effect, isMainThread)
         activeEffects.add(reg)
+        if (tag != null) {
+            taggedEffects.computeIfAbsent(tag) { CopyOnWriteArraySet() }.add(reg)
+        }
         reg.runEffect()
         return reg
-    }
-
-    fun watchEffect(tag: Any?, effect: PreferenceEffect?): EffectHandle {
-        val handle = watchEffect(effect)
-        if (tag != null) {
-            taggedEffects.computeIfAbsent(tag) { CopyOnWriteArraySet() }.add(handle)
-        }
-        return handle
     }
 
     fun watchEffects(vararg effects: PreferenceEffect?): EffectHandle {
@@ -235,13 +228,14 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
     fun <T> getComputed(cacheKey: Any?, computer: ComputedValue<T>?): T? {
         if (cacheKey == null || computer == null) return null
         val cached = computedCache[cacheKey]
-        if (cached != null && !cached.isStale(this)) {
-            return cached.value as T?
+        return if (cached != null && !cached.isStale(this)) {
+            cached.value as T?
+        } else {
+            val getter = TrackingPreferenceGetter(this)
+            val result = computer.compute(getter)
+            computedCache[cacheKey] = CachedComputation(result, getter.accessedValues)
+            result
         }
-        val getter = TrackingPreferenceGetter(this)
-        val result = computer.compute(getter)
-        computedCache[cacheKey] = CachedComputation(result, getter.accessedValues)
-        return result
     }
 
     fun invalidateComputed(cacheKey: Any?) {
@@ -257,22 +251,31 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         key ?: return
 
-        if (computedCache.isNotEmpty()) {
-            for ((cacheKey, cached) in computedCache) {
-                if (cached.trackedValues != null && (cached.trackedValues.containsKey(key) || cached.trackedValues.containsKey("contains:$key"))) {
-                    computedCache.remove(cacheKey)
-                }
+        invalidateComputedOnKeyChange(key)
+        notifyEffectsOnKeyChange(key)
+        notifyListenersOnKeyChange(key)
+    }
+
+    private fun invalidateComputedOnKeyChange(key: String) {
+        if (computedCache.isEmpty()) return
+        for ((cacheKey, cached) in computedCache) {
+            val tracked = cached.trackedValues
+            if (tracked != null && (tracked.containsKey(key) || tracked.containsKey("contains:$key"))) {
+                computedCache.remove(cacheKey)
             }
         }
+    }
 
-        if (activeEffects.isNotEmpty()) {
-            for (reg in activeEffects) {
-                if (!reg.isDisposed && reg.trackedKeys.contains(key)) {
-                    reg.runEffect()
-                }
+    private fun notifyEffectsOnKeyChange(key: String) {
+        if (activeEffects.isEmpty()) return
+        for (reg in activeEffects) {
+            if (!reg.isDisposed && reg.trackedKeys.contains(key)) {
+                reg.runEffect()
             }
         }
+    }
 
+    private fun notifyListenersOnKeyChange(key: String) {
         val listeners = listenersMap[key]
         if (!listeners.isNullOrEmpty()) {
             for (listener in listeners) {

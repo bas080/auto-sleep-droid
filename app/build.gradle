@@ -2,6 +2,7 @@ plugins {
     id "com.android.application"
     id "org.jetbrains.kotlin.android"
     id "jacoco"
+    id "io.gitlab.arturbosch.detekt"
 }
 
 jacoco {
@@ -63,6 +64,12 @@ android {
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
+    }
+
+    detekt {
+        buildUponDefaultConfig = true
+        config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+        ignoreFailures = false
     }
 
     testOptions {
@@ -166,7 +173,7 @@ tasks.register("jacocoTestCoverageVerification", JacocoCoverageVerification) {
 
 afterEvaluate {
     tasks.matching { it.name.startsWith("test") }.configureEach {
-        dependsOn("lintDebug")
+        dependsOn("lintDebug", "detekt")
         finalizedBy("jacocoTestCoverageVerification")
     }
 }

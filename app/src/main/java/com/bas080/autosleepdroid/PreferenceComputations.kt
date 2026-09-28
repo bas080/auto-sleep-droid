@@ -16,22 +16,15 @@ fun getSessionPhase(
     isSessionOngoing: Boolean,
     isAlarmRingingOrSnoozed: Boolean = false
 ): SessionPhase {
-    if (isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime)) {
-        return SessionPhase.ALARM
-    }
-
     val windowStart = currentWakeTime - (minSleepDuration * 1.2).toLong()
     val preAlarmStart = currentWakeTime - (minSleepDuration * 0.5).toLong()
 
-    if (now >= preAlarmStart && now < currentWakeTime) {
-        return SessionPhase.PRE_ALARM_WINDOW
+    return when {
+        isAlarmRingingOrSnoozed || (isSessionOngoing && now >= currentWakeTime) -> SessionPhase.ALARM
+        now >= preAlarmStart && now < currentWakeTime -> SessionPhase.PRE_ALARM_WINDOW
+        now >= windowStart && now < preAlarmStart -> SessionPhase.INITIATION_AND_ACTIVE_SLEEP
+        else -> SessionPhase.IDLE
     }
-
-    if (now >= windowStart && now < preAlarmStart) {
-        return SessionPhase.INITIATION_AND_ACTIVE_SLEEP
-    }
-
-    return SessionPhase.IDLE
 }
 
 object PreferenceComputations {
@@ -46,7 +39,10 @@ object PreferenceComputations {
             val now = System.currentTimeMillis()
             val wakeAlarmEnabled = getter.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false)
 
-            val minSleepMin = getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+            val minSleepMin = getter.getInt(
+                PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
+                AppDefaults.MIN_SLEEP_DURATION_MINUTES
+            )
             val minSleepDurationMs = minSleepMin * 60_000L
 
             var currentWakeTime = 0L
@@ -111,7 +107,10 @@ object PreferenceComputations {
             if (isWakeupRinging || isWakeupSnoozed) return@ComputedValue true
 
             val now = System.currentTimeMillis()
-            val minSleepMin = getter.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+            val minSleepMin = getter.getInt(
+                PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
+                AppDefaults.MIN_SLEEP_DURATION_MINUTES
+            )
             val minSleepDurationMs = minSleepMin * 60_000L
 
             val goalHour = getter.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)

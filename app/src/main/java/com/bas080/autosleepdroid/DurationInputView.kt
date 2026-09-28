@@ -115,13 +115,11 @@ class DurationInputView : LinearLayout {
     }
 
     private fun getCurrentlyDisplayedValue(picker: NumberPicker?): String {
-        picker ?: return ""
+        if (picker == null) return ""
         val displayedValues = picker.displayedValues
         val valNum = picker.value
-        if (displayedValues != null && valNum >= 0 && valNum < displayedValues.size) {
-            return displayedValues[valNum]
-        }
-        return valNum.toString()
+        val hasDisplayed = displayedValues != null && valNum in 0 until displayedValues.size
+        return if (hasDisplayed) displayedValues!![valNum] else valNum.toString()
     }
 
     private fun syncEditText(picker: NumberPicker?) {
@@ -135,36 +133,10 @@ class DurationInputView : LinearLayout {
 
         val editText = findEditTextInPicker(picker)
         val str = editText?.text?.toString()?.trim() ?: ""
-        val currentDisplayed = getCurrentlyDisplayedValue(picker)
-        val currentValStr = picker.value.toString()
-
-        val isSameAsCurrent = str == currentDisplayed || str == currentValStr
-        val isEdited = str.isNotEmpty() && !isSameAsCurrent
         val isFocused = picker.hasFocus() || (editText != null && editText.hasFocus())
 
-        if ((isEdited || isFocused) && str.isNotEmpty() && !isSameAsCurrent) {
-            try {
-                val valNum = str.toInt()
-                if (picker === pickerHours) {
-                    if (valNum in minHours..maxHours) {
-                        picker.value = valNum
-                    }
-                } else if (picker === pickerMinutes) {
-                    if (minuteStep > 1) {
-                        val count = 60 / minuteStep
-                        var stepIdx = Math.round(valNum.toFloat() / minuteStep)
-                        if (stepIdx < 0) stepIdx = 0
-                        if (stepIdx >= count) stepIdx = count - 1
-                        picker.value = stepIdx
-                    } else {
-                        if (valNum in 0..59) {
-                            picker.value = valNum
-                        }
-                    }
-                }
-                syncEditText(picker)
-            } catch (ignored: NumberFormatException) {
-            }
+        if (shouldApplyPickerValue(picker, str, isFocused)) {
+            applyParsedPickerValue(picker, str)
         }
 
         if (isFocused) {
@@ -173,40 +145,64 @@ class DurationInputView : LinearLayout {
         }
     }
 
-    private fun findEditTextInPicker(picker: NumberPicker?): EditText? {
-        picker ?: return null
-        val inputId = android.content.res.Resources.getSystem().getIdentifier("numberpicker_input", "id", "android")
-        if (inputId != 0) {
-            val v = picker.findViewById<View>(inputId)
-            if (v is EditText) return v
-        }
-        for (i in 0 until picker.childCount) {
-            val child = picker.getChildAt(i)
-            if (child is EditText) {
-                return child
+    private fun shouldApplyPickerValue(picker: NumberPicker, str: String, isFocused: Boolean): Boolean {
+        if (str.isEmpty()) return false
+        val currentDisplayed = getCurrentlyDisplayedValue(picker)
+        val currentValStr = picker.value.toString()
+        val isSameAsCurrent = str == currentDisplayed || str == currentValStr
+        return !isSameAsCurrent && (isFocused || str.isNotEmpty())
+    }
+
+    private fun applyParsedPickerValue(picker: NumberPicker, str: String) {
+        try {
+            val valNum = str.toInt()
+            if (picker === pickerHours) {
+                if (valNum in minHours..maxHours) {
+                    picker.value = valNum
+                }
+            } else if (picker === pickerMinutes) {
+                applyParsedMinutesValue(picker, valNum)
             }
+            syncEditText(picker)
+        } catch (ignored: NumberFormatException) {
         }
-        return null
+    }
+
+    private fun applyParsedMinutesValue(picker: NumberPicker, valNum: Int) {
+        if (minuteStep > 1) {
+            val count = 60 / minuteStep
+            var stepIdx = Math.round(valNum.toFloat() / minuteStep)
+            if (stepIdx < 0) stepIdx = 0
+            if (stepIdx >= count) stepIdx = count - 1
+            picker.value = stepIdx
+        } else if (valNum in 0..59) {
+            picker.value = valNum
+        }
+    }
+
+    private fun findEditTextInPicker(picker: NumberPicker?): EditText? {
+        if (picker == null) return null
+        val inputId = android.content.res.Resources.getSystem().getIdentifier("numberpicker_input", "id", "android")
+        val viewById = if (inputId != 0) picker.findViewById<View>(inputId) else null
+
+        return (viewById as? EditText) ?: (0 until picker.childCount)
+            .map { picker.getChildAt(it) }
+            .filterIsInstance<EditText>()
+            .firstOrNull()
     }
 
     fun getTotalMinutes(): Int {
-        val hoursPicker = pickerHours ?: return -1
-        val minutesPicker = pickerMinutes ?: return -1
+        val hp = pickerHours
+        val mp = pickerMinutes
+        if (hp == null || mp == null) return -1
 
-        commitPickerInput(hoursPicker)
-        commitPickerInput(minutesPicker)
+        commitPickerInput(hp)
+        commitPickerInput(mp)
 
-        val h = hoursPicker.value
-        val m = if (minuteStep > 1) {
-            minutesPicker.value * minuteStep
-        } else {
-            minutesPicker.value
-        }
+        val h = hp.value
+        val m = if (minuteStep > 1) mp.value * minuteStep else mp.value
         val total = h * 60 + m
-        if (total <= 0 || total > 1440) {
-            return -1
-        }
-        return total
+        return if (total in 1..1440) total else -1
     }
 
     fun setTotalMinutes(totalMinutes: Int) {

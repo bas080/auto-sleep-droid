@@ -24,71 +24,51 @@ object DurationUtils {
     }
 
     fun parseDurationMinutes(input: String?, defaultUnit: DefaultUnit = DefaultUnit.MINUTES): Int {
-        if (input == null) {
-            return -1
-        }
-        val raw = input.trim()
-        if (raw.isEmpty()) {
-            return -1
-        }
-        val s = raw.replace("\\s+".toRegex(), "").lowercase(Locale.US)
+        if (input.isNullOrBlank()) return -1
+        val s = input.trim().replace("\\s+".toRegex(), "").lowercase(Locale.US)
 
-        try {
-            if (s.matches("^[0-9]+([.,][0-9]+)?$".toRegex())) {
-                val valNum = s.replace(',', '.').toDouble()
-                if (valNum <= 0) {
-                    return -1
-                }
-                val totalMins = if (defaultUnit == DefaultUnit.HOURS) Math.round(valNum * 60.0) else Math.round(valNum)
-                return if (totalMins in 1..Int.MAX_VALUE) totalMins.toInt() else -1
-            }
-
-            var m = Pattern.compile("^([0-9]+([.,][0-9]+)?)h$").matcher(s)
-            if (m.matches()) {
-                val hours = m.group(1)!!.replace(',', '.').toDouble()
-                val total = Math.round(hours * 60.0)
-                return if (total in 1..Int.MAX_VALUE) total.toInt() else -1
-            }
-
-            m = Pattern.compile("^([0-9]+([.,][0-9]+)?)m$").matcher(s)
-            if (m.matches()) {
-                val mins = m.group(1)!!.replace(',', '.').toDouble()
-                val total = Math.round(mins)
-                return if (total in 1..Int.MAX_VALUE) total.toInt() else -1
-            }
-
-            m = Pattern.compile("^([0-9]+)h([0-9]+)m$").matcher(s)
-            if (m.matches()) {
-                val hours = m.group(1)!!.toLong()
-                val mins = m.group(2)!!.toLong()
-                val total = hours * 60L + mins
-                return if (total in 1..Int.MAX_VALUE) total.toInt() else -1
-            }
-
-            m = Pattern.compile("^([0-9]+)m[0-9]+s$").matcher(s)
-            if (m.matches()) {
-                val mins = m.group(1)!!.toLong()
-                return if (mins in 1..Int.MAX_VALUE) mins.toInt() else -1
-            }
-
-            m = Pattern.compile("^([0-9]+)h[0-9]+s$").matcher(s)
-            if (m.matches()) {
-                val hours = m.group(1)!!.toLong()
-                val total = hours * 60L
-                return if (total in 1..Int.MAX_VALUE) total.toInt() else -1
-            }
-
-            m = Pattern.compile("^([0-9]+)h([0-9]+)m[0-9]+s$").matcher(s)
-            if (m.matches()) {
-                val hours = m.group(1)!!.toLong()
-                val mins = m.group(2)!!.toLong()
-                val total = hours * 60L + mins
-                return if (total in 1..Int.MAX_VALUE) total.toInt() else -1
-            }
+        return try {
+            parsePlainNumber(s, defaultUnit)
+                ?: parseHoursMinutesPattern(s)
+                ?: parseSecondsPattern(s)
+                ?: -1
         } catch (ignored: NumberFormatException) {
-            return -1
+            -1
         }
+    }
 
-        return -1
+    private fun parsePlainNumber(s: String, defaultUnit: DefaultUnit): Int? {
+        if (!s.matches("^[0-9]+([.,][0-9]+)?$".toRegex())) return null
+        val valNum = s.replace(',', '.').toDouble()
+        val totalMins = if (defaultUnit == DefaultUnit.HOURS) Math.round(valNum * 60.0) else Math.round(valNum)
+        return if (valNum > 0 && totalMins in 1..Int.MAX_VALUE) totalMins.toInt() else null
+    }
+
+    private fun parseHoursMinutesPattern(s: String): Int? {
+        val hoursOnly = Pattern.compile("^([0-9]+([.,][0-9]+)?)h$").matcher(s)
+        val minsOnly = Pattern.compile("^([0-9]+([.,][0-9]+)?)m$").matcher(s)
+        val hoursMins = Pattern.compile("^([0-9]+)h([0-9]+)m$").matcher(s)
+
+        val totalMins = when {
+            hoursOnly.matches() -> Math.round(hoursOnly.group(1)!!.replace(',', '.').toDouble() * 60.0)
+            minsOnly.matches() -> Math.round(minsOnly.group(1)!!.replace(',', '.').toDouble())
+            hoursMins.matches() -> hoursMins.group(1)!!.toLong() * 60L + hoursMins.group(2)!!.toLong()
+            else -> return null
+        }
+        return if (totalMins in 1..Int.MAX_VALUE) totalMins.toInt() else null
+    }
+
+    private fun parseSecondsPattern(s: String): Int? {
+        val minsSecs = Pattern.compile("^([0-9]+)m[0-9]+s$").matcher(s)
+        val hoursSecs = Pattern.compile("^([0-9]+)h[0-9]+s$").matcher(s)
+        val hoursMinsSecs = Pattern.compile("^([0-9]+)h([0-9]+)m[0-9]+s$").matcher(s)
+
+        val totalMins = when {
+            minsSecs.matches() -> minsSecs.group(1)!!.toLong()
+            hoursSecs.matches() -> hoursSecs.group(1)!!.toLong() * 60L
+            hoursMinsSecs.matches() -> hoursMinsSecs.group(1)!!.toLong() * 60L + hoursMinsSecs.group(2)!!.toLong()
+            else -> return null
+        }
+        return if (totalMins in 1..Int.MAX_VALUE) totalMins.toInt() else null
     }
 }
