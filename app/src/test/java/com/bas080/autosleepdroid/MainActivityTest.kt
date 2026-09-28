@@ -1377,4 +1377,100 @@ class MainActivityTest {
         }
         assertTrue("NapDialogActivity class must be completely removed", napActivityClass == null)
     }
+
+    @Test
+    fun testDisableHealthConnectSwitchAndClearPermissions() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val prefs = application.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("health_connect_enabled", true).commit()
+
+        HealthConnectManager.setClientForTesting(null, true)
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val switchHealthConnect = activity.findViewById<Switch>(R.id.switch_health_connect)
+        assertNotNull(switchHealthConnect)
+
+        switchHealthConnect.isPressed = true
+        switchHealthConnect.isChecked = false
+        switchHealthConnect.isPressed = false
+
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        assertFalse(prefs.getBoolean("health_connect_enabled", true))
+    }
+
+    @Test
+    fun testAllDurationDialogsMinSleepAndHcMinDuration() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val inputMinSleep = activity.findViewById<View>(R.id.input_min_sleep)
+        val inputHcMinDuration = activity.findViewById<View>(R.id.input_hc_min_duration)
+
+        inputMinSleep.performClick()
+        val dialog1 = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull(dialog1)
+        dialog1.getButton(DialogInterface.BUTTON_NEGATIVE).performClick()
+
+        inputHcMinDuration.performClick()
+        val dialog2 = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull(dialog2)
+        val durationInputs = ArrayList<DurationInputView>()
+        if (dialog2.window != null) {
+            findViewsOfType(dialog2.window!!.decorView, DurationInputView::class.java, durationInputs)
+        }
+        if (durationInputs.isNotEmpty()) {
+            durationInputs[0].setTotalMinutes(30)
+        }
+        dialog2.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        val prefs = activity.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
+        assertEquals(30, prefs.getInt("hc_min_duration_minutes", -1))
+    }
+
+    @Test
+    fun testImportInvalidJsonFromClipboardShowsErrorToast() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().get()
+
+        val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = android.content.ClipData.newPlainText("label", "{ invalid json }")
+        clipboard.setPrimaryClip(clip)
+
+        val btnImport = activity.findViewById<View>(R.id.btn_import)
+        btnImport.performClick()
+
+        val importDialog = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull(importDialog)
+        importDialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        assertEquals(activity.getString(R.string.toast_import_invalid), ShadowToast.getTextOfLatestToast())
+    }
+
+    @Test
+    fun testClearLogsButtonInLogsOverlayClearsEventsAndRefreshesText() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        EventLogger.log(application, EventLogger.LEVEL_HIGH, "Log entry before clear")
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val btnLinks = activity.findViewById<View>(R.id.btn_links)
+        btnLinks.performClick()
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+        Shadows.shadowOf(dialog).clickOnItem(1) // Open logs overlay
+
+        val btnClearLogs = activity.findViewById<Button>(R.id.btn_clear_logs)
+        assertNotNull(btnClearLogs)
+        btnClearLogs.performClick()
+
+        val eventLogText = activity.findViewById<TextView>(R.id.event_log_text)
+        assertEquals("", eventLogText.text.toString())
+    }
 }

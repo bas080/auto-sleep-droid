@@ -1484,4 +1484,58 @@ class MainServiceTest {
 
         controller.destroy()
     }
+
+    @Test
+    fun testProcessSleepSessionAndMediaPauseHelpers() {
+        preferences.edit()
+            .putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true)
+            .putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, System.currentTimeMillis() - 3600_000L)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val processMethod = MainService::class.java.getDeclaredMethod("processSleepSession")
+        processMethod.isAccessible = true
+        processMethod.invoke(service)
+
+        val pauseMethod = MainService::class.java.getDeclaredMethod("pauseMediaViaAudioFocus")
+        pauseMethod.isAccessible = true
+        pauseMethod.invoke(service)
+    }
+
+    @Test
+    fun testAlarmAndRingtoneHelpersDirectly() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val tryRingtone = MainService::class.java.getDeclaredMethod("tryPlayRingtoneAlarm")
+        tryRingtone.isAccessible = true
+        tryRingtone.invoke(service)
+
+        val stopSound = MainService::class.java.getDeclaredMethod("stopWakeUpAlarmSound")
+        stopSound.isAccessible = true
+        stopSound.invoke(service)
+
+        val cancelSnooze = MainService::class.java.getDeclaredMethod("cancelSnoozeAlarm")
+        cancelSnooze.isAccessible = true
+        cancelSnooze.invoke(service)
+
+        val dismissAlarm = MainService::class.java.getDeclaredMethod("dismissAutoSleepAlarm")
+        dismissAlarm.isAccessible = true
+        dismissAlarm.invoke(service)
+    }
+
+    @Test
+    fun testAudioPlaybackCallbackDirectly() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val callbackField = MainService::class.java.getDeclaredField("audioPlaybackCallback")
+        callbackField.isAccessible = true
+        val callback = callbackField.get(service) as android.media.AudioManager.AudioPlaybackCallback?
+        assertNotNull(callback)
+
+        callback?.onPlaybackConfigChanged(emptyList())
+    }
 }
