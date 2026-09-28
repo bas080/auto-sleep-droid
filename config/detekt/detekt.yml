@@ -48,8 +48,6 @@ empty-blocks:
 exceptions:
   active: true
   excludes: ['**/test/**']
-  SwallowedException:
-    active: true
 
 performance:
   active: true
