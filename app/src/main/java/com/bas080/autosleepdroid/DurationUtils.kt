@@ -40,9 +40,8 @@ object DurationUtils {
     private fun parsePlainNumber(s: String, defaultUnit: DefaultUnit): Int? {
         if (!s.matches("^[0-9]+([.,][0-9]+)?$".toRegex())) return null
         val valNum = s.replace(',', '.').toDouble()
-        if (valNum <= 0) return null
         val totalMins = if (defaultUnit == DefaultUnit.HOURS) Math.round(valNum * 60.0) else Math.round(valNum)
-        return if (totalMins in 1..Int.MAX_VALUE) totalMins.toInt() else null
+        return if (valNum > 0 && totalMins in 1..Int.MAX_VALUE) totalMins.toInt() else null
     }
 
     private fun parseHoursMinutesPattern(s: String): Int? {

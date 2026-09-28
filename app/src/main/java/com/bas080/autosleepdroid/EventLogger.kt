@@ -102,16 +102,16 @@ object EventLogger {
         if (context != null) {
             appContext = context.applicationContext
         }
-        val targetContext = context ?: appContext ?: return emptyList()
-        val appCtx = targetContext.applicationContext
+        val targetContext = context ?: appContext
+        val appCtx = targetContext?.applicationContext ?: return emptyList()
 
         val file = getLogFile(appCtx)
-        if (!file.exists()) {
-            return emptyList()
+        return if (file.exists()) {
+            val lines = file.readLines().filter { it.trim().isNotEmpty() }
+            Collections.unmodifiableList(lines)
+        } else {
+            emptyList()
         }
-
-        val lines = file.readLines().filter { it.trim().isNotEmpty() }
-        return Collections.unmodifiableList(lines)
     }
 
     fun isDarkMode(context: Context?): Boolean {

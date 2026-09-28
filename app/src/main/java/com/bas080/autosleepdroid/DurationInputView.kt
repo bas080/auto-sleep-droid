@@ -115,13 +115,11 @@ class DurationInputView : LinearLayout {
     }
 
     private fun getCurrentlyDisplayedValue(picker: NumberPicker?): String {
-        picker ?: return ""
+        if (picker == null) return ""
         val displayedValues = picker.displayedValues
         val valNum = picker.value
-        if (displayedValues != null && valNum >= 0 && valNum < displayedValues.size) {
-            return displayedValues[valNum]
-        }
-        return valNum.toString()
+        val hasDisplayed = displayedValues != null && valNum in 0 until displayedValues.size
+        return if (hasDisplayed) displayedValues!![valNum] else valNum.toString()
     }
 
     private fun syncEditText(picker: NumberPicker?) {
@@ -187,23 +185,23 @@ class DurationInputView : LinearLayout {
         if (picker == null) return null
         val inputId = android.content.res.Resources.getSystem().getIdentifier("numberpicker_input", "id", "android")
         val viewById = if (inputId != 0) picker.findViewById<View>(inputId) else null
-        if (viewById is EditText) return viewById
 
-        return (0 until picker.childCount)
+        return (viewById as? EditText) ?: (0 until picker.childCount)
             .map { picker.getChildAt(it) }
             .filterIsInstance<EditText>()
             .firstOrNull()
     }
 
     fun getTotalMinutes(): Int {
-        val hoursPicker = pickerHours ?: return -1
-        val minutesPicker = pickerMinutes ?: return -1
+        val hp = pickerHours
+        val mp = pickerMinutes
+        if (hp == null || mp == null) return -1
 
-        commitPickerInput(hoursPicker)
-        commitPickerInput(minutesPicker)
+        commitPickerInput(hp)
+        commitPickerInput(mp)
 
-        val h = hoursPicker.value
-        val m = if (minuteStep > 1) minutesPicker.value * minuteStep else minutesPicker.value
+        val h = hp.value
+        val m = if (minuteStep > 1) mp.value * minuteStep else mp.value
         val total = h * 60 + m
         return if (total in 1..1440) total else -1
     }

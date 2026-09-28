@@ -70,11 +70,13 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
         val trackedValues: Map<String, Any>?
     ) {
         fun isStale(preferenceManager: PreferenceManager): Boolean {
-            val tracked = trackedValues ?: return false
-            if (tracked.isEmpty()) return false
-
-            return tracked.entries.any { (key, trackedValue) ->
-                isKeyStale(preferenceManager, key, trackedValue)
+            val tracked = trackedValues
+            return if (tracked.isNullOrEmpty()) {
+                false
+            } else {
+                tracked.entries.any { (key, trackedValue) ->
+                    isKeyStale(preferenceManager, key, trackedValue)
+                }
             }
         }
 
@@ -225,13 +227,14 @@ class PreferenceManager(val sharedPreferences: SharedPreferences) : SharedPrefer
     fun <T> getComputed(cacheKey: Any?, computer: ComputedValue<T>?): T? {
         if (cacheKey == null || computer == null) return null
         val cached = computedCache[cacheKey]
-        if (cached != null && !cached.isStale(this)) {
-            return cached.value as T?
+        return if (cached != null && !cached.isStale(this)) {
+            cached.value as T?
+        } else {
+            val getter = TrackingPreferenceGetter(this)
+            val result = computer.compute(getter)
+            computedCache[cacheKey] = CachedComputation(result, getter.accessedValues)
+            result
         }
-        val getter = TrackingPreferenceGetter(this)
-        val result = computer.compute(getter)
-        computedCache[cacheKey] = CachedComputation(result, getter.accessedValues)
-        return result
     }
 
     fun invalidateComputed(cacheKey: Any?) {

@@ -180,10 +180,11 @@ object HealthConnectManager {
             return "Invalid timestamps: startTime=$startTimeMs, endTime=$endTimeMs"
         }
         val durationMinutes = ((endTimeMs - startTimeMs) / 60_000L).toInt()
-        if (durationMinutes < 1 || durationMinutes > 1440) {
-            return "Invalid sleep duration: ${durationMinutes}m"
+        return if (durationMinutes < 1 || durationMinutes > 1440) {
+            "Invalid sleep duration: ${durationMinutes}m"
+        } else {
+            null
         }
-        return null
     }
 
     private fun executeSleepSessionWrite(
