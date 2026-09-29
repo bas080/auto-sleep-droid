@@ -54,6 +54,11 @@ class PreferenceManagerTest {
 
         rawPreferences.edit().putBoolean("test_key", true).commit()
         assertFalse("Unregistered listener must not receive callbacks", keyFired.get())
+
+        preferenceManager.registerListener("test_key2", listener)
+        preferenceManager.unregisterListener(listener)
+        rawPreferences.edit().putBoolean("test_key2", true).commit()
+        assertFalse("Unregistered listener via global method must not receive callbacks", keyFired.get())
     }
 
     @Test
@@ -67,6 +72,11 @@ class PreferenceManagerTest {
 
         assertTrue("Write must trigger preference listener callback", listenerFired.get())
         assertTrue("Getter must return written preference value", preferenceManager.getBoolean("test_key", false))
+
+        rawPreferences.edit().putLong("long_key", 12345L).putString("str_key", "hello").commit()
+        assertEquals(12345L, preferenceManager.getLong("long_key", 0L))
+        assertEquals("hello", preferenceManager.getString("str_key", null))
+        assertTrue(preferenceManager.contains("long_key"))
     }
 
     @Test
@@ -166,7 +176,7 @@ class PreferenceManagerTest {
 
     @Test
     fun testTrackingPreferenceGetterAndCachedComputationTypes() {
-        // Test Long, String (non-null and null sentinel), and contains tracking
+
         rawPreferences.edit()
             .putLong("long_key", 100L)
             .putString("string_key", "hello")
@@ -187,7 +197,6 @@ class PreferenceManagerTest {
         assertEquals("100-hello-null-false", val1)
         assertEquals(1, computeCount)
 
-        // Same access without preference change -> memoized
         val val2 = preferenceManager.getComputed(compKey) { _ ->
             computeCount++
             ""
@@ -195,7 +204,6 @@ class PreferenceManagerTest {
         assertEquals("100-hello-null-false", val2)
         assertEquals(1, computeCount)
 
-        // Updating long_key triggers staleness
         rawPreferences.edit().putLong("long_key", 200L).commit()
         val val3 = preferenceManager.getComputed(compKey) { getter ->
             computeCount++
@@ -208,7 +216,6 @@ class PreferenceManagerTest {
         assertEquals("200-hello-null-false", val3)
         assertEquals(2, computeCount)
 
-        // Setting missing_string triggers staleness via NULL_SENTINEL
         rawPreferences.edit().putString("missing_string", "now_present").commit()
         val val4 = preferenceManager.getComputed(compKey) { getter ->
             computeCount++
@@ -221,7 +228,6 @@ class PreferenceManagerTest {
         assertEquals("200-hello-now_present-false", val4)
         assertEquals(3, computeCount)
 
-        // Adding present_key triggers staleness via contains:present_key
         rawPreferences.edit().putBoolean("present_key", true).commit()
         val val5 = preferenceManager.getComputed(compKey) { getter ->
             computeCount++
@@ -247,6 +253,9 @@ class PreferenceManagerTest {
             count1.addAndGet(getter.getInt("k1", 0))
         }
 
+        val emptyHandle = preferenceManager.watchEffects()
+        emptyHandle.dispose()
+
         val multiHandle = preferenceManager.watchEffects(
             PreferenceManager.PreferenceEffect { getter ->
                 count2.addAndGet(getter.getInt("k2", 0))
@@ -263,26 +272,32 @@ class PreferenceManagerTest {
         rawPreferences.edit().putInt("k2", 20).commit()
         assertEquals(22, count2.get())
 
-        // Dispose via tag
         preferenceManager.disposeEffects(tag)
         rawPreferences.edit().putInt("k1", 100).commit()
-        assertEquals(11, count1.get()) // Unchanged
+        assertEquals(11, count1.get())
 
-        // Dispose multiHandle
         multiHandle.dispose()
         rawPreferences.edit().putInt("k2", 200).commit()
-        assertEquals(22, count2.get()) // Unchanged
+        assertEquals(22, count2.get())
     }
 
     @Test
     fun testInvalidationAndNullHandling() {
-        // Null inputs to getters/listeners
         preferenceManager.registerListener(null, null)
         preferenceManager.unregisterListener(null)
         preferenceManager.unregisterListener(null, null)
         preferenceManager.disposeEffects(null)
         assertEquals(null, preferenceManager.getComputed<String>(null))
         assertEquals(null, preferenceManager.getComputed<String>("key", null))
+
+        val listenerFired = AtomicBoolean(false)
+        preferenceManager.registerListener("some_key") { listenerFired.set(true) }
+
+        val effectFired = AtomicBoolean(false)
+        preferenceManager.watchEffect { getter ->
+            getter.getBoolean("some_key", false)
+            effectFired.set(true)
+        }
 
         val computeCount = AtomicInteger(0)
         preferenceManager.getComputed("comp1") { getter ->
@@ -291,7 +306,6 @@ class PreferenceManagerTest {
         }
         assertEquals(1, computeCount.get())
 
-        // Invalidate specific cacheKey
         preferenceManager.invalidateComputed("comp1")
         preferenceManager.getComputed("comp1") { getter ->
             computeCount.incrementAndGet()
@@ -299,7 +313,6 @@ class PreferenceManagerTest {
         }
         assertEquals(2, computeCount.get())
 
-        // Invalidate all
         preferenceManager.invalidateAllComputed()
         preferenceManager.getComputed("comp1") { getter ->
             computeCount.incrementAndGet()
@@ -307,10 +320,12 @@ class PreferenceManagerTest {
         }
         assertEquals(3, computeCount.get())
 
-        // Null key in onSharedPreferenceChanged
+        effectFired.set(false)
+        listenerFired.set(false)
         preferenceManager.onSharedPreferenceChanged(rawPreferences, null)
+        assertTrue(listenerFired.get())
+        assertTrue(effectFired.get())
 
-        // Shutdown
         preferenceManager.shutdown()
     }
 }

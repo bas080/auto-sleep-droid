@@ -1033,7 +1033,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         startTimerService()
         checkHealthConnectOnResume()
         registerPreferenceListeners()
-        maybeShowRandomDonateDialog()
     }
 
     private fun checkHealthConnectOnResume() {

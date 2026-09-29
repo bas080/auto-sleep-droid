@@ -59,18 +59,7 @@ object PreferenceComputations {
                 val currentHour = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)
                 val currentMin = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
 
-                val calCurrent = Calendar.getInstance()
-                calCurrent.timeInMillis = now
-                calCurrent.set(Calendar.HOUR_OF_DAY, currentHour)
-                calCurrent.set(Calendar.MINUTE, currentMin)
-                calCurrent.set(Calendar.SECOND, 0)
-                calCurrent.set(Calendar.MILLISECOND, 0)
-                if (now - calCurrent.timeInMillis > HOURS_12_IN_MS) {
-                    calCurrent.add(Calendar.DAY_OF_YEAR, 1)
-                } else if (calCurrent.timeInMillis - now > HOURS_12_IN_MS) {
-                    calCurrent.add(Calendar.DAY_OF_YEAR, -1)
-                }
-                currentWakeTime = calCurrent.timeInMillis
+                currentWakeTime = calculateCurrentWakeTime(now, currentHour, currentMin)
 
                 val timerDuration = getter.getInt(PreferenceKeys.KEY_DURATION_MINUTES, AppDefaults.DURATION_MINUTES)
                 val timerEndsAt = getter.getLong(PreferenceKeys.KEY_TIMER_ENDS_AT, 0L)
@@ -124,18 +113,7 @@ object PreferenceComputations {
             val currentHour = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)
             val currentMin = getter.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
 
-            val calCurrent = Calendar.getInstance()
-            calCurrent.timeInMillis = now
-            calCurrent.set(Calendar.HOUR_OF_DAY, currentHour)
-            calCurrent.set(Calendar.MINUTE, currentMin)
-            calCurrent.set(Calendar.SECOND, 0)
-            calCurrent.set(Calendar.MILLISECOND, 0)
-            if (now - calCurrent.timeInMillis > HOURS_12_IN_MS) {
-                calCurrent.add(Calendar.DAY_OF_YEAR, 1)
-            } else if (calCurrent.timeInMillis - now > HOURS_12_IN_MS) {
-                calCurrent.add(Calendar.DAY_OF_YEAR, -1)
-            }
-            val currentWakeTime = calCurrent.timeInMillis
+            val currentWakeTime = calculateCurrentWakeTime(now, currentHour, currentMin)
 
             val rangeStart = currentWakeTime - (minSleepDurationMs / 2)
             val rangeEnd = currentWakeTime + (minSleepDurationMs / 2)
@@ -164,5 +142,20 @@ object PreferenceComputations {
         return PreferenceManager.ComputedValue { getter ->
             DurationUtils.formatDurationString(getter.getInt(key, defaultMinutes))
         }
+    }
+
+    internal fun calculateCurrentWakeTime(now: Long, currentHour: Int, currentMin: Int): Long {
+        val calCurrent = Calendar.getInstance()
+        calCurrent.timeInMillis = now
+        calCurrent.set(Calendar.HOUR_OF_DAY, currentHour)
+        calCurrent.set(Calendar.MINUTE, currentMin)
+        calCurrent.set(Calendar.SECOND, 0)
+        calCurrent.set(Calendar.MILLISECOND, 0)
+        if (now - calCurrent.timeInMillis > HOURS_12_IN_MS) {
+            calCurrent.add(Calendar.DAY_OF_YEAR, 1)
+        } else if (calCurrent.timeInMillis - now > HOURS_12_IN_MS) {
+            calCurrent.add(Calendar.DAY_OF_YEAR, -1)
+        }
+        return calCurrent.timeInMillis
     }
 }
