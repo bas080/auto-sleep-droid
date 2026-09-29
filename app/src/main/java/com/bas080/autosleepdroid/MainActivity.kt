@@ -35,7 +35,6 @@ import org.json.JSONObject
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.Calendar
-import kotlin.random.Random
 
 class MainActivity : ComponentActivity(), EventLogger.Listener {
 
@@ -1033,7 +1032,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         startTimerService()
         checkHealthConnectOnResume()
         registerPreferenceListeners()
-        maybeShowRandomDonateDialog()
     }
 
     private fun checkHealthConnectOnResume() {
@@ -1076,41 +1074,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
                 EventLogger.log(this, EventLogger.LEVEL_HIGH, "Health Connect permission revoked; disabling sync")
             }
         }
-    }
-
-    internal fun maybeShowRandomDonateDialog(forceShow: Boolean = false, randomRoll: Float = Random.nextFloat()) {
-        val pm = preferenceManager ?: return
-        val isHidden = pm.getBoolean(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN, false)
-        val hasCrash = getSharedPreferences("crash_reports", MODE_PRIVATE).contains("pending_crash_report")
-        val shouldShow = forceShow || randomRoll < DONATE_DIALOG_PROBABILITY
-
-        if (!isHidden && !hasCrash && shouldShow) {
-            showDonateDialog()
-        }
-    }
-
-    private fun showDonateDialog() {
-        val messages = intArrayOf(
-            R.string.dialog_donate_random_message_1,
-            R.string.dialog_donate_random_message_2,
-            R.string.dialog_donate_random_message_3,
-            R.string.dialog_donate_random_message_4,
-            R.string.dialog_donate_random_message_5
-        )
-        val selectedMessageRes = messages.random()
-
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle(R.string.dialog_donate_random_title)
-        builder.setMessage(selectedMessageRes)
-        builder.setPositiveButton(R.string.link_donate) { _, _ ->
-            preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN, true)?.apply()
-            openUrl("https://liberapay.com/bas080")
-        }
-        builder.setNegativeButton(R.string.btn_later) { dialog, _ ->
-            dialog.dismiss()
-        }
-        val dialog = builder.show()
-        centerDialogTitle(dialog)
     }
 
     private fun centerDialogTitle(dialog: AlertDialog) {
@@ -1213,7 +1176,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         private const val ALPHA_DISABLED = 0.38f
         private const val EXPORT_IMPORT_SCHEMA_VERSION = 1
         private const val IMPORT_INPUT_LINES = 4
-        private const val DONATE_DIALOG_PROBABILITY = 0.2f
 
         private val EXPORTED_BOOL_PREFS = arrayOf(
             BoolPrefSpec(PreferenceKeys.KEY_ACTIVE, true),
