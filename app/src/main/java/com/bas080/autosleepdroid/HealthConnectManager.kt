@@ -1,5 +1,3 @@
-@file:Suppress("TooManyFunctions")
-
 package com.bas080.autosleepdroid
 
 import android.app.Activity
@@ -18,26 +16,73 @@ import java.time.ZoneId
 
 object HealthConnectManager {
 
-    private const val MS_PER_MINUTE = 60_000L
-    private const val MAX_SLEEP_DURATION_MINUTES = 1440
+    internal const val MS_PER_MINUTE = 60_000L
+    internal const val MAX_SLEEP_DURATION_MINUTES = 1440
 
     @Volatile
-    private var testClient: HealthConnectClient? = null
+    internal var testClient: HealthConnectClient? = null
 
     @Volatile
-    private var testSdkAvailable: Boolean? = null
+    internal var testSdkAvailable: Boolean? = null
 
     fun setClientForTesting(client: HealthConnectClient?, isSdkAvailable: Boolean? = true) {
         this.testClient = client
         this.testSdkAvailable = isSdkAvailable
     }
 
-    private fun getClient(context: Context): HealthConnectClient {
+    internal fun getClient(context: Context): HealthConnectClient {
         return testClient ?: HealthConnectClient.getOrCreate(context)
     }
 
     fun openHealthConnectPermissions(activity: Activity) {
-        if (!isHealthConnectAvailable(activity)) {
+        HealthConnectPermissionHandler.openHealthConnectPermissions(activity)
+    }
+
+    fun interface Callback {
+        fun onResult(success: Boolean, error: String?)
+    }
+
+    fun interface PermissionCallback {
+        fun onPermissionResult(hasPermission: Boolean)
+    }
+
+    val REQUIRED_PERMISSIONS = setOf(
+        HealthPermission.getWritePermission(SleepSessionRecord::class)
+    )
+
+    @Suppress("TooGenericExceptionCaught")
+    fun isHealthConnectAvailable(context: Context): Boolean {
+        testSdkAvailable?.let { return it }
+        return try {
+            val status = HealthConnectClient.getSdkStatus(context)
+            status == HealthConnectClient.SDK_AVAILABLE
+        } catch (e: Exception) {
+            EventLogger.log(context, EventLogger.LEVEL_LOW, "Failed to query Health Connect SDK status: ${e.message}")
+            false
+        }
+    }
+
+    fun revokeAllPermissions(context: Context, callback: Callback? = null) {
+        HealthConnectPermissionHandler.revokeAllPermissions(context, callback)
+    }
+
+    fun hasSleepWritePermission(context: Context, callback: PermissionCallback) {
+        HealthConnectPermissionHandler.hasSleepWritePermission(context, callback)
+    }
+
+    fun writeSleepSession(
+        context: Context,
+        startTimeMs: Long,
+        endTimeMs: Long,
+        callback: Callback? = null
+    ) {
+        HealthConnectSessionWriter.writeSleepSession(context, startTimeMs, endTimeMs, callback)
+    }
+}
+
+internal object HealthConnectPermissionHandler {
+    fun openHealthConnectPermissions(activity: Activity) {
+        if (!HealthConnectManager.isHealthConnectAvailable(activity)) {
             val toastRes = R.string.toast_health_connect_not_available
             android.widget.Toast.makeText(activity, toastRes, android.widget.Toast.LENGTH_SHORT).show()
             return
@@ -75,39 +120,15 @@ object HealthConnectManager {
         android.widget.Toast.makeText(activity, fallbackToastRes, android.widget.Toast.LENGTH_SHORT).show()
     }
 
-    fun interface Callback {
-        fun onResult(success: Boolean, error: String?)
-    }
-
-    fun interface PermissionCallback {
-        fun onPermissionResult(hasPermission: Boolean)
-    }
-
-    val REQUIRED_PERMISSIONS = setOf(
-        HealthPermission.getWritePermission(SleepSessionRecord::class)
-    )
-
     @Suppress("TooGenericExceptionCaught")
-    fun isHealthConnectAvailable(context: Context): Boolean {
-        testSdkAvailable?.let { return it }
-        return try {
-            val status = HealthConnectClient.getSdkStatus(context)
-            status == HealthConnectClient.SDK_AVAILABLE
-        } catch (e: Exception) {
-            EventLogger.log(context, EventLogger.LEVEL_LOW, "Failed to query Health Connect SDK status: ${e.message}")
-            false
-        }
-    }
-
-    @Suppress("TooGenericExceptionCaught")
-    fun revokeAllPermissions(context: Context, callback: Callback? = null) {
-        if (!isHealthConnectAvailable(context)) {
+    fun revokeAllPermissions(context: Context, callback: HealthConnectManager.Callback?) {
+        if (!HealthConnectManager.isHealthConnectAvailable(context)) {
             callback?.onResult(false, "Health Connect SDK unavailable")
             return
         }
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val client = getClient(context)
+                val client = HealthConnectManager.getClient(context)
                 client.permissionController.revokeAllPermissions()
                 EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: Revoked all granted permissions")
                 withContext(Dispatchers.Main) {
@@ -123,12 +144,12 @@ object HealthConnectManager {
         }
     }
 
-    fun hasSleepWritePermission(context: Context, callback: PermissionCallback) {
-        if (!isHealthConnectAvailable(context)) {
+    fun hasSleepWritePermission(context: Context, callback: HealthConnectManager.PermissionCallback) {
+        if (!HealthConnectManager.isHealthConnectAvailable(context)) {
             callback.onPermissionResult(false)
             return
         }
-        if (testSdkAvailable != null || testClient != null) {
+        if (HealthConnectManager.testSdkAvailable != null || HealthConnectManager.testClient != null) {
             callback.onPermissionResult(checkTestClientPermission())
             return
         }
@@ -137,10 +158,10 @@ object HealthConnectManager {
 
     private fun checkTestClientPermission(): Boolean {
         return try {
-            val client = testClient ?: return false
+            val client = HealthConnectManager.testClient ?: return false
             runBlocking {
                 val granted = client.permissionController.getGrantedPermissions()
-                granted.containsAll(REQUIRED_PERMISSIONS)
+                granted.containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)
             }
         } catch (ignored: Exception) {
             false
@@ -148,12 +169,12 @@ object HealthConnectManager {
     }
 
     @Suppress("TooGenericExceptionCaught")
-    private fun checkAsyncPermission(context: Context, callback: PermissionCallback) {
+    private fun checkAsyncPermission(context: Context, callback: HealthConnectManager.PermissionCallback) {
         CoroutineScope(Dispatchers.IO).launch {
             val hasPermission = try {
-                val client = getClient(context)
+                val client = HealthConnectManager.getClient(context)
                 val granted = client.permissionController.getGrantedPermissions()
-                granted.containsAll(REQUIRED_PERMISSIONS)
+                granted.containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)
             } catch (e: Exception) {
                 EventLogger.log(context, EventLogger.LEVEL_LOW, "Failed async permission check: ${e.message}")
                 false
@@ -163,12 +184,14 @@ object HealthConnectManager {
             }
         }
     }
+}
 
+internal object HealthConnectSessionWriter {
     fun writeSleepSession(
         context: Context,
         startTimeMs: Long,
         endTimeMs: Long,
-        callback: Callback? = null
+        callback: HealthConnectManager.Callback?
     ) {
         val validationError = validateSessionTimestamps(startTimeMs, endTimeMs)
         if (validationError != null) {
@@ -177,7 +200,7 @@ object HealthConnectManager {
             return
         }
 
-        if (!isHealthConnectAvailable(context)) {
+        if (!HealthConnectManager.isHealthConnectAvailable(context)) {
             val errorMsg = "Health Connect SDK unavailable"
             EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: $errorMsg")
             callback?.onResult(false, errorMsg)
@@ -191,8 +214,8 @@ object HealthConnectManager {
         if (startTimeMs <= 0 || endTimeMs <= startTimeMs) {
             return "Invalid timestamps: startTime=$startTimeMs, endTime=$endTimeMs"
         }
-        val durationMinutes = ((endTimeMs - startTimeMs) / MS_PER_MINUTE).toInt()
-        return if (durationMinutes < 1 || durationMinutes > MAX_SLEEP_DURATION_MINUTES) {
+        val durationMinutes = ((endTimeMs - startTimeMs) / HealthConnectManager.MS_PER_MINUTE).toInt()
+        return if (durationMinutes < 1 || durationMinutes > HealthConnectManager.MAX_SLEEP_DURATION_MINUTES) {
             "Invalid sleep duration: ${durationMinutes}m"
         } else {
             null
@@ -204,13 +227,13 @@ object HealthConnectManager {
         context: Context,
         startTimeMs: Long,
         endTimeMs: Long,
-        callback: Callback?
+        callback: HealthConnectManager.Callback?
     ) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val client = getClient(context)
+                val client = HealthConnectManager.getClient(context)
                 val granted = client.permissionController.getGrantedPermissions()
-                if (!granted.containsAll(REQUIRED_PERMISSIONS)) {
+                if (!granted.containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)) {
                     val errorMsg = "Write permission not granted"
                     EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: $errorMsg")
                     withContext(Dispatchers.Main) { callback?.onResult(false, errorMsg) }
@@ -228,7 +251,7 @@ object HealthConnectManager {
                 )
 
                 client.insertRecords(listOf(record))
-                val durationMinutes = ((endTimeMs - startTimeMs) / MS_PER_MINUTE).toInt()
+                val durationMinutes = ((endTimeMs - startTimeMs) / HealthConnectManager.MS_PER_MINUTE).toInt()
                 val formatted = DurationUtils.formatDurationString(durationMinutes)
                 val logMsg = "Successfully persisted sleep session ($formatted)"
                 EventLogger.log(context, EventLogger.LEVEL_HIGH, "Health Connect: $logMsg")
