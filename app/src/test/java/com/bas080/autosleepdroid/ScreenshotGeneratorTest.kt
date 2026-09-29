@@ -82,7 +82,7 @@ class ScreenshotGeneratorTest {
         captureScreenshot7UserManual()
         captureScreenshot8FeedbackOverlay()
         captureScreenshot9ImportDialog()
-        captureScreenshot10DonateDialog()
+        captureScreenshot10LinksDialog()
     }
 
     private fun captureScreenshot1MainOverview() {
@@ -228,12 +228,12 @@ class ScreenshotGeneratorTest {
         renderAndSaveView(viewToRender, "9.png")
     }
 
-    private fun captureScreenshot10DonateDialog() {
+    private fun captureScreenshot10LinksDialog() {
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         val activity = controller.get()
         drainActivityIntents(activity)
 
-        activity.maybeShowRandomDonateDialog(forceShow = true)
+        activity.findViewById<View>(R.id.btn_links)?.performClick()
         shadowOf(Looper.getMainLooper()).idle()
 
         val dialog = ShadowAlertDialog.getLatestDialog()
