@@ -1,5 +1,3 @@
-@file:Suppress("TooManyFunctions")
-
 package com.bas080.autosleepdroid
 
 import android.content.Context
@@ -21,14 +19,11 @@ object EventLogger {
     const val LEVEL_NORMAL: Int = 1
     const val LEVEL_HIGH: Int = 2
 
-    private const val LOG_FILE_NAME = "event_logs.txt"
-    private const val MAX_LOG_FILE_BYTES = 1_000_000L
-    private const val TRIM_TO_LOGS = 50
-
     @Volatile
     private var listener: Listener? = null
+
     @Volatile
-    private var appContext: Context? = null
+    internal var appContext: Context? = null
 
     fun interface Listener {
         fun onEventLogged(event: String)
@@ -54,34 +49,16 @@ object EventLogger {
         }
 
         val line = "$timestamp $marker$message"
-        writeLogToFile(targetContext, line)
-        dispatchLogToListener(line)
-    }
+        EventLogStorage.writeLogToFile(targetContext, line)
 
-    private fun writeLogToFile(targetContext: Context?, line: String) {
-        if (targetContext == null) return
-        val appCtx = targetContext.applicationContext
-        val file = getLogFile(appCtx)
-        if (file.exists() && file.length() >= MAX_LOG_FILE_BYTES) {
-            pruneFile(file)
+        val currentListener = listener
+        if (currentListener != null) {
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                currentListener.onEventLogged(line)
+            } else {
+                Handler(Looper.getMainLooper()).post { currentListener.onEventLogged(line) }
+            }
         }
-        file.appendText(line + "\n")
-    }
-
-    private fun dispatchLogToListener(line: String) {
-        val currentListener = listener ?: return
-        if (Looper.myLooper() == Looper.getMainLooper()) {
-            currentListener.onEventLogged(line)
-        } else {
-            Handler(Looper.getMainLooper()).post { currentListener.onEventLogged(line) }
-        }
-    }
-
-    private fun pruneFile(file: File) {
-        val lines = file.readLines().filter { it.trim().isNotEmpty() }
-        val trimmed = lines.takeLast(TRIM_TO_LOGS)
-        val content = trimmed.joinToString("\n", postfix = "\n")
-        file.writeText(content)
     }
 
     @Synchronized
@@ -105,8 +82,52 @@ object EventLogger {
             appContext = context.applicationContext
         }
         val targetContext = context ?: appContext
-        val appCtx = targetContext?.applicationContext ?: return emptyList()
+        return EventLogStorage.getEvents(targetContext)
+    }
 
+    fun isDarkMode(context: Context?): Boolean {
+        val targetContext = context ?: appContext
+        return EventLogFormatter.isDarkMode(targetContext)
+    }
+
+    fun formatColoredEvent(line: String?): CharSequence {
+        return formatColoredEvent(null, line)
+    }
+
+    fun formatColoredEvent(context: Context?, line: String?): CharSequence {
+        val targetContext = context ?: appContext
+        return EventLogFormatter.formatColoredEvent(targetContext, line)
+    }
+
+    @Synchronized
+    fun clear(context: Context?) {
+        val targetContext = context ?: appContext
+        EventLogStorage.clear(targetContext)
+        if (context != null) {
+            appContext = context.applicationContext
+        } else {
+            appContext = null
+        }
+    }
+}
+
+internal object EventLogStorage {
+    private const val LOG_FILE_NAME = "event_logs.txt"
+    private const val MAX_LOG_FILE_BYTES = 1_000_000L
+    private const val TRIM_TO_LOGS = 50
+
+    fun writeLogToFile(context: Context?, line: String) {
+        if (context == null) return
+        val appCtx = context.applicationContext
+        val file = getLogFile(appCtx)
+        if (file.exists() && file.length() >= MAX_LOG_FILE_BYTES) {
+            pruneFile(file)
+        }
+        file.appendText(line + "\n")
+    }
+
+    fun getEvents(context: Context?): List<String> {
+        val appCtx = context?.applicationContext ?: return emptyList()
         val file = getLogFile(appCtx)
         return if (file.exists()) {
             val lines = file.readLines().filter { it.trim().isNotEmpty() }
@@ -116,15 +137,34 @@ object EventLogger {
         }
     }
 
-    fun isDarkMode(context: Context?): Boolean {
-        val ctx = context ?: appContext ?: return false
-        val config = ctx.resources?.configuration
-        val currentNightMode = (config?.uiMode ?: 0) and android.content.res.Configuration.UI_MODE_NIGHT_MASK
-        return currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    fun clear(context: Context?) {
+        if (context != null) {
+            val appCtx = context.applicationContext
+            val file = getLogFile(appCtx)
+            if (file.exists()) {
+                file.delete()
+            }
+        }
     }
 
-    fun formatColoredEvent(line: String?): CharSequence {
-        return formatColoredEvent(null, line)
+    private fun pruneFile(file: File) {
+        val lines = file.readLines().filter { it.trim().isNotEmpty() }
+        val trimmed = lines.takeLast(TRIM_TO_LOGS)
+        val content = trimmed.joinToString("\n", postfix = "\n")
+        file.writeText(content)
+    }
+
+    private fun getLogFile(context: Context): File {
+        return File(context.filesDir, LOG_FILE_NAME)
+    }
+}
+
+internal object EventLogFormatter {
+    fun isDarkMode(context: Context?): Boolean {
+        if (context == null) return false
+        val config = context.resources?.configuration
+        val currentNightMode = (config?.uiMode ?: 0) and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        return currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
     }
 
     fun formatColoredEvent(context: Context?, line: String?): CharSequence {
@@ -179,10 +219,10 @@ object EventLogger {
 
     private fun parseMessageLevel(rawMessage: String): Pair<Int, String> {
         return when {
-            rawMessage.contains("\u0000") -> Pair(LEVEL_LOW, rawMessage.replace("\u0000", ""))
-            rawMessage.contains("\u0002") -> Pair(LEVEL_HIGH, rawMessage.replace("\u0002", ""))
-            rawMessage.contains("\u0001") -> Pair(LEVEL_NORMAL, rawMessage.replace("\u0001", ""))
-            else -> Pair(LEVEL_NORMAL, rawMessage)
+            rawMessage.contains("\u0000") -> Pair(EventLogger.LEVEL_LOW, rawMessage.replace("\u0000", ""))
+            rawMessage.contains("\u0002") -> Pair(EventLogger.LEVEL_HIGH, rawMessage.replace("\u0002", ""))
+            rawMessage.contains("\u0001") -> Pair(EventLogger.LEVEL_NORMAL, rawMessage.replace("\u0001", ""))
+            else -> Pair(EventLogger.LEVEL_NORMAL, rawMessage)
         }
     }
 
@@ -198,8 +238,8 @@ object EventLogger {
 
         if (darkMode) {
             when (level) {
-                LEVEL_LOW -> textColor = -0x555556
-                LEVEL_HIGH -> {
+                EventLogger.LEVEL_LOW -> textColor = -0x555556
+                EventLogger.LEVEL_HIGH -> {
                     textColor = -0x1
                     isBold = true
                 }
@@ -207,8 +247,8 @@ object EventLogger {
             }
         } else {
             when (level) {
-                LEVEL_LOW -> textColor = -0x777778
-                LEVEL_HIGH -> {
+                EventLogger.LEVEL_LOW -> textColor = -0x777778
+                EventLogger.LEVEL_HIGH -> {
                     textColor = -0x1000000
                     isBold = true
                 }
@@ -220,26 +260,5 @@ object EventLogger {
         if (isBold) {
             spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-    }
-
-    @Synchronized
-    fun clear(context: Context?) {
-        val targetContext = context ?: appContext
-        if (targetContext != null) {
-            val appCtx = targetContext.applicationContext
-            val file = getLogFile(appCtx)
-            if (file.exists()) {
-                file.delete()
-            }
-        }
-        if (context != null) {
-            appContext = context.applicationContext
-        } else {
-            appContext = null
-        }
-    }
-
-    private fun getLogFile(context: Context): File {
-        return File(context.filesDir, LOG_FILE_NAME)
     }
 }
