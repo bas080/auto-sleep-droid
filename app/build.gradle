@@ -78,6 +78,12 @@ android {
             maxParallelForks = Runtime.runtime.availableProcessors()
             systemProperty 'robolectric.dependency.repo.url', 'https://maven-central.storage-download.googleapis.com/maven2/'
             systemProperty 'robolectric.dependency.repo.id', 'gcs-maven-central'
+            if (System.getProperty("generate.screenshots") != null) {
+                systemProperty "generate.screenshots", System.getProperty("generate.screenshots")
+            }
+            if (System.getenv("GENERATE_SCREENSHOTS") != null) {
+                environment "GENERATE_SCREENSHOTS", System.getenv("GENERATE_SCREENSHOTS")
+            }
             jvmArgs("-XX:-TieredCompilation")
             jacoco {
                 includeNoLocationClasses = true
