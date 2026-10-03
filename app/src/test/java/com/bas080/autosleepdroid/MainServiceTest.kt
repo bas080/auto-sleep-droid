@@ -1049,23 +1049,6 @@ class MainServiceTest {
     }
 
     @Test
-    fun testAwakeIntentTargetsMainServiceWithAwakeAction() {
-        val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
-
-        val awakeIntentMethod = MainService::class.java.getDeclaredMethod("awakeIntent")
-        awakeIntentMethod.isAccessible = true
-        val pendingIntent = awakeIntentMethod.invoke(service) as android.app.PendingIntent?
-
-        assertNotNull("awakeIntent pendingIntent must be non-null", pendingIntent)
-        val shadowPendingIntent = Shadows.shadowOf(pendingIntent)
-        assertTrue("awakeIntent must be a service PendingIntent", shadowPendingIntent.isService || shadowPendingIntent.isForegroundService)
-        val intent = shadowPendingIntent.savedIntent
-        assertEquals(MainService.ACTION_AWAKE, intent.action)
-        assertEquals(MainService::class.java.name, intent.component?.className)
-    }
-
-    @Test
     fun testSessionAnchoredMinimumSleepDoesNotPushAlarmWhenSleepDurationSatisfied() {
         val now = System.currentTimeMillis()
         val minSleepMin = 450
@@ -1258,9 +1241,9 @@ class MainServiceTest {
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
 
-        val awakeIntentMethod = MainService::class.java.getDeclaredMethod("awakeIntent")
-        awakeIntentMethod.isAccessible = true
-        val pendingIntent = awakeIntentMethod.invoke(service) as android.app.PendingIntent?
+        val turnOffIntentMethod = MainService::class.java.getDeclaredMethod("turnOffIntent")
+        turnOffIntentMethod.isAccessible = true
+        val pendingIntent = turnOffIntentMethod.invoke(service) as android.app.PendingIntent?
 
         assertNotNull("PendingIntent should not be null", pendingIntent)
         val shadowPendingIntent = Shadows.shadowOf(pendingIntent)
