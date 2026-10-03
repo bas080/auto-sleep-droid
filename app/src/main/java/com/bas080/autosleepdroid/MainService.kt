@@ -49,7 +49,6 @@ private const val REQUEST_CODE_SNOOZE = 106
 private const val REQUEST_CODE_UPDATE_NOTIF = 107
 private const val REQUEST_CODE_DISMISS = 20
 private const val REQUEST_CODE_TEST_5 = 5
-private const val REQUEST_CODE_TEST_16 = 16
 private const val REQUEST_CODE_TEST_7 = 7
 
 open class MainService : Service() {
@@ -1264,14 +1263,14 @@ open class MainService : Service() {
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun setAlarmVolume(gain: Float) {
         if (Build.VERSION.SDK_INT >= BUILD_VERSION_P) {
             currentAlarmRingtone?.volume = gain
         }
         try {
             alarmMediaPlayer?.setVolume(gain, gain)
-        } catch (ignored: Exception) {
+        } catch (ignored: IllegalStateException) {
+        } catch (ignored: IllegalArgumentException) {
         }
     }
 
@@ -1528,15 +1527,6 @@ open class MainService : Service() {
         val intent = Intent(this, MainService::class.java).setAction(ACTION_TURN_OFF)
         return getServicePendingIntent(
             REQUEST_CODE_TEST_5, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )!!
-    }
-
-    @Suppress("UnusedPrivateMember")
-    private fun awakeIntent(): PendingIntent {
-        val intent = Intent(this, MainService::class.java).setAction(ACTION_AWAKE)
-        return getServicePendingIntent(
-            REQUEST_CODE_TEST_16, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )!!
     }
