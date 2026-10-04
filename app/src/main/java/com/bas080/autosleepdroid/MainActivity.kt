@@ -496,7 +496,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
     }
 
-    @Suppress("LongParameterList")
     fun showDurationDialog(
         titleResId: Int,
         prefKey: String,
@@ -1140,21 +1139,25 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         eventScrollView?.post { eventScrollView?.fullScroll(ScrollView.FOCUS_DOWN) }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun startTimerService() {
         val serviceIntent = Intent(this, MainService::class.java)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 try {
                     startForegroundService(serviceIntent)
-                } catch (e: Exception) {
+                } catch (e: IllegalStateException) {
+                    EventLogger.log(this, "startForegroundService failed, falling back to startService: ${e.message}")
+                    startService(serviceIntent)
+                } catch (e: SecurityException) {
                     EventLogger.log(this, "startForegroundService failed, falling back to startService: ${e.message}")
                     startService(serviceIntent)
                 }
             } else {
                 startService(serviceIntent)
             }
-        } catch (e: Exception) {
+        } catch (e: IllegalStateException) {
+            EventLogger.log(this, "Failed to start service: ${e.message}")
+        } catch (e: SecurityException) {
             EventLogger.log(this, "Failed to start service: ${e.message}")
         }
     }

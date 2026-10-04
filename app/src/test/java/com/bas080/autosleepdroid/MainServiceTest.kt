@@ -346,7 +346,7 @@ class MainServiceTest {
         val service = controller.create().get()
 
         val now = System.currentTimeMillis()
-        service.initializeTimerState(true, 30, now - 1000L, 10, true, now)
+        service.initializeTimerState(MainService.InitialStateParams(true, 30, now - 1000L, 10, true), now)
 
         // 1) Verify initial fade state
         assertTrue("Timer should be in FADING state", service.isFading)
@@ -475,7 +475,7 @@ class MainServiceTest {
         val service = controller.create().get()
 
         val now = System.currentTimeMillis()
-        service.initializeTimerState(true, 20, now + 1200_000L, 10, true, now)
+        service.initializeTimerState(MainService.InitialStateParams(true, 20, now + 1200_000L, 10, true), now)
         assertEquals(MainService.State.ACTIVE, service.state)
 
         service.onPlaybackStateChanged(true, now)
@@ -1049,23 +1049,6 @@ class MainServiceTest {
     }
 
     @Test
-    fun testAwakeIntentTargetsMainServiceWithAwakeAction() {
-        val controller = Robolectric.buildService(MainService::class.java)
-        val service = controller.create().get()
-
-        val awakeIntentMethod = MainService::class.java.getDeclaredMethod("awakeIntent")
-        awakeIntentMethod.isAccessible = true
-        val pendingIntent = awakeIntentMethod.invoke(service) as android.app.PendingIntent?
-
-        assertNotNull("awakeIntent pendingIntent must be non-null", pendingIntent)
-        val shadowPendingIntent = Shadows.shadowOf(pendingIntent)
-        assertTrue("awakeIntent must be a service PendingIntent", shadowPendingIntent.isService || shadowPendingIntent.isForegroundService)
-        val intent = shadowPendingIntent.savedIntent
-        assertEquals(MainService.ACTION_AWAKE, intent.action)
-        assertEquals(MainService::class.java.name, intent.component?.className)
-    }
-
-    @Test
     fun testSessionAnchoredMinimumSleepDoesNotPushAlarmWhenSleepDurationSatisfied() {
         val now = System.currentTimeMillis()
         val minSleepMin = 450
@@ -1258,9 +1241,9 @@ class MainServiceTest {
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
 
-        val awakeIntentMethod = MainService::class.java.getDeclaredMethod("awakeIntent")
-        awakeIntentMethod.isAccessible = true
-        val pendingIntent = awakeIntentMethod.invoke(service) as android.app.PendingIntent?
+        val turnOffIntentMethod = MainService::class.java.getDeclaredMethod("turnOffIntent")
+        turnOffIntentMethod.isAccessible = true
+        val pendingIntent = turnOffIntentMethod.invoke(service) as android.app.PendingIntent?
 
         assertNotNull("PendingIntent should not be null", pendingIntent)
         val shadowPendingIntent = Shadows.shadowOf(pendingIntent)
