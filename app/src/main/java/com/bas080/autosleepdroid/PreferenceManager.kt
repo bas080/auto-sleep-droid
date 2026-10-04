@@ -88,12 +88,12 @@ class PreferenceManager(
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     fun <T> getComputed(cacheKey: Any?, computer: ComputedValue<T>?): T? {
         if (cacheKey == null || computer == null) return null
         val cached = computedCache[cacheKey]
         val value = if (cached != null) {
-            cached.value as T?
+            @Suppress("UNCHECKED_CAST")
+            (cached.value as T?)
         } else {
             val tracker = TrackingPreferenceGetter(this)
             val result = computer.compute(tracker)
