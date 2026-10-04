@@ -496,7 +496,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         }
     }
 
-    @Suppress("LongParameterList")
     fun showDurationDialog(
         titleResId: Int,
         prefKey: String,
