@@ -119,7 +119,7 @@ jobs:
               --latest=true
           fi
 
-      - name: Create or update draft release (pull request)
+      - name: Create or update pre-release (pull request)
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -135,14 +135,15 @@ jobs:
           git push origin "refs/tags/${RELEASE_TAG}" --force || true
 
           if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            gh release edit "${RELEASE_TAG}" --title "${RELEASE_TITLE}" --draft=true
+            gh release edit "${RELEASE_TAG}" --title "${RELEASE_TITLE}" --prerelease=true --draft=false
             gh release upload "${RELEASE_TAG}" "${APK_NAME}" --clobber
           else
             gh release create "${RELEASE_TAG}" "${APK_NAME}" \
               --target "${GITHUB_SHA}" \
               --title "${RELEASE_TITLE}" \
-              --notes "Draft release APK for PR #${PR_NUMBER}." \
-              --draft=true
+              --notes "Pre-release APK for PR #${PR_NUMBER}." \
+              --prerelease=true \
+              --draft=false
           fi
 
       - name: Create versioned GitHub release (tag push)
