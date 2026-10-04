@@ -125,35 +125,16 @@ open class MainService : Service() {
     )
 
     fun initializeTimerState(params: InitialStateParams, now: Long = System.currentTimeMillis()) {
-        initializeTimerState(
-            params.savedEnabled,
-            params.savedDurationMinutes,
-            params.savedEndsAt,
-            params.initialVolume,
-            params.musicActive,
-            now
-        )
-    }
-
-    @Suppress("LongParameterList")
-    fun initializeTimerState(
-        savedEnabled: Boolean,
-        savedDurationMinutes: Int,
-        savedEndsAt: Long,
-        initialVolume: Int,
-        musicActive: Boolean,
-        now: Long
-    ) {
-        this.configuredDurationMinutes = if (isValidDuration(savedDurationMinutes)) savedDurationMinutes else AppDefaults.DURATION_MINUTES
-        this.lastObservedVolume = initialVolume
+        this.configuredDurationMinutes = if (isValidDuration(params.savedDurationMinutes)) params.savedDurationMinutes else AppDefaults.DURATION_MINUTES
+        this.lastObservedVolume = params.initialVolume
         this.lastObservedMediaActive = false
 
-        if (!savedEnabled) {
+        if (!params.savedEnabled) {
             transitionTo(State.OFF)
             return
         }
 
-        initializeEnabledTimerState(savedEndsAt, initialVolume, musicActive, now)
+        initializeEnabledTimerState(params.savedEndsAt, params.initialVolume, params.musicActive, now)
     }
 
     private fun initializeEnabledTimerState(
@@ -486,7 +467,10 @@ open class MainService : Service() {
 
         EventLogger.log(this, "MainService state initialized (enabled: $savedEnabled, duration: ${savedDuration}m)")
 
-        initializeTimerState(savedEnabled, savedDuration, savedEndsAt, currentVolume, musicActive, System.currentTimeMillis())
+        initializeTimerState(
+            InitialStateParams(savedEnabled, savedDuration, savedEndsAt, currentVolume, musicActive),
+            System.currentTimeMillis()
+        )
 
         registerDndReceiver()
         checkAndApplyDndAutoTimer()

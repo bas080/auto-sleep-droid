@@ -346,7 +346,7 @@ class MainServiceTest {
         val service = controller.create().get()
 
         val now = System.currentTimeMillis()
-        service.initializeTimerState(true, 30, now - 1000L, 10, true, now)
+        service.initializeTimerState(MainService.InitialStateParams(true, 30, now - 1000L, 10, true), now)
 
         // 1) Verify initial fade state
         assertTrue("Timer should be in FADING state", service.isFading)
@@ -475,7 +475,7 @@ class MainServiceTest {
         val service = controller.create().get()
 
         val now = System.currentTimeMillis()
-        service.initializeTimerState(true, 20, now + 1200_000L, 10, true, now)
+        service.initializeTimerState(MainService.InitialStateParams(true, 20, now + 1200_000L, 10, true), now)
         assertEquals(MainService.State.ACTIVE, service.state)
 
         service.onPlaybackStateChanged(true, now)
