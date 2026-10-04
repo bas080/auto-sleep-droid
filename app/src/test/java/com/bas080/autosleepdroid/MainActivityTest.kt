@@ -1344,4 +1344,110 @@ class MainActivityTest {
             toggleLogs.isEmpty()
         )
     }
+
+    @Test
+    fun testShowFeedbackDialogAndOverlayExtensions() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().get()
+
+        activity.showFeedbackDialog("Crash sample")
+        val overlay = activity.findViewById<View>(R.id.feedback_overlay_container)
+        assertEquals(View.VISIBLE, overlay.visibility)
+
+        activity.showFeedbackOverlay(null)
+        assertEquals(View.VISIBLE, overlay.visibility)
+    }
+
+    @Test
+    fun testOpenSettingsWithFallbackLaunchesPrimaryIntent() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+        val shadowActivity = Shadows.shadowOf(activity)
+        while (shadowActivity.nextStartedActivity != null) {}
+
+        activity.openSettingsWithFallback("action.PRIMARY", "action.FALLBACK")
+        val nextIntent = shadowActivity.nextStartedActivity
+        assertNotNull(nextIntent)
+        assertEquals("action.PRIMARY", nextIntent?.action)
+    }
+
+    @Test
+    fun testShowDurationDialogExtension() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        activity.showDurationDialog(
+            R.string.label_duration,
+            PreferenceKeys.KEY_DURATION_MINUTES,
+            20
+        )
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull(dialog)
+    }
+
+    @Test
+    fun testPendingHealthConnectPermissionGrantedOnResume() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val prefs = application.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
+
+        val mockClient = org.mockito.Mockito.mock(androidx.health.connect.client.HealthConnectClient::class.java)
+        val mockPermissionController = org.mockito.Mockito.mock(
+            androidx.health.connect.client.PermissionController::class.java
+        )
+        org.mockito.Mockito.`when`(mockClient.permissionController).thenReturn(mockPermissionController)
+        kotlinx.coroutines.runBlocking {
+            org.mockito.Mockito.`when`(mockPermissionController.getGrantedPermissions())
+                .thenReturn(HealthConnectManager.REQUIRED_PERMISSIONS)
+        }
+        HealthConnectManager.setClientForTesting(mockClient, true)
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().get()
+        activity.isRequestingHealthConnectPermission = true
+
+        controller.resume()
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        assertTrue(prefs.getBoolean("health_connect_enabled", false))
+        assertFalse(activity.isRequestingHealthConnectPermission)
+    }
+
+    @Test
+    fun testPendingHealthConnectPermissionDeniedOnResume() {
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val prefs = application.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
+
+        HealthConnectManager.setClientForTesting(null, true)
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().get()
+        activity.isRequestingHealthConnectPermission = true
+
+        controller.resume()
+        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+        assertFalse(prefs.getBoolean("health_connect_enabled", true))
+        assertFalse(activity.isRequestingHealthConnectPermission)
+    }
+
+    @Test
+    fun testMinSleepAndHcMinDurationDialogClicks() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().resume().get()
+
+        val switchGoal = activity.findViewById<Switch>(R.id.switch_enable_goal)
+        switchGoal.isChecked = true
+
+        val inputMinSleep = activity.findViewById<View>(R.id.input_min_sleep)
+        inputMinSleep.performClick()
+        val dialog1 = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull(dialog1)
+        dialog1.getButton(DialogInterface.BUTTON_NEGATIVE).performClick()
+
+        val inputHcMinDuration = activity.findViewById<View>(R.id.input_hc_min_duration)
+        inputHcMinDuration.performClick()
+        val dialog2 = ShadowAlertDialog.getLatestAlertDialog()
+        assertNotNull(dialog2)
+        dialog2.getButton(DialogInterface.BUTTON_NEGATIVE).performClick()
+    }
 }
