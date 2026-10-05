@@ -1,6 +1,7 @@
 ---
 title: Fix volume button snooze detection when screen is locked
 status: open
+parent: app-next-release-1855c1b5
 priority: 1
 issue-type: task
 created-at: "2026-10-05T15:31:48.987124+00:00"
