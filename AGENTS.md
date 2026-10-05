@@ -6,6 +6,16 @@ Instructions and guidelines for AI coding agents and human developers working in
 
 Auto Sleep Droid is an Android sleep timer app controlled entirely from the notification shade with a live event log UI in `MainActivity`.
 
+## Task Tracking
+
+Use dots as the persistent task tracker for this project.
+
+Before starting work, run `dot ready` and choose an unblocked task. Use `dot show` and `dot tree` when you need context or dependencies.
+
+When you discover new project work, create a task in dots and add the appropriate dependency rather than keeping it only in your notes or conversation.
+
+Keep task status up to date. Mark a task complete only after the implementation and relevant tests are finished.
+
 ## Build & Test Instructions
 
 ### Common Commands
