@@ -1,6 +1,7 @@
 ---
 title: Implement phone flip gesture during alarm ringing and audio fading
 status: open
+parent: app-next-release-1855c1b5
 priority: 3
 issue-type: task
 created-at: "2026-10-05T15:07:54.156325+00:00"
