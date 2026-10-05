@@ -6,4 +6,4 @@ Auto Sleep Droid puts your phone to sleep when you fall asleep, and wakes you up
 - **Commands:** Use `./gradlew` for testing and building (e.g. `./gradlew test`).
 - **User Experience:** Provide clear user feedback via toast notifications and immediate reactive UI updates on every state change.
 - **User Manual & Permissions:** Keep the bundled manual (`app/src/main/assets/manual.html`) synchronized whenever user-visible features change. Document any newly required permissions in `README.md`.
-- **Commit Messages:** Write concise, plain commit titles without conventional commit prefixes (e.g., `Add dark mode support` instead of `feat: add dark mode support`).
+- **Commit Messages:** Use concise, imperative titles without prefixes (e.g., `Add feature` instead of `Added feature` or `feat: add feature`).
