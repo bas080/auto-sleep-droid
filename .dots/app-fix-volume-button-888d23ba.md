@@ -1,11 +1,9 @@
 ---
 title: Fix volume button snooze detection when screen is locked
-status: closed
+status: open
 priority: 1
 issue-type: task
-created-at: "\"\\\"2026-10-05T15:31:48.987124+00:00\\\"\""
-closed-at: "2026-10-05T17:31:25.574362+00:00"
-close-reason: Fix volume button snooze detection when screen is locked by requesting alarm audio focus
+created-at: "2026-10-05T15:31:48.987124+00:00"
 ---
 
 Volume button presses are not detected when attempting to snooze the ringing wake alarm while the screen is locked.
