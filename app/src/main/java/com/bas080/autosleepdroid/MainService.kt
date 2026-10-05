@@ -82,6 +82,7 @@ open class MainService : Service() {
     private var isForeground = false
     private var lastTimerEndsAt = 0L
     private var wakeLock: android.os.PowerManager.WakeLock? = null
+    private var alarmAudioFocusRequest: android.media.AudioFocusRequest? = null
 
     var state = State.OFF
         private set
@@ -1164,10 +1165,45 @@ open class MainService : Service() {
     }
 
     @Suppress("TooGenericExceptionCaught")
+    private fun requestAlarmAudioFocus() {
+        val am = audioManager ?: return
+        try {
+            val focusRequest = android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                .build()
+            alarmAudioFocusRequest = focusRequest
+            am.requestAudioFocus(focusRequest)
+            EventLogger.log(this, "Requested audio focus for wake-up alarm")
+        } catch (e: Exception) {
+            EventLogger.log(this, "Failed to request alarm audio focus: ${e.message}")
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun abandonAlarmAudioFocus() {
+        val am = audioManager ?: return
+        try {
+            alarmAudioFocusRequest?.let {
+                am.abandonAudioFocusRequest(it)
+                alarmAudioFocusRequest = null
+            }
+            EventLogger.log(this, "Abandoned audio focus for wake-up alarm")
+        } catch (e: Exception) {
+            EventLogger.log(this, "Failed to abandon alarm audio focus: ${e.message}")
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
     private fun playWakeUpAlarmSound() {
         stopWakeUpAlarmSound()
         try {
             ensureAudibleAlarmStreamVolume()
+            requestAlarmAudioFocus()
             val started = tryPlayMediaPlayerAlarm() || tryPlayRingtoneAlarm()
             if (started) {
                 startWakeUpAlarmCrescendo()
@@ -1308,6 +1344,7 @@ open class MainService : Service() {
     }
 
     private fun stopWakeUpAlarmSound() {
+        abandonAlarmAudioFocus()
         alarmCrescendoRunnable?.let {
             handler.removeCallbacks(it)
             alarmCrescendoRunnable = null

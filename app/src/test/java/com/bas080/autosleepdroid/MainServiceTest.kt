@@ -1297,6 +1297,37 @@ class MainServiceTest {
     }
 
     @Test
+    fun testWakeUpAlarmRequestsAndAbandonsAudioFocus() {
+        preferences.edit()
+            .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", 6)
+            .putInt("wake_up_goal_minute", 30)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val focusRequestField = MainService::class.java.getDeclaredField("alarmAudioFocusRequest")
+        focusRequestField.isAccessible = true
+
+        val triggerIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_WAKEUP_ALARM_EXPIRY)
+        service.onStartCommand(triggerIntent, 0, 1)
+
+        val activeFocusRequest = focusRequestField.get(service)
+        assertNotNull("alarmAudioFocusRequest must be set when wake alarm triggers and plays sound", activeFocusRequest)
+
+        val receiverField = MainService::class.java.getDeclaredField("volumeReceiver")
+        receiverField.isAccessible = true
+        val receiver = receiverField.get(service) as android.content.BroadcastReceiver?
+        assertNotNull(receiver)
+        receiver?.onReceive(service, Intent("android.media.VOLUME_CHANGED_ACTION"))
+
+        val focusRequestAfterSnooze = focusRequestField.get(service)
+        assertTrue("alarmAudioFocusRequest must be cleared/abandoned after alarm is snoozed or stopped", focusRequestAfterSnooze == null)
+    }
+
+    @Test
     fun testWakeUpAlarmExpiryAcquiresWakeLockAndReleasesOnSnoozeOrStop() {
         preferences.edit()
             .putBoolean("wake_up_goal_enabled", true)
