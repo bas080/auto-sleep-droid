@@ -83,6 +83,7 @@ open class MainService : Service() {
     private var lastTimerEndsAt = 0L
     private var wakeLock: android.os.PowerManager.WakeLock? = null
     private var alarmAudioFocusRequest: android.media.AudioFocusRequest? = null
+    var phoneFlipDetector: PhoneFlipDetector? = null
 
     var state = State.OFF
         private set
@@ -390,6 +391,10 @@ open class MainService : Service() {
             getSystemService(Vibrator::class.java)
         }
         createNotificationChannel()
+
+        phoneFlipDetector = PhoneFlipDetector(this) {
+            handlePhoneFlip()
+        }
 
         initializeStateAndNotification()
         setupPreferenceListeners()
@@ -700,6 +705,30 @@ open class MainService : Service() {
             registerVolumeObserver()
         } else {
             unregisterVolumeObserver()
+        }
+
+        val needSensor = isFading || isWakeUpAlarmRinging
+        if (needSensor) {
+            phoneFlipDetector?.start()
+        } else {
+            phoneFlipDetector?.stop()
+        }
+    }
+
+    private fun handlePhoneFlip() {
+        if (isWakeUpAlarmRinging) {
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed via phone flip")
+            stopWakeUpAlarmSound()
+            releaseWakeLock()
+            snoozeWakeUpAlarm()
+            setWakeUpAlarmState(false, true)
+            onTriggerVibration()
+            updateListenersRegistration()
+            updateNotification()
+            Toast.makeText(this, R.string.toast_alarm_snoozed, Toast.LENGTH_SHORT).show()
+        } else if (isFading) {
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Sleep timer reset via phone flip during fade")
+            cancelFadeForVolumeChange()
         }
     }
 
@@ -1601,6 +1630,8 @@ open class MainService : Service() {
         unregisterDndReceiver()
         unregisterAudioPlaybackCallback()
         cancelTimerCallbacks()
+        phoneFlipDetector?.stop()
+        phoneFlipDetector = null
         preferenceManager?.shutdown()
         super.onDestroy()
     }

@@ -1306,7 +1306,7 @@ class MainActivityTest {
     }
 
     @Test
-    fun testNapFeatureAndSensorClassesAbsence() {
+    fun testNapFeatureAbsence() {
         val appContext = ApplicationProvider.getApplicationContext<Context>()
         val prefs = appContext.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
 
