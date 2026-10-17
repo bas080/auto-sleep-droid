@@ -23,6 +23,7 @@ internal object MainActivityDialogs {
 
     private const val PADDING_DIALOG_HORIZONTAL_DP = 24
     private const val PADDING_DIALOG_VERTICAL_DP = 12
+    private const val NOTE_INPUT_MIN_LINES = 3
 
     fun centerDialogTitle(dialog: AlertDialog) {
         dialog.findViewById<TextView>(android.R.id.title)?.gravity = Gravity.CENTER
@@ -101,19 +102,6 @@ internal object MainActivityDialogs {
         activity.mainContentContainer?.visibility = View.GONE
     }
 
-    private fun loadManualTextIfNeeded(activity: MainActivity) {
-        val textContent = activity.manualTextContent ?: return
-        if (textContent.text.isNotEmpty()) return
-
-        try {
-            val htmlText = activity.assets.open("manual.html")
-                .bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
-            val formattedText: CharSequence = Html.fromHtml(htmlText, Html.FROM_HTML_MODE_LEGACY)
-            textContent.text = formattedText
-        } catch (e: IOException) {
-            EventLogger.log(activity, "Failed to load manual: " + e.message)
-        }
-    }
 
     fun showTargetTimeDialog(activity: MainActivity) {
         val pm = activity.preferenceManager ?: return
@@ -154,13 +142,95 @@ internal object MainActivityDialogs {
         }
     }
 
-    private fun showTimePickerDialog(
-        activity: MainActivity,
-        initialHour: Int,
-        initialMin: Int,
-        listener: TimePickerDialog.OnTimeSetListener
-    ) {
-        val is24Hour = android.text.format.DateFormat.is24HourFormat(activity)
-        TimePickerDialog(activity, listener, initialHour, initialMin, is24Hour).show()
+
+    fun showBedtimeNoteDialog(activity: MainActivity) {
+        val pm = activity.preferenceManager
+        val currentNote = pm?.getString(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF, "") ?: ""
+
+        val input = android.widget.EditText(activity)
+        input.hint = activity.getString(R.string.hint_bedtime_note_placeholder)
+        input.setText(currentNote)
+        if (currentNote.isNotEmpty()) {
+            input.setSelection(currentNote.length)
+        }
+        input.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        input.minLines = NOTE_INPUT_MIN_LINES
+
+        val density = activity.resources.displayMetrics.density
+        val paddingPx = (PADDING_DIALOG_HORIZONTAL_DP * density).toInt()
+        input.setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
+
+        val builder = AlertDialog.Builder(activity)
+        builder.setTitle(R.string.dialog_bedtime_note_title)
+        builder.setView(input)
+        builder.setPositiveButton(R.string.dialog_ok) { _, _ ->
+            val newNote = input.text.toString().trim()
+            pm?.edit()?.putString(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF, newNote)?.apply()
+        }
+        builder.setNegativeButton(R.string.dialog_cancel) { dialog, _ -> dialog.dismiss() }
+        val dialog = builder.show()
+        centerDialogTitle(dialog)
     }
+
+    fun showBedtimeOverlay(activity: MainActivity) {
+        val overlay = activity.bedtimeOverlayContainer ?: return
+        val textNoteDisplay = activity.findViewById<TextView>(R.id.text_bedtime_note_display)
+        val textTipDisplay = activity.findViewById<TextView>(R.id.text_sleep_tip_display)
+        val btnLike = activity.findViewById<android.widget.Button>(R.id.btn_factoid_like)
+        val btnDislike = activity.findViewById<android.widget.Button>(R.id.btn_factoid_dislike)
+        val btnClose = activity.findViewById<android.widget.Button>(R.id.btn_close_bedtime_overlay)
+
+        val pm = activity.preferenceManager
+        val noteText = pm?.getString(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF, "") ?: ""
+        val displayText = if (noteText.isBlank()) {
+            activity.getString(R.string.hint_bedtime_note_placeholder)
+        } else {
+            noteText
+        }
+        textNoteDisplay?.text = displayText
+
+        var currentFactoid = SleepFactoidManager.getTodayFactoid(activity)
+        textTipDisplay?.text = currentFactoid.text
+
+        btnLike?.setOnClickListener {
+            Toast.makeText(activity, "👍", Toast.LENGTH_SHORT).show()
+        }
+
+        btnDislike?.setOnClickListener {
+            currentFactoid = SleepFactoidManager.dislikeFactoid(activity, currentFactoid.id)
+            textTipDisplay?.text = currentFactoid.text
+        }
+
+        btnClose?.setOnClickListener {
+            overlay.visibility = View.GONE
+            activity.mainContentContainer?.visibility = View.VISIBLE
+        }
+
+        activity.mainContentContainer?.visibility = View.GONE
+        overlay.visibility = View.VISIBLE
+    }
+}
+
+private fun loadManualTextIfNeeded(activity: MainActivity) {
+    val textContent = activity.manualTextContent ?: return
+    if (textContent.text.isNotEmpty()) return
+
+    try {
+        val htmlText = activity.assets.open("manual.html")
+            .bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+        val formattedText: CharSequence = Html.fromHtml(htmlText, Html.FROM_HTML_MODE_LEGACY)
+        textContent.text = formattedText
+    } catch (e: IOException) {
+        EventLogger.log(activity, "Failed to load manual: " + e.message)
+    }
+}
+
+private fun showTimePickerDialog(
+    activity: MainActivity,
+    initialHour: Int,
+    initialMin: Int,
+    listener: TimePickerDialog.OnTimeSetListener
+) {
+    val is24Hour = android.text.format.DateFormat.is24HourFormat(activity)
+    TimePickerDialog(activity, listener, initialHour, initialMin, is24Hour).show()
 }

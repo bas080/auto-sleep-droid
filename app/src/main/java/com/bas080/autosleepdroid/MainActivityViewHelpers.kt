@@ -31,6 +31,8 @@ internal object MainActivityViewHelpers {
         setRowEnabled(activity.btnTargetTime, goalEnabled)
         setRowEnabled(activity.btnCurrentWakeTime, goalEnabled)
         setRowEnabled(activity.inputMinSleep, goalEnabled)
+        setRowEnabled(activity.rowBedtimeReminder, goalEnabled)
+        setRowEnabled(activity.btnBedtimeNote, goalEnabled)
         setRowEnabled(activity.rowHealthConnect, true)
         setRowEnabled(activity.inputHcMinDuration, healthConnectEnabled)
         setRowEnabled(activity.btnExport, true)

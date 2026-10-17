@@ -23,4 +23,7 @@ object PreferenceKeys {
     const val KEY_WAKEUP_LAST_SCHEDULED_MS: String = "wakeup_last_scheduled_ms"
     const val KEY_LAST_AWAKE_TIME_MS: String = "last_awake_time_ms"
     const val KEY_DONATE_DIALOG_HIDDEN: String = "donate_dialog_hidden"
+    const val KEY_BEDTIME_REMINDER_ENABLED: String = "bedtime_reminder_enabled"
+    const val KEY_BEDTIME_NOTE_TO_SELF: String = "bedtime_note_to_self"
+    const val KEY_DISLIKED_FACTOIDS: String = "disliked_factoids_set"
 }
