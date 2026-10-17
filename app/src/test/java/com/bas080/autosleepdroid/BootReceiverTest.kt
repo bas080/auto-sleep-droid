@@ -58,4 +58,56 @@ class BootReceiverTest {
         val nextService = shadowApp.nextStartedService
         assertNull(nextService)
     }
+
+
+    @Test
+    fun testBootCompletedFallbackToStartServiceOnIllegalStateException() {
+        var startServiceCalled = false
+        val context = object : android.content.ContextWrapper(ApplicationProvider.getApplicationContext()) {
+            override fun startForegroundService(service: Intent?): android.content.ComponentName? {
+                throw IllegalStateException("Foreground service not allowed")
+            }
+            override fun startService(service: Intent?): android.content.ComponentName? {
+                startServiceCalled = true
+                return super.startService(service)
+            }
+        }
+        val receiver = BootReceiver()
+        val bootIntent = Intent(Intent.ACTION_BOOT_COMPLETED)
+        receiver.onReceive(context, bootIntent)
+        org.junit.Assert.assertTrue(startServiceCalled)
+    }
+
+    @Test
+    fun testBootCompletedFallbackToStartServiceOnSecurityException() {
+        var startServiceCalled = false
+        val context = object : android.content.ContextWrapper(ApplicationProvider.getApplicationContext()) {
+            override fun startForegroundService(service: Intent?): android.content.ComponentName? {
+                throw SecurityException("Security restriction")
+            }
+            override fun startService(service: Intent?): android.content.ComponentName? {
+                startServiceCalled = true
+                return super.startService(service)
+            }
+        }
+        val receiver = BootReceiver()
+        val bootIntent = Intent(Intent.ACTION_BOOT_COMPLETED)
+        receiver.onReceive(context, bootIntent)
+        org.junit.Assert.assertTrue(startServiceCalled)
+    }
+
+    @Test
+    fun testBootCompletedHandlesExceptionsGracefully() {
+        val context = object : android.content.ContextWrapper(ApplicationProvider.getApplicationContext()) {
+            override fun startForegroundService(service: Intent?): android.content.ComponentName? {
+                throw IllegalStateException("Foreground service not allowed")
+            }
+            override fun startService(service: Intent?): android.content.ComponentName? {
+                throw SecurityException("Start service not permitted")
+            }
+        }
+        val receiver = BootReceiver()
+        val bootIntent = Intent(Intent.ACTION_BOOT_COMPLETED)
+        receiver.onReceive(context, bootIntent)
+    }
 }

@@ -34,29 +34,31 @@ Standard `ContextCompat.startForegroundService(context, intent)` on API 26+ dire
 To prevent background foreground service crashes while ensuring seamless foreground service promotion:
 
 ### A. Fallback Execution in `startTimerService()`
-When launching the service, attempt `startForegroundService(intent)` inside a `try-catch` block. If `startForegroundService()` throws an exception (e.g. background execution restriction), fall back to `startService(intent)`:
+When launching the service from UI activities (such as `MainActivity.onResume()`), attempt `startService(intent)` first. If `startService(intent)` throws an `IllegalStateException` (e.g. background execution limits), fall back to `startForegroundService(intent)`:
 
 ```kotlin
-private fun startTimerService() {
-    val serviceIntent = Intent(this, MainService::class.java)
+fun startTimerService(activity: MainActivity) {
+    val serviceIntent = Intent(activity, MainService::class.java)
     try {
+        activity.startService(serviceIntent)
+    } catch (e: IllegalStateException) {
+        EventLogger.log(activity, "startService failed, attempting startForegroundService: ${e.message}")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
-                startForegroundService(serviceIntent)
-            } catch (e: Exception) {
-                EventLogger.log(this, "startForegroundService failed, falling back to startService: ${e.message}")
-                startService(serviceIntent)
+                activity.startForegroundService(serviceIntent)
+            } catch (ex: IllegalStateException) {
+                EventLogger.log(activity, "startForegroundService failed: ${ex.message}")
+            } catch (ex: SecurityException) {
+                EventLogger.log(activity, "startForegroundService failed: ${ex.message}")
             }
-        } else {
-            startService(serviceIntent)
         }
-    } catch (e: Exception) {
-        EventLogger.log(this, "Failed to start service: ${e.message}")
+    } catch (e: SecurityException) {
+        EventLogger.log(activity, "startService failed: ${e.message}")
     }
 }
 ```
 
-When `startService(intent)` is used, Android OS does not set the `fgRequired = true` timeout flag. If `Service.startForeground()` fails inside `MainService`, the service continues running cleanly as a background service without crashing the process.
+When `startService(intent)` is used while the activity is in the foreground, Android OS does not set the `fgRequired = true` timeout flag. `MainService` will still invoke `startForeground()` to promote itself to a foreground service. If `Service.startForeground()` is rejected by the OS, the service continues running cleanly as a background service without triggering `ForegroundServiceDidNotStartInTimeException`.
 
 ### B. Self-Healing Recovery in `onResume()`
 Invoke `startTimerService()` inside `MainActivity.onResume()`. When the user opens or switches back to `MainActivity`, the activity is in the foreground (where `mAllowStartForeground = true`). `MainService` is then started or promoted to a foreground service with its notification shade item cleanly established.

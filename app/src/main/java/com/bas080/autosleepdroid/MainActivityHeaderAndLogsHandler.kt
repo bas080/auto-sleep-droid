@@ -76,24 +76,23 @@ internal object MainActivityHeaderAndLogsHandler {
         activity.eventScrollView?.post { activity.eventScrollView?.fullScroll(ScrollView.FOCUS_DOWN) }
     }
 
-    fun startTimerService(activity: MainActivity) {
-        val serviceIntent = Intent(activity, MainService::class.java)
+    fun startTimerService(context: Context) {
+        val serviceIntent = Intent(context, MainService::class.java)
         try {
+            context.startService(serviceIntent)
+        } catch (e: IllegalStateException) {
+            EventLogger.log(context, "startService failed, attempting startForegroundService: ${e.message}")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 try {
-                    activity.startForegroundService(serviceIntent)
-                    return
-                } catch (e: IllegalStateException) {
-                    EventLogger.log(activity, "startForegroundService failed: ${e.message}")
-                } catch (e: SecurityException) {
-                    EventLogger.log(activity, "startForegroundService failed: ${e.message}")
+                    context.startForegroundService(serviceIntent)
+                } catch (ex: IllegalStateException) {
+                    EventLogger.log(context, "startForegroundService failed: ${ex.message}")
+                } catch (ex: SecurityException) {
+                    EventLogger.log(context, "startForegroundService failed: ${ex.message}")
                 }
             }
-            activity.startService(serviceIntent)
-        } catch (e: IllegalStateException) {
-            EventLogger.log(activity, "Failed to start service: ${e.message}")
         } catch (e: SecurityException) {
-            EventLogger.log(activity, "Failed to start service: ${e.message}")
+            EventLogger.log(context, "startService failed: ${e.message}")
         }
     }
 

@@ -1450,4 +1450,49 @@ class MainActivityTest {
         assertNotNull(dialog2)
         dialog2.getButton(DialogInterface.BUTTON_NEGATIVE).performClick()
     }
+
+    @Test
+    fun testStartTimerServiceFallbackToForegroundServiceOnIllegalStateException() {
+        val application = ApplicationProvider.getApplicationContext<Context>()
+        var startForegroundServiceCalled = false
+        val context = object : android.content.ContextWrapper(application) {
+            override fun startService(service: Intent?): android.content.ComponentName? {
+                throw IllegalStateException("Background service start not allowed")
+            }
+            override fun startForegroundService(service: Intent?): android.content.ComponentName? {
+                startForegroundServiceCalled = true
+                return super.startForegroundService(service)
+            }
+        }
+
+        MainActivityHeaderAndLogsHandler.startTimerService(context)
+        assertTrue(startForegroundServiceCalled)
+    }
+
+    @Test
+    fun testStartTimerServiceHandlesSecurityExceptionOnStartService() {
+        val application = ApplicationProvider.getApplicationContext<Context>()
+        val context = object : android.content.ContextWrapper(application) {
+            override fun startService(service: Intent?): android.content.ComponentName? {
+                throw SecurityException("Security exception")
+            }
+        }
+
+        MainActivityHeaderAndLogsHandler.startTimerService(context)
+    }
+
+    @Test
+    fun testStartTimerServiceHandlesExceptionsOnStartForegroundService() {
+        val application = ApplicationProvider.getApplicationContext<Context>()
+        val context = object : android.content.ContextWrapper(application) {
+            override fun startService(service: Intent?): android.content.ComponentName? {
+                throw IllegalStateException("Background service start not allowed")
+            }
+            override fun startForegroundService(service: Intent?): android.content.ComponentName? {
+                throw IllegalStateException("Foreground service not allowed")
+            }
+        }
+
+        MainActivityHeaderAndLogsHandler.startTimerService(context)
+    }
 }
