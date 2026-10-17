@@ -139,6 +139,23 @@
                         app:rowType="value"
                         app:valueId="@+id/text_min_sleep_value" />
 
+                    <com.bas080.autosleepdroid.SettingRowView
+                        android:id="@+id/row_bedtime_reminder"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:rowTitle="@string/label_bedtime_reminder"
+                        app:rowDescription="@string/desc_bedtime_reminder"
+                        app:rowType="toggle"
+                        app:switchId="@+id/switch_bedtime_reminder" />
+
+                    <com.bas080.autosleepdroid.SettingRowView
+                        android:id="@+id/btn_bedtime_note"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:rowTitle="@string/label_bedtime_note"
+                        app:rowDescription="@string/desc_bedtime_note"
+                        app:rowType="none" />
+
                 </LinearLayout>
 
                 <!-- Health Connect Section -->
@@ -505,6 +522,152 @@
                     android:text="@string/label_include_logs"
                     android:textColor="?android:attr/textColorPrimary"
                     android:checked="true" />
+            </LinearLayout>
+        </ScrollView>
+    </RelativeLayout>
+
+    <!-- Full-screen Bedtime Goal Reminder Overlay Container -->
+    <RelativeLayout
+        android:id="@+id/bedtime_overlay_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?android:attr/windowBackground"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/bedtime_overlay_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            android:text="@string/title_bedtime_overlay"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:paddingTop="12dp"
+            android:paddingBottom="4dp" />
+
+        <TextView
+            android:id="@+id/bedtime_overlay_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/bedtime_overlay_title"
+            android:layout_centerHorizontal="true"
+            android:text="@string/subtitle_bedtime_overlay"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="13sp"
+            android:paddingBottom="16dp" />
+
+        <LinearLayout
+            android:id="@+id/bedtime_overlay_bottom_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/btn_close_bedtime_overlay"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/btn_close" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/bedtime_overlay_scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@id/bedtime_overlay_subtitle"
+            android:layout_above="@id/bedtime_overlay_bottom_bar"
+            android:layout_marginBottom="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/card_bedtime_note"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:background="?android:attr/colorBackgroundFloating"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_bedtime_note"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:paddingBottom="8dp" />
+
+                    <ScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:id="@+id/text_bedtime_note_display"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="?android:attr/textColorPrimary"
+                            android:textSize="14sp"
+                            android:lineSpacingExtra="3dp" />
+                    </ScrollView>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/card_sleep_tip"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:background="?android:attr/colorBackgroundFloating"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/header_today_sleep_tip"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:paddingBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/text_sleep_tip_display"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="14sp"
+                        android:lineSpacingExtra="3dp"
+                        android:paddingBottom="12dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="end">
+
+                        <Button
+                            android:id="@+id/btn_factoid_like"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="👍"
+                            android:textSize="18sp"
+                            android:layout_marginEnd="8dp" />
+
+                        <Button
+                            android:id="@+id/btn_factoid_dislike"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="👎"
+                            android:textSize="18sp" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
         </ScrollView>
     </RelativeLayout>

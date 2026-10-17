@@ -15,7 +15,22 @@ internal object MainActivityControlsHandler {
         setupTimerControls(activity)
         setupAutoTimerControls(activity)
         setupWakeGoalControls(activity)
+        setupBedtimeReminderControls(activity)
         setupHealthConnectControls(activity)
+    }
+
+    private fun setupBedtimeReminderControls(activity: MainActivity) {
+        activity.rowBedtimeReminder?.setOnCheckedChangeListener { isChecked ->
+            activity.preferenceManager?.edit()
+                ?.putBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, isChecked)
+                ?.apply()
+            val msg = if (isChecked) "Bedtime reminder enabled" else "Bedtime reminder disabled"
+            EventLogger.log(activity, EventLogger.LEVEL_HIGH, msg)
+        }
+
+        activity.btnBedtimeNote?.setOnClickListener {
+            MainActivityDialogs.showBedtimeNoteDialog(activity)
+        }
     }
 
     private fun setupTimerControls(activity: MainActivity) {
