@@ -26,6 +26,10 @@ internal object MainActivityControlsHandler {
                 ?.apply()
             val msg = if (isChecked) "Bedtime reminder enabled" else "Bedtime reminder disabled"
             EventLogger.log(activity, EventLogger.LEVEL_HIGH, msg)
+            if (isChecked) {
+                MainActivityPermissionAndSettingsHandler.requestExactAlarmPermissionIfNeeded(activity)
+                MainActivityPermissionAndSettingsHandler.requestNotificationPermissionOnStartupIfNeeded(activity)
+            }
         }
 
         activity.btnBedtimeNote?.setOnClickListener {
