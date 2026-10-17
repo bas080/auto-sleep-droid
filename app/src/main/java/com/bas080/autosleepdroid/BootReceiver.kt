@@ -3,6 +3,7 @@ package com.bas080.autosleepdroid
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
@@ -15,6 +16,24 @@ class BootReceiver : BroadcastReceiver() {
         EventLogger.log(context, "Boot completed")
 
         val serviceIntent = Intent(context, MainService::class.java)
-        context.startForegroundService(serviceIntent)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                try {
+                    context.startForegroundService(serviceIntent)
+                } catch (e: IllegalStateException) {
+                    EventLogger.log(context, "startForegroundService failed on boot: ${e.message}")
+                    context.startService(serviceIntent)
+                } catch (e: SecurityException) {
+                    EventLogger.log(context, "startForegroundService failed on boot: ${e.message}")
+                    context.startService(serviceIntent)
+                }
+            } else {
+                context.startService(serviceIntent)
+            }
+        } catch (e: IllegalStateException) {
+            EventLogger.log(context, "Failed to start service on boot: ${e.message}")
+        } catch (e: SecurityException) {
+            EventLogger.log(context, "Failed to start service on boot: ${e.message}")
+        }
     }
 }
