@@ -63,7 +63,7 @@ internal object MainActivityUiStateUpdater {
         )
         val bedtimeEnabled = getter.getBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, false)
         activity.rowBedtimeReminder?.isChecked = bedtimeEnabled
-        MainActivityViewHelpers.updateInputEnabledStates(activity, goalEnabled, healthConnectEnabled)
+        MainActivityViewHelpers.updateInputEnabledStates(activity, goalEnabled, healthConnectEnabled, bedtimeEnabled)
     }
 
     fun updateHealthConnectUi(activity: MainActivity, getter: PreferenceGetter) {
