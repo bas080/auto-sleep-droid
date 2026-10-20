@@ -9,6 +9,8 @@ import android.widget.Button
 import android.widget.ScrollView
 import android.widget.TextView
 
+private const val MS_PER_MINUTE = 60_000L
+
 internal object MainActivityHeaderAndLogsHandler {
 
     fun setupHeaderAndLinks(activity: MainActivity) {
@@ -51,13 +53,15 @@ internal object MainActivityHeaderAndLogsHandler {
         activity.manualOverlayContainer?.visibility = View.GONE
         activity.logsOverlayContainer?.visibility = View.GONE
         activity.feedbackOverlayContainer?.visibility = View.GONE
+        activity.bedtimeOverlayContainer?.visibility = View.GONE
         activity.mainContentContainer?.visibility = View.VISIBLE
     }
 
     fun isAnyOverlayVisible(activity: MainActivity): Boolean {
         return activity.manualOverlayContainer?.visibility == View.VISIBLE ||
             activity.logsOverlayContainer?.visibility == View.VISIBLE ||
-            activity.feedbackOverlayContainer?.visibility == View.VISIBLE
+            activity.feedbackOverlayContainer?.visibility == View.VISIBLE ||
+            activity.bedtimeOverlayContainer?.visibility == View.VISIBLE
     }
 
     fun refreshEventLog(activity: MainActivity) {
@@ -102,5 +106,35 @@ internal object MainActivityHeaderAndLogsHandler {
 
     fun updateCurrentWakeTimeButtonText(activity: MainActivity, hour: Int, minute: Int) {
         MainActivityUiStateUpdater.updateCurrentWakeTimeButtonText(activity, hour, minute)
+    }
+
+    fun checkAndShowBedtimeOverlayOnResume(activity: MainActivity) {
+        val pm = activity.preferenceManager ?: return
+        val goalEnabled = pm.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false)
+        val bedtimeEnabled = pm.getBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, false)
+        if (!goalEnabled || !bedtimeEnabled) return
+
+        val now = System.currentTimeMillis()
+        val minSleepMin = pm.getInt(
+            PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
+            AppDefaults.MIN_SLEEP_DURATION_MINUTES
+        )
+        val minSleepMs = minSleepMin * MS_PER_MINUTE
+
+        val goalHour = pm.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
+        val goalMin = pm.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
+        val currentHour = pm.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)
+        val currentMin = pm.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
+
+        val currentWakeTime = PreferenceComputations.calculateCurrentWakeTime(now, currentHour, currentMin)
+        val bedtimeStart = currentWakeTime - minSleepMs
+
+        val alreadyShownToday = pm.getLong("bedtime_overlay_last_shown_ms", 0L)
+        val sameWindow = alreadyShownToday in bedtimeStart..currentWakeTime
+
+        if (now in bedtimeStart..currentWakeTime && !sameWindow && !isAnyOverlayVisible(activity)) {
+            pm.edit().putLong("bedtime_overlay_last_shown_ms", now).apply()
+            MainActivityDialogs.showBedtimeOverlay(activity)
+        }
     }
 }

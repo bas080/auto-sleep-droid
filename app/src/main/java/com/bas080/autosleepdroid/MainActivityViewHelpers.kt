@@ -14,7 +14,8 @@ internal object MainActivityViewHelpers {
     fun updateInputEnabledStates(
         activity: MainActivity,
         goalEnabled: Boolean,
-        healthConnectEnabled: Boolean
+        healthConnectEnabled: Boolean,
+        bedtimeReminderEnabled: Boolean = false
     ) {
         setRowEnabled(activity.headerDnd, true)
         setRowEnabled(activity.headerTimer, true)
@@ -31,6 +32,8 @@ internal object MainActivityViewHelpers {
         setRowEnabled(activity.btnTargetTime, goalEnabled)
         setRowEnabled(activity.btnCurrentWakeTime, goalEnabled)
         setRowEnabled(activity.inputMinSleep, goalEnabled)
+        setRowEnabled(activity.rowBedtimeReminder, goalEnabled)
+        setRowEnabled(activity.btnBedtimeNote, goalEnabled && bedtimeReminderEnabled)
         setRowEnabled(activity.rowHealthConnect, true)
         setRowEnabled(activity.inputHcMinDuration, healthConnectEnabled)
         setRowEnabled(activity.btnExport, true)

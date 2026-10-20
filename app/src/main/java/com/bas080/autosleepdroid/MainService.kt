@@ -47,6 +47,7 @@ private const val REQUEST_CODE_WAKE_ALARM = 101
 private const val REQUEST_CODE_SHOW_INTENT = 102
 private const val REQUEST_CODE_SNOOZE = 106
 private const val REQUEST_CODE_UPDATE_NOTIF = 107
+private const val REQUEST_CODE_BEDTIME_REMINDER = 108
 private const val REQUEST_CODE_DISMISS = 20
 private const val REQUEST_CODE_TEST_5 = 5
 private const val REQUEST_CODE_TEST_7 = 7
@@ -83,6 +84,7 @@ open class MainService : Service() {
     private var lastTimerEndsAt = 0L
     private var wakeLock: android.os.PowerManager.WakeLock? = null
     private var alarmAudioFocusRequest: android.media.AudioFocusRequest? = null
+    var phoneFlipDetector: PhoneFlipDetector? = null
 
     var state = State.OFF
         private set
@@ -391,6 +393,10 @@ open class MainService : Service() {
         }
         createNotificationChannel()
 
+        phoneFlipDetector = PhoneFlipDetector(this) {
+            handlePhoneFlip()
+        }
+
         initializeStateAndNotification()
         setupPreferenceListeners()
     }
@@ -606,7 +612,17 @@ open class MainService : Service() {
             ACTION_UPDATE_NOTIFICATION -> handleUpdateNotificationAction()
             ACTION_AWAKE -> handleAwakeAction()
             ACTION_NOTIFICATION_CLICK -> handleNotificationClickAction()
+            ACTION_BEDTIME_REMINDER_EXPIRY -> handleBedtimeReminderExpiryAction()
         }
+    }
+
+    private fun handleBedtimeReminderExpiryAction() {
+        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Bedtime goal reminder triggered")
+        acquireWakeLock()
+        val activityIntent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+        startActivity(activityIntent)
     }
 
     private fun handleTurnOffAction() {
@@ -700,6 +716,30 @@ open class MainService : Service() {
             registerVolumeObserver()
         } else {
             unregisterVolumeObserver()
+        }
+
+        val needSensor = isFading || isWakeUpAlarmRinging
+        if (needSensor) {
+            phoneFlipDetector?.start()
+        } else {
+            phoneFlipDetector?.stop()
+        }
+    }
+
+    private fun handlePhoneFlip() {
+        if (isWakeUpAlarmRinging) {
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed via phone flip")
+            stopWakeUpAlarmSound()
+            releaseWakeLock()
+            snoozeWakeUpAlarm()
+            setWakeUpAlarmState(false, true)
+            onTriggerVibration()
+            updateListenersRegistration()
+            updateNotification()
+            Toast.makeText(this, R.string.toast_alarm_snoozed, Toast.LENGTH_SHORT).show()
+        } else if (isFading) {
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Sleep timer reset via phone flip during fade")
+            cancelFadeForVolumeChange()
         }
     }
 
@@ -917,6 +957,56 @@ open class MainService : Service() {
             lastScheduledWakeupAlarmTimeMs = targetAlarmTimeMs
             preferences?.edit()?.putLong(KEY_WAKEUP_LAST_SCHEDULED_MS, targetAlarmTimeMs)?.apply()
             scheduleAlarmClockInternal(targetAlarmTimeMs)
+        }
+        checkAndScheduleBedtimeReminder(targetAlarmTimeMs)
+    }
+
+    private fun checkAndScheduleBedtimeReminder(targetAlarmTimeMs: Long) {
+        val pm = preferenceManager ?: return
+        val bedtimeEnabled = true == pm.getComputed(PreferenceComputations.IS_BEDTIME_REMINDER_ENABLED)
+        val am = alarmManager
+        if (!bedtimeEnabled || am == null) {
+            cancelBedtimeReminderAlarm()
+        } else {
+            scheduleBedtimeReminderAlarmInternal(am, targetAlarmTimeMs)
+        }
+    }
+
+    private fun scheduleBedtimeReminderAlarmInternal(am: AlarmManager, targetAlarmTimeMs: Long) {
+        val minSleepMin = preferences?.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, AppDefaults.MIN_SLEEP_DURATION_MINUTES)
+            ?: AppDefaults.MIN_SLEEP_DURATION_MINUTES
+        val targetBedtimeMs = targetAlarmTimeMs - (minSleepMin * MS_PER_MINUTE)
+        val now = System.currentTimeMillis()
+
+        if (targetBedtimeMs > now) {
+            val intent = Intent(this, MainService::class.java).setAction(ACTION_BEDTIME_REMINDER_EXPIRY)
+            val pendingIntent = getServicePendingIntent(
+                REQUEST_CODE_BEDTIME_REMINDER, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            ) ?: return
+
+            try {
+                if (Build.VERSION.SDK_INT >= BUILD_VERSION_S && am.canScheduleExactAlarms()) {
+                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, targetBedtimeMs, pendingIntent)
+                } else {
+                    am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, targetBedtimeMs, pendingIntent)
+                }
+            } catch (e: SecurityException) {
+                EventLogger.log(this, "SecurityException scheduling bedtime reminder: ${e.message}")
+            }
+        }
+    }
+
+    private fun cancelBedtimeReminderAlarm() {
+        val am = alarmManager ?: return
+        val intent = Intent(this, MainService::class.java).setAction(ACTION_BEDTIME_REMINDER_EXPIRY)
+        val pendingIntent = getServicePendingIntent(
+            REQUEST_CODE_BEDTIME_REMINDER, intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        if (pendingIntent != null) {
+            am.cancel(pendingIntent)
+            pendingIntent.cancel()
         }
     }
 
@@ -1601,6 +1691,8 @@ open class MainService : Service() {
         unregisterDndReceiver()
         unregisterAudioPlaybackCallback()
         cancelTimerCallbacks()
+        phoneFlipDetector?.stop()
+        phoneFlipDetector = null
         preferenceManager?.shutdown()
         super.onDestroy()
     }
@@ -1617,6 +1709,7 @@ open class MainService : Service() {
         const val ACTION_AWAKE = "com.bas080.autosleepdroid.AWAKE"
         const val ACTION_NOTIFICATION_CLICK = "com.bas080.autosleepdroid.NOTIFICATION_CLICK"
         const val ACTION_UPDATE_NOTIFICATION = "com.bas080.autosleepdroid.UPDATE_NOTIFICATION"
+        const val ACTION_BEDTIME_REMINDER_EXPIRY = "com.bas080.autosleepdroid.BEDTIME_REMINDER_EXPIRY"
         const val EXTRA_DURATION = "com.bas080.autosleepdroid.DURATION"
         const val ALARM_SEARCH_NAME = "Auto Sleep"
         const val KEY_WAKEUP_LAST_SCHEDULED_MS = PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS
