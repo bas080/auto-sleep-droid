@@ -123,6 +123,79 @@ class SleepFactoidManagerTest {
     }
 
     @Test
+    fun testBedtimeOverlayDislikeButtonAndCloseButton() {
+        val prefs = application.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true)
+            .putBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, true)
+            .commit()
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().get()
+
+        MainActivityDialogs.showBedtimeOverlay(activity)
+
+        val overlay = activity.findViewById<android.view.View>(R.id.bedtime_overlay_container)
+        assertEquals(android.view.View.VISIBLE, overlay.visibility)
+
+        val textFactoid = activity.findViewById<TextView>(R.id.text_sleep_tip_display)
+        val initialText = textFactoid.text.toString()
+
+        val btnDislike = activity.findViewById<Button>(R.id.btn_factoid_dislike)
+        btnDislike.performClick()
+
+        val newText = textFactoid.text.toString()
+        assertTrue(initialText != newText)
+
+        val dislikedSet = prefs.getStringSet(PreferenceKeys.KEY_DISLIKED_FACTOIDS, emptySet()) ?: emptySet()
+        assertFalse(dislikedSet.isEmpty())
+
+        val btnClose = activity.findViewById<Button>(R.id.btn_close_bedtime_overlay)
+        btnClose.performClick()
+
+        assertEquals(android.view.View.GONE, overlay.visibility)
+    }
+
+    @Test
+    fun testCheckAndShowBedtimeOverlaySkippedWhenDisabledOrAlreadyShown() {
+        val cal = Calendar.getInstance()
+        cal.add(Calendar.MINUTE, 60)
+        val targetHour = cal.get(Calendar.HOUR_OF_DAY)
+        val targetMin = cal.get(Calendar.MINUTE)
+
+        val prefs = application.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE)
+
+        // Case 1: Disabled
+        prefs.edit()
+            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false)
+            .putBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, false)
+            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, targetHour)
+            .putInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, targetMin)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, targetHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, targetMin)
+            .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 450)
+            .commit()
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java)
+        val activity = controller.create().get()
+
+        MainActivityHeaderAndLogsHandler.checkAndShowBedtimeOverlayOnResume(activity)
+        val overlay = activity.findViewById<android.view.View>(R.id.bedtime_overlay_container)
+        assertEquals(android.view.View.GONE, overlay.visibility)
+
+        // Case 2: Already shown today
+        val now = System.currentTimeMillis()
+        prefs.edit()
+            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true)
+            .putBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, true)
+            .putLong("bedtime_overlay_last_shown_ms", now)
+            .commit()
+
+        MainActivityHeaderAndLogsHandler.checkAndShowBedtimeOverlayOnResume(activity)
+        assertEquals(android.view.View.GONE, overlay.visibility)
+    }
+
+    @Test
     fun testBedtimeReminderToggleInActivity() {
         val controller = Robolectric.buildActivity(MainActivity::class.java)
         val activity = controller.create().resume().get()

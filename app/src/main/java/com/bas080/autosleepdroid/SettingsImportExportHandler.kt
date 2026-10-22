@@ -27,6 +27,7 @@ internal object SettingsImportExportHandler {
         BoolPrefSpec(PreferenceKeys.KEY_ACTIVE, true),
         BoolPrefSpec(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, false),
         BoolPrefSpec(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false),
+        BoolPrefSpec(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, false),
         BoolPrefSpec(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false),
         BoolPrefSpec(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN, false)
     )
@@ -76,6 +77,10 @@ internal object SettingsImportExportHandler {
                 if (PreferenceKeys.KEY_CURRENT_WAKE_HOUR == spec.key) def = goalHour
                 else if (PreferenceKeys.KEY_CURRENT_WAKE_MINUTE == spec.key) def = goalMin
                 json.put(spec.key, pm.getInt(spec.key, def))
+            }
+            if (pm.sharedPreferences.contains(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF)) {
+                val note = pm.getString(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF, "")
+                json.put(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF, note)
             }
 
             val exportStr = json.toString()
@@ -140,6 +145,10 @@ internal object SettingsImportExportHandler {
             val editor = pm.sharedPreferences.edit()
             importBooleanSettings(json, editor)
             importIntSettings(json, editor)
+            if (json.has(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF)) {
+                val note = json.optString(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF, "")
+                editor.putString(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF, note)
+            }
 
             editor.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS).apply()
 
