@@ -200,6 +200,10 @@ class PreferenceComputationsTest {
         rawPreferences.edit().putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true).commit()
         assertTrue(preferenceManager.getComputed(PreferenceComputations.IS_HEALTH_CONNECT_ENABLED)!!)
 
+        assertFalse(preferenceManager.getComputed(PreferenceComputations.IS_BEDTIME_REMINDER_ENABLED)!!)
+        rawPreferences.edit().putBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, true).commit()
+        assertTrue(preferenceManager.getComputed(PreferenceComputations.IS_BEDTIME_REMINDER_ENABLED)!!)
+
         val durationComp = PreferenceComputations.formatDuration("test_dur", 45)
         assertEquals("45m", preferenceManager.getComputed(durationComp))
         rawPreferences.edit().putInt("test_dur", 90).commit()
