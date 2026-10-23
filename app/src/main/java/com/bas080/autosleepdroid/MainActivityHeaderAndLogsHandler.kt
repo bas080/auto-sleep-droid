@@ -129,10 +129,7 @@ internal object MainActivityHeaderAndLogsHandler {
         val currentWakeTime = PreferenceComputations.calculateCurrentWakeTime(now, currentHour, currentMin)
         val bedtimeStart = currentWakeTime - minSleepMs
 
-        val alreadyShownToday = pm.getLong("bedtime_overlay_last_shown_ms", 0L)
-        val sameWindow = alreadyShownToday in bedtimeStart..currentWakeTime
-
-        if (now in bedtimeStart..currentWakeTime && !sameWindow && !isAnyOverlayVisible(activity)) {
+        if (now in bedtimeStart..currentWakeTime && !isAnyOverlayVisible(activity)) {
             pm.edit().putLong("bedtime_overlay_last_shown_ms", now).apply()
             MainActivityDialogs.showBedtimeOverlay(activity)
         }
