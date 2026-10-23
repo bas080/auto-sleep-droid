@@ -46,6 +46,8 @@ class ImportExportTest {
             .putInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 480)
             .putBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, true)
             .putInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 20)
+            .putBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, true)
+            .putString(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF, "Rest is vital")
             .putBoolean(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN, true)
             .apply()
 
@@ -79,6 +81,8 @@ class ImportExportTest {
         assertEquals(480, json.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES))
         assertTrue(json.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED))
         assertEquals(20, json.getInt(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES))
+        assertTrue(json.getBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED))
+        assertEquals("Rest is vital", json.getString(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF))
         assertTrue(json.getBoolean(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN))
     }
 
@@ -100,6 +104,8 @@ class ImportExportTest {
             put(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 420)
             put(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)
             put(PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES, 15)
+            put(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, true)
+            put(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF, "Imported bedtime note")
             put(PreferenceKeys.KEY_DONATE_DIALOG_HIDDEN, true)
         }.toString()
 
@@ -114,6 +120,8 @@ class ImportExportTest {
         assertEquals(6, prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, 0))
         assertEquals(15, prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, 0))
         assertEquals(420, prefs.getInt(PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES, 0))
+        assertTrue(prefs.getBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, false))
+        assertEquals("Imported bedtime note", prefs.getString(PreferenceKeys.KEY_BEDTIME_NOTE_TO_SELF, ""))
 
         assertEquals(activity.getString(R.string.toast_import_success), ShadowToast.getTextOfLatestToast())
     }
