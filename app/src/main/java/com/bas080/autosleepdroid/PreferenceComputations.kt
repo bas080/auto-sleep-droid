@@ -138,11 +138,6 @@ object PreferenceComputations {
             getter.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false)
         }
 
-    val IS_BEDTIME_REMINDER_ENABLED: PreferenceManager.ComputedValue<Boolean> =
-        PreferenceManager.ComputedValue { getter ->
-            getter.getBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, false)
-        }
-
     fun formatDuration(key: String, defaultMinutes: Int): PreferenceManager.ComputedValue<String> {
         return PreferenceManager.ComputedValue { getter ->
             DurationUtils.formatDurationString(getter.getInt(key, defaultMinutes))

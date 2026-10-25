@@ -148,14 +148,5 @@
     <string name="dialog_awake_message">¿Registrar tu sesión de sueño y cancelar la alarma de despertar de hoy?</string>
     <string name="toast_awake_registered">¡Buenos días! Sesión de sueño registrada y alarma actualizada.</string>
     <string name="btn_later">Más tarde</string>
-    <string name="label_bedtime_reminder">Recordatorio de hora de dormir</string>
-    <string name="desc_bedtime_reminder">Te recuerda cuándo prepararte para dormir según tu objetivo y tiempo de sueño</string>
-    <string name="label_bedtime_note">Nota para tu futuro yo</string>
-    <string name="desc_bedtime_note">Nota personal mostrada en la pantalla de preparación para dormir</string>
-    <string name="hint_bedtime_note_placeholder">¿Por qué es importante para ti este objetivo de sueño? Escribe una nota para tu futuro yo…</string>
-    <string name="dialog_bedtime_note_title">Nota para tu futuro yo</string>
-    <string name="title_bedtime_overlay">Hora de dormir</string>
-    <string name="subtitle_bedtime_overlay">El descanso no es un lujo; es una necesidad.</string>
-    <string name="header_today_sleep_tip">Consejo de sueño de hoy</string>
     <string name="btn_close">Cerrar</string>
 </resources>

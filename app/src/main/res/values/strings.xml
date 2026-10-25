@@ -148,14 +148,5 @@
     <string name="dialog_donate_random_message_4">No ads, no tracking, no subscriptions, no paywalls. Just honest code to help you sleep. If that brings you peace of mind, consider tossing a tip!</string>
     <string name="dialog_donate_random_message_5">Saved from 3 AM podcast blasts playing all night? If Auto Sleep Droid has been your silent bedtime hero, show some love with a small donation!</string>
     <string name="btn_later">Later</string>
-    <string name="label_bedtime_reminder">Bedtime Goal Reminder</string>
-    <string name="desc_bedtime_reminder">Reminds you when it\'s time to prepare for bed based on your wake goal and sleep duration</string>
-    <string name="label_bedtime_note">Note to Future Self</string>
-    <string name="desc_bedtime_note">Personal note displayed on bedtime preparation screen</string>
-    <string name="hint_bedtime_note_placeholder">Why is this sleep goal important to you? Write a note to your future self…</string>
-    <string name="dialog_bedtime_note_title">Note to Future Self</string>
-    <string name="title_bedtime_overlay">Time for Bed</string>
-    <string name="subtitle_bedtime_overlay">Rest is not a luxury; it is a necessity.</string>
-    <string name="header_today_sleep_tip">Today\'s Sleep Tip</string>
     <string name="btn_close">Close</string>
 </resources>

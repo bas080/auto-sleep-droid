@@ -15,30 +15,7 @@ internal object MainActivityControlsHandler {
         setupTimerControls(activity)
         setupAutoTimerControls(activity)
         setupWakeGoalControls(activity)
-        setupBedtimeReminderControls(activity)
         setupHealthConnectControls(activity)
-    }
-
-    private fun setupBedtimeReminderControls(activity: MainActivity) {
-        activity.rowBedtimeReminder?.setOnCheckedChangeListener { isChecked ->
-            activity.preferenceManager?.edit()
-                ?.putBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, isChecked)
-                ?.apply()
-            val pm = activity.preferenceManager
-            val goalEnabled = pm?.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) ?: false
-            val hcEnabled = pm?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
-            MainActivityViewHelpers.updateInputEnabledStates(activity, goalEnabled, hcEnabled, isChecked)
-            val msg = if (isChecked) "Bedtime reminder enabled" else "Bedtime reminder disabled"
-            EventLogger.log(activity, EventLogger.LEVEL_HIGH, msg)
-            if (isChecked) {
-                MainActivityPermissionAndSettingsHandler.requestExactAlarmPermissionIfNeeded(activity)
-                MainActivityPermissionAndSettingsHandler.requestNotificationPermissionOnStartupIfNeeded(activity)
-            }
-        }
-
-        activity.btnBedtimeNote?.setOnClickListener {
-            MainActivityDialogs.showBedtimeNoteDialog(activity)
-        }
     }
 
     private fun setupTimerControls(activity: MainActivity) {
@@ -89,8 +66,7 @@ internal object MainActivityControlsHandler {
                 ?.apply()
             val pm = activity.preferenceManager
             val hcEnabled = pm?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
-            val bedtimeEnabled = pm?.getBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, false) ?: false
-            MainActivityViewHelpers.updateInputEnabledStates(activity, isChecked, hcEnabled, bedtimeEnabled)
+            MainActivityViewHelpers.updateInputEnabledStates(activity, isChecked, hcEnabled)
             val msg = if (isChecked) "Wake-up goal enabled" else "Wake-up goal disabled"
             EventLogger.log(activity, EventLogger.LEVEL_HIGH, msg)
         }
@@ -138,8 +114,7 @@ internal object MainActivityControlsHandler {
         }
         val pm = activity.preferenceManager
         val goalEnabled = pm?.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) ?: false
-        val bedtimeEnabled = pm?.getBoolean(PreferenceKeys.KEY_BEDTIME_REMINDER_ENABLED, false) ?: false
-        MainActivityViewHelpers.updateInputEnabledStates(activity, goalEnabled, isChecked, bedtimeEnabled)
+        MainActivityViewHelpers.updateInputEnabledStates(activity, goalEnabled, isChecked)
     }
 
     private fun enableHealthConnect(activity: MainActivity, isUserInitiated: Boolean) {

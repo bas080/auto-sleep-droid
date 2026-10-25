@@ -53,10 +53,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
     internal var textCurrentWakeTimeValue: TextView? = null
     internal var inputMinSleep: View? = null
     internal var textMinSleepValue: TextView? = null
-    internal var rowBedtimeReminder: SettingRowView? = null
-    internal var switchBedtimeReminder: Switch? = null
-    internal var btnBedtimeNote: View? = null
-    internal var bedtimeOverlayContainer: View? = null
     internal var rowHealthConnect: SettingRowView? = null
     internal var switchHealthConnect: Switch? = null
     internal var inputHcMinDuration: View? = null
@@ -157,10 +153,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         textCurrentWakeTimeValue = findViewById(R.id.text_current_wake_time_value)
         inputMinSleep = findViewById(R.id.input_min_sleep)
         textMinSleepValue = findViewById(R.id.text_min_sleep_value)
-        rowBedtimeReminder = findViewById(R.id.row_bedtime_reminder)
-        switchBedtimeReminder = findViewById(R.id.switch_bedtime_reminder)
-        btnBedtimeNote = findViewById(R.id.btn_bedtime_note)
-        bedtimeOverlayContainer = findViewById(R.id.bedtime_overlay_container)
         rowHealthConnect = findViewById(R.id.row_health_connect)
         switchHealthConnect = findViewById(R.id.switch_health_connect)
         inputHcMinDuration = findViewById(R.id.input_hc_min_duration)
@@ -192,7 +184,6 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         MainActivityHeaderAndLogsHandler.startTimerService(this)
         MainActivityPermissionAndSettingsHandler.checkHealthConnectOnResume(this)
         MainActivityUiStateUpdater.registerPreferenceListeners(this)
-        MainActivityHeaderAndLogsHandler.checkAndShowBedtimeOverlayOnResume(this)
     }
 
     override fun onPause() {
