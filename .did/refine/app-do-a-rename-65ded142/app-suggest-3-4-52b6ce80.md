@@ -7,3 +7,6 @@ created-at: "2026-10-05T17:59:30.305950+00:00"
 ---
 
 Suggested name candidates: 3-letter: Nod, Sno, Zzz. 4-letter: Doze, Dozr, Slum, Rest, Somn. 5-letter: Somno, Slmbr, Noddr, Snooz. 6-letter: Asleep, Snooze, Slumbr, Somnol, Nodoff, Sleepy.
+
+### Questions for @bas080
+- Which candidate length or specific brand name is preferred from this list?
