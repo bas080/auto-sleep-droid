@@ -1,6 +1,6 @@
 ---
 title: Remind user of bedtime wake goal to encourage timely sleep
-status: open
+status: resolved
 priority: 3
 issue-type: task
 created-at: "2026-10-17T10:45:00.000000+00:00"
