@@ -16,6 +16,7 @@ object AppDefaults {
     const val TOTAL_FADE_STEPS: Int = (FADE_DURATION_MS / FADE_STEP_INTERVAL_MS).toInt()
 
     const val SNOOZE_DURATION_MS: Long = 9 * 60_000L
+    const val MAX_SNOOZE_COUNT: Int = 3
     const val ALARM_CRESCENDO_DURATION_MS: Long = 3 * 60_000L
     const val ALARM_CRESCENDO_INTERVAL_MS: Long = 500L
 }

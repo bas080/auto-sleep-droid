@@ -459,6 +459,10 @@ open class MainService : Service() {
             if (snoozed) editor.putBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_SNOOZED, true)
             else editor.remove(PreferenceKeys.KEY_WAKEUP_ALARM_SNOOZED)
 
+            if (!snoozed && !ringing) {
+                editor.remove(PreferenceKeys.KEY_SNOOZE_COUNT)
+            }
+
             editor.apply()
         }
     }
@@ -651,6 +655,9 @@ open class MainService : Service() {
 
     private fun handleWakeUpAlarmExpiryAction() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Auto Sleep wake-up alarm triggered")
+        if (!isWakeUpAlarmSnoozed) {
+            preferences?.edit()?.remove(PreferenceKeys.KEY_SNOOZE_COUNT)?.apply()
+        }
         if (isWakeAlarmEnabled()) {
             acquireWakeLock()
             setWakeUpAlarmState(true, false)
@@ -728,15 +735,7 @@ open class MainService : Service() {
 
     private fun handlePhoneFlip() {
         if (isWakeUpAlarmRinging) {
-            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed via phone flip")
-            stopWakeUpAlarmSound()
-            releaseWakeLock()
-            snoozeWakeUpAlarm()
-            setWakeUpAlarmState(false, true)
-            onTriggerVibration()
-            updateListenersRegistration()
-            updateNotification()
-            Toast.makeText(this, R.string.toast_alarm_snoozed, Toast.LENGTH_SHORT).show()
+            snoozeWakeUpAlarmWithThreshold("phone flip")
         } else if (isFading) {
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Sleep timer reset via phone flip during fade")
             cancelFadeForVolumeChange()
@@ -902,7 +901,10 @@ open class MainService : Service() {
 
         dismissAutoSleepAlarm()
         updateNextWakeUpTimeOnDismissOrExpiry()
-        preferences?.edit()?.putLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, System.currentTimeMillis())?.apply()
+        preferences?.edit()
+            ?.remove(PreferenceKeys.KEY_SNOOZE_COUNT)
+            ?.putLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, System.currentTimeMillis())
+            ?.apply()
         checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
 
         updateListenersRegistration()
@@ -1489,16 +1491,33 @@ open class MainService : Service() {
         }
     }
 
+    private fun snoozeWakeUpAlarmWithThreshold(source: String) {
+        val currentSnoozes = preferences?.getInt(PreferenceKeys.KEY_SNOOZE_COUNT, 0) ?: 0
+        val newSnoozeCount = currentSnoozes + 1
+        preferences?.edit()?.putInt(PreferenceKeys.KEY_SNOOZE_COUNT, newSnoozeCount)?.apply()
+
+        if (newSnoozeCount >= AppDefaults.MAX_SNOOZE_COUNT) {
+            EventLogger.log(
+                this,
+                EventLogger.LEVEL_HIGH,
+                "Wake-Up Goal alarm marked awake after $newSnoozeCount snoozes via $source"
+            )
+            handleAwakeAction()
+        } else {
+            EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed via $source")
+            stopWakeUpAlarmSound()
+            releaseWakeLock()
+            snoozeWakeUpAlarm()
+            setWakeUpAlarmState(false, true)
+            onTriggerVibration()
+            updateListenersRegistration()
+            updateNotification()
+            Toast.makeText(this, R.string.toast_alarm_snoozed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun snoozeWakeUpAlarmViaVolumeKey() {
-        EventLogger.log(this, EventLogger.LEVEL_HIGH, "Wake-Up Goal alarm snoozed via volume button")
-        stopWakeUpAlarmSound()
-        releaseWakeLock()
-        snoozeWakeUpAlarm()
-        setWakeUpAlarmState(false, true)
-        onTriggerVibration()
-        updateListenersRegistration()
-        updateNotification()
-        Toast.makeText(this, R.string.toast_alarm_snoozed, Toast.LENGTH_SHORT).show()
+        snoozeWakeUpAlarmWithThreshold("volume button")
     }
 
     private fun pauseMediaViaAudioFocus() {

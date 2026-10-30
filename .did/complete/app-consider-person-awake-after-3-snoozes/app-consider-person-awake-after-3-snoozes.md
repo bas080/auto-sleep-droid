@@ -1,6 +1,6 @@
 ---
 title: Consider person awake after 3 alarm snoozes
-status: open
+status: resolved
 priority: 2
 issue-type: feature
 created-at: "2026-10-25T18:35:00.000000+00:00"
