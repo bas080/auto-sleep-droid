@@ -1552,4 +1552,51 @@ class MainServiceTest {
 
         callback?.onPlaybackConfigChanged(emptyList())
     }
+
+    @Test
+    fun testThirdSnoozeTriggersAwakeAction() {
+        preferences.edit()
+            .putBoolean("show_notification", true)
+            .putBoolean("wake_up_goal_enabled", true)
+            .commit()
+
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val triggerIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_WAKEUP_ALARM_EXPIRY)
+
+        val receiverField = MainService::class.java.getDeclaredField("volumeReceiver")
+        receiverField.isAccessible = true
+
+        val volumeKeyIntent = Intent("android.media.VOLUME_CHANGED_ACTION")
+
+        // 1st Snooze
+        service.onStartCommand(triggerIntent, 0, 1)
+        var receiver = receiverField.get(service) as android.content.BroadcastReceiver?
+        assertNotNull(receiver)
+        receiver?.onReceive(service, volumeKeyIntent)
+        assertEquals(1, preferences.getInt("snooze_count", 0))
+        assertTrue(preferences.getBoolean("is_wakeup_alarm_snoozed", false))
+
+        // 2nd Snooze
+        service.onStartCommand(triggerIntent, 0, 1)
+        receiver = receiverField.get(service) as android.content.BroadcastReceiver?
+        assertNotNull(receiver)
+        receiver?.onReceive(service, volumeKeyIntent)
+        assertEquals(2, preferences.getInt("snooze_count", 0))
+        assertTrue(preferences.getBoolean("is_wakeup_alarm_snoozed", false))
+
+        // 3rd Snooze -> Triggers Awake
+        service.onStartCommand(triggerIntent, 0, 1)
+        receiver = receiverField.get(service) as android.content.BroadcastReceiver?
+        assertNotNull(receiver)
+        receiver?.onReceive(service, volumeKeyIntent)
+
+        // After 3rd snooze, user is considered awake:
+        // is_wakeup_alarm_snoozed is false, snooze_count is cleared, last_awake_time_ms is set
+        assertFalse("Alarm should no longer be snoozed on 3rd snooze", preferences.getBoolean("is_wakeup_alarm_snoozed", false))
+        assertEquals("Snooze count should be cleared after awake", 0, preferences.getInt("snooze_count", 0))
+        assertTrue("last_awake_time_ms should be recorded", preferences.getLong("last_awake_time_ms", 0L) > 0L)
+    }
 }
