@@ -463,7 +463,7 @@ class MainServiceTest {
             ensureVolMethod.invoke(service)
 
             val maxVol = am.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM)
-            val expectedMinVol = Math.max(1, Math.round(maxVol * 0.3f))
+            val expectedMinVol = Math.max(1, Math.round(maxVol * 0.85f))
             assertEquals("STREAM_ALARM volume should be raised to minimum audible volume if muted",
                 expectedMinVol, am.getStreamVolume(android.media.AudioManager.STREAM_ALARM))
         }
@@ -542,7 +542,7 @@ class MainServiceTest {
 
         if (am != null) {
             val maxVol = am.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM)
-            val expectedMinVol = Math.max(1, Math.round(maxVol * 0.3f))
+            val expectedMinVol = Math.max(1, Math.round(maxVol * 0.85f))
             assertEquals("STREAM_ALARM volume should be raised to audible volume when alarm plays",
                 expectedMinVol, am.getStreamVolume(android.media.AudioManager.STREAM_ALARM))
         }
