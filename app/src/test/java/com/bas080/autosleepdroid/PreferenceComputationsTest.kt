@@ -273,16 +273,19 @@ class PreferenceComputationsTest {
         // 5-hour difference -> max step (30m)
         assertEquals(30, PreferenceComputations.calculateElasticStepMinutes(12, 0, 7, 0))
 
-        // Greater than 5 hours (e.g. 7 hours) -> clamped to max step (30m)
+        // 3-hour difference (180 min) -> full max step (30m)
+        assertEquals(30, PreferenceComputations.calculateElasticStepMinutes(10, 0, 7, 0))
+
+        // Greater than 3 hours (e.g. 7 hours) -> clamped to max step (30m)
         assertEquals(30, PreferenceComputations.calculateElasticStepMinutes(14, 0, 7, 0))
 
-        // 2-hour difference (120 min) -> tension = 120/300 = 0.4 -> rawStep = 5 + 0.4 * 25 = 15m
-        assertEquals(15, PreferenceComputations.calculateElasticStepMinutes(9, 0, 7, 0))
+        // 2-hour difference (120 min) -> tension = 120/180 = 0.67 -> rawStep = 5 + 0.67 * 25 = 21.67m -> 20m
+        assertEquals(20, PreferenceComputations.calculateElasticStepMinutes(9, 0, 7, 0))
 
-        // 45-minute difference -> tension = 45/300 = 0.15 -> rawStep = 5 + 0.15 * 25 = 8.75m -> rounded to 10m
+        // 45-minute difference -> tension = 45/180 = 0.25 -> rawStep = 5 + 0.25 * 25 = 11.25m -> rounded to 10m
         assertEquals(10, PreferenceComputations.calculateElasticStepMinutes(7, 45, 7, 0))
 
-        // 5-minute difference -> tension = 5/300 -> rounded to min step (5m)
+        // 5-minute difference -> rounded to min step (5m)
         assertEquals(5, PreferenceComputations.calculateElasticStepMinutes(7, 5, 7, 0))
 
         // Exactly at goal (0 diff) -> 0m
@@ -291,8 +294,8 @@ class PreferenceComputationsTest {
         // Current earlier than goal -> 0m (no deduction)
         assertEquals(0, PreferenceComputations.calculateElasticStepMinutes(6, 30, 7, 0))
 
-        // Midnight wrap: goal 23:30, current 01:30 (2h diff = 120m) -> 15m
-        assertEquals(15, PreferenceComputations.calculateElasticStepMinutes(1, 30, 23, 30))
+        // Midnight wrap: goal 23:30, current 01:30 (2h diff = 120m) -> 20m
+        assertEquals(20, PreferenceComputations.calculateElasticStepMinutes(1, 30, 23, 30))
     }
 
     @Test
@@ -317,9 +320,9 @@ class PreferenceComputationsTest {
         assertEquals(7, h4)
         assertEquals(0, m4)
 
-        // Midnight wrap: 01:30 -> 01:15 towards 23:30
+        // Midnight wrap: 01:30 -> 01:10 towards 23:30 (20m step)
         val (h5, m5) = PreferenceComputations.calculateNextWakeTime(1, 30, 23, 30)
         assertEquals(1, h5)
-        assertEquals(15, m5)
+        assertEquals(10, m5)
     }
 }
