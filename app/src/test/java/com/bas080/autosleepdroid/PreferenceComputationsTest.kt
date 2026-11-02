@@ -267,4 +267,59 @@ class PreferenceComputationsTest {
         preferenceManager.getComputed(PreferenceComputations.GET_SESSION_PHASE)
         preferenceManager.getComputed(PreferenceComputations.SHOULD_SHOW_AWAKE_ACTION)
     }
+
+    @Test
+    fun testCalculateElasticStepMinutes() {
+        // 5-hour difference -> max step (30m)
+        assertEquals(30, PreferenceComputations.calculateElasticStepMinutes(12, 0, 7, 0))
+
+        // Greater than 5 hours (e.g. 7 hours) -> clamped to max step (30m)
+        assertEquals(30, PreferenceComputations.calculateElasticStepMinutes(14, 0, 7, 0))
+
+        // 2-hour difference (120 min) -> tension = 120/300 = 0.4 -> rawStep = 5 + 0.4 * 25 = 15m
+        assertEquals(15, PreferenceComputations.calculateElasticStepMinutes(9, 0, 7, 0))
+
+        // 45-minute difference -> tension = 45/300 = 0.15 -> rawStep = 5 + 0.15 * 25 = 8.75m -> rounded to 10m
+        assertEquals(10, PreferenceComputations.calculateElasticStepMinutes(7, 45, 7, 0))
+
+        // 5-minute difference -> tension = 5/300 -> rounded to min step (5m)
+        assertEquals(5, PreferenceComputations.calculateElasticStepMinutes(7, 5, 7, 0))
+
+        // Exactly at goal (0 diff) -> 0m
+        assertEquals(0, PreferenceComputations.calculateElasticStepMinutes(7, 0, 7, 0))
+
+        // Current earlier than goal -> 0m (no deduction)
+        assertEquals(0, PreferenceComputations.calculateElasticStepMinutes(6, 30, 7, 0))
+
+        // Midnight wrap: goal 23:30, current 01:30 (2h diff = 120m) -> 15m
+        assertEquals(15, PreferenceComputations.calculateElasticStepMinutes(1, 30, 23, 30))
+    }
+
+    @Test
+    fun testCalculateNextWakeTime() {
+        // 12:00 -> 11:30 (30m step)
+        val (h1, m1) = PreferenceComputations.calculateNextWakeTime(12, 0, 7, 0)
+        assertEquals(11, h1)
+        assertEquals(30, m1)
+
+        // 07:45 -> 07:35 (10m step)
+        val (h2, m2) = PreferenceComputations.calculateNextWakeTime(7, 45, 7, 0)
+        assertEquals(7, h2)
+        assertEquals(35, m2)
+
+        // 07:05 -> 07:00 (5m step to goal)
+        val (h3, m3) = PreferenceComputations.calculateNextWakeTime(7, 5, 7, 0)
+        assertEquals(7, h3)
+        assertEquals(0, m3)
+
+        // 07:00 -> 07:00 (stays at goal)
+        val (h4, m4) = PreferenceComputations.calculateNextWakeTime(7, 0, 7, 0)
+        assertEquals(7, h4)
+        assertEquals(0, m4)
+
+        // Midnight wrap: 01:30 -> 01:15 towards 23:30
+        val (h5, m5) = PreferenceComputations.calculateNextWakeTime(1, 30, 23, 30)
+        assertEquals(1, h5)
+        assertEquals(15, m5)
+    }
 }

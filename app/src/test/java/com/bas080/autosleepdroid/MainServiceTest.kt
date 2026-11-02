@@ -417,13 +417,9 @@ class MainServiceTest {
             .setAction(MainService.ACTION_AWAKE)
         service.onStartCommand(awakeIntent, 0, 1)
 
-        val cal = Calendar.getInstance()
-        cal.add(Calendar.MINUTE, -15)
-        val goalMins = 6 * 60 + 30
-        val calcMins = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
-        val finalMins = Math.max(goalMins, calcMins)
-        assertEquals(finalMins / 60, preferences.getInt("current_wake_hour", -1))
-        assertEquals(finalMins % 60, preferences.getInt("current_wake_minute", -1))
+        val (expectedHour, expectedMin) = PreferenceComputations.calculateNextWakeTime(7, 30, 6, 30)
+        assertEquals(expectedHour, preferences.getInt("current_wake_hour", -1))
+        assertEquals(expectedMin, preferences.getInt("current_wake_minute", -1))
     }
 
     @Test
@@ -583,18 +579,10 @@ class MainServiceTest {
 
         val savedHour = preferences.getInt("current_wake_hour", -1)
         val savedMin = preferences.getInt("current_wake_minute", -1)
-        val savedTotalMins = savedHour * 60 + savedMin
+        val (expectedHour, expectedMin) = PreferenceComputations.calculateNextWakeTime(7, 0, 6, 30)
 
-        val calDismiss = Calendar.getInstance()
-        calDismiss.add(Calendar.MINUTE, -15)
-        val goalMins = 6 * 60 + 30
-        val calcMins = calDismiss.get(Calendar.HOUR_OF_DAY) * 60 + calDismiss.get(Calendar.MINUTE)
-        val expectedMins = Math.max(goalMins, calcMins)
-
-        assertTrue(
-            "Saved wake time ($savedHour:$savedMin) must match dismissal calculation ($expectedMins)",
-            Math.abs(savedTotalMins - expectedMins) <= 1 || Math.abs(savedTotalMins - expectedMins) >= 1439
-        )
+        assertEquals("Saved hour must match elastic step calculation", expectedHour, savedHour)
+        assertEquals("Saved min must match elastic step calculation", expectedMin, savedMin)
 
         assertTrue("Next daily alarm timestamp must be saved in preferences",
             preferences.contains(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS))
@@ -822,13 +810,9 @@ class MainServiceTest {
             .setAction(MainService.ACTION_AWAKE)
         service.onStartCommand(awakeIntent, 0, 1)
 
-        val calAwake = Calendar.getInstance()
-        calAwake.add(Calendar.MINUTE, -15)
-        val goalMins = 6 * 60 + 30
-        val calcMins = calAwake.get(Calendar.HOUR_OF_DAY) * 60 + calAwake.get(Calendar.MINUTE)
-        val finalMins = Math.max(goalMins, calcMins)
-        assertEquals("Current wake hour should set to awake hour", finalMins / 60, preferences.getInt("current_wake_hour", -1))
-        assertEquals("Current wake minute should set to awake minute", finalMins % 60, preferences.getInt("current_wake_minute", -1))
+        val (expectedHour, expectedMin) = PreferenceComputations.calculateNextWakeTime(7, 0, 6, 30)
+        assertEquals("Current wake hour should set to awake hour", expectedHour, preferences.getInt("current_wake_hour", -1))
+        assertEquals("Current wake minute should set to awake minute", expectedMin, preferences.getInt("current_wake_minute", -1))
         assertFalse("sleep_start_time_ms should be cleared", preferences.contains("sleep_start_time_ms"))
         assertTrue("Next daily wake alarm should be scheduled", preferences.contains(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS))
     }
@@ -877,13 +861,8 @@ class MainServiceTest {
             .setAction(MainService.ACTION_AWAKE)
         service.onStartCommand(awakeIntent, 0, 1)
 
-        val calAwake = Calendar.getInstance()
-        calAwake.add(Calendar.MINUTE, -15)
-        val goalMins = targetHour * 60 + targetMin
-        val calcMins = calAwake.get(Calendar.HOUR_OF_DAY) * 60 + calAwake.get(Calendar.MINUTE)
-        val finalMins = Math.max(goalMins, calcMins)
-        assertEquals("Current wake hour should set to awake hour", finalMins / 60, preferences.getInt("current_wake_hour", -1))
-        assertEquals("Current wake minute should set to awake minute", finalMins % 60, preferences.getInt("current_wake_minute", -1))
+        assertEquals("Current wake hour should set to awake hour", targetHour, preferences.getInt("current_wake_hour", -1))
+        assertEquals("Current wake minute should set to awake minute", targetMin, preferences.getInt("current_wake_minute", -1))
         assertEquals("sleep_start_time_ms should be cleared", 0L, preferences.getLong("sleep_start_time_ms", 0L))
     }
 
@@ -1084,13 +1063,13 @@ class MainServiceTest {
     @Test
     fun testClickingAwakeSetsCurrentWakeTimeToClickTimeMinus15mWhenLaterThanGoal() {
         val now = System.currentTimeMillis()
-        val pastGoalHour = 0
-        val pastGoalMin = 0
+        val targetHour = 7
+        val targetMin = 0
 
         preferences.edit()
             .putBoolean("wake_up_goal_enabled", true)
-            .putInt("wake_up_goal_hour", pastGoalHour)
-            .putInt("wake_up_goal_minute", pastGoalMin)
+            .putInt("wake_up_goal_hour", targetHour)
+            .putInt("wake_up_goal_minute", targetMin)
             .putInt("current_wake_hour", 12)
             .putInt("current_wake_minute", 0)
             .putLong("sleep_start_time_ms", now - 4 * 3600_000L)
@@ -1099,19 +1078,14 @@ class MainServiceTest {
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
 
-        val expectedCal = Calendar.getInstance()
-        expectedCal.add(Calendar.MINUTE, -15)
-        val expectedHour = expectedCal.get(Calendar.HOUR_OF_DAY)
-        val expectedMin = expectedCal.get(Calendar.MINUTE)
+        val (expectedHour, expectedMin) = PreferenceComputations.calculateNextWakeTime(12, 0, targetHour, targetMin)
 
         val awakeIntent = Intent(context, MainService::class.java)
             .setAction(MainService.ACTION_AWAKE)
         service.onStartCommand(awakeIntent, 0, 1)
 
-        val actualMins = preferences.getInt("current_wake_hour", -1) * 60 + preferences.getInt("current_wake_minute", -1)
-        val expectedMins = expectedHour * 60 + expectedMin
-        assertTrue("Current wake time must be within 1 minute of click time minus 15m",
-            Math.abs(actualMins - expectedMins) <= 1)
+        assertEquals("Current wake hour should converge by elastic step", expectedHour, preferences.getInt("current_wake_hour", -1))
+        assertEquals("Current wake minute should converge by elastic step", expectedMin, preferences.getInt("current_wake_minute", -1))
         assertFalse("Ongoing sleep session must be cleared after clicking awake", preferences.contains("sleep_start_time_ms"))
 
         val scheduledMs = preferences.getLong(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L)
@@ -1558,6 +1532,10 @@ class MainServiceTest {
         preferences.edit()
             .putBoolean("show_notification", true)
             .putBoolean("wake_up_goal_enabled", true)
+            .putInt("wake_up_goal_hour", 7)
+            .putInt("wake_up_goal_minute", 0)
+            .putInt("current_wake_hour", 12)
+            .putInt("current_wake_minute", 0)
             .commit()
 
         val controller = Robolectric.buildService(MainService::class.java)
@@ -1598,5 +1576,8 @@ class MainServiceTest {
         assertFalse("Alarm should no longer be snoozed on 3rd snooze", preferences.getBoolean("is_wakeup_alarm_snoozed", false))
         assertEquals("Snooze count should be cleared after awake", 0, preferences.getInt("snooze_count", 0))
         assertTrue("last_awake_time_ms should be recorded", preferences.getLong("last_awake_time_ms", 0L) > 0L)
+        // Verify current wake time converged by 30 minutes (from 12:00 toward 07:00 -> 11:30)
+        assertEquals(11, preferences.getInt("current_wake_hour", -1))
+        assertEquals(30, preferences.getInt("current_wake_minute", -1))
     }
 }
