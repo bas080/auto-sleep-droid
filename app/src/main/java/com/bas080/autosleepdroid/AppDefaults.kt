@@ -19,4 +19,9 @@ object AppDefaults {
     const val MAX_SNOOZE_COUNT: Int = 3
     const val ALARM_CRESCENDO_DURATION_MS: Long = 3 * 60_000L
     const val ALARM_CRESCENDO_INTERVAL_MS: Long = 500L
+
+    const val ELASTIC_MIN_STEP_MINUTES: Int = 5
+    const val ELASTIC_MAX_STEP_MINUTES: Int = 30
+    const val ELASTIC_MAX_DISTANCE_MINUTES: Int = 3 * 60 // 180 minutes (3 hours)
+    const val ELASTIC_STEP_ROUNDING_MINUTES: Int = 5
 }

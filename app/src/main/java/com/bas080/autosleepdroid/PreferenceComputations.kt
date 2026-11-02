@@ -7,6 +7,9 @@ private const val PRE_ALARM_WINDOW_FACTOR = 0.5
 private const val MS_PER_MINUTE = 60_000L
 private const val HOURS_12_IN_MS = 12 * 3600_000L
 private const val HOURS_14_IN_MS = 14 * 3600_000L
+private const val MINUTES_PER_HOUR = 60
+private const val MINUTES_PER_DAY = 24 * 60
+private const val HOURS_12_IN_MINUTES = 12 * 60
 
 enum class SessionPhase {
     IDLE,
@@ -157,5 +160,46 @@ object PreferenceComputations {
             calCurrent.add(Calendar.DAY_OF_YEAR, -1)
         }
         return calCurrent.timeInMillis
+    }
+
+    internal fun calculateElasticStepMinutes(
+        currentHour: Int,
+        currentMinute: Int,
+        goalHour: Int,
+        goalMinute: Int
+    ): Int {
+        val currentMins = currentHour * MINUTES_PER_HOUR + currentMinute
+        val goalMins = goalHour * MINUTES_PER_HOUR + goalMinute
+
+        var diffMinutes = (currentMins - goalMins) % MINUTES_PER_DAY
+        if (diffMinutes < 0) {
+            diffMinutes += MINUTES_PER_DAY
+        }
+
+        if (diffMinutes == 0 || diffMinutes > HOURS_12_IN_MINUTES) {
+            return 0
+        }
+
+        val tension = Math.min(1.0f, diffMinutes.toFloat() / AppDefaults.ELASTIC_MAX_DISTANCE_MINUTES)
+        val stepRange = AppDefaults.ELASTIC_MAX_STEP_MINUTES - AppDefaults.ELASTIC_MIN_STEP_MINUTES
+        val rawStep = AppDefaults.ELASTIC_MIN_STEP_MINUTES + tension * stepRange
+        val rounding = AppDefaults.ELASTIC_STEP_ROUNDING_MINUTES
+        val roundedStep = Math.round(rawStep / rounding.toFloat()) * rounding
+
+        return Math.min(diffMinutes, Math.max(AppDefaults.ELASTIC_MIN_STEP_MINUTES, roundedStep))
+    }
+
+    internal fun calculateNextWakeTime(
+        currentHour: Int,
+        currentMinute: Int,
+        goalHour: Int,
+        goalMinute: Int
+    ): Pair<Int, Int> {
+        val step = calculateElasticStepMinutes(currentHour, currentMinute, goalHour, goalMinute)
+        val currentMins = currentHour * MINUTES_PER_HOUR + currentMinute
+        val nextMins = (currentMins - step + MINUTES_PER_DAY) % MINUTES_PER_DAY
+        val nextHour = nextMins / MINUTES_PER_HOUR
+        val nextMin = nextMins % MINUTES_PER_HOUR
+        return Pair(nextHour, nextMin)
     }
 }

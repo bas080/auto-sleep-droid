@@ -33,11 +33,9 @@ private const val BUILD_VERSION_P = 28
 private const val BUILD_VERSION_Q = 29
 private const val BUILD_VERSION_S = 31
 private const val MS_PER_MINUTE = 60_000L
-private const val MINUTES_PER_HOUR = 60
 private const val MS_PER_SECOND = 1000L
 private const val HOURS_12_IN_MS = 12 * 3600_000L
 private const val HOURS_14_IN_MS = 14 * 3600_000L
-private const val EARLY_WAKE_OFFSET_MINUTES = 15
 private const val WAKE_LOCK_TIMEOUT_MS = 30_000L
 private const val VIBRATION_DURATION_MS = 70L
 private const val MIN_AUDIBLE_VOLUME_RATIO = 0.85f
@@ -916,19 +914,16 @@ open class MainService : Service() {
         val prefs = preferences ?: return
         val goalHour = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_HOUR, AppDefaults.WAKE_UP_GOAL_HOUR)
         val goalMin = prefs.getInt(PreferenceKeys.KEY_WAKE_UP_GOAL_MINUTE, AppDefaults.WAKE_UP_GOAL_MINUTE)
-        val goalMins = goalHour * MINUTES_PER_HOUR + goalMin
+        val currentHour = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, goalHour)
+        val currentMin = prefs.getInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, goalMin)
 
-        val cal = Calendar.getInstance()
-        cal.add(Calendar.MINUTE, -EARLY_WAKE_OFFSET_MINUTES)
-        val calcMins = cal.get(Calendar.HOUR_OF_DAY) * MINUTES_PER_HOUR + cal.get(Calendar.MINUTE)
-
-        val finalMins = Math.max(goalMins, calcMins)
-        val newHour = finalMins / MINUTES_PER_HOUR
-        val newMin = finalMins % MINUTES_PER_HOUR
+        val (nextHour, nextMin) = PreferenceComputations.calculateNextWakeTime(
+            currentHour, currentMin, goalHour, goalMin
+        )
 
         prefs.edit()
-            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, newHour)
-            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, newMin)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_HOUR, nextHour)
+            .putInt(PreferenceKeys.KEY_CURRENT_WAKE_MINUTE, nextMin)
             .remove(KEY_WAKEUP_LAST_SCHEDULED_MS)
             .apply()
     }
