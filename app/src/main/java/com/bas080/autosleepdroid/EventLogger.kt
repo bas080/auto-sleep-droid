@@ -113,17 +113,19 @@ object EventLogger {
 
 internal object EventLogStorage {
     private const val LOG_FILE_NAME = "event_logs.txt"
-    private const val MAX_LOG_FILE_BYTES = 1_000_000L
-    private const val TRIM_TO_LOGS = 50
+    private const val MAX_LOG_LINES = 200
 
     fun writeLogToFile(context: Context?, line: String) {
         if (context == null) return
-        val appCtx = context.applicationContext
-        val file = getLogFile(appCtx)
-        if (file.exists() && file.length() >= MAX_LOG_FILE_BYTES) {
-            pruneFile(file)
-        }
+        val file = getLogFile(context.applicationContext)
         file.appendText(line + "\n")
+        trim(file)
+    }
+
+    private fun trim(file: File) {
+        val lines = file.readLines().filter { it.trim().isNotEmpty() }
+        if (lines.size <= MAX_LOG_LINES) return
+        file.writeText(lines.takeLast(MAX_LOG_LINES).joinToString("\n", postfix = "\n"))
     }
 
     fun getEvents(context: Context?): List<String> {
@@ -145,13 +147,6 @@ internal object EventLogStorage {
                 file.delete()
             }
         }
-    }
-
-    private fun pruneFile(file: File) {
-        val lines = file.readLines().filter { it.trim().isNotEmpty() }
-        val trimmed = lines.takeLast(TRIM_TO_LOGS)
-        val content = trimmed.joinToString("\n", postfix = "\n")
-        file.writeText(content)
     }
 
     private fun getLogFile(context: Context): File {

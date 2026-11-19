@@ -167,24 +167,36 @@ class EventLoggerTest {
     }
 
     @Test
-    fun testPruneFileWhenMaxBytesExceeded() {
+    fun testTrimKeepsOnlyMaxLogLines() {
+        EventLogger.clear(context)
+
+        for (i in 1..250) {
+            EventLogger.log(context, "Line $i")
+        }
+
+        val lines = EventLogger.getEvents(context)
+        assertEquals(200, lines.size)
+        assertTrue(lines.first().contains("Line 51"))
+        assertTrue(lines.last().contains("Line 250"))
+    }
+
+    @Test
+    fun testTrimsLegacyOversizedFileOnNextWrite() {
         EventLogger.clear(context)
         val logFile = File(context.filesDir, "event_logs.txt")
 
-        // Write content > 1,000,000 bytes with 100 lines
         val largeContent = StringBuilder()
-        for (i in 1..100) {
-            largeContent.append("Line $i ").append("a".repeat(10000)).append("\n")
+        for (i in 1..300) {
+            largeContent.append("Legacy line $i \u0001").append("a".repeat(10000)).append("\n")
         }
         logFile.writeText(largeContent.toString())
-        assertTrue(logFile.length() >= 1_000_000L)
+        assertTrue(logFile.length() > 1_000_000L)
 
-        // Next log triggers pruneFile to keep only the last 50 lines
-        EventLogger.log(context, "New line after prune")
+        EventLogger.log(context, "New line after trim")
 
         val lines = logFile.readLines().filter { it.trim().isNotEmpty() }
-        assertEquals(51, lines.size)
-        assertTrue(lines.last().contains("New line after prune"))
+        assertEquals(200, lines.size)
+        assertTrue(lines.last().contains("New line after trim"))
     }
 
     @Test
