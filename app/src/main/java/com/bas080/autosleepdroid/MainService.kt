@@ -1494,7 +1494,7 @@ open class MainService : Service() {
             !isEnabled -> getString(R.string.timer_off)
             isFading || isActive -> {
                 val timeStr = formatTargetTime()
-                if (timeStr.isNotEmpty()) "\u266A $timeStr" else ""
+                if (timeStr.isNotEmpty()) "\u23F8\uFE0E $timeStr" else ""
             }
             else -> getString(R.string.waiting_title)
         }
