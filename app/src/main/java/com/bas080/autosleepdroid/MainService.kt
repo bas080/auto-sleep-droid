@@ -442,8 +442,16 @@ open class MainService : Service() {
             checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
         } else {
             dismissAutoSleepAlarm()
+            cancelNotificationUpdateAlarm()
         }
         updateNotification()
+    }
+
+    private fun stopAndResetWakeAlarm() {
+        stopWakeUpAlarmSound()
+        releaseWakeLock()
+        cancelSnoozeAlarm()
+        setWakeUpAlarmState(false, false)
     }
 
     private fun setWakeUpAlarmState(ringing: Boolean, snoozed: Boolean) {
@@ -741,10 +749,7 @@ open class MainService : Service() {
 
     private fun handleOffStateTransition() {
         unregisterAudioPlaybackCallback()
-        stopWakeUpAlarmSound()
-        releaseWakeLock()
-        cancelSnoozeAlarm()
-        setWakeUpAlarmState(false, false)
+        stopAndResetWakeAlarm()
         onCancelAlarm()
         updateListenersRegistration()
         showOrHideNotification()
@@ -809,17 +814,21 @@ open class MainService : Service() {
         }
     }
 
-    fun onCancelAlarm() {
+    private fun cancelServiceAlarm(requestCode: Int, action: String) {
         val am = alarmManager ?: return
-        val intent = Intent(this, MainService::class.java).setAction(ACTION_ALARM_EXPIRY)
+        val intent = Intent(this, MainService::class.java).setAction(action)
         val pendingIntent = getServicePendingIntent(
-            REQUEST_CODE_DEFAULT, intent,
+            requestCode, intent,
             PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
         )
         if (pendingIntent != null) {
             am.cancel(pendingIntent)
             pendingIntent.cancel()
         }
+    }
+
+    fun onCancelAlarm() {
+        cancelServiceAlarm(REQUEST_CODE_DEFAULT, ACTION_ALARM_EXPIRY)
     }
 
     fun onPauseMedia() {
@@ -881,15 +890,12 @@ open class MainService : Service() {
 
         processSleepSession()
 
-        stopWakeUpAlarmSound()
-        releaseWakeLock()
-        cancelSnoozeAlarm()
-        setWakeUpAlarmState(false, false)
+        stopAndResetWakeAlarm()
 
         dismissAutoSleepAlarm()
+        cancelNotificationUpdateAlarm()
         updateNextWakeUpTimeOnDismissOrExpiry()
         preferences?.edit()
-            ?.remove(PreferenceKeys.KEY_SNOOZE_COUNT)
             ?.putLong(PreferenceKeys.KEY_LAST_AWAKE_TIME_MS, System.currentTimeMillis())
             ?.apply()
         checkAndScheduleSmartWakeUpAlarm(timerEndsAt)
@@ -931,6 +937,7 @@ open class MainService : Service() {
     private fun checkAndScheduleSmartWakeUpAlarm(timerEndsAt: Long) {
         if (!isWakeAlarmEnabled()) {
             dismissAutoSleepAlarm()
+            cancelNotificationUpdateAlarm()
             return
         }
 
@@ -940,6 +947,7 @@ open class MainService : Service() {
 
         if (targetAlarmTimeMs != lastScheduled) {
             dismissAutoSleepAlarm()
+            cancelNotificationUpdateAlarm()
             lastScheduledWakeupAlarmTimeMs = targetAlarmTimeMs
             preferences?.edit()?.putLong(KEY_WAKEUP_LAST_SCHEDULED_MS, targetAlarmTimeMs)?.apply()
             scheduleAlarmClockInternal(targetAlarmTimeMs)
@@ -1007,45 +1015,16 @@ open class MainService : Service() {
     }
 
     private fun dismissAutoSleepAlarm() {
-        val am = alarmManager
-        if (am != null) {
-            val alarmTriggerIntent = Intent(this, MainService::class.java).setAction(ACTION_WAKEUP_ALARM_EXPIRY)
-            val operationIntent = getServicePendingIntent(
-                REQUEST_CODE_WAKE_ALARM, alarmTriggerIntent,
-                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-            )
-            if (operationIntent != null) {
-                am.cancel(operationIntent)
-                operationIntent.cancel()
-            }
-
-            val updateTriggerIntent = Intent(this, MainService::class.java).setAction(ACTION_UPDATE_NOTIFICATION)
-            val updateOperation = getServicePendingIntent(
-                REQUEST_CODE_UPDATE_NOTIF, updateTriggerIntent,
-                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-            )
-            if (updateOperation != null) {
-                am.cancel(updateOperation)
-                updateOperation.cancel()
-            }
-        }
-
+        cancelServiceAlarm(REQUEST_CODE_WAKE_ALARM, ACTION_WAKEUP_ALARM_EXPIRY)
         preferences?.edit()?.remove(KEY_WAKEUP_LAST_SCHEDULED_MS)?.apply()
     }
 
+    private fun cancelNotificationUpdateAlarm() {
+        cancelServiceAlarm(REQUEST_CODE_UPDATE_NOTIF, ACTION_UPDATE_NOTIFICATION)
+    }
+
     private fun cancelSnoozeAlarm() {
-        val am = alarmManager
-        if (am != null) {
-            val snoozeTriggerIntent = Intent(this, MainService::class.java).setAction(ACTION_WAKEUP_ALARM_EXPIRY)
-            val snoozeOperation = getServicePendingIntent(
-                REQUEST_CODE_SNOOZE, snoozeTriggerIntent,
-                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-            )
-            if (snoozeOperation != null) {
-                am.cancel(snoozeOperation)
-                snoozeOperation.cancel()
-            }
-        }
+        cancelServiceAlarm(REQUEST_CODE_SNOOZE, ACTION_WAKEUP_ALARM_EXPIRY)
     }
 
     fun onTriggerVibration() {
@@ -1515,7 +1494,7 @@ open class MainService : Service() {
             !isEnabled -> getString(R.string.timer_off)
             isFading || isActive -> {
                 val timeStr = formatTargetTime()
-                if (timeStr.isNotEmpty()) "\u266A $timeStr" else ""
+                if (timeStr.isNotEmpty()) "\u23F8\uFE0E $timeStr" else ""
             }
             else -> getString(R.string.waiting_title)
         }
