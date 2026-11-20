@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -1090,6 +1091,34 @@ class MainServiceTest {
 
         val scheduledMs = preferences.getLong(MainService.KEY_WAKEUP_LAST_SCHEDULED_MS, 0L)
         assertTrue("Next wake alarm must be rescheduled after clicking awake", scheduledMs > now)
+    }
+
+    @Test
+    fun testAwakeActionReleasesMediaPauseFocus() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val audioManagerField = MainService::class.java.getDeclaredField("audioManager")
+        audioManagerField.isAccessible = true
+        val audioManager = audioManagerField.get(service) as android.media.AudioManager
+        val shadowAudioManager = Shadows.shadowOf(audioManager)
+
+        service.onPauseMedia()
+        assertNull("No focus abandoned before awake is registered", shadowAudioManager.lastAbandonedAudioFocusRequest)
+
+        val focusField = MainService::class.java.getDeclaredField("mediaPauseFocusRequest")
+        focusField.isAccessible = true
+        val pauseFocus = focusField.get(service)
+        assertNotNull("Media pause focus request should be tracked", pauseFocus)
+
+        val awakeIntent = Intent(context, MainService::class.java)
+            .setAction(MainService.ACTION_AWAKE)
+        service.onStartCommand(awakeIntent, 0, 1)
+
+        val abandoned = shadowAudioManager.lastAbandonedAudioFocusRequest
+        assertNotNull("Media pause focus should be abandoned after awake is registered", abandoned)
+        assertEquals("The abandoned request must be the one captured when media was paused", pauseFocus, abandoned)
+        assertNull("Media pause focus request should be cleared", focusField.get(service))
     }
 
     @Test
