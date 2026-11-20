@@ -10,12 +10,15 @@ Implements improvements 1, 4, and 5 from `.did/refine/app-improve-flip-detection
 
 ## Changes
 
-- `PhoneFlipDetector` no longer fires on a single face-down accelerometer sample. It now requires a sustained hold: the device must remain face-down and stationary (gravity magnitude within tolerance of STANDARD_GRAVITY) for 400 ms before the callback fires; any unstable or non-face-down sample cancels the pending flip. State re-arms only after the device is back above face-up threshold, so one flip fires at most once.
-- Tolerance to tilted placements improved: the face-down threshold changed from z < -7.0 (about 45 degrees from vertical) to z < -STANDARD_GRAVITY * 0.5 (60 degrees from vertical), so a phone resting on a mild slope still qualifies.
+- `PhoneFlipDetector` was redesigned around the gesture model defined by @bas080: a flip is the device transitioning from one resting position to another (side-to-side, face-up-to-face-down, or back), regardless of which way the screen faces. The act of flipping itself triggers the snooze or the play-time extension.
+- The detector tracks the settled orientation (six quantized orientations from the dominant gravity axis). It fires when the device leaves its settled orientation and then re-settles (in any orientation, including the original one) and holds it for 400 ms.
+- Stationarity gating: samples whose gravity magnitude deviates more than 1.5 m/s^2 from standard gravity are treated as in-motion and reset the pending flip, so shakes and drops do not fire.
+- This also resolves refinement question 2: a phone already in any resting position when the alarm starts never snoozes by itself; the user must actually flip it.
 - `MainService.handlePhoneFlip()` fade-reset branch now triggers haptic feedback via `onTriggerVibration()`, matching the alarm-snooze branch.
-- Tests: injectable clock in `PhoneFlipDetectorTest` covers single-sample rejection, sustained-fire, once-per-flip, re-arm, zero-gravity and magnitude-outlier rejection, shallow tilt rejection; the service-level tests simulate sustained flips.
+- Detector remains off while snoozed (rejected for battery life).
+- Tests: `PhoneFlipDetectorTest` covers settle-first-then-flip, firing in any direction including flipping back, once-per-flip, in-motion sample rejection, and the two service-level gestures (fade reset and face-down-start lift-and-flip snooze).
 
 ## Verification
 
 - `./gradlew :app:testDebugUnitTest :app:detekt` passes.
-- Physical verification pending: flip to snooze while alarm rings and flip to reset during fade must still work, now requiring the phone to be held face-down briefly instead of a passing tilt.
+- Physical verification pending: a brief deliberate flip should snooze the ringing alarm and extend play during fade, in either direction, with haptic feedback on the fade path.

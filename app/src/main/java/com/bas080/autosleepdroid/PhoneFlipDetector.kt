@@ -8,10 +8,8 @@ import android.hardware.SensorManager
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-private const val FACE_UP_THRESHOLD_Z = 0.0f
-private const val FACE_DOWN_TILT_COS = 0.5f
+private const val SETTLE_HOLD_MS = 400L
 private const val GRAVITY_TOLERANCE = 1.5f
-private const val FACE_DOWN_HOLD_MS = 400L
 
 class PhoneFlipDetector(
     context: Context,
@@ -19,17 +17,21 @@ class PhoneFlipDetector(
     private val now: () -> Long = System::currentTimeMillis
 ) : SensorEventListener {
 
-    private enum class State { ARMED, PENDING, FIRED }
+    private enum class Orientation { FACE_UP, FACE_DOWN, LEFT, RIGHT, TOP, BOTTOM }
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
     private val accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-    private var state = State.ARMED
-    private var faceDownStartedAtMs = 0L
+    private var settledOrientation: Orientation? = null
+    private var candidateOrientation: Orientation? = null
+    private var candidateSinceMs = 0L
+    private var leftSettled = false
     private var isRegistered = false
 
     fun start() {
         if (isRegistered || sensorManager == null || accelerometer == null) return
-        state = State.ARMED
+        settledOrientation = null
+        candidateOrientation = null
+        leftSettled = false
         sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI)
         isRegistered = true
     }
@@ -38,7 +40,9 @@ class PhoneFlipDetector(
         if (!isRegistered || sensorManager == null) return
         sensorManager.unregisterListener(this)
         isRegistered = false
-        state = State.ARMED
+        settledOrientation = null
+        candidateOrientation = null
+        leftSettled = false
     }
 
     fun isRegistered(): Boolean = isRegistered
@@ -50,26 +54,47 @@ class PhoneFlipDetector(
         val z = event.values[2]
         val magnitude = sqrt(x * x + y * y + z * z)
         val isStationary = abs(magnitude - SensorManager.STANDARD_GRAVITY) <= GRAVITY_TOLERANCE
-        val isFaceDownNow = isStationary && z <= -SensorManager.STANDARD_GRAVITY * FACE_DOWN_TILT_COS
+        val orientation = if (isStationary) orientationFor(x, y, z) else null
+        onSample(orientation)
+    }
 
-        if (z > FACE_UP_THRESHOLD_Z) {
-            state = State.ARMED
+    private fun onSample(orientation: Orientation?) {
+        when {
+            orientation == null -> candidateOrientation = null
+            settledOrientation == null -> {
+                settledOrientation = orientation
+                candidateOrientation = null
+                leftSettled = false
+            }
+            else -> trackStable(orientation)
         }
+    }
 
-        when (state) {
-            State.ARMED -> if (isFaceDownNow) {
-                state = State.PENDING
-                faceDownStartedAtMs = now()
-            }
-            State.PENDING -> {
-                if (!isFaceDownNow) {
-                    state = State.ARMED
-                } else if (now() - faceDownStartedAtMs >= FACE_DOWN_HOLD_MS) {
-                    state = State.FIRED
-                    onFlip()
-                }
-            }
-            State.FIRED -> Unit
+    private fun trackStable(orientation: Orientation) {
+        if (orientation != settledOrientation) {
+            leftSettled = true
+        }
+        if (leftSettled && candidateOrientation == orientation && heldLongEnough()) {
+            settledOrientation = orientation
+            candidateOrientation = null
+            leftSettled = false
+            onFlip()
+        } else if (candidateOrientation != orientation) {
+            candidateOrientation = orientation
+            candidateSinceMs = now()
+        }
+    }
+
+    private fun heldLongEnough(): Boolean = now() - candidateSinceMs >= SETTLE_HOLD_MS
+
+    private fun orientationFor(x: Float, y: Float, z: Float): Orientation {
+        val absX = abs(x)
+        val absY = abs(y)
+        val absZ = abs(z)
+        return when {
+            absZ >= absX && absZ >= absY -> if (z > 0) Orientation.FACE_UP else Orientation.FACE_DOWN
+            absX >= absY -> if (x > 0) Orientation.RIGHT else Orientation.LEFT
+            else -> if (y > 0) Orientation.TOP else Orientation.BOTTOM
         }
     }
 

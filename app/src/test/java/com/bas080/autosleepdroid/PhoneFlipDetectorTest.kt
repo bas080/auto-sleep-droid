@@ -42,7 +42,7 @@ class PhoneFlipDetectorTest {
         var flipCount = 0
         val detector = PhoneFlipDetector(application, onFlip = {
             flipCount++
-        })
+        }, now = { fakeClockMs })
 
         assertFalse(detector.isRegistered())
         detector.start()
@@ -52,92 +52,103 @@ class PhoneFlipDetectorTest {
         assertFalse(detector.isRegistered())
     }
 
-    private fun createDebouncedDetector(onFlip: () -> Unit, clockMillis: () -> Long): PhoneFlipDetector {
-        return PhoneFlipDetector(application, onFlip, clockMillis).also { it.start() }
+    private fun createDebouncedDetector(onFlip: () -> Unit): PhoneFlipDetector {
+        return PhoneFlipDetector(application, onFlip = onFlip, now = { fakeClockMs }).also { it.start() }
     }
 
     @Test
-    fun testSingleFaceDownSampleDoesNotTriggerCallback() {
+    fun testFlipTriggersCallbackOncePerFlip() {
         var flipCount = 0
-        val detector = createDebouncedDetector({ flipCount++ }, { fakeClockMs })
+        val detector = createDebouncedDetector { flipCount++ }
 
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        val event = createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f)
+        val faceUpEvent = createAccelerometerEvent(accelerometer, 0.0f, 0.0f, 9.81f)
+        val faceDownEvent = createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f)
 
-        detector.onSensorChanged(event)
+        // Settle in the starting orientation: no flip
+        fakeClockMs = 1_000L
+        detector.onSensorChanged(faceUpEvent)
         assertEquals(0, flipCount)
+
+        // Transition to face down: pending until the hold elapses
+        fakeClockMs = 1_100L
+        detector.onSensorChanged(faceDownEvent)
+        assertEquals(0, flipCount)
+
+        fakeClockMs = 1_300L
+        detector.onSensorChanged(faceDownEvent)
+        assertEquals(0, flipCount)
+
+        fakeClockMs = 1_600L
+        detector.onSensorChanged(faceDownEvent)
+        assertEquals(1, flipCount)
+
+        // Staying in the new orientation must not fire again
+        fakeClockMs = 2_100L
+        detector.onSensorChanged(faceDownEvent)
+        assertEquals(1, flipCount)
     }
 
     @Test
-    fun testSustainedFaceDownFlipTriggersCallbackOncePerFlip() {
+    fun testFlipWorksInAnyDirection() {
         var flipCount = 0
-        val detector = createDebouncedDetector({ flipCount++ }, { fakeClockMs })
+        val detector = createDebouncedDetector { flipCount++ }
 
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        val event = createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f)
+        val faceDownEvent = createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f)
+        val onLeftSideEvent = createAccelerometerEvent(accelerometer, -9.81f, 0.0f, 0.0f)
 
         fakeClockMs = 1_000L
-        detector.onSensorChanged(event)
+        detector.onSensorChanged(faceDownEvent)
         assertEquals(0, flipCount)
 
         fakeClockMs = 1_100L
-        detector.onSensorChanged(event)
+        detector.onSensorChanged(onLeftSideEvent)
         assertEquals(0, flipCount)
 
-        fakeClockMs = 1_500L
-        detector.onSensorChanged(event)
+        fakeClockMs = 1_600L
+        detector.onSensorChanged(onLeftSideEvent)
         assertEquals(1, flipCount)
 
-        // Continued face down samples must not trigger additional callbacks
-        fakeClockMs = 2_000L
-        detector.onSensorChanged(event)
+        // Flipping back also counts as a flip
+        fakeClockMs = 1_700L
+        detector.onSensorChanged(faceDownEvent)
         assertEquals(1, flipCount)
 
-        // Face up event re-arms the detector
-        fakeClockMs = 2_100L
-        val faceUpEvent = createAccelerometerEvent(accelerometer, 0.0f, 0.0f, 9.81f)
-        detector.onSensorChanged(faceUpEvent)
-        assertEquals(1, flipCount)
-
-        // Second sustained face down flip triggers the callback again
         fakeClockMs = 2_200L
-        detector.onSensorChanged(event)
-        assertEquals(1, flipCount)
-
-        fakeClockMs = 2_700L
-        detector.onSensorChanged(event)
+        detector.onSensorChanged(faceDownEvent)
         assertEquals(2, flipCount)
     }
 
     @Test
-    fun testUnstableAccelerometerSamplesDoNotTriggerCallback() {
+    fun testUnstableSamplesDoNotTriggerCallback() {
         var flipCount = 0
-        val detector = createDebouncedDetector({ flipCount++ }, { fakeClockMs })
+        val detector = createDebouncedDetector { flipCount++ }
 
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val faceUpEvent = createAccelerometerEvent(accelerometer, 0.0f, 0.0f, 9.81f)
+        val inMotionEvent = createAccelerometerEvent(accelerometer, 12.0f, -4.0f, 6.0f)
+        val faceDownEvent = createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f)
 
         fakeClockMs = 1_000L
-        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f))
+        detector.onSensorChanged(faceUpEvent)
+        assertEquals(0, flipCount)
 
-        fakeClockMs = 1_600L
-        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 0.0f, 0.0f, 0.0f))
+        fakeClockMs = 1_100L
+        detector.onSensorChanged(inMotionEvent)
+        assertEquals(0, flipCount)
+
+        fakeClockMs = 1_200L
+        detector.onSensorChanged(faceDownEvent)
+        assertEquals(0, flipCount)
+
+        fakeClockMs = 1_500L
+        detector.onSensorChanged(faceDownEvent)
         assertEquals(0, flipCount)
 
         fakeClockMs = 1_700L
-        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f))
-        assertEquals(0, flipCount)
-
-        fakeClockMs = 2_300L
-        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 20.0f, 0.0f, -9.81f))
-        assertEquals(0, flipCount)
-
-        fakeClockMs = 2_400L
-        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f))
-        assertEquals(0, flipCount)
-
-        fakeClockMs = 2_900L
-        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -4.0f))
-        assertEquals(0, flipCount)
+        detector.onSensorChanged(faceDownEvent)
+        assertEquals(1, flipCount)
     }
 
     @Test
@@ -156,12 +167,12 @@ class PhoneFlipDetectorTest {
         assertTrue(service.isFading)
         assertTrue(detector.isRegistered())
 
-        // Simulate a sustained phone flip face down during fading
+        // Simulate the phone resting face up being flipped face down and held
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        val flipEvent = createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f)
-        detector.onSensorChanged(flipEvent)
+        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 0.0f, 0.0f, 9.81f))
+        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f))
         Thread.sleep(500)
-        detector.onSensorChanged(flipEvent)
+        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f))
 
         // Verify timer reset back to ACTIVE
         assertTrue(service.isActive)
@@ -187,12 +198,13 @@ class PhoneFlipDetectorTest {
         assertTrue(detector!!.isRegistered())
         assertTrue(prefs.getBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING, false))
 
-        // Trigger a sustained phone flip while alarm is ringing
+        // The phone lies face down when the alarm starts, the user lifts it and flips it over
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        val flipEvent = createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f)
-        detector.onSensorChanged(flipEvent)
+        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f))
+        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 0.0f, 0.0f, 9.81f))
+        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f))
         Thread.sleep(500)
-        detector.onSensorChanged(flipEvent)
+        detector.onSensorChanged(createAccelerometerEvent(accelerometer, 0.0f, 0.0f, -9.81f))
 
         // Alarm should now be snoozed and sensor listener unregistered
         assertFalse(prefs.getBoolean(PreferenceKeys.KEY_WAKEUP_ALARM_RINGING, false))
