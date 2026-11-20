@@ -390,9 +390,9 @@ open class MainService : Service() {
         }
         createNotificationChannel()
 
-        phoneFlipDetector = PhoneFlipDetector(this) {
+        phoneFlipDetector = PhoneFlipDetector(this, onFlip = {
             handlePhoneFlip()
-        }
+        })
 
         initializeStateAndNotification()
         setupPreferenceListeners()
@@ -733,6 +733,7 @@ open class MainService : Service() {
             snoozeWakeUpAlarmWithThreshold("phone flip")
         } else if (isFading) {
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Sleep timer reset via phone flip during fade")
+            onTriggerVibration()
             cancelFadeForVolumeChange()
         }
     }
@@ -1445,6 +1446,7 @@ open class MainService : Service() {
             .build()
         am.requestAudioFocus(focusRequest)
     }
+
 
     private fun buildNotification(): Notification {
         val showAwake = shouldShowAwakeAction()
