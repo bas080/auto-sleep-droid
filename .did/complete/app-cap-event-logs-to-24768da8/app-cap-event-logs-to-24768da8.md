@@ -1,6 +1,6 @@
 ---
 title: Cap stored event logs to a practical amount
-status: open
+status: resolved
 priority: 3
 issue-type: task
 created-at: "2026-11-19T22:06:13.009453+00:00"

@@ -1,6 +1,6 @@
 ---
 title: Use pause emoji instead of music note for fade-out time in notification
-status: open
+status: resolved
 priority: 3
 issue-type: task
 created-at: "2026-11-19T21:54:32.679980+00:00"

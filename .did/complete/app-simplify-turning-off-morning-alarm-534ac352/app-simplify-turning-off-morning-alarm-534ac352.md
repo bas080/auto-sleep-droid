@@ -1,6 +1,6 @@
 ---
 title: Simplify the code for turning off the wake-up alarm in the morning
-status: open
+status: resolved
 priority: 3
 issue-type: task
 created-at: "2026-11-19T20:04:39.923939+00:00"
