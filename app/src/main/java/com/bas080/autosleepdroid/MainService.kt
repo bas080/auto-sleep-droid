@@ -81,6 +81,7 @@ open class MainService : Service() {
     private var lastTimerEndsAt = 0L
     private var wakeLock: android.os.PowerManager.WakeLock? = null
     private var alarmAudioFocusRequest: android.media.AudioFocusRequest? = null
+    private var mediaPauseFocusRequest: android.media.AudioFocusRequest? = null
     var phoneFlipDetector: PhoneFlipDetector? = null
 
     var state = State.OFF
@@ -390,9 +391,9 @@ open class MainService : Service() {
         }
         createNotificationChannel()
 
-        phoneFlipDetector = PhoneFlipDetector(this) {
+        phoneFlipDetector = PhoneFlipDetector(this, onFlip = {
             handlePhoneFlip()
-        }
+        })
 
         initializeStateAndNotification()
         setupPreferenceListeners()
@@ -733,6 +734,7 @@ open class MainService : Service() {
             snoozeWakeUpAlarmWithThreshold("phone flip")
         } else if (isFading) {
             EventLogger.log(this, EventLogger.LEVEL_HIGH, "Sleep timer reset via phone flip during fade")
+            onTriggerVibration()
             cancelFadeForVolumeChange()
         }
     }
@@ -891,6 +893,7 @@ open class MainService : Service() {
         processSleepSession()
 
         stopAndResetWakeAlarm()
+        abandonMediaPauseFocus()
 
         dismissAutoSleepAlarm()
         cancelNotificationUpdateAlarm()
@@ -1443,7 +1446,22 @@ open class MainService : Service() {
                     .build()
             )
             .build()
+        mediaPauseFocusRequest = focusRequest
         am.requestAudioFocus(focusRequest)
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun abandonMediaPauseFocus() {
+        val am = audioManager ?: return
+        try {
+            mediaPauseFocusRequest?.let {
+                am.abandonAudioFocusRequest(it)
+                mediaPauseFocusRequest = null
+                EventLogger.log(this, "Released media pause audio focus; players may resume")
+            }
+        } catch (e: Exception) {
+            EventLogger.log(this, "Failed to release media pause audio focus: ${e.message}")
+        }
     }
 
     private fun buildNotification(): Notification {
