@@ -16,3 +16,8 @@ v0.0.37 report: "sleep timer now doesn't allow the screen to sleep, so the phone
 
 ## Conclusion / open question for @bas080
 - Not a regression and not fixed since v0.0.37; behavior is unchanged. If a real overnight drain was observed, likely causes worth checking on device: alarm ringing unattended overnight (screen on 30 s per cycle at the wake goal time), system-level charging/keep-awake, or a misattributed drain. Can add a diagnostic or cap screen wake behavior if the user reproduces it.
+
+## Follow-up: could the media-pause mechanism keep the screen on?
+- No. Pausing media uses a AUDIOFOCUS_GAIN_TRANSIENT request against AudioManager (MainService pauseMediaViaAudioFocus); audio focus only affects audio policy (players pause/duck). It has no path to the display and never touches PowerManager.
+- Exhaustive check across app (Kotlin + XML): the only PowerManager interaction in the entire app is the alarm wake lock; no keepScreenOn attribute in any layout, no window flags in activities, and the ongoing notification is a plain silent CATEGORY_SERVICE notification.
+- If anything the pause helps: media/video apps release their own keep-screen-on flags when playback stops.
