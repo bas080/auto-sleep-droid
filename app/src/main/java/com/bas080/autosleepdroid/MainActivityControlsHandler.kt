@@ -13,22 +13,73 @@ internal object MainActivityControlsHandler {
 
     fun setupConfigControls(activity: MainActivity) {
         setupTimerControls(activity)
-        setupAutoTimerControls(activity)
         setupWakeGoalControls(activity)
         setupHealthConnectControls(activity)
     }
 
-    private fun setupTimerControls(activity: MainActivity) {
+    fun bindToggleListeners(activity: MainActivity) {
         activity.rowEnableTimer?.setOnCheckedChangeListener { isChecked ->
-            activity.preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_ACTIVE, isChecked)?.apply()
-            val pm = activity.preferenceManager
-            val goalEnabled = pm?.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) ?: false
-            val healthConnectEnabled = pm?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
-            MainActivityViewHelpers.updateInputEnabledStates(activity, goalEnabled, healthConnectEnabled)
-            val msg = if (isChecked) "Timer enabled from UI" else "Timer disabled from UI"
-            EventLogger.log(activity, EventLogger.LEVEL_HIGH, msg)
+            onTimerToggled(activity, isChecked)
         }
+        activity.rowAutoTimer?.setOnCheckedChangeListener { isChecked ->
+            onAutoTimerToggled(activity, isChecked)
+        }
+        activity.rowEnableGoal?.setOnCheckedChangeListener { isChecked ->
+            onGoalToggled(activity, isChecked)
+        }
+        activity.rowHealthConnect?.setOnCheckedChangeListener { isChecked ->
+            onHealthConnectToggled(activity, isChecked)
+        }
+    }
 
+    fun unbindToggleListeners(activity: MainActivity) {
+        activity.rowEnableTimer?.setOnCheckedChangeListener(null)
+        activity.rowAutoTimer?.setOnCheckedChangeListener(null)
+        activity.rowEnableGoal?.setOnCheckedChangeListener(null)
+        activity.rowHealthConnect?.setOnCheckedChangeListener(null)
+    }
+
+    private fun onTimerToggled(activity: MainActivity, isChecked: Boolean) {
+        activity.preferenceManager?.edit()?.putBoolean(PreferenceKeys.KEY_ACTIVE, isChecked)?.apply()
+        val pm = activity.preferenceManager
+        val goalEnabled = pm?.getBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, false) ?: false
+        val healthConnectEnabled = pm?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
+        MainActivityViewHelpers.updateInputEnabledStates(activity, goalEnabled, healthConnectEnabled)
+        val msg = if (isChecked) "Timer enabled from UI" else "Timer disabled from UI"
+        EventLogger.log(activity, EventLogger.LEVEL_HIGH, msg)
+    }
+
+    private fun onAutoTimerToggled(activity: MainActivity, isChecked: Boolean) {
+        val pm = activity.preferenceManager ?: return
+        val editor = pm.edit()
+        editor.putBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, isChecked)
+        if (isChecked) {
+            val dndActive = MainActivityViewHelpers.isDndActive(activity)
+            editor.putBoolean(PreferenceKeys.KEY_ACTIVE, dndActive)
+            activity.rowEnableTimer?.isChecked = dndActive
+        }
+        editor.apply()
+        val logMsg = if (isChecked) "Auto sleep timer (DND) enabled" else "Auto sleep timer (DND) disabled"
+        EventLogger.log(activity, EventLogger.LEVEL_HIGH, logMsg)
+    }
+
+    private fun onGoalToggled(activity: MainActivity, isChecked: Boolean) {
+        activity.preferenceManager?.sharedPreferences?.edit()
+            ?.putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, isChecked)
+            ?.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
+            ?.apply()
+        val hcEnabled = activity.preferenceManager
+            ?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
+        MainActivityViewHelpers.updateInputEnabledStates(activity, isChecked, hcEnabled)
+        val msg = if (isChecked) "Wake-up goal enabled" else "Wake-up goal disabled"
+        EventLogger.log(activity, EventLogger.LEVEL_HIGH, msg)
+    }
+
+    private fun onHealthConnectToggled(activity: MainActivity, isChecked: Boolean) {
+        handleHealthConnectToggle(activity, true, isChecked)
+    }
+
+    private fun setupTimerControls(activity: MainActivity) {
         activity.inputDuration?.setOnClickListener {
             val spec = DurationDialogSpec(
                 R.string.label_duration,
@@ -42,35 +93,7 @@ internal object MainActivityControlsHandler {
         }
     }
 
-    private fun setupAutoTimerControls(activity: MainActivity) {
-        activity.rowAutoTimer?.setOnCheckedChangeListener { isChecked ->
-            val pm = activity.preferenceManager ?: return@setOnCheckedChangeListener
-            val editor = pm.edit()
-            editor.putBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, isChecked)
-            if (isChecked) {
-                val dndActive = MainActivityViewHelpers.isDndActive(activity)
-                editor.putBoolean(PreferenceKeys.KEY_ACTIVE, dndActive)
-                activity.rowEnableTimer?.isChecked = dndActive
-            }
-            editor.apply()
-            val logMsg = if (isChecked) "Auto sleep timer (DND) enabled" else "Auto sleep timer (DND) disabled"
-            EventLogger.log(activity, EventLogger.LEVEL_HIGH, logMsg)
-        }
-    }
-
     private fun setupWakeGoalControls(activity: MainActivity) {
-        activity.rowEnableGoal?.setOnCheckedChangeListener { isChecked ->
-            activity.preferenceManager?.sharedPreferences?.edit()
-                ?.putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, isChecked)
-                ?.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)
-                ?.apply()
-            val hcEnabled = activity.preferenceManager
-                ?.getBoolean(PreferenceKeys.KEY_HEALTH_CONNECT_ENABLED, false) ?: false
-            MainActivityViewHelpers.updateInputEnabledStates(activity, isChecked, hcEnabled)
-            val msg = if (isChecked) "Wake-up goal enabled" else "Wake-up goal disabled"
-            EventLogger.log(activity, EventLogger.LEVEL_HIGH, msg)
-        }
-
         activity.btnTargetTime?.setOnClickListener { MainActivityDialogs.showTargetTimeDialog(activity) }
         activity.btnCurrentWakeTime?.setOnClickListener { MainActivityDialogs.showCurrentWakeTimeDialog(activity) }
 
@@ -89,10 +112,6 @@ internal object MainActivityControlsHandler {
     }
 
     private fun setupHealthConnectControls(activity: MainActivity) {
-        activity.rowHealthConnect?.setOnCheckedChangeListener { isChecked ->
-            handleHealthConnectToggle(activity, true, isChecked)
-        }
-
         activity.inputHcMinDuration?.setOnClickListener {
             val spec = DurationDialogSpec(
                 R.string.label_hc_min_duration,
