@@ -12,9 +12,45 @@ internal object MainActivityControlsHandler {
     private const val HC_STEP_MINUTES = 5
 
     fun setupConfigControls(activity: MainActivity) {
-        setupTimerControls(activity)
-        setupWakeGoalControls(activity)
-        setupHealthConnectControls(activity)
+        activity.inputDuration?.setOnClickListener {
+            val spec = DurationDialogSpec(
+                R.string.label_duration,
+                PreferenceKeys.KEY_DURATION_MINUTES,
+                AppDefaults.DURATION_MINUTES,
+                MainActivity.DurationPickerBounds(0, MAX_TIMER_HOURS, TIMER_STEP_MINUTES)
+            )
+            MainActivityDialogs.showDurationDialog(activity, spec) { minutes ->
+                activity.textDurationValue?.text = DurationUtils.formatDurationString(minutes)
+            }
+        }
+
+        activity.btnTargetTime?.setOnClickListener { MainActivityDialogs.showTargetTimeDialog(activity) }
+        activity.btnCurrentWakeTime?.setOnClickListener { MainActivityDialogs.showCurrentWakeTimeDialog(activity) }
+
+        activity.inputMinSleep?.setOnClickListener {
+            val spec = DurationDialogSpec(
+                R.string.label_min_sleep,
+                PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
+                AppDefaults.MIN_SLEEP_DURATION_MINUTES,
+                MainActivity.DurationPickerBounds(0, MAX_MIN_SLEEP_HOURS, MIN_SLEEP_STEP_MINUTES)
+            )
+            MainActivityDialogs.showDurationDialog(activity, spec) { minutes ->
+                activity.preferenceManager?.edit()?.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)?.apply()
+                activity.textMinSleepValue?.text = DurationUtils.formatDurationString(minutes)
+            }
+        }
+
+        activity.inputHcMinDuration?.setOnClickListener {
+            val spec = DurationDialogSpec(
+                R.string.label_hc_min_duration,
+                PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES,
+                AppDefaults.HC_MIN_DURATION_MINUTES,
+                MainActivity.DurationPickerBounds(0, MAX_HC_HOURS, HC_STEP_MINUTES)
+            )
+            MainActivityDialogs.showDurationDialog(activity, spec) { minutes ->
+                activity.textHcMinDurationValue?.text = DurationUtils.formatDurationString(minutes)
+            }
+        }
     }
 
     fun bindToggleListeners(activity: MainActivity) {
@@ -28,7 +64,7 @@ internal object MainActivityControlsHandler {
             onGoalToggled(activity, isChecked)
         }
         activity.rowHealthConnect?.setOnCheckedChangeListener { isChecked ->
-            onHealthConnectToggled(activity, isChecked)
+            handleHealthConnectToggle(activity, true, isChecked)
         }
     }
 
@@ -73,56 +109,6 @@ internal object MainActivityControlsHandler {
         MainActivityViewHelpers.updateInputEnabledStates(activity, isChecked, hcEnabled)
         val msg = if (isChecked) "Wake-up goal enabled" else "Wake-up goal disabled"
         EventLogger.log(activity, EventLogger.LEVEL_HIGH, msg)
-    }
-
-    private fun onHealthConnectToggled(activity: MainActivity, isChecked: Boolean) {
-        handleHealthConnectToggle(activity, true, isChecked)
-    }
-
-    private fun setupTimerControls(activity: MainActivity) {
-        activity.inputDuration?.setOnClickListener {
-            val spec = DurationDialogSpec(
-                R.string.label_duration,
-                PreferenceKeys.KEY_DURATION_MINUTES,
-                AppDefaults.DURATION_MINUTES,
-                MainActivity.DurationPickerBounds(0, MAX_TIMER_HOURS, TIMER_STEP_MINUTES)
-            )
-            MainActivityDialogs.showDurationDialog(activity, spec) { minutes ->
-                activity.textDurationValue?.text = DurationUtils.formatDurationString(minutes)
-            }
-        }
-    }
-
-    private fun setupWakeGoalControls(activity: MainActivity) {
-        activity.btnTargetTime?.setOnClickListener { MainActivityDialogs.showTargetTimeDialog(activity) }
-        activity.btnCurrentWakeTime?.setOnClickListener { MainActivityDialogs.showCurrentWakeTimeDialog(activity) }
-
-        activity.inputMinSleep?.setOnClickListener {
-            val spec = DurationDialogSpec(
-                R.string.label_min_sleep,
-                PreferenceKeys.KEY_MIN_SLEEP_DURATION_MINUTES,
-                AppDefaults.MIN_SLEEP_DURATION_MINUTES,
-                MainActivity.DurationPickerBounds(0, MAX_MIN_SLEEP_HOURS, MIN_SLEEP_STEP_MINUTES)
-            )
-            MainActivityDialogs.showDurationDialog(activity, spec) { minutes ->
-                activity.preferenceManager?.edit()?.remove(PreferenceKeys.KEY_WAKEUP_LAST_SCHEDULED_MS)?.apply()
-                activity.textMinSleepValue?.text = DurationUtils.formatDurationString(minutes)
-            }
-        }
-    }
-
-    private fun setupHealthConnectControls(activity: MainActivity) {
-        activity.inputHcMinDuration?.setOnClickListener {
-            val spec = DurationDialogSpec(
-                R.string.label_hc_min_duration,
-                PreferenceKeys.KEY_HC_MIN_DURATION_MINUTES,
-                AppDefaults.HC_MIN_DURATION_MINUTES,
-                MainActivity.DurationPickerBounds(0, MAX_HC_HOURS, HC_STEP_MINUTES)
-            )
-            MainActivityDialogs.showDurationDialog(activity, spec) { minutes ->
-                activity.textHcMinDurationValue?.text = DurationUtils.formatDurationString(minutes)
-            }
-        }
     }
 
     private fun handleHealthConnectToggle(activity: MainActivity, isUserInitiated: Boolean, isChecked: Boolean) {
