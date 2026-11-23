@@ -1482,6 +1482,40 @@ class MainActivityTest {
     }
 
     @Test
+    fun testRecreationDoesNotLogSpuriousToggleEvents() {
+        // Simulate a user whose toggles are all enabled from a previous session.
+        val app = ApplicationProvider.getApplicationContext<Context>()
+        app.getSharedPreferences("sleep_timer", Context.MODE_PRIVATE).edit()
+            .putBoolean(PreferenceKeys.KEY_ACTIVE, true)
+            .putBoolean(PreferenceKeys.KEY_AUTO_TIMER_ENABLED, true)
+            .putBoolean(PreferenceKeys.KEY_WAKE_UP_GOAL_ENABLED, true)
+            .commit()
+
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+
+        // Recreating after view state was saved (e.g. the UI reopening the next morning)
+        // must not log toggles: the restore pass runs before onResume, where listeners bind.
+        val before = EventLogger.getEvents(app)
+        controller.recreate()
+        val after = EventLogger.getEvents(app)
+        val newEntries = after.drop(before.size)
+
+        val toggleMessages = setOf(
+            "Timer enabled from UI",
+            "Timer disabled from UI",
+            "Auto sleep timer (DND) enabled",
+            "Auto sleep timer (DND) disabled",
+            "Wake-up goal enabled",
+            "Wake-up goal disabled"
+        )
+        val spurious = newEntries.filter { message -> toggleMessages.any { message.contains(it) } }
+        assertTrue(
+            "Unexpected toggle logs after recreation: $spurious (all new entries: $newEntries)",
+            spurious.isEmpty()
+        )
+    }
+
+    @Test
     fun testStartTimerServiceHandlesExceptionsOnStartForegroundService() {
         val application = ApplicationProvider.getApplicationContext<Context>()
         val context = object : android.content.ContextWrapper(application) {

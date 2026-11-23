@@ -99,6 +99,8 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
 
         MainActivityHeaderAndLogsHandler.setupHeaderAndLinks(this)
         MainActivityControlsHandler.setupConfigControls(this)
+        // Toggle listeners bind in onResume (after the view-state restore pass) so that
+        // activity recreation cannot be mistaken for a user toggle.
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -183,12 +185,14 @@ class MainActivity : ComponentActivity(), EventLogger.Listener {
         EventLogger.setListener(this)
         MainActivityHeaderAndLogsHandler.startTimerService(this)
         MainActivityPermissionAndSettingsHandler.checkHealthConnectOnResume(this)
+        MainActivityControlsHandler.bindToggleListeners(this)
         MainActivityUiStateUpdater.registerPreferenceListeners(this)
     }
 
     override fun onPause() {
         super.onPause()
         EventLogger.setListener(null)
+        MainActivityControlsHandler.unbindToggleListeners(this)
         MainActivityUiStateUpdater.unregisterPreferenceListeners(this)
     }
 
