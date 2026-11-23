@@ -1353,7 +1353,7 @@ open class MainService : Service() {
         try {
             wakeLock?.let {
                 if (it.isHeld) {
-                    val heldSeconds = (System.currentTimeMillis() - wakeLockAcquiredAtMs) / 1000
+                    val heldSeconds = (System.currentTimeMillis() - wakeLockAcquiredAtMs) / MS_PER_SECOND
                     it.release()
                     EventLogger.log(this, "Released screen wake lock (held for ${heldSeconds}s)")
                 }
