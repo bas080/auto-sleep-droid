@@ -486,6 +486,57 @@ class MainServiceTest {
     }
 
     @Test
+    fun testSleepStartTimeIsNotOverwrittenByLaterMediaPauses() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val now = System.currentTimeMillis()
+        service.initializeTimerState(MainService.InitialStateParams(true, 20, now + 1200_000L, 10, true), now)
+        assertEquals(MainService.State.ACTIVE, service.state)
+
+        service.onPlaybackStateChanged(true, now)
+        val firstStop = now + 60_000L
+        service.onPlaybackStateChanged(false, firstStop)
+        assertEquals("First media pause of the session records the sleep start",
+            firstStop, preferences.getLong("sleep_start_time_ms", 0L))
+
+        service.onPlaybackStateChanged(true, firstStop)
+        val secondStop = firstStop + 45_000L
+        service.onPlaybackStateChanged(false, secondStop)
+        assertEquals("Rapid skip storms must not move the sleep start",
+            firstStop, preferences.getLong("sleep_start_time_ms", 0L))
+
+        service.onPlaybackStateChanged(true, secondStop)
+        val staleStop = secondStop + 15 * 3600_000L
+        service.onPlaybackStateChanged(false, staleStop)
+        assertEquals("A stale session (>14h) starts a new recording",
+            staleStop, preferences.getLong("sleep_start_time_ms", 0L))
+    }
+
+    @Test
+    fun testTurningTimerOffReleasesMediaPauseFocus() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val audioManagerField = MainService::class.java.getDeclaredField("audioManager")
+        audioManagerField.isAccessible = true
+        val audioManager = audioManagerField.get(service) as android.media.AudioManager
+        val shadowAudioManager = Shadows.shadowOf(audioManager)
+
+        service.onPauseMedia()
+        val focusField = MainService::class.java.getDeclaredField("mediaPauseFocusRequest")
+        focusField.isAccessible = true
+        val pauseFocus = focusField.get(service)
+        assertNotNull("Media pause focus request should be tracked", pauseFocus)
+
+        service.handleTurnOff(false)
+
+        assertEquals("Media pause focus must be abandoned when the timer is turned off",
+            pauseFocus, shadowAudioManager.lastAbandonedAudioFocusRequest)
+        assertNull("Media pause focus request should be cleared", focusField.get(service))
+    }
+
+    @Test
     fun testRunWakeUpAlarmCrescendoStepAppliesQuadraticGain() {
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()

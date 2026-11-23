@@ -80,6 +80,7 @@ open class MainService : Service() {
     private var isForeground = false
     private var lastTimerEndsAt = 0L
     private var wakeLock: android.os.PowerManager.WakeLock? = null
+    private var wakeLockAcquiredAtMs = 0L
     private var alarmAudioFocusRequest: android.media.AudioFocusRequest? = null
     private var mediaPauseFocusRequest: android.media.AudioFocusRequest? = null
     var phoneFlipDetector: PhoneFlipDetector? = null
@@ -335,12 +336,17 @@ open class MainService : Service() {
         lastObservedMediaActive = musicActive
 
         if (playbackStarted) {
-            EventLogger.log("Music playback started")
+            EventLogger.log(EventLogger.LEVEL_LOW, "Music playback started")
         } else if (playbackStopped) {
-            EventLogger.log("Music playback stopped")
+            EventLogger.log(EventLogger.LEVEL_LOW, "Music playback stopped")
             if (state == State.ACTIVE) {
-                preferences?.edit()?.putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now)?.apply()
-                EventLogger.log(this, EventLogger.LEVEL_HIGH, "Media paused during active timer; recorded sleep start time")
+                val existingSleepStart = preferences?.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L) ?: 0L
+                if (existingSleepStart == 0L || now - existingSleepStart >= HOURS_14_IN_MS) {
+                    preferences?.edit()?.putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now)?.apply()
+                    EventLogger.log(this, EventLogger.LEVEL_HIGH, "Media paused during active timer; recorded sleep start time")
+                } else {
+                    EventLogger.log(EventLogger.LEVEL_LOW, "Music paused during active timer; sleep start already recorded")
+                }
             }
         }
 
@@ -360,7 +366,7 @@ open class MainService : Service() {
         lastObservedVolume = currentVolume
 
         if (volumeChanged) {
-            EventLogger.log("Volume changed to $currentVolume")
+            EventLogger.log(EventLogger.LEVEL_LOW, "Volume changed to $currentVolume")
             if (state == State.FADING) {
                 cancelFadeForVolumeChange()
             } else if (state == State.ACTIVE) {
@@ -752,6 +758,7 @@ open class MainService : Service() {
     private fun handleOffStateTransition() {
         unregisterAudioPlaybackCallback()
         stopAndResetWakeAlarm()
+        abandonMediaPauseFocus()
         onCancelAlarm()
         updateListenersRegistration()
         showOrHideNotification()
@@ -836,7 +843,10 @@ open class MainService : Service() {
     fun onPauseMedia() {
         EventLogger.log(this, EventLogger.LEVEL_HIGH, "Timer expired: pausing media")
         val now = System.currentTimeMillis()
-        preferences?.edit()?.putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now)?.apply()
+        val existingSleepStart = preferences?.getLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, 0L) ?: 0L
+        if (existingSleepStart == 0L || now - existingSleepStart >= HOURS_14_IN_MS) {
+            preferences?.edit()?.putLong(PreferenceKeys.KEY_SLEEP_START_TIME_MS, now)?.apply()
+        }
         pauseMediaViaAudioFocus()
 
         restoreVolumeRunnable = Runnable { restoreVolumeAfterPause() }
@@ -1199,8 +1209,8 @@ open class MainService : Service() {
             alarmAudioFocusRequest?.let {
                 am.abandonAudioFocusRequest(it)
                 alarmAudioFocusRequest = null
+                EventLogger.log(this, "Abandoned audio focus for wake-up alarm")
             }
-            EventLogger.log(this, "Abandoned audio focus for wake-up alarm")
         } catch (e: Exception) {
             EventLogger.log(this, "Failed to abandon alarm audio focus: ${e.message}")
         }
@@ -1330,6 +1340,7 @@ open class MainService : Service() {
                 )
                 lock.acquire(WAKE_LOCK_TIMEOUT_MS)
                 wakeLock = lock
+                wakeLockAcquiredAtMs = System.currentTimeMillis()
                 EventLogger.log(this, "Acquired screen wake lock for wake-up alarm")
             }
         } catch (e: Exception) {
@@ -1342,13 +1353,16 @@ open class MainService : Service() {
         try {
             wakeLock?.let {
                 if (it.isHeld) {
+                    val heldSeconds = (System.currentTimeMillis() - wakeLockAcquiredAtMs) / MS_PER_SECOND
                     it.release()
+                    EventLogger.log(this, "Released screen wake lock (held for ${heldSeconds}s)")
                 }
             }
         } catch (e: Exception) {
             EventLogger.log(this, "Failed to release wake lock: ${e.message}")
         }
         wakeLock = null
+        wakeLockAcquiredAtMs = 0L
     }
 
     private fun stopWakeUpAlarmSound() {
