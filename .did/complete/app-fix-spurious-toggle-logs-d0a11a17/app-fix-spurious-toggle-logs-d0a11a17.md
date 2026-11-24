@@ -1,6 +1,6 @@
 ---
 title: Fix spurious toggle logs when opening the main UI
-status: open
+status: resolved
 priority: 3
 issue-type: task
 ---
@@ -20,3 +20,7 @@ Report: opening the main UI can log "Auto sleep timer (DND) enabled" and "Health
 
 - Robolectric: recreate the activity with saved view state and assert no new LEVEL_HIGH toggle logs and no Health Connect permission request.
 - Full CI: ./gradlew test lintDebug via GitHub Actions.
+
+## Outcome
+
+Verified on device by @bas080 over two real nights with v0.0.42: opening the UI produces no spurious toggle logs, real toggles still log, and no Health Connect permission flow is triggered on open. Shipped in v0.0.42 (PR #242, commit 6bd3983).
