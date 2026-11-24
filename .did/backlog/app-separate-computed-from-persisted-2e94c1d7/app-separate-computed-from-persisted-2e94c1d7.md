@@ -3,7 +3,7 @@ title: Make a clear distinction between computed and persisted state
 status: open
 priority: 3
 issue-type: task
-created-at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+created-at: "2026-11-24T14:13:34Z"
 ---
 
 Guideline from @bas080: if something needs to work across restarts or crashes, preferences is the preferred method over in-memory (only). Everything else may live in memory.
