@@ -513,6 +513,72 @@ class MainServiceTest {
             staleStop, preferences.getLong("sleep_start_time_ms", 0L))
     }
 
+    private fun audioPlaybackCallbackField(service: MainService): Any? {
+        val field = MainService::class.java.getDeclaredField("audioPlaybackCallback")
+        field.isAccessible = true
+        return field.get(service)
+    }
+
+    @Test
+    fun testTimerOffStateRegistersNoPlaybackCallback() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        // Overnight auto-DND cycle ends here: timer expired, media paused, volume restored -> WAITING (armed).
+        val now = System.currentTimeMillis()
+        service.initializeTimerState(MainService.InitialStateParams(true, 20, 0L, 10, false), now)
+        assertEquals(MainService.State.WAITING, service.state)
+        assertNotNull("WAITING state registers the playback callback", audioPlaybackCallbackField(service))
+
+        // Morning: DND goes off -> the timer turns off and must tear the listener down.
+        service.handleTurnOff(false)
+        assertEquals(MainService.State.OFF, service.state)
+        assertNull("OFF state must not keep the playback callback registered", audioPlaybackCallbackField(service))
+    }
+
+    @Test
+    fun testPlaybackEventsInOffStateLogNothingAndStayUnregistered() {
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        val now = System.currentTimeMillis()
+        service.initializeTimerState(MainService.InitialStateParams(true, 20, 0L, 10, false), now)
+        service.handleTurnOff(false)
+
+        EventLogger.clear(context)
+        val before = EventLogger.getEvents(context)
+
+        // Stray deliveries (leaked callback or the alarm tone being counted as music) must be silent
+        // and must self-heal: no log entries, state stays OFF, callback stays unregistered.
+        service.onPlaybackStateChanged(true, now + 1000L)
+        service.onPlaybackStateChanged(false, now + 2000L)
+
+        val after = EventLogger.getEvents(context)
+        assertEquals("Playback events in OFF state must not log", before, after)
+        assertEquals("Playback events in OFF state must not change the state",
+            MainService.State.OFF, service.state)
+        assertNull("Playback events in OFF state must keep the callback unregistered",
+            audioPlaybackCallbackField(service))
+    }
+
+    @Test
+    fun testWaitingStateStillArmsTimerOnPlaybackStart() {
+        // Guard must not break the WAITING -> ACTIVE arming path.
+        val controller = Robolectric.buildService(MainService::class.java)
+        val service = controller.create().get()
+
+        val now = System.currentTimeMillis()
+        service.initializeTimerState(MainService.InitialStateParams(true, 20, 0L, 10, false), now)
+
+        service.onPlaybackStateChanged(true, now + 1000L)
+        assertEquals(MainService.State.ACTIVE, service.state)
+        val expectedEndsAt = now + 1000L + 20 * 60_000L
+        assertTrue("WAITING must arm the timer on playback start",
+            Math.abs(expectedEndsAt - service.timerEndsAt) < 1000L)
+    }
+
     @Test
     fun testTurningTimerOffReleasesMediaPauseFocus() {
         val controller = Robolectric.buildService(MainService::class.java)
