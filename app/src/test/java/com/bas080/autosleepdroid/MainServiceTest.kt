@@ -523,7 +523,6 @@ class MainServiceTest {
     fun testTimerOffStateRegistersNoPlaybackCallback() {
         val controller = Robolectric.buildService(MainService::class.java)
         val service = controller.create().get()
-        val context = ApplicationProvider.getApplicationContext<Context>()
 
         // Overnight auto-DND cycle ends here: timer expired, media paused, volume restored -> WAITING (armed).
         val now = System.currentTimeMillis()
