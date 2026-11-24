@@ -331,6 +331,11 @@ open class MainService : Service() {
     }
 
     fun onPlaybackStateChanged(musicActive: Boolean, now: Long) {
+        if (state == State.OFF) {
+            // Stray delivery after the timer was turned off: tear the listener down and stay quiet.
+            unregisterAudioPlaybackCallback()
+            return
+        }
         val playbackStarted = musicActive && !lastObservedMediaActive
         val playbackStopped = !musicActive && lastObservedMediaActive
         lastObservedMediaActive = musicActive
